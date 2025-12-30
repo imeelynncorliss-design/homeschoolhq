@@ -242,7 +242,6 @@ export default function Dashboard() {
 
             <div className="bg-white rounded-lg shadow p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-4">Your Children</h2>
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Your Children</h2>
 <p className="text-sm text-gray-600 mb-3">👉 Click a child's name to view their lessons</p>
               {kids.length === 0 ? (
                 <p className="text-gray-600">No children added yet.</p>
