@@ -24,7 +24,11 @@ Return ONLY valid JSON (no markdown, no explanation) with the same structure as 
       }]
     });
 
-    const adaptedLesson = JSON.parse(message.content[0].text);
+    const textContent = message.content.find(block => block.type === 'text');
+if (!textContent || textContent.type !== 'text') {
+  throw new Error('No text content in response');
+}
+const adaptedLesson = JSON.parse(textContent.text);
     return NextResponse.json({ adaptedLesson });
   } catch (error) {
     console.error('Adaptation error:', error);
