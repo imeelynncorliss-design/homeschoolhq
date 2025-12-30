@@ -242,6 +242,8 @@ export default function Dashboard() {
 
             <div className="bg-white rounded-lg shadow p-6">
               <h2 className="text-xl font-bold text-gray-900 mb-4">Your Children</h2>
+              <h2 className="text-xl font-bold text-gray-900 mb-4">Your Children</h2>
+<p className="text-sm text-gray-600 mb-3">👉 Click a child's name to view their lessons</p>
               {kids.length === 0 ? (
                 <p className="text-gray-600">No children added yet.</p>
               ) : (
@@ -287,10 +289,10 @@ export default function Dashboard() {
                         <div>
                           <div className="flex justify-between items-start mb-2">
                             <div 
-                              className="cursor-pointer flex-1"
+                              className="cursor-pointer flex-1 hover:bg-blue-50 transition-colors"
                               onClick={() => setSelectedKid(kid.id)}
                             >
-                              <h3 className={`font-semibold ${selectedKid === kid.id ? 'text-blue-600' : 'text-gray-900'}`}>
+                              <h3 className={`font-semibold ${selectedKid === kid.id ? 'text-blue-600' : 'text-gray-900'} ${selectedKid === kid.id ? 'bg-blue-50 p-2 rounded' : ''}`}>
                                 {kid.name}
                               </h3>
                               <p className="text-gray-600 text-sm">
