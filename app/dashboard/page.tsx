@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import LessonGenerator from '@/components/LessonGenerator'
-import CurriculumImporter from '@/components/CurriculumImporter';
+import CurriculumImporter from '@/components/CurriculumImporter'
+import ChildPhotoUpload from '@/components/ChildPhotoUpload';
 
 const DURATION_OPTIONS = [
   '15 min',
@@ -342,39 +343,49 @@ const groupedLessons = () => {
                     <div key={kid.id} className="border rounded p-3">
                       {editingId === kid.id ? (
                         <div className="space-y-2">
-                          <input
-                            type="text"
-                            value={editName}
-                            onChange={(e) => setEditName(e.target.value)}
-                            className="w-full px-2 py-1 border rounded text-gray-900 text-sm"
-                          />
-                          <input
-                            type="number"
-                            value={editAge}
-                            onChange={(e) => setEditAge(e.target.value)}
-                            className="w-full px-2 py-1 border rounded text-gray-900 text-sm"
-                          />
-                          <input
-                            type="text"
-                            value={editGrade}
-                            onChange={(e) => setEditGrade(e.target.value)}
-                            className="w-full px-2 py-1 border rounded text-gray-900 text-sm"
-                          />
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => saveEdit(kid.id)}
-                              className="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700"
-                            >
-                              Save
-                            </button>
-                            <button
-                              onClick={cancelEdit}
-                              className="px-3 py-1 bg-gray-600 text-white text-sm rounded hover:bg-gray-700"
-                            >
-                              Cancel
-                            </button>
-                          </div>
+                        {/* Photo Upload - ADD THIS */}
+                        <ChildPhotoUpload
+                          childId={kid.id}
+                          currentPhotoUrl={kid.photo_url}
+                          onUploadComplete={(url) => {
+                            loadKids() // Refresh to show new photo
+                          }}
+                        />
+                        
+                        {/* Existing inputs */}
+                        <input
+                          type="text"
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          className="w-full px-2 py-1 border rounded text-gray-900 text-sm"
+                        />
+                        <input
+                          type="number"
+                          value={editAge}
+                          onChange={(e) => setEditAge(e.target.value)}
+                          className="w-full px-2 py-1 border rounded text-gray-900 text-sm"
+                        />
+                        <input
+                          type="text"
+                          value={editGrade}
+                          onChange={(e) => setEditGrade(e.target.value)}
+                          className="w-full px-2 py-1 border rounded text-gray-900 text-sm"
+                        />
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => saveEdit(kid.id)}
+                            className="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700"
+                          >
+                            Save
+                          </button>
+                          <button
+                            onClick={cancelEdit}
+                            className="px-3 py-1 bg-gray-600 text-white text-sm rounded hover:bg-gray-700"
+                          >
+                            Cancel
+                          </button>
                         </div>
+                      </div>
                       ) : (
                         <div>
                           <div className="flex justify-between items-start mb-2">
@@ -382,9 +393,19 @@ const groupedLessons = () => {
                               className="cursor-pointer flex-1 hover:bg-blue-50 transition-colors"
                               onClick={() => setSelectedKid(kid.id)}
                             >
-                              <h3 className={`font-semibold ${selectedKid === kid.id ? 'text-blue-600' : 'text-gray-900'} ${selectedKid === kid.id ? 'bg-blue-50 p-2 rounded' : ''}`}>
-                                {kid.name}
-                              </h3>
+                              
+  {/* Photo Display */}
+  {kid.photo_url && (
+    <img 
+      src={kid.photo_url} 
+      alt={kid.name}
+      className="w-12 h-12 rounded-full object-cover mb-2"
+    />
+  )}
+  
+  <h3 className={`font-semibold ${selectedKid === kid.id ? 'text-blue-600' : 'text-gray-900'} ${selectedKid === kid.id ? 'bg-blue-50 p-2 rounded' : ''}`}>
+    {kid.name}
+  </h3>
                               <p className="text-gray-600 text-sm">
                                 {kid.age && `Age: ${kid.age}`}
                                 {kid.age && kid.grade && ' • '}
