@@ -56,8 +56,11 @@ Return ONLY valid JSON (no markdown, no explanation) with this exact structure:
         });
 
         // Parse the JSON response
-        const content = message.content[0].text;
-        return JSON.parse(content);
+const textContent = message.content.find(block => block.type === 'text');
+if (!textContent || textContent.type !== 'text') {
+  throw new Error('No text content in response');
+}
+return JSON.parse(textContent.text);
       })
     );
 
