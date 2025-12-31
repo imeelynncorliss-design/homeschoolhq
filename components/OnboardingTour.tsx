@@ -33,6 +33,8 @@ export default function OnboardingTour({ run, onComplete }: OnboardingTourProps)
       ),
       placement: 'right',
       disableBeacon: true,
+      spotlightClicks: false,
+      disableOverlayClose: true,
     },
     {
       target: 'body',
@@ -67,12 +69,12 @@ export default function OnboardingTour({ run, onComplete }: OnboardingTourProps)
 
   const handleJoyrideCallback = (data: CallBackProps) => {
     const { status, index, action } = data
-
-    if (status === STATUS.FINISHED || status === STATUS.SKIPPED) {
+  
+    if (status === STATUS.FINISHED || status === STATUS.SKIPPED || action === 'close') {
       onComplete()
       setStepIndex(0)
     }
-
+  
     if (action === 'next' || action === 'prev') {
       setStepIndex(index + (action === 'next' ? 1 : -1))
     }
@@ -83,7 +85,7 @@ export default function OnboardingTour({ run, onComplete }: OnboardingTourProps)
       steps={steps}
       run={run}
       continuous
-      showProgress
+      showProgress={false}
       showSkipButton
       stepIndex={stepIndex}
       callback={handleJoyrideCallback}
