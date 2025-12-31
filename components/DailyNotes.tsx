@@ -1,0 +1,181 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { supabase } from '@/lib/supabase'
+
+interface DailyNotesProps {
+  date: Date
+  onClose: () => void
+}
+
+export default function DailyNotes({ date, onClose }: DailyNotesProps) {
+  const [notes, setNotes] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [noteId, setNoteId] = useState<string | null>(null)
+
+  useEffect(() => {
+    loadNotes()
+  }, [date])
+
+  const loadNotes = async () => {
+    setLoading(true)
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (user) {
+      const dateStr = date.toISOString().split('T')[0] // YYYY-MM-DD format
+      
+      const { data, error } = await supabase
+        .from('daily_notes')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('note_date', dateStr)
+        .single()
+      
+      if (data) {
+        setNotes(data.note_text || '')
+        setNoteId(data.id)
+      } else {
+        setNotes('')
+        setNoteId(null)
+      }
+    }
+    setLoading(false)
+  }
+
+  const saveNotes = async () => {
+    setSaving(true)
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (user) {
+      const dateStr = date.toISOString().split('T')[0]
+      
+      if (noteId) {
+        // Update existing note
+        await supabase
+          .from('daily_notes')
+          .update({ 
+            note_text: notes,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', noteId)
+      } else {
+        // Create new note
+        const { data } = await supabase
+          .from('daily_notes')
+          .insert([{
+            user_id: user.id,
+            note_date: dateStr,
+            note_text: notes
+          }])
+          .select()
+          .single()
+        
+        if (data) {
+          setNoteId(data.id)
+        }
+      }
+    }
+    setSaving(false)
+  }
+
+  const deleteNotes = async () => {
+    if (!noteId) return
+    
+    if (confirm('Delete notes for this day?')) {
+      await supabase
+        .from('daily_notes')
+        .delete()
+        .eq('id', noteId)
+      
+      onClose()
+    }
+  }
+
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString('en-US', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    })
+  }
+
+  return (
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex justify-between items-start mb-4">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">Daily Notes</h2>
+            <p className="text-sm text-gray-600 mt-1">
+              {formatDate(date)}
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 text-2xl"
+          >
+            ×
+          </button>
+        </div>
+
+        {loading ? (
+          <div className="text-center py-8 text-gray-600">Loading notes...</div>
+        ) : (
+          <>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              className="w-full h-64 px-4 py-3 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+              placeholder="Add notes for this day...
+
+Examples:
+• What we accomplished today
+• Challenges or wins
+• Plans for tomorrow
+• Field trip details
+• Special activities"
+            />
+            
+            <div className="flex justify-between items-center mt-4">
+              <div className="flex gap-2">
+                {noteId && (
+                  <button
+                    onClick={deleteNotes}
+                    className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                  >
+                    Delete
+                  </button>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={onClose}
+                  className="px-4 py-2 bg-gray-200 text-gray-900 rounded hover:bg-gray-300"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    await saveNotes()
+                    onClose()
+                  }}
+                  disabled={saving}
+                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {saving ? 'Saving...' : 'Save Notes'}
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}

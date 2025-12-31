@@ -15,7 +15,7 @@ export async function POST(request: Request) {
         description,
         lesson_date: date,
         duration: duration || null,
-        completed: false
+        status: 'not_started'  // Changed from completed: false
       }])
       .select();
 

@@ -4,7 +4,7 @@ interface Lesson {
   id: string
   subject: string
   duration_minutes: number | null
-  completed: boolean
+  status: 'not_started' | 'in_progress' | 'completed'
 }
 
 interface HoursTrackerProps {
@@ -14,17 +14,28 @@ interface HoursTrackerProps {
 }
 
 export default function HoursTracker({ lessons, childName, photoUrl }: HoursTrackerProps) {
-  // Calculate total minutes and hours
-  const totalMinutes = lessons.reduce((sum, lesson) => {
-    return sum + (lesson.duration_minutes || 0)
-  }, 0)
+  // Calculate minutes by status
+  const minutesInProgress = lessons
+    .filter(lesson => lesson.status === 'in_progress')
+    .reduce((sum, lesson) => sum + (lesson.duration_minutes || 0), 0)
   
+  const minutesCompleted = lessons
+    .filter(lesson => lesson.status === 'completed')
+    .reduce((sum, lesson) => sum + (lesson.duration_minutes || 0), 0)
+  
+  const totalMinutes = minutesInProgress + minutesCompleted
+  
+  const hoursInProgress = (minutesInProgress / 60).toFixed(1)
+  const hoursCompleted = (minutesCompleted / 60).toFixed(1)
   const totalHours = (totalMinutes / 60).toFixed(1)
   
-  // Calculate hours by subject
+  // Calculate hours by subject (unchanged)
   const hoursBySubject: { [subject: string]: number } = {}
   
-  lessons.forEach(lesson => {
+  // NEW - only count in_progress and completed lessons
+lessons.forEach(lesson => {
+  // Only count lessons that are in progress or completed
+  if (lesson.status === 'in_progress' || lesson.status === 'completed') {
     const subject = lesson.subject || 'Other'
     const minutes = lesson.duration_minutes || 0
     
@@ -32,9 +43,9 @@ export default function HoursTracker({ lessons, childName, photoUrl }: HoursTrac
       hoursBySubject[subject] = 0
     }
     hoursBySubject[subject] += minutes
-  })
+  }
+})
   
-  // Convert to hours and sort by hours (descending)
   const subjectHours = Object.entries(hoursBySubject)
     .map(([subject, minutes]) => ({
       subject,
@@ -78,11 +89,24 @@ export default function HoursTracker({ lessons, childName, photoUrl }: HoursTrac
         </h3>
       </div>
       
-      {/* Total Hours */}
+      {/* Total Hours with Breakdown */}
       <div className="bg-blue-50 rounded-lg p-4 mb-4">
-        <div className="text-center">
+        <div className="text-center mb-3">
           <div className="text-3xl font-bold text-blue-600">{totalHours} hrs</div>
-          <div className="text-sm text-gray-600">({totalMinutes} minutes total)</div>
+        </div>
+        <div className="space-y-1 text-sm">
+          <div className="flex justify-between text-gray-600">
+            <span>In Progress:</span>
+            <span className="font-medium">{hoursInProgress} hrs ({minutesInProgress} min)</span>
+          </div>
+          <div className="flex justify-between text-gray-600">
+            <span>Completed:</span>
+            <span className="font-medium">{hoursCompleted} hrs ({minutesCompleted} min)</span>
+          </div>
+          <div className="border-t border-blue-200 pt-1 flex justify-between text-gray-800">
+            <span className="font-semibold">Total:</span>
+            <span className="font-semibold">{totalHours} hrs ({totalMinutes} min)</span>
+          </div>
         </div>
       </div>
       

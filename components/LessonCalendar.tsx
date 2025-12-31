@@ -1,0 +1,364 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { Calendar, momentLocalizer, ToolbarProps } from 'react-big-calendar'
+import moment from 'moment'
+import 'react-big-calendar/lib/css/react-big-calendar.css'
+import FamilyNotes from './FamilyNotes'
+import DailyNotes from './DailyNotes'
+import { supabase } from '@/lib/supabase'
+
+const localizer = momentLocalizer(moment)
+
+interface Lesson {
+  id: string
+  kid_id: string
+  title: string
+  subject: string
+  description?: string
+  lesson_date: string | null
+  duration_minutes: number | null
+  status: 'not_started' | 'in_progress' | 'completed'
+}
+
+interface Child {
+  id: string
+  name: string
+  age?: number
+  grade?: string
+  photo_url?: string
+}
+
+interface LessonCalendarProps {
+  kids: Child[]
+  lessonsByKid: { [kidId: string]: Lesson[] }
+  onLessonClick: (lesson: Lesson, child: Child) => void
+}
+
+// Color palette for children
+const CHILD_COLORS = [
+  '#3b82f6', // Blue
+  '#a855f7', // Purple
+  '#ec4899', // Pink
+  '#f97316', // Orange
+  '#14b8a6', // Teal
+  '#84cc16', // Lime
+  '#f59e0b', // Amber
+  '#8b5cf6', // Violet
+]
+
+export default function LessonCalendar({ kids, lessonsByKid, onLessonClick }: LessonCalendarProps) {
+  const [currentDate, setCurrentDate] = useState(new Date())
+  const [showFamilyNotes, setShowFamilyNotes] = useState(false)
+  const [showDailyNotes, setShowDailyNotes] = useState(false)
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null)
+  const [datesWithNotes, setDatesWithNotes] = useState<Set<string>>(new Set())
+
+  // Load dates that have notes
+  useEffect(() => {
+    loadDatesWithNotes()
+  }, [])
+
+  const loadDatesWithNotes = async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (user) {
+      const { data } = await supabase
+        .from('daily_notes')
+        .select('note_date')
+        .eq('user_id', user.id)
+      
+      if (data) {
+        const dates = new Set(data.map(note => note.note_date))
+        setDatesWithNotes(dates)
+      }
+    }
+  }
+
+  // Custom date cell to show note indicator and clickable icon
+  const DateCellWrapper = ({ children, value }: any) => {
+    const dateStr = moment(value).format('YYYY-MM-DD')
+    const hasNotes = datesWithNotes.has(dateStr)
+    
+    return (
+      <div className="rbc-day-bg relative group">
+        {children}
+        {/* Note icon - always visible, highlighted if has notes */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            setSelectedDate(value)
+            setShowDailyNotes(true)
+          }}
+          className={`absolute bottom-1 right-1 p-1 rounded transition-all ${
+            hasNotes 
+              ? 'bg-yellow-400 text-gray-900 shadow-sm' 
+              : 'bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-600'
+          }`}
+          title={hasNotes ? "View notes" : "Add notes"}
+        >
+          <svg 
+            xmlns="http://www.w3.org/2000/svg" 
+            className="h-3.5 w-3.5" 
+            viewBox="0 0 20 20" 
+            fill="currentColor"
+          >
+            <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
+          </svg>
+        </button>
+      </div>
+    )
+  }
+
+  // Assign colors to kids
+  const kidColors: { [kidId: string]: string } = {}
+  kids.forEach((kid, index) => {
+    kidColors[kid.id] = CHILD_COLORS[index % CHILD_COLORS.length]
+  })
+
+  // Custom toolbar
+  const CustomToolbar = (toolbar: ToolbarProps) => {
+    const goToBack = () => {
+      const newDate = moment(currentDate).subtract(1, 'month').toDate()
+      setCurrentDate(newDate)
+    }
+
+    const goToNext = () => {
+      const newDate = moment(currentDate).add(1, 'month').toDate()
+      setCurrentDate(newDate)
+    }
+
+    const label = () => {
+      const date = moment(currentDate)
+      return (
+        <span className="text-xl font-bold text-gray-900">
+          {date.format('MMMM YYYY')}
+        </span>
+      )
+    }
+
+    return (
+      <div className="flex justify-between items-center mb-6">
+        <div className="flex items-center gap-4">
+          <button
+            type="button"
+            onClick={goToBack}
+            className="p-2 hover:bg-gray-200 rounded transition-colors cursor-pointer"
+          >
+            <span className="text-2xl text-gray-700">←</span>
+          </button>
+          {label()}
+          <button
+            type="button"
+            onClick={goToNext}
+            className="p-2 hover:bg-gray-200 rounded transition-colors cursor-pointer"
+          >
+            <span className="text-2xl text-gray-700">→</span>
+          </button>
+        </div>
+        
+        <button
+          type="button"
+          onClick={() => setShowFamilyNotes(true)}
+          className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors flex items-center gap-2"
+        >
+          <span>📝</span>
+          <span>Family Notes</span>
+        </button>
+      </div>
+    )
+  }
+
+  // Custom event component to show child photo
+  const EventComponent = ({ event }: any) => {
+    const child = kids.find(k => k.id === event.kidId)
+    
+    return (
+      <div className="flex items-center gap-1 overflow-hidden">
+        {child?.photo_url && (
+          <img 
+            src={child.photo_url} 
+            alt={child.name}
+            className="w-5 h-5 rounded-full object-cover flex-shrink-0"
+          />
+        )}
+        <span className="text-xs truncate">{event.title}</span>
+      </div>
+    )
+  }
+
+  // Flatten all lessons with kid info
+  const events = kids.flatMap(kid => {
+    const lessons = lessonsByKid[kid.id] || []
+    return lessons
+      .filter(lesson => lesson.lesson_date)
+      .map(lesson => {
+        const startDate = new Date(lesson.lesson_date!)
+        const endDate = new Date(startDate)
+        
+        if (lesson.duration_minutes) {
+          endDate.setMinutes(endDate.getMinutes() + lesson.duration_minutes)
+        } else {
+          endDate.setHours(endDate.getHours() + 1)
+        }
+
+        return {
+          id: lesson.id,
+          title: `${lesson.subject}: ${lesson.title}`,
+          start: startDate,
+          end: endDate,
+          resource: { lesson, child: kid },
+          kidId: kid.id,
+          kidName: kid.name
+        }
+      })
+  })
+
+  const eventStyleGetter = (event: any) => {
+    const backgroundColor = kidColors[event.kidId] || '#3b82f6'
+
+    return {
+      style: {
+        backgroundColor,
+        borderRadius: '4px',
+        opacity: 0.9,
+        color: 'white',
+        border: '0px',
+        display: 'block',
+        fontWeight: '500'
+      }
+    }
+  }
+
+  return (
+    <div className="bg-white rounded-lg shadow p-6">
+      <div className="rounded-lg p-6" style={{ height: '700px', backgroundColor: '#f9fafb' }}>
+        {/* Child Legend */}
+        <div className="flex flex-wrap gap-3 mb-4">
+        {kids.map(kid => (
+          <div key={kid.id} className="flex items-center gap-2 bg-white border border-gray-200 px-3 py-1 rounded-full shadow-sm">
+            {kid.photo_url && (
+              <img 
+                src={kid.photo_url} 
+                alt={kid.name}
+                className="w-6 h-6 rounded-full object-cover"
+              />
+            )}
+            <span className="text-sm text-gray-700 font-medium">{kid.name}</span>
+            <div 
+              className="w-4 h-4 rounded-full" 
+              style={{ backgroundColor: kidColors[kid.id] }}
+            />
+          </div>
+        ))}
+      </div>
+
+      <style jsx global>{`
+        .rbc-date-cell {
+          padding: 8px;
+        }
+        
+        .rbc-date-cell button {
+          color: #374151 !important;
+          font-weight: 600 !important;
+          font-size: 14px;
+        }
+        
+        .rbc-now {
+          background-color: #dbeafe !important;
+        }
+        
+        .rbc-today {
+          background-color: #dbeafe !important;
+        }
+        
+        .rbc-header {
+          padding: 12px 4px;
+          font-weight: 600;
+          color: #6b7280 !important;
+          border-bottom: 1px solid #e5e7eb;
+          background-color: #ffffff;
+          text-transform: uppercase;
+          font-size: 12px;
+          letter-spacing: 0.5px;
+        }
+        
+        .rbc-month-view {
+          border: 1px solid #e5e7eb;
+          border-radius: 8px;
+          overflow: hidden;
+          background-color: #ffffff;
+        }
+        
+        .rbc-day-bg {
+          background-color: #ffffff !important;
+          border-color: #e5e7eb !important;
+        }
+        
+        .rbc-day-bg:hover {
+          background-color: #f9fafb !important;
+        }
+        
+        .rbc-off-range-bg {
+          background-color: #f9fafb !important;
+        }
+        
+        .rbc-off-range .rbc-date-cell button {
+          color: #9ca3af !important;
+        }
+        
+        .rbc-event {
+          padding: 2px 5px;
+          font-size: 12px;
+        }
+        
+        .rbc-event:hover {
+          opacity: 1 !important;
+          cursor: pointer;
+        }
+        
+        .rbc-show-more {
+          color: #3b82f6 !important;
+          font-weight: 600;
+        }
+      `}</style>
+      
+      <Calendar
+        localizer={localizer}
+        events={events}
+        startAccessor="start"
+        endAccessor="end"
+        eventPropGetter={eventStyleGetter}
+        onSelectEvent={(event) => onLessonClick(event.resource.lesson, event.resource.child)}
+        views={['month']}
+        view="month"
+        date={currentDate}
+        onNavigate={(date) => setCurrentDate(date)}
+        components={{
+          toolbar: CustomToolbar,
+          event: EventComponent,
+          dateCellWrapper: DateCellWrapper
+        }}
+        popup
+      />
+    </div>
+    
+    {/* Family Notes Modal */}
+    {showFamilyNotes && (
+      <FamilyNotes onClose={() => setShowFamilyNotes(false)} />
+    )}
+    
+    {/* Daily Notes Modal */}
+    {showDailyNotes && selectedDate && (
+      <DailyNotes 
+        date={selectedDate} 
+        onClose={() => {
+          setShowDailyNotes(false)
+          setSelectedDate(null)
+          loadDatesWithNotes() // Reload to update indicators
+        }} 
+      />
+    )}
+    </div>
+  )
+}
