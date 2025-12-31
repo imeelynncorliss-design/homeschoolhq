@@ -296,7 +296,15 @@ export default function Dashboard() {
   }
 
   const deleteLesson = async (id: string) => {
-    if (confirm('Delete this lesson?')) {
+    const lesson = lessons.find(l => l.id === id)
+    let confirmMessage = 'Are you sure you want to delete this lesson?'
+    
+    if (lesson?.duration_minutes) {
+      const hours = (lesson.duration_minutes / 60).toFixed(1)
+      confirmMessage = `This lesson has ${lesson.duration_minutes} minutes (${hours} hours) of tracked time.\n\nDeleting this lesson will remove these hours from your total.\n\nAre you sure you want to delete it?`
+    }
+    
+    if (confirm(confirmMessage)) {
       await supabase.from('lessons').delete().eq('id', id)
       if (selectedKid) loadLessons(selectedKid)
     }
@@ -616,47 +624,47 @@ export default function Dashboard() {
             {selectedKidData ? (
               <>
                 {/* Action Buttons Card - Only show when lessons exist */}
-{lessons.length > 0 && (
+                {lessons.length > 0 && (
   <div className="bg-white rounded-lg shadow p-6 mb-6">
     <div className="flex justify-between items-center">
-                    <h2 className="text-xl font-bold text-gray-900">
-                      Lessons for {selectedKidData.name}
-                    </h2>
-                    <div className="flex gap-2 action-buttons">
-                      <button
-                        onClick={() => setShowLessonForm(!showLessonForm)}
-                        className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                      >
-                        {showLessonForm ? 'Cancel' : '+ Add Lesson'}
-                      </button>
-                      <button
-                        onClick={() => setShowGenerator(true)}
-                        className="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded hover:from-purple-700 hover:to-blue-700"
-                      >
-                        📚 Lesson Generator
-                      </button>
-                      <button
-                        onClick={() => setShowImporter(true)}
-                        className="bg-gradient-to-r from-green-600 to-teal-600 text-white px-6 py-3 rounded-lg hover:from-green-700 hover:to-teal-700 flex items-center gap-2"
-                      >
-                        📥 Import Curriculum
-                      </button>
-                    </div>
-                  </div>
-                </div>
-                )}
+      <h2 className="text-xl font-bold text-gray-900">
+        Lessons for {selectedKidData.name}
+      </h2>
+      <div className="flex gap-2 action-buttons">
+        <button
+          onClick={() => setShowImporter(true)}
+          className="bg-gradient-to-r from-green-600 to-teal-600 text-white px-6 py-3 rounded-lg hover:from-green-700 hover:to-teal-700 flex items-center gap-2"
+        >
+          📥 Import Curriculum
+        </button>
+        <button
+          onClick={() => setShowLessonForm(!showLessonForm)}
+          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+        >
+          {showLessonForm ? 'Cancel' : '+ Add Lesson'}
+        </button>
+        <button
+          onClick={() => setShowGenerator(true)}
+          className="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded hover:from-purple-700 hover:to-blue-700"
+        >
+          📚 Lesson Generator
+        </button>
+      </div>
+    </div>
+  </div>
+)}
 
-                {/* Hours Tracker - Now in its own card */}
-                <div className="hours-tracker">
-                  <HoursTracker 
-                    lessons={lessons} 
-                    childName={selectedKidData.name}
-                    photoUrl={selectedKidData.photo_url}
-                  />
-                </div>
+{/* Hours Tracker - Now in its own card */}
+<div className="hours-tracker">
+  <HoursTracker 
+    lessons={lessons} 
+    childName={selectedKidData.name}
+    photoUrl={selectedKidData.photo_url}
+  />
+</div>
 
-                {/* Lesson Form and List - New card */}
-                <div className="bg-white rounded-lg shadow p-6 mb-6">
+{/* Lesson Form and List - New card */}
+<div className="bg-white rounded-lg shadow p-6 mb-6">
                 {showLessonForm && (
   <div className="mb-6 p-4 border rounded bg-gray-50">
     <div className="flex justify-between items-center mb-3">
@@ -724,27 +732,27 @@ export default function Dashboard() {
   <div className="text-center py-8">
     <p className="text-gray-600 mb-4">No lessons yet. Choose how you'd like to get started:</p>
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-2xl mx-auto">
-      <button
-        onClick={() => setShowLessonForm(true)}
-        className="p-6 border-2 rounded-lg bg-blue-50 hover:bg-blue-100 hover:border-blue-400 transition-all cursor-pointer text-left"
-      >
-        <h4 className="font-semibold text-blue-900 mb-2">➕ Add Lesson</h4>
-        <p className="text-sm text-gray-700">Manually create individual lessons one at a time</p>
-      </button>
-      <button
-        onClick={() => setShowGenerator(true)}
-        className="p-6 border-2 rounded-lg bg-purple-50 hover:bg-purple-100 hover:border-purple-400 transition-all cursor-pointer text-left"
-      >
-        <h4 className="font-semibold text-purple-900 mb-2">📚 Lesson Generator</h4>
-        <p className="text-sm text-gray-700">Use AI to generate a series of lessons on any topic</p>
-      </button>
-      <button
-        onClick={() => setShowImporter(true)}
-        className="p-6 border-2 rounded-lg bg-green-50 hover:bg-green-100 hover:border-green-400 transition-all cursor-pointer text-left"
-      >
-        <h4 className="font-semibold text-green-900 mb-2">📥 Import Curriculum</h4>
-        <p className="text-sm text-gray-700">Upload an existing curriculum or lesson plan</p>
-      </button>
+    <button
+  onClick={() => setShowImporter(true)}
+  className="p-6 border-2 rounded-lg bg-green-50 hover:bg-green-100 hover:border-green-400 transition-all cursor-pointer text-left"
+>
+  <h4 className="font-semibold text-green-900 mb-2">📥 Import Curriculum</h4>
+  <p className="text-sm text-gray-700">Upload the table of contents for your curriculum</p>
+</button>
+<button
+  onClick={() => setShowLessonForm(true)}
+  className="p-6 border-2 rounded-lg bg-blue-50 hover:bg-blue-100 hover:border-blue-400 transition-all cursor-pointer text-left"
+>
+  <h4 className="font-semibold text-blue-900 mb-2">➕ Add Lesson</h4>
+  <p className="text-sm text-gray-700">Manually create individual lessons one at a time</p>
+</button>
+<button
+  onClick={() => setShowGenerator(true)}
+  className="p-6 border-2 rounded-lg bg-purple-50 hover:bg-purple-100 hover:border-purple-400 transition-all cursor-pointer text-left"
+>
+  <h4 className="font-semibold text-purple-900 mb-2">📚 Lesson Generator</h4>
+  <p className="text-sm text-gray-700">Create multiple custom lessons on any topic</p>
+</button>
     </div>
   </div>
 ) : (

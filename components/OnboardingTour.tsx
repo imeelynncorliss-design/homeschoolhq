@@ -42,9 +42,9 @@ export default function OnboardingTour({ run, onComplete }: OnboardingTourProps)
           <p><strong>After adding a child:</strong></p>
           <ul className="list-disc ml-5 mt-2 space-y-1">
             <li>Click their name to select them</li>
-            <li>Use <strong>Add Lesson</strong> to create individual lessons</li>
-            <li>Use <strong>Lesson Generator</strong> to create AI-powered lessons</li>
-            <li>Use <strong>Import Curriculum</strong> to upload existing plans</li>
+            <li>Use <strong>Import Curriculum</strong> - upload table of contents</li>
+            <li>Use <strong>Add Lesson</strong> - create individual lessons</li>
+            <li>Use <strong>Lesson Generator</strong> - guided custom lesson creation</li>
             <li>Track hours automatically as you add lessons!</li>
           </ul>
         </div>
