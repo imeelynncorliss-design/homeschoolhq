@@ -879,11 +879,11 @@ export default function Dashboard() {
                                                         <h3 className={`font-semibold text-gray-900 text-sm ${lesson.completed ? 'line-through' : ''}`}>
                                                           {lesson.title}
                                                         </h3>
-                                                        {lesson.duration && (
-                                                          <span className="inline-block px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded mt-1">
-                                                            ⏱️ {lesson.duration}
-                                                          </span>
-                                                        )}
+                                                        {lesson.duration_minutes && (
+  <span className="inline-block px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded mt-1">
+    ⏱️ {lesson.duration_minutes} min
+  </span>
+)}
                                                         {lesson.description && (
                                                           (() => {
                                                             try {
