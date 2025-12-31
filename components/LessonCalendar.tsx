@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react'
 import { Calendar, momentLocalizer, ToolbarProps } from 'react-big-calendar'
 import moment from 'moment'
-import 'react-big-calendar/lib/css/react-big-calendar.css'
 import FamilyNotes from './FamilyNotes'
 import DailyNotes from './DailyNotes'
 import { supabase } from '@/lib/supabase'
