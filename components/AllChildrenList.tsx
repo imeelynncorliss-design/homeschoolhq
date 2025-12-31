@@ -163,11 +163,13 @@ export default function AllChildrenList({
             {isExpanded && (
               <div className="px-6 pb-6 space-y-6">
                 {/* Hours Tracker */}
-                <HoursTracker 
-                  lessons={kidLessons}
-                  childName={kid.name}
-                  photoUrl={kid.photo_url}
-                />
+                <HoursTracker
+  lessons={kidLessons}
+  childName={kid.name}
+  childId={kid.id}  
+  // ADD THIS LINE
+  photoUrl={kid.photo_url}
+/>
 
                 {/* Lessons */}
                 {kidLessons.length === 0 ? (
