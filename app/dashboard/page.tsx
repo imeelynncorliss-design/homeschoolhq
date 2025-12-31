@@ -5,7 +5,9 @@ import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import LessonGenerator from '@/components/LessonGenerator'
 import CurriculumImporter from '@/components/CurriculumImporter'
-import ChildPhotoUpload from '@/components/ChildPhotoUpload';
+import ChildPhotoUpload from '@/components/ChildPhotoUpload'
+import HoursTracker from '@/components/HoursTracker'
+import OnboardingTour from '@/components/OnboardingTour'
 
 const DURATION_OPTIONS = [
   '15 min',
@@ -18,6 +20,21 @@ const DURATION_OPTIONS = [
   '3 hours'
 ];
 
+// Helper to convert duration string to minutes
+const parseDurationToMinutes = (duration: string): number => {
+  const map: { [key: string]: number } = {
+    '15 min': 15,
+    '30 min': 30,
+    '45 min': 45,
+    '1 hour': 60,
+    '1.5 hours': 90,
+    '2 hours': 120,
+    '2.5 hours': 150,
+    '3 hours': 180,
+  }
+  return map[duration] || 0
+}
+
 export default function Dashboard() {
   const [showGenerator, setShowGenerator] = useState(false);
   const [showImporter, setShowImporter] = useState(false);
@@ -27,9 +44,13 @@ export default function Dashboard() {
   const [kids, setKids] = useState<any[]>([])
   const [lessons, setLessons] = useState<any[]>([])
   const [selectedKid, setSelectedKid] = useState<string | null>(null)
+  const [showTour, setShowTour] = useState(false)
+  const [tourKey, setTourKey] = useState(0)
   
   // Collapsible section state
-  const [collapsedStatuses, setCollapsedStatuses] = useState<Set<string>>(new Set());
+  const [collapsedStatuses, setCollapsedStatuses] = useState<Set<string>>(
+    new Set(['Not Started', 'In Progress', 'Completed'])
+  );
   const [collapsedSubjects, setCollapsedSubjects] = useState<Set<string>>(new Set());
   
   // Kid form state
@@ -41,7 +62,8 @@ export default function Dashboard() {
   const [editName, setEditName] = useState('')
   const [editAge, setEditAge] = useState('')
   const [editGrade, setEditGrade] = useState('')
-  
+  const [photoFile, setPhotoFile] = useState<File | null>(null)
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null)
   // Lesson form state
   const [showLessonForm, setShowLessonForm] = useState(false)
   const [lessonSubject, setLessonSubject] = useState('')
@@ -49,6 +71,7 @@ export default function Dashboard() {
   const [lessonDescription, setLessonDescription] = useState('')
   const [lessonDate, setLessonDate] = useState('')
   const [addingLesson, setAddingLesson] = useState(false)
+  const [lessonDuration, setLessonDuration] = useState('')
   
   // Lesson editing state
   const [editingLessonId, setEditingLessonId] = useState<string | null>(null)
@@ -69,6 +92,14 @@ export default function Dashboard() {
       loadLessons(selectedKid)
     }
   }, [selectedKid])
+
+  useEffect(() => {
+    // Check if user has seen tour before
+    const hasSeenTour = localStorage.getItem('hasSeenTour')
+    if (!hasSeenTour && kids.length === 0) {
+      setShowTour(true)
+    }
+  }, [kids])
 
   const checkUser = async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -108,7 +139,7 @@ export default function Dashboard() {
   const addKid = async (e: React.FormEvent) => {
     e.preventDefault()
     setAdding(true)
-
+  
     const { data, error } = await supabase
       .from('kids')
       .insert([{ 
@@ -117,14 +148,40 @@ export default function Dashboard() {
         grade 
       }])
       .select()
-
-    if (!error && data) {
+  
+    if (!error && data && data.length > 0) {
+      const newKidId = data[0].id
+      
+      // Upload photo if one was selected
+      if (photoFile) {
+        const fileExt = photoFile.name.split('.').pop()
+        const fileName = `${newKidId}/${Date.now()}.${fileExt}`
+        
+        const { error: uploadError, data: uploadData } = await supabase.storage
+          .from('child-photos')
+          .upload(fileName, photoFile)
+        
+        if (!uploadError) {
+          const { data: { publicUrl } } = supabase.storage
+            .from('child-photos')
+            .getPublicUrl(fileName)
+          
+          // Update kid with photo URL
+          await supabase
+            .from('kids')
+            .update({ photo_url: publicUrl })
+            .eq('id', newKidId)
+        }
+      }
+      
       setName('')
       setAge('')
       setGrade('')
+      setPhotoFile(null)
+      setPhotoPreview(null)
       setShowAddKidForm(false)
       loadKids()
-      if (data.length > 0) setSelectedKid(data[0].id)
+      setSelectedKid(newKidId)
     }
     setAdding(false)
   }
@@ -165,23 +222,33 @@ export default function Dashboard() {
   const addLesson = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!selectedKid) return
-    
-    setAddingLesson(true)
 
-    await supabase
+    setAddingLesson(true)
+  
+    // Convert duration string to minutes
+    const durationInMinutes = lessonDuration ? parseDurationToMinutes(lessonDuration) : null
+  
+    const { data, error } = await supabase
       .from('lessons')
       .insert([{
         kid_id: selectedKid,
         subject: lessonSubject,
         title: lessonTitle,
         description: lessonDescription,
-        lesson_date: lessonDate || null
+        lesson_date: lessonDate || null,
+        duration_minutes: durationInMinutes
       }])
-
+  
+    if (error) {
+      console.error('Insert error:', error)
+      alert('Error adding lesson: ' + error.message)
+    }
+  
     setLessonSubject('')
     setLessonTitle('')
     setLessonDescription('')
     setLessonDate('')
+    setLessonDuration('')
     setShowLessonForm(false)
     setAddingLesson(false)
     loadLessons(selectedKid)
@@ -201,6 +268,9 @@ export default function Dashboard() {
   }
 
   const saveEditLesson = async (id: string) => {
+    // Convert duration string to minutes
+    const durationInMinutes = editLessonDuration ? parseDurationToMinutes(editLessonDuration) : null
+    
     await supabase
       .from('lessons')
       .update({
@@ -208,7 +278,7 @@ export default function Dashboard() {
         subject: editLessonSubject,
         description: editLessonDescription,
         lesson_date: editLessonDate || null,
-        duration: editLessonDuration || null
+        duration_minutes: durationInMinutes
       })
       .eq('id', id)
     
@@ -237,6 +307,23 @@ export default function Dashboard() {
     router.push('/')
   }
 
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        alert('File too large. Maximum size is 5MB.')
+        return
+      }
+      setPhotoFile(file)
+      setPhotoPreview(URL.createObjectURL(file))
+    }
+  }
+
+  const completeTour = () => {
+    localStorage.setItem('hasSeenTour', 'true')
+    setShowTour(false)
+  }
+
   // Helper function to determine lesson status
   const getLessonStatus = (lesson: any) => {
     if (lesson.completed) return 'Completed';
@@ -254,36 +341,36 @@ export default function Dashboard() {
   };
 
   // Group lessons by status, then by subject
-const groupedLessons = () => {
-  const groups: { [status: string]: { [subject: string]: any[] } } = {
-    'Not Started': {},
-    'In Progress': {},
-    'Completed': {}
-  };
+  const groupedLessons = () => {
+    const groups: { [status: string]: { [subject: string]: any[] } } = {
+      'Not Started': {},
+      'In Progress': {},
+      'Completed': {}
+    };
 
-  lessons.forEach(lesson => {
-    const status = getLessonStatus(lesson);
-    const subject = lesson.subject || 'Other';
-    
-    if (!groups[status][subject]) {
-      groups[status][subject] = [];
-    }
-    groups[status][subject].push(lesson);
-  });
+    lessons.forEach(lesson => {
+      const status = getLessonStatus(lesson);
+      const subject = lesson.subject || 'Other';
+      
+      if (!groups[status][subject]) {
+        groups[status][subject] = [];
+      }
+      groups[status][subject].push(lesson);
+    });
 
-  // Sort lessons within each subject group numerically by lesson number
-  Object.keys(groups).forEach(status => {
-    Object.keys(groups[status]).forEach(subject => {
-      groups[status][subject].sort((a, b) => {
-        const numA = parseInt(a.title.match(/\d+/)?.[0] || '0');
-        const numB = parseInt(b.title.match(/\d+/)?.[0] || '0');
-        return numA - numB;
+    // Sort lessons within each subject group numerically by lesson number
+    Object.keys(groups).forEach(status => {
+      Object.keys(groups[status]).forEach(subject => {
+        groups[status][subject].sort((a, b) => {
+          const numA = parseInt(a.title.match(/\d+/)?.[0] || '0');
+          const numB = parseInt(b.title.match(/\d+/)?.[0] || '0');
+          return numA - numB;
+        });
       });
     });
-  });
 
-  return groups;
-};
+    return groups;
+  };
 
   const toggleStatus = (status: string) => {
     const newCollapsed = new Set(collapsedStatuses);
@@ -318,12 +405,26 @@ const groupedLessons = () => {
         <div className="bg-white rounded-lg shadow p-8 mb-6">
           <div className="flex justify-between items-center mb-8">
             <h1 className="text-3xl font-bold text-gray-900">HomeschoolHQ Dashboard</h1>
-            <button 
-              onClick={handleLogout}
-              className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-            >
-              Logout
-            </button>
+            <div className="flex gap-2">
+            <button
+  onClick={() => {
+    setShowTour(false) // Reset first
+    setTimeout(() => {
+      setTourKey(prev => prev + 1) // Force remount
+      setShowTour(true)
+    }, 0)
+  }}
+  className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
+>
+  👋 Take Tour
+</button>
+              <button 
+                onClick={handleLogout}
+                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+              >
+                Logout
+              </button>
+            </div>
           </div>
           <p className="text-gray-900">Welcome, {user?.email}!</p>
         </div>
@@ -331,7 +432,7 @@ const groupedLessons = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Kids Section */}
           <div className="md:col-span-1">
-            <div className="bg-white rounded-lg shadow p-6 mb-6">
+            <div className="bg-white rounded-lg shadow p-6 mb-6 kids-section">
               <h2 className="text-xl font-bold text-gray-900 mb-4">Your Children</h2>
               <p className="text-sm text-gray-600 mb-3">👉 Click a child's name to view their lessons</p>
               
@@ -339,53 +440,53 @@ const groupedLessons = () => {
                 <p className="text-gray-600 mb-4">No children added yet.</p>
               ) : (
                 <div className="space-y-3 mb-4">
-                  {kids.map((kid) => (
-                    <div key={kid.id} className="border rounded p-3">
+                  {kids.map((kid, index) => (
+                    <div key={kid.id} className={`border rounded p-3 ${index === 0 ? 'kid-card' : ''}`}>
                       {editingId === kid.id ? (
                         <div className="space-y-2">
-                        {/* Photo Upload - ADD THIS */}
-                        <ChildPhotoUpload
-                          childId={kid.id}
-                          currentPhotoUrl={kid.photo_url}
-                          onUploadComplete={(url) => {
-                            loadKids() // Refresh to show new photo
-                          }}
-                        />
-                        
-                        {/* Existing inputs */}
-                        <input
-                          type="text"
-                          value={editName}
-                          onChange={(e) => setEditName(e.target.value)}
-                          className="w-full px-2 py-1 border rounded text-gray-900 text-sm"
-                        />
-                        <input
-                          type="number"
-                          value={editAge}
-                          onChange={(e) => setEditAge(e.target.value)}
-                          className="w-full px-2 py-1 border rounded text-gray-900 text-sm"
-                        />
-                        <input
-                          type="text"
-                          value={editGrade}
-                          onChange={(e) => setEditGrade(e.target.value)}
-                          className="w-full px-2 py-1 border rounded text-gray-900 text-sm"
-                        />
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => saveEdit(kid.id)}
-                            className="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700"
-                          >
-                            Save
-                          </button>
-                          <button
-                            onClick={cancelEdit}
-                            className="px-3 py-1 bg-gray-600 text-white text-sm rounded hover:bg-gray-700"
-                          >
-                            Cancel
-                          </button>
+                          {/* Photo Upload */}
+                          <ChildPhotoUpload
+                            childId={kid.id}
+                            currentPhotoUrl={kid.photo_url}
+                            onUploadComplete={(url) => {
+                              loadKids()
+                            }}
+                          />
+                          
+                          {/* Existing inputs */}
+                          <input
+                            type="text"
+                            value={editName}
+                            onChange={(e) => setEditName(e.target.value)}
+                            className="w-full px-2 py-1 border rounded text-gray-900 text-sm"
+                          />
+                          <input
+                            type="number"
+                            value={editAge}
+                            onChange={(e) => setEditAge(e.target.value)}
+                            className="w-full px-2 py-1 border rounded text-gray-900 text-sm"
+                          />
+                          <input
+                            type="text"
+                            value={editGrade}
+                            onChange={(e) => setEditGrade(e.target.value)}
+                            className="w-full px-2 py-1 border rounded text-gray-900 text-sm"
+                          />
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => saveEdit(kid.id)}
+                              className="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700"
+                            >
+                              Save
+                            </button>
+                            <button
+                              onClick={cancelEdit}
+                              className="px-3 py-1 bg-gray-600 text-white text-sm rounded hover:bg-gray-700"
+                            >
+                              Cancel
+                            </button>
+                          </div>
                         </div>
-                      </div>
                       ) : (
                         <div>
                           <div className="flex justify-between items-start mb-2">
@@ -393,19 +494,18 @@ const groupedLessons = () => {
                               className="cursor-pointer flex-1 hover:bg-blue-50 transition-colors"
                               onClick={() => setSelectedKid(kid.id)}
                             >
+                              {/* Photo Display */}
+                              {kid.photo_url && (
+                                <img 
+                                  src={kid.photo_url} 
+                                  alt={kid.name}
+                                  className="w-12 h-12 rounded-full object-cover mb-2"
+                                />
+                              )}
                               
-  {/* Photo Display */}
-  {kid.photo_url && (
-    <img 
-      src={kid.photo_url} 
-      alt={kid.name}
-      className="w-12 h-12 rounded-full object-cover mb-2"
-    />
-  )}
-  
-  <h3 className={`font-semibold ${selectedKid === kid.id ? 'text-blue-600' : 'text-gray-900'} ${selectedKid === kid.id ? 'bg-blue-50 p-2 rounded' : ''}`}>
-    {kid.name}
-  </h3>
+                              <h3 className={`font-semibold ${selectedKid === kid.id ? 'text-blue-600' : 'text-gray-900'} ${selectedKid === kid.id ? 'bg-blue-50 p-2 rounded' : ''}`}>
+                                {kid.name}
+                              </h3>
                               <p className="text-gray-600 text-sm">
                                 {kid.age && `Age: ${kid.age}`}
                                 {kid.age && kid.grade && ' • '}
@@ -443,38 +543,71 @@ const groupedLessons = () => {
               </button>
               
               {showAddKidForm && (
-                <form onSubmit={addKid} className="space-y-3 p-4 border rounded bg-gray-50">
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="w-full px-3 py-2 border rounded text-gray-900"
-                    placeholder="Name *"
-                    required
-                  />
-                  <input
-                    type="number"
-                    value={age}
-                    onChange={(e) => setAge(e.target.value)}
-                    className="w-full px-3 py-2 border rounded text-gray-900"
-                    placeholder="Age"
-                  />
-                  <input
-                    type="text"
-                    value={grade}
-                    onChange={(e) => setGrade(e.target.value)}
-                    className="w-full px-3 py-2 border rounded text-gray-900"
-                    placeholder="Grade"
-                  />
-                  <button
-                    type="submit"
-                    disabled={adding}
-                    className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700"
-                  >
-                    {adding ? 'Adding...' : 'Add Child'}
-                  </button>
-                </form>
-              )}
+  <form onSubmit={addKid} className="space-y-3 p-4 border rounded bg-gray-50">
+    {/* Photo Upload */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-2">
+        Child's Photo (optional)
+      </label>
+      {photoPreview ? (
+        <div className="flex items-center gap-3">
+          <img 
+            src={photoPreview} 
+            alt="Preview"
+            className="w-20 h-20 rounded-full object-cover"
+          />
+          <button
+            type="button"
+            onClick={() => {
+              setPhotoFile(null)
+              setPhotoPreview(null)
+            }}
+            className="text-sm text-red-600 hover:text-red-700"
+          >
+            Remove
+          </button>
+        </div>
+      ) : (
+        <input
+          type="file"
+          accept="image/*"
+          onChange={handlePhotoSelect}
+          className="w-full px-3 py-2 border rounded text-gray-900 text-sm"
+        />
+      )}
+    </div>
+    
+    <input
+      type="text"
+      value={name}
+      onChange={(e) => setName(e.target.value)}
+      className="w-full px-3 py-2 border rounded text-gray-900"
+      placeholder="Name *"
+      required
+    />
+    <input
+      type="number"
+      value={age}
+      onChange={(e) => setAge(e.target.value)}
+      className="w-full px-3 py-2 border rounded text-gray-900"
+      placeholder="Age"
+    />
+    <input
+      type="text"
+      value={grade}
+      onChange={(e) => setGrade(e.target.value)}
+      className="w-full px-3 py-2 border rounded text-gray-900"
+      placeholder="Grade"
+    />
+    <button
+      type="submit"
+      disabled={adding}
+      className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700"
+    >
+      {adding ? 'Adding...' : 'Add Child'}
+    </button>
+  </form>
+)}
             </div>
           </div>
 
@@ -482,12 +615,14 @@ const groupedLessons = () => {
           <div className="md:col-span-2">
             {selectedKidData ? (
               <>
-                <div className="bg-white rounded-lg shadow p-6 mb-6">
-                  <div className="flex justify-between items-center mb-4">
+                {/* Action Buttons Card - Only show when lessons exist */}
+{lessons.length > 0 && (
+  <div className="bg-white rounded-lg shadow p-6 mb-6">
+    <div className="flex justify-between items-center">
                     <h2 className="text-xl font-bold text-gray-900">
                       Lessons for {selectedKidData.name}
                     </h2>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 action-buttons">
                       <button
                         onClick={() => setShowLessonForm(!showLessonForm)}
                         className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
@@ -508,10 +643,34 @@ const groupedLessons = () => {
                       </button>
                     </div>
                   </div>
+                </div>
+                )}
 
-                  {showLessonForm && (
-                    <form onSubmit={addLesson} className="space-y-3 mb-6 p-4 border rounded">
-                      <input
+                {/* Hours Tracker - Now in its own card */}
+                <div className="hours-tracker">
+                  <HoursTracker 
+                    lessons={lessons} 
+                    childName={selectedKidData.name}
+                    photoUrl={selectedKidData.photo_url}
+                  />
+                </div>
+
+                {/* Lesson Form and List - New card */}
+                <div className="bg-white rounded-lg shadow p-6 mb-6">
+                {showLessonForm && (
+  <div className="mb-6 p-4 border rounded bg-gray-50">
+    <div className="flex justify-between items-center mb-3">
+      <h3 className="font-semibold text-gray-900">Add New Lesson</h3>
+      <button
+        type="button"
+        onClick={() => setShowLessonForm(false)}
+        className="text-gray-500 hover:text-gray-700 text-2xl leading-none"
+      >
+        ×
+      </button>
+    </div>
+    <form onSubmit={addLesson} className="space-y-3">
+      <input
                         type="text"
                         value={lessonSubject}
                         onChange={(e) => setLessonSubject(e.target.value)}
@@ -540,6 +699,16 @@ const groupedLessons = () => {
                         onChange={(e) => setLessonDate(e.target.value)}
                         className="w-full px-3 py-2 border rounded text-gray-900"
                       />
+                      <select
+                        value={lessonDuration}
+                        onChange={(e) => setLessonDuration(e.target.value)}
+                        className="w-full px-3 py-2 border rounded text-gray-900"
+                      >
+                        <option value="">Duration (optional)</option>
+                        {DURATION_OPTIONS.map(duration => (
+                          <option key={duration} value={duration}>{duration}</option>
+                        ))}
+                      </select>
                       <button
                         type="submit"
                         disabled={addingLesson}
@@ -548,11 +717,37 @@ const groupedLessons = () => {
                         {addingLesson ? 'Adding...' : 'Add Lesson'}
                       </button>
                     </form>
-                  )}
+                    </div>
+)}
 
-                  {lessons.length === 0 ? (
-                    <p className="text-gray-600">No lessons yet. Click "+ Add Lesson" to start!</p>
-                  ) : (
+{lessons.length === 0 ? (
+  <div className="text-center py-8">
+    <p className="text-gray-600 mb-4">No lessons yet. Choose how you'd like to get started:</p>
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-2xl mx-auto">
+      <button
+        onClick={() => setShowLessonForm(true)}
+        className="p-6 border-2 rounded-lg bg-blue-50 hover:bg-blue-100 hover:border-blue-400 transition-all cursor-pointer text-left"
+      >
+        <h4 className="font-semibold text-blue-900 mb-2">➕ Add Lesson</h4>
+        <p className="text-sm text-gray-700">Manually create individual lessons one at a time</p>
+      </button>
+      <button
+        onClick={() => setShowGenerator(true)}
+        className="p-6 border-2 rounded-lg bg-purple-50 hover:bg-purple-100 hover:border-purple-400 transition-all cursor-pointer text-left"
+      >
+        <h4 className="font-semibold text-purple-900 mb-2">📚 Lesson Generator</h4>
+        <p className="text-sm text-gray-700">Use AI to generate a series of lessons on any topic</p>
+      </button>
+      <button
+        onClick={() => setShowImporter(true)}
+        className="p-6 border-2 rounded-lg bg-green-50 hover:bg-green-100 hover:border-green-400 transition-all cursor-pointer text-left"
+      >
+        <h4 className="font-semibold text-green-900 mb-2">📥 Import Curriculum</h4>
+        <p className="text-sm text-gray-700">Upload an existing curriculum or lesson plan</p>
+      </button>
+    </div>
+  </div>
+) : (
                     <div className="space-y-4">
                       {/* Group by Status, then by Subject */}
                       {Object.entries(grouped).map(([status, subjects]) => {
@@ -774,6 +969,9 @@ const groupedLessons = () => {
           </div>
         </div>
       </div>
+      
+      {/* Onboarding Tour */}
+      <OnboardingTour key={tourKey} run={showTour} onComplete={completeTour} />
     </div>
   )
 }
