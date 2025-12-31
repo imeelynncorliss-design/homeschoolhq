@@ -68,7 +68,7 @@ export default function OnboardingTour({ run, onComplete }: OnboardingTourProps)
   const handleJoyrideCallback = (data: CallBackProps) => {
     const { status, index, action } = data
 
-    if ([STATUS.FINISHED, STATUS.SKIPPED].includes(status)) {
+    if (status === STATUS.FINISHED || status === STATUS.SKIPPED) { {
       onComplete()
       setStepIndex(0)
     }
