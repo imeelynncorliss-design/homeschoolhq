@@ -1,19 +1,25 @@
 'use client'
 
+import ExportHoursButton from '@/components/ExportHoursButton'
+
 interface Lesson {
   id: string
   subject: string
   duration_minutes: number | null
   status: 'not_started' | 'in_progress' | 'completed'
+  title?: string  // Add this if it exists in your schema
+  date?: string   // Add this if it exists in your schema
+  completed_at?: string  // Add this if it exists in your schema
 }
 
 interface HoursTrackerProps {
   lessons: Lesson[]
   childName: string
+  childId: string
   photoUrl?: string | null
 }
 
-export default function HoursTracker({ lessons, childName, photoUrl }: HoursTrackerProps) {
+export default function HoursTracker({ lessons, childName, childId, photoUrl }: HoursTrackerProps) {
   // Calculate minutes by status
   const minutesInProgress = lessons
     .filter(lesson => lesson.status === 'in_progress')
@@ -33,18 +39,18 @@ export default function HoursTracker({ lessons, childName, photoUrl }: HoursTrac
   const hoursBySubject: { [subject: string]: number } = {}
   
   // NEW - only count in_progress and completed lessons
-lessons.forEach(lesson => {
-  // Only count lessons that are in progress or completed
-  if (lesson.status === 'in_progress' || lesson.status === 'completed') {
-    const subject = lesson.subject || 'Other'
-    const minutes = lesson.duration_minutes || 0
-    
-    if (!hoursBySubject[subject]) {
-      hoursBySubject[subject] = 0
+  lessons.forEach(lesson => {
+    // Only count lessons that are in progress or completed
+    if (lesson.status === 'in_progress' || lesson.status === 'completed') {
+      const subject = lesson.subject || 'Other'
+      const minutes = lesson.duration_minutes || 0
+      
+      if (!hoursBySubject[subject]) {
+        hoursBySubject[subject] = 0
+      }
+      hoursBySubject[subject] += minutes
     }
-    hoursBySubject[subject] += minutes
-  }
-})
+  })
   
   const subjectHours = Object.entries(hoursBySubject)
     .map(([subject, minutes]) => ({
@@ -76,17 +82,27 @@ lessons.forEach(lesson => {
   
   return (
     <div className="bg-white rounded-lg shadow p-6 mb-6">
-      <div className="flex items-center gap-4 mb-4">
-        {photoUrl && (
-          <img 
-            src={photoUrl} 
-            alt={childName}
-            className="w-16 h-16 rounded-full object-cover"
-          />
-        )}
-        <h3 className="text-lg font-bold text-gray-900">
-          📊 Hours Tracked for {childName}
-        </h3>
+      {/* HEADER WITH EXPORT BUTTON */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-4">
+          {photoUrl && (
+            <img 
+              src={photoUrl} 
+              alt={childName}
+              className="w-16 h-16 rounded-full object-cover"
+            />
+          )}
+          <h3 className="text-lg font-bold text-gray-900">
+            📊 Hours Tracked for {childName}
+          </h3>
+        </div>
+        
+        {/* EXPORT BUTTON - Now passes lessons directly */}
+        <ExportHoursButton 
+          childId={childId}
+          childName={childName}
+          lessons={lessons}
+        />
       </div>
       
       {/* Total Hours with Breakdown */}

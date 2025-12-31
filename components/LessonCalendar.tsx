@@ -6,6 +6,7 @@ import moment from 'moment'
 import FamilyNotes from './FamilyNotes'
 import DailyNotes from './DailyNotes'
 import { supabase } from '@/lib/supabase'
+import './calendar-print.css' // Import print styles
 
 const localizer = momentLocalizer(moment)
 
@@ -74,6 +75,11 @@ export default function LessonCalendar({ kids, lessonsByKid, onLessonClick }: Le
     }
   }
 
+  // Print function
+  const handlePrint = () => {
+    window.print()
+  }
+
   // Custom date cell to show note indicator and clickable icon
   const DateCellWrapper = ({ children, value }: any) => {
     const dateStr = moment(value).format('YYYY-MM-DD')
@@ -89,7 +95,7 @@ export default function LessonCalendar({ kids, lessonsByKid, onLessonClick }: Le
             setSelectedDate(value)
             setShowDailyNotes(true)
           }}
-          className={`absolute bottom-1 right-1 p-1 rounded transition-all ${
+          className={`print-hide absolute bottom-1 right-1 p-1 rounded transition-all ${
             hasNotes 
               ? 'bg-yellow-400 text-gray-900 shadow-sm' 
               : 'bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-600'
@@ -142,7 +148,7 @@ export default function LessonCalendar({ kids, lessonsByKid, onLessonClick }: Le
           <button
             type="button"
             onClick={goToBack}
-            className="p-2 hover:bg-gray-200 rounded transition-colors cursor-pointer"
+            className="no-print p-2 hover:bg-gray-200 rounded transition-colors cursor-pointer"
           >
             <span className="text-2xl text-gray-700">←</span>
           </button>
@@ -150,20 +156,43 @@ export default function LessonCalendar({ kids, lessonsByKid, onLessonClick }: Le
           <button
             type="button"
             onClick={goToNext}
-            className="p-2 hover:bg-gray-200 rounded transition-colors cursor-pointer"
+            className="no-print p-2 hover:bg-gray-200 rounded transition-colors cursor-pointer"
           >
             <span className="text-2xl text-gray-700">→</span>
           </button>
         </div>
         
-        <button
-          type="button"
-          onClick={() => setShowFamilyNotes(true)}
-          className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors flex items-center gap-2"
-        >
-          <span>📝</span>
-          <span>Family Notes</span>
-        </button>
+        <div className="no-print flex gap-2">
+          <button
+            type="button"
+            onClick={handlePrint}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors flex items-center gap-2"
+          >
+            <svg 
+              className="w-5 h-5" 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                strokeWidth={2} 
+                d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" 
+              />
+            </svg>
+            <span>Print Calendar</span>
+          </button>
+          
+          <button
+            type="button"
+            onClick={() => setShowFamilyNotes(true)}
+            className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors flex items-center gap-2"
+          >
+            <span>📝</span>
+            <span>Family Notes</span>
+          </button>
+        </div>
       </div>
     )
   }
@@ -231,11 +260,17 @@ export default function LessonCalendar({ kids, lessonsByKid, onLessonClick }: Le
 
   return (
     <div className="bg-white rounded-lg shadow p-6">
-      <div className="rounded-lg p-6" style={{ height: '700px', backgroundColor: '#f9fafb' }}>
+      <div className="printable-calendar rounded-lg p-6" style={{ height: '700px', backgroundColor: '#f9fafb' }}>
+        {/* Print Header (only visible when printing) */}
+        <div className="print-header" style={{ display: 'none' }}>
+          <h1>HomeschoolHQ - {moment(currentDate).format('MMMM YYYY')}</h1>
+          <p>Lesson Schedule</p>
+        </div>
+        
         {/* Child Legend */}
-        <div className="flex flex-wrap gap-3 mb-4">
+        <div className="print-legend flex flex-wrap gap-3 mb-4">
         {kids.map(kid => (
-          <div key={kid.id} className="flex items-center gap-2 bg-white border border-gray-200 px-3 py-1 rounded-full shadow-sm">
+          <div key={kid.id} className="print-legend-item flex items-center gap-2 bg-white border border-gray-200 px-3 py-1 rounded-full shadow-sm">
             {kid.photo_url && (
               <img 
                 src={kid.photo_url} 
@@ -245,7 +280,7 @@ export default function LessonCalendar({ kids, lessonsByKid, onLessonClick }: Le
             )}
             <span className="text-sm text-gray-700 font-medium">{kid.name}</span>
             <div 
-              className="w-4 h-4 rounded-full" 
+              className="print-legend-color w-4 h-4 rounded-full" 
               style={{ backgroundColor: kidColors[kid.id] }}
             />
           </div>
@@ -319,6 +354,13 @@ export default function LessonCalendar({ kids, lessonsByKid, onLessonClick }: Le
         .rbc-show-more {
           color: #3b82f6 !important;
           font-weight: 600;
+        }
+        
+        /* Show print header only when printing */
+        @media print {
+          .print-header {
+            display: block !important;
+          }
         }
       `}</style>
       

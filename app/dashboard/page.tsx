@@ -9,6 +9,7 @@ import ChildPhotoUpload from '@/components/ChildPhotoUpload'
 import OnboardingTour from '@/components/OnboardingTour'
 import LessonCalendar from '@/components/LessonCalendar'
 import AllChildrenList from '@/components/AllChildrenList'
+import TodaysDashboard from '@/components/TodaysDashboard'
 
 const DURATION_OPTIONS = [
   '15 min',
@@ -52,8 +53,8 @@ export default function Dashboard() {
   // Sidebar state
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   
-  // View mode state - DEFAULT TO CALENDAR
-  const [viewMode, setViewMode] = useState<'list' | 'calendar'>('calendar')
+  // View mode state - DEFAULT TO TODAY
+  const [viewMode, setViewMode] = useState<'today' | 'calendar' | 'list'>('today')
   const [selectedLesson, setSelectedLesson] = useState<any | null>(null)
   const [selectedLessonChild, setSelectedLessonChild] = useState<any | null>(null)
   
@@ -300,6 +301,30 @@ export default function Dashboard() {
     loadAllLessons()
   }
 
+  // NEW: Handle status change for Today's Dashboard
+  const handleStatusChange = async (lessonId: string, newStatus: 'not_started' | 'in_progress' | 'completed') => {
+    const updates: any = { status: newStatus }
+    
+    if (newStatus === 'completed') {
+      updates.completed_at = new Date().toISOString()
+    }
+    if (newStatus === 'not_started') {
+      updates.completed_at = null
+    }
+
+    const { error } = await supabase
+      .from('lessons')
+      .update(updates)
+      .eq('id', lessonId)
+
+    if (!error) {
+      loadAllLessons()
+    } else {
+      console.error('Error updating lesson status:', error)
+      alert('Failed to update lesson status')
+    }
+  }
+
   const cycleLessonStatus = async (lessonId: string, currentStatus: string) => {
     let newStatus: string
     
@@ -311,12 +336,7 @@ export default function Dashboard() {
       newStatus = 'not_started'
     }
     
-    await supabase
-      .from('lessons')
-      .update({ status: newStatus })
-      .eq('id', lessonId)
-    
-    loadAllLessons()
+    await handleStatusChange(lessonId, newStatus as any)
   }
 
   const deleteLesson = async (id: string) => {
@@ -612,15 +632,25 @@ export default function Dashboard() {
           <div className="flex-1 min-w-0">
             {kids.length > 0 ? (
               <>
-                {/* View Toggle - MOVED OUTSIDE */}
+                {/* View Toggle - UPDATED WITH 3 TABS */}
                 <div className="bg-white rounded-lg shadow p-4 mb-6">
                   <div className="flex justify-between items-center">
                     <h2 className="text-2xl font-bold text-gray-900">
                       Family Schedule
                     </h2>
                     
-                    {/* View Toggle */}
+                    {/* View Toggle - 3 TABS */}
                     <div className="flex bg-gray-100 rounded-lg p-1">
+                      <button
+                        onClick={() => setViewMode('today')}
+                        className={`px-6 py-3 rounded transition-all ${
+                          viewMode === 'today'
+                            ? 'bg-white shadow text-gray-900 font-semibold'
+                            : 'text-gray-600 hover:text-gray-900'
+                        }`}
+                      >
+                        📚 Today
+                      </button>
                       <button
                         onClick={() => setViewMode('calendar')}
                         className={`px-6 py-3 rounded transition-all ${
@@ -741,8 +771,18 @@ export default function Dashboard() {
                   </div>
                 )}
 
-                {/* Calendar or List View */}
-                {viewMode === 'calendar' ? (
+                {/* TODAY / CALENDAR / LIST VIEW */}
+                {viewMode === 'today' ? (
+                  <TodaysDashboard
+                    kids={kids}
+                    lessonsByKid={lessonsByKid}
+                    onStatusChange={handleStatusChange}
+                    onLessonClick={(lesson, child) => {
+                      setSelectedLesson(lesson)
+                      setSelectedLessonChild(child)
+                    }}
+                  />
+                ) : viewMode === 'calendar' ? (
                   <LessonCalendar 
                     kids={kids}
                     lessonsByKid={lessonsByKid}
