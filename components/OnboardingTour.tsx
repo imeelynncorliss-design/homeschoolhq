@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import Joyride, { CallBackProps, STATUS, Step } from 'react-joyride'
 
 interface OnboardingTourProps {
@@ -68,7 +68,7 @@ export default function OnboardingTour({ run, onComplete }: OnboardingTourProps)
   const handleJoyrideCallback = (data: CallBackProps) => {
     const { status, index, action } = data
 
-    if (status === STATUS.FINISHED || status === STATUS.SKIPPED) { {
+    if (status === STATUS.FINISHED || status === STATUS.SKIPPED) {
       onComplete()
       setStepIndex(0)
     }
