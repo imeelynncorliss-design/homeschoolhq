@@ -29,6 +29,7 @@ interface AllChildrenListProps {
   onEditLesson: (lesson: Lesson) => void
   onDeleteLesson: (id: string) => void
   onCycleStatus: (id: string, currentStatus: string) => void
+  autoExpandKid?: string | null
 }
 
 export default function AllChildrenList({ 
@@ -36,7 +37,8 @@ export default function AllChildrenList({
   lessonsByKid, 
   onEditLesson, 
   onDeleteLesson,
-  onCycleStatus 
+  onCycleStatus,
+  autoExpandKid 
 }: AllChildrenListProps) {
   const router = useRouter()
   
@@ -57,8 +59,20 @@ export default function AllChildrenList({
     setLocalLessonsByKid(lessonsByKid)
   }, [lessonsByKid])
 
-  // All children collapsed by default
-  const [expandedKids, setExpandedKids] = useState<Set<string>>(new Set())
+  // Auto-expand the specified child if autoExpandKid prop is provided
+  const [expandedKids, setExpandedKids] = useState<Set<string>>(() => {
+    if (autoExpandKid) {
+      return new Set([autoExpandKid])
+    }
+    return new Set()
+  })
+
+  // Update expanded kids when autoExpandKid changes
+  useEffect(() => {
+    if (autoExpandKid) {
+      setExpandedKids(new Set([autoExpandKid]))
+    }
+  }, [autoExpandKid])
   
   // Multiselect state
   const [selectedLessons, setSelectedLessons] = useState<Set<string>>(new Set())

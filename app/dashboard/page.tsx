@@ -457,11 +457,12 @@ export default function Dashboard() {
                 <div className="mt-4 space-y-2">
                   {kids.map((kid) => (
                     <button
-                      key={kid.id}
-                      onClick={() => {
-                        setSelectedKid(kid.id)
-                        setSidebarCollapsed(false)
-                      }}
+                    key={kid.id}
+                    onClick={() => {
+                      setSelectedKid(kid.id)
+                      setViewMode('list')  // ADD THIS LINE
+                      setViewMode('list')
+                    }}
                       className={`w-full p-2 rounded transition-colors ${selectedKid === kid.id ? 'bg-blue-100 ring-2 ring-blue-400' : 'hover:bg-gray-100'}`}
                       title={kid.name}
                     >
@@ -543,10 +544,13 @@ export default function Dashboard() {
                         ) : (
                           <div>
                             <div className="flex justify-between items-start mb-2">
-                              <div 
-                                className="cursor-pointer flex-1 hover:bg-blue-50 transition-colors"
-                                onClick={() => setSelectedKid(kid.id)}
-                              >
+                            <div 
+  className="cursor-pointer flex-1 hover:bg-blue-50 transition-colors"
+  onClick={() => {
+    setSelectedKid(kid.id)
+    setViewMode('list') 
+  }}
+>
                                 {kid.photo_url && (
                                   <img 
                                     src={kid.photo_url} 
@@ -845,16 +849,17 @@ export default function Dashboard() {
                   />
                 ) : (
                   <AllChildrenList
-                    kids={kids}
-                    lessonsByKid={lessonsByKid}
-                    onEditLesson={(lesson) => {
-                      setSelectedLesson(lesson)
-                      setSelectedLessonChild(kids.find(k => k.id === lesson.kid_id))
-                      startEditLesson(lesson)
-                    }}
-                    onDeleteLesson={deleteLesson}
-                    onCycleStatus={cycleLessonStatus}
-                  />
+  kids={kids}
+  lessonsByKid={lessonsByKid}
+  autoExpandKid={selectedKid}
+  onEditLesson={(lesson) => {
+    setSelectedLesson(lesson)
+    setSelectedLessonChild(kids.find(k => k.id === lesson.kid_id))
+    startEditLesson(lesson)
+  }}
+  onDeleteLesson={deleteLesson}
+  onCycleStatus={cycleLessonStatus}
+/>
                 )}
 
                 {/* Lesson Detail Modal */}
