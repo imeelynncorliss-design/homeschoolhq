@@ -37,9 +37,8 @@ export default function AllChildrenList({
   onDeleteLesson,
   onCycleStatus 
 }: AllChildrenListProps) {
-  const [expandedKids, setExpandedKids] = useState<Set<string>>(
-    new Set(kids.map(k => k.id)) // All expanded by default
-  )
+  // All children collapsed by default
+  const [expandedKids, setExpandedKids] = useState<Set<string>>(new Set())
   
   // Collapse all statuses by default
   const [collapsedStatuses, setCollapsedStatuses] = useState<Set<string>>(() => {
@@ -123,15 +122,31 @@ export default function AllChildrenList({
     return groups
   }
 
+  // Calculate stats for a child
+  const getChildStats = (lessons: Lesson[]) => {
+    const total = lessons.length
+    const completed = lessons.filter(l => l.status === 'completed').length
+    const totalMinutes = lessons.reduce((sum, l) => sum + (l.duration_minutes || 0), 0)
+    const completedPercent = total > 0 ? Math.round((completed / total) * 100) : 0
+    
+    return {
+      total,
+      completed,
+      totalHours: (totalMinutes / 60).toFixed(1),
+      completedPercent
+    }
+  }
+
   return (
     <div className="space-y-6">
       {kids.map(kid => {
         const kidLessons = lessonsByKid[kid.id] || []
         const isExpanded = expandedKids.has(kid.id)
         const grouped = groupLessonsByStatus(kidLessons)
+        const stats = getChildStats(kidLessons)
 
         return (
-          <div key={kid.id} className="bg-white rounded-lg shadow">
+          <div key={kid.id} className="bg-white rounded-lg shadow overflow-hidden">
             {/* Child Header */}
             <button
               onClick={() => toggleKid(kid.id)}
@@ -152,24 +167,46 @@ export default function AllChildrenList({
                     {kid.age && kid.grade && ' • '}
                     {kid.grade && `Grade: ${kid.grade}`}
                   </p>
+                  {/* Summary when collapsed */}
+                  {!isExpanded && kidLessons.length > 0 && (
+                    <div className="mt-2 flex items-center gap-4 text-sm text-gray-600">
+                      <span>{stats.total} lessons</span>
+                      <span>•</span>
+                      <span>{stats.completedPercent}% complete</span>
+                      <span>•</span>
+                      <span>{stats.totalHours} hours</span>
+                    </div>
+                  )}
                 </div>
               </div>
-              <span className="text-2xl text-gray-600">
-                {isExpanded ? '▼' : '▶'}
-              </span>
+              <div className="flex items-center gap-4">
+                {/* Progress indicator when collapsed */}
+                {!isExpanded && kidLessons.length > 0 && (
+                  <div className="text-right">
+                    <div className="text-2xl font-bold text-gray-900">{stats.completedPercent}%</div>
+                    <div className="text-xs text-gray-500">
+                      {stats.completed} of {stats.total}
+                    </div>
+                  </div>
+                )}
+                <span className="text-2xl text-gray-400">
+                  {isExpanded ? '▼' : '▶'}
+                </span>
+              </div>
             </button>
 
             {/* Child Content */}
             {isExpanded && (
-              <div className="px-6 pb-6 space-y-6">
+              <div className="px-6 pb-6 space-y-6 border-t border-gray-100">
                 {/* Hours Tracker */}
-                <HoursTracker
-  lessons={kidLessons}
-  childName={kid.name}
-  childId={kid.id}  
-  // ADD THIS LINE
-  photoUrl={kid.photo_url}
-/>
+                <div className="pt-6">
+                  <HoursTracker
+                    lessons={kidLessons}
+                    childName={kid.name}
+                    childId={kid.id}
+                    photoUrl={kid.photo_url}
+                  />
+                </div>
 
                 {/* Lessons */}
                 {kidLessons.length === 0 ? (

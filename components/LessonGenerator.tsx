@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
 
 type Child = {
   id: string;
@@ -80,34 +81,98 @@ export default function LessonGenerator({ children, onClose }: Props) {
   };
 
   const saveLesson = async (variation: LessonVariation) => {
+    setLoading(true)
     try {
-      // Call your existing lesson creation endpoint
-      const response = await fetch('/api/lessons', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          child_id: formData.childId,
-          title: variation.title,
-          subject: formData.subject,
-          duration: formData.duration,
-          description: JSON.stringify(variation),
-          date: new Date().toISOString().split('T')[0]
-        })
-      });
+      // Get current user
+      const { data } = await supabase.auth.getUser()
+      const currentUser = data.user
+      
+      if (!currentUser) {
+        alert('You must be logged in to save lessons')
+        setLoading(false)
+        return
+      }
 
-      if (response.ok) {
+      // Use Supabase directly - no API endpoint needed
+      const { data: insertData, error } = await supabase
+        .from('lessons')
+        .insert([{
+          kid_id: formData.childId,
+          user_id: currentUser.id,
+          subject: formData.subject,
+          title: variation.title,
+          description: JSON.stringify(variation),
+          lesson_date: new Date().toISOString().split('T')[0],
+          duration_minutes: formData.duration,
+          status: 'not_started'
+        }])
+        .select()
+
+      if (error) {
+        console.error('Save failed:', error);
+        alert(`Failed to save lesson: ${error.message}`);
+      } else {
         setSelectedVariation(variation);
         router.refresh();
       }
     } catch (error) {
       console.error('Save failed:', error);
       alert('Failed to save lesson. Please try again.');
+    } finally {
+      setLoading(false)
     }
   };
 
+  const [showAdaptModal, setShowAdaptModal] = useState(false);
+  const [adaptTargetChildId, setAdaptTargetChildId] = useState('');
+
   const adaptForAnotherChild = () => {
-    // Show adaptation modal (implement separately)
-    console.log('Adapt lesson for another child');
+    setShowAdaptModal(true);
+  };
+
+  const saveAdaptedLesson = async () => {
+    if (!adaptTargetChildId || !selectedVariation) return;
+
+    try {
+      const targetChild = children.find(c => c.id === adaptTargetChildId);
+      if (!targetChild) return;
+
+      // Get current user
+      const { data } = await supabase.auth.getUser()
+      const currentUser = data.user
+      
+      if (!currentUser) {
+        alert('You must be logged in to save lessons')
+        return
+      }
+
+      const { data: insertData, error } = await supabase
+        .from('lessons')
+        .insert([{
+          kid_id: adaptTargetChildId,
+          user_id: currentUser.id,
+          subject: formData.subject,
+          title: selectedVariation.title,
+          description: JSON.stringify(selectedVariation),
+          lesson_date: new Date().toISOString().split('T')[0],
+          duration_minutes: formData.duration,
+          status: 'not_started'
+        }])
+        .select()
+
+      if (error) {
+        console.error('Adapt failed:', error);
+        alert(`Failed to adapt lesson: ${error.message}`);
+      } else {
+        alert(`Lesson adapted for ${targetChild.name}!`);
+        setShowAdaptModal(false);
+        setAdaptTargetChildId('');
+        router.refresh();
+      }
+    } catch (error) {
+      console.error('Adapt failed:', error);
+      alert('Failed to adapt lesson. Please try again.');
+    }
   };
 
   return (
@@ -319,11 +384,19 @@ export default function LessonGenerator({ children, onClose }: Props) {
                 </button>
               </div>
             </div>
+
+            {/* Close Button */}
+            <button
+              onClick={onClose}
+              className="w-full border-2 border-gray-300 py-3 rounded-lg hover:bg-gray-50 text-gray-700 font-medium"
+            >
+              Cancel & Close
+            </button>
           </div>
         )}
 
         {/* Success State */}
-        {selectedVariation && (
+        {selectedVariation && !showAdaptModal && (
           <div className="text-center space-y-4">
             <div className="text-green-600 text-5xl">✓</div>
             <h3 className="text-xl font-bold text-gray-900">Saved for {formData.childName}!</h3>
@@ -332,7 +405,7 @@ export default function LessonGenerator({ children, onClose }: Props) {
                 onClick={adaptForAnotherChild}
                 className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700"
               >
-                Adapt this lesson for another child
+                📚 Use this lesson for another child
               </button>
               <button
   onClick={onClose}
@@ -341,6 +414,65 @@ export default function LessonGenerator({ children, onClose }: Props) {
   Done
 </button>
             </div>
+          </div>
+        )}
+
+        {/* Adapt Modal */}
+        {showAdaptModal && selectedVariation && (
+          <div className="space-y-4">
+            <div className="text-center mb-4">
+              <div className="text-4xl mb-2">📚</div>
+              <h3 className="text-xl font-bold text-gray-900">Adapt Lesson for Another Child</h3>
+              <p className="text-sm text-gray-600 mt-2">
+                "{selectedVariation.title}" will be copied to the selected child
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-2">
+                Select Child
+              </label>
+              <select
+                value={adaptTargetChildId}
+                onChange={(e) => setAdaptTargetChildId(e.target.value)}
+                className="w-full border rounded-lg px-3 py-2 text-gray-900"
+              >
+                <option value="">Choose a child...</option>
+                {children
+                  .filter(child => child.id !== formData.childId)
+                  .map(child => (
+                    <option key={child.id} value={child.id}>
+                      {child.name}{child.grade_level ? ` (${child.grade_level})` : ''}
+                    </option>
+                  ))}
+              </select>
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={saveAdaptedLesson}
+                disabled={!adaptTargetChildId}
+                className="flex-1 bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+              >
+                Save for {adaptTargetChildId ? children.find(c => c.id === adaptTargetChildId)?.name : 'Child'}
+              </button>
+              <button
+                onClick={() => {
+                  setShowAdaptModal(false)
+                  setAdaptTargetChildId('')
+                }}
+                className="flex-1 border border-gray-300 py-3 rounded-lg hover:bg-gray-50 text-gray-900"
+              >
+                Cancel
+              </button>
+            </div>
+
+            <button
+              onClick={onClose}
+              className="w-full text-sm text-gray-600 hover:text-gray-900"
+            >
+              Close Generator
+            </button>
           </div>
         )}
       </div>

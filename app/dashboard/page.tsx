@@ -58,6 +58,8 @@ export default function Dashboard() {
   const [viewMode, setViewMode] = useState<'today' | 'week' | 'calendar' | 'list'>('today')
   const [selectedLesson, setSelectedLesson] = useState<any | null>(null)
   const [selectedLessonChild, setSelectedLessonChild] = useState<any | null>(null)
+  const [showCopyModal, setShowCopyModal] = useState(false)
+  const [copyTargetChildId, setCopyTargetChildId] = useState('')
   
   // Kid form state
   const [name, setName] = useState('')
@@ -352,6 +354,35 @@ export default function Dashboard() {
     if (confirm(confirmMessage)) {
       await supabase.from('lessons').delete().eq('id', id)
       loadAllLessons()
+    }
+  }
+
+  const copyLessonToChild = async () => {
+    if (!copyTargetChildId || !selectedLesson) return
+
+    const targetChild = kids.find(k => k.id === copyTargetChildId)
+    if (!targetChild) return
+
+    const { error } = await supabase
+      .from('lessons')
+      .insert([{
+        kid_id: copyTargetChildId,
+        subject: selectedLesson.subject,
+        title: selectedLesson.title,
+        description: selectedLesson.description,
+        lesson_date: selectedLesson.lesson_date,
+        duration_minutes: selectedLesson.duration_minutes,
+        status: 'not_started'
+      }])
+
+    if (!error) {
+      alert(`Lesson copied to ${targetChild.name}!`)
+      setShowCopyModal(false)
+      setCopyTargetChildId('')
+      loadAllLessons()
+    } else {
+      console.error('Copy error:', error)
+      alert('Failed to copy lesson. Please try again.')
     }
   }
 
@@ -701,7 +732,7 @@ export default function Dashboard() {
                         onClick={() => setShowGenerator(true)}
                         className="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded hover:from-purple-700 hover:to-blue-700"
                       >
-                        📚 Generator
+                        ✨ Generate Lessons
                       </button>
                     </div>
                   </div>
@@ -997,6 +1028,12 @@ export default function Dashboard() {
                               Edit Lesson
                             </button>
                             <button
+                              onClick={() => setShowCopyModal(true)}
+                              className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
+                            >
+                              📚 Copy to Another Child
+                            </button>
+                            <button
                               onClick={() => {
                                 deleteLesson(selectedLesson.id)
                                 setSelectedLesson(null)
@@ -1018,6 +1055,60 @@ export default function Dashboard() {
                           </div>
                         </div>
                       )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Copy to Another Child Modal */}
+                {showCopyModal && selectedLesson && selectedLessonChild && (
+                  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setShowCopyModal(false)}>
+                    <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
+                      <div className="text-center mb-4">
+                        <div className="text-4xl mb-2">📚</div>
+                        <h3 className="text-xl font-bold text-gray-900">Copy Lesson to Another Child</h3>
+                        <p className="text-sm text-gray-600 mt-2">
+                          "{selectedLesson.title}" will be copied from {selectedLessonChild.name}
+                        </p>
+                      </div>
+
+                      <div className="mb-4">
+                        <label className="block text-sm font-medium text-gray-900 mb-2">
+                          Select Child
+                        </label>
+                        <select
+                          value={copyTargetChildId}
+                          onChange={(e) => setCopyTargetChildId(e.target.value)}
+                          className="w-full border rounded-lg px-3 py-2 text-gray-900"
+                        >
+                          <option value="">Choose a child...</option>
+                          {kids
+                            .filter(kid => kid.id !== selectedLessonChild.id)
+                            .map(kid => (
+                              <option key={kid.id} value={kid.id}>
+                                {kid.name}{kid.grade ? ` (${kid.grade})` : ''}
+                              </option>
+                            ))}
+                        </select>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <button
+                          onClick={copyLessonToChild}
+                          disabled={!copyTargetChildId}
+                          className="flex-1 bg-purple-600 text-white py-3 rounded-lg hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium"
+                        >
+                          Copy to {copyTargetChildId ? kids.find(k => k.id === copyTargetChildId)?.name : 'Child'}
+                        </button>
+                        <button
+                          onClick={() => {
+                            setShowCopyModal(false)
+                            setCopyTargetChildId('')
+                          }}
+                          className="flex-1 border border-gray-300 py-3 rounded-lg hover:bg-gray-50 text-gray-900 font-medium"
+                        >
+                          Cancel
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}
