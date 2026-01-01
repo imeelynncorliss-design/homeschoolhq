@@ -236,8 +236,27 @@ export default function TodaysDashboard({ kids, lessonsByKid, onStatusChange, on
                       </div>
                       <h3 className="font-semibold text-gray-900 mb-1">{lesson.title}</h3>
                       {lesson.description && (
-                        <p className="text-sm text-gray-600 line-clamp-2">{lesson.description}</p>
+                        <p className="text-sm text-gray-600 line-clamp-2 mb-2">{lesson.description}</p>
                       )}
+                      {/* Date Information */}
+                      <div className="flex items-center gap-3 text-xs text-gray-500">
+                        {lesson.date && (
+                          <span className="inline-flex items-center gap-1">
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            Scheduled: {new Date(lesson.date).toLocaleDateString()}
+                          </span>
+                        )}
+                        {lesson.status === 'completed' && lesson.completed_at && (
+                          <span className="inline-flex items-center gap-1 text-green-600 font-medium">
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Completed: {new Date(lesson.completed_at).toLocaleDateString()}
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     <StatusButton lesson={lesson} child={kid} />
