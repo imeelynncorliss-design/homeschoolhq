@@ -17,7 +17,9 @@ interface Lesson {
 
 interface Child {
   id: string
-  name: string
+  firstname: string
+  lastname: string
+  displayname: string
   age?: number
   grade?: string
   photo_url?: string
@@ -344,12 +346,12 @@ export default function AllChildrenList({
                 {kid.photo_url && (
                   <img 
                     src={kid.photo_url} 
-                    alt={kid.name}
+                    alt={kid.displayname}
                     className="w-16 h-16 rounded-full object-cover"
                   />
                 )}
                 <div className="text-left">
-                  <h2 className="text-2xl font-bold text-gray-900">{kid.name}</h2>
+                  <h2 className="text-2xl font-bold text-gray-900">{kid.displayname}</h2>
                   <p className="text-gray-600">
                     {kid.age && `Age: ${kid.age}`}
                     {kid.age && kid.grade && ' • '}
@@ -390,7 +392,7 @@ export default function AllChildrenList({
                 <div className="pt-6">
                   <HoursTracker
                     lessons={kidLessons}
-                    childName={kid.name}
+                    childName={kid.displayname}
                     childId={kid.id}
                     photoUrl={kid.photo_url}
                   />
@@ -398,7 +400,7 @@ export default function AllChildrenList({
 
                 {/* Lessons */}
                 {kidLessons.length === 0 ? (
-                  <p className="text-gray-600 text-center py-8">No lessons yet for {kid.name}</p>
+                  <p className="text-gray-600 text-center py-8">No lessons yet for {kid.displayname}</p>
                 ) : (
                   <div className="space-y-4">
                     {Object.entries(grouped).map(([status, subjects]) => {

@@ -16,8 +16,10 @@ interface Lesson {
 }
 
 interface Child {
-  id: string
-  name: string
+  id: string  
+  firstname: string
+  lastname: string
+  displayname: string
   age?: number
   grade?: string
   photo_url?: string
@@ -70,7 +72,10 @@ export default function TodaysDashboard({ kids, lessonsByKid, onStatusChange, on
     const minutes = kidLessons.reduce((sum, l) => sum + (l.duration_minutes || 0), 0)
     return {
       id: kid.id,
-      name: kid.name,
+      name: kid.displayname,
+      firstname: kid.firstname,
+      lastname: kid.lastname,
+      displayname: kid.displayname,
       total,
       completed,
       hours: (minutes / 60).toFixed(1)
@@ -237,12 +242,12 @@ export default function TodaysDashboard({ kids, lessonsByKid, onStatusChange, on
                   {kid.photo_url && (
                     <img 
                       src={kid.photo_url} 
-                      alt={kid.name}
+                      alt={kid.displayname}
                       className="w-12 h-12 rounded-full object-cover border-2 border-white shadow"
                     />
                   )}
                   <div className="text-left">
-                    <h2 className="text-xl font-bold text-gray-900">{kid.name}</h2>
+                    <h2 className="text-xl font-bold text-gray-900">{kid.displayname}</h2>
                     <p className="text-sm text-gray-600">
                       {kidCompleted} of {kidTotal} lessons • {(kidMinutes / 60).toFixed(1)} hours
                     </p>

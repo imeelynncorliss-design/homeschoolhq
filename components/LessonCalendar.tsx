@@ -23,7 +23,9 @@ interface Lesson {
 
 interface Child {
   id: string
-  name: string
+  displayname: string
+  firstname: string
+  lastname: string
   age?: number
   grade?: string
   photo_url?: string
@@ -206,7 +208,7 @@ export default function LessonCalendar({ kids, lessonsByKid, onLessonClick }: Le
         {child?.photo_url && (
           <img 
             src={child.photo_url} 
-            alt={child.name}
+            alt={child.displayname}
             className="w-5 h-5 rounded-full object-cover flex-shrink-0"
           />
         )}
@@ -237,7 +239,7 @@ export default function LessonCalendar({ kids, lessonsByKid, onLessonClick }: Le
           end: endDate,
           resource: { lesson, child: kid },
           kidId: kid.id,
-          kidName: kid.name
+          kidName: kid.displayname
         }
       })
   })
@@ -274,11 +276,11 @@ export default function LessonCalendar({ kids, lessonsByKid, onLessonClick }: Le
             {kid.photo_url && (
               <img 
                 src={kid.photo_url} 
-                alt={kid.name}
+                alt={kid.displayname}
                 className="w-6 h-6 rounded-full object-cover"
               />
             )}
-            <span className="text-sm text-gray-700 font-medium">{kid.name}</span>
+            <span className="text-sm text-gray-700 font-medium">{kid.displayname}</span>
             <div 
               className="print-legend-color w-4 h-4 rounded-full" 
               style={{ backgroundColor: kidColors[kid.id] }}

@@ -17,7 +17,9 @@ interface Lesson {
 
 interface Child {
   id: string
-  name: string
+  firstname: string
+  lastname: string
+  displayname: string
   age?: number
   grade?: string
   photo_url?: string
@@ -100,7 +102,10 @@ export default function ThisWeekDashboard({ kids, lessonsByKid, onStatusChange, 
     const minutes = kidWeekLessons.reduce((sum, l) => sum + (l.duration_minutes || 0), 0)
     return {
       id: kid.id,
-      name: kid.name,
+      name: kid.displayname,
+      firstname: kid.firstname,
+      lastname: kid.lastname,
+      displayname: kid.displayname,
       total,
       completed,
       hours: (minutes / 60).toFixed(1)
@@ -243,7 +248,7 @@ export default function ThisWeekDashboard({ kids, lessonsByKid, onStatusChange, 
             <div className="space-y-2">
               {childStats.map(stat => (
                 <div key={stat.id} className="flex items-center justify-between text-sm bg-white/10 rounded-lg px-3 py-2">
-                  <span className="font-medium">{stat.name}</span>
+                  <span className="font-medium">{stat.displayname}</span>
                   <span className="text-indigo-100">
                     {stat.total} {stat.total === 1 ? 'lesson' : 'lessons'} ({stat.completed} done) • {stat.hours}h
                   </span>
@@ -373,12 +378,12 @@ export default function ThisWeekDashboard({ kids, lessonsByKid, onStatusChange, 
                                 {kid.photo_url && (
                                   <img 
                                     src={kid.photo_url} 
-                                    alt={kid.name}
+                                    alt={kid.displayname}
                                     className="w-8 h-8 rounded-full object-cover"
                                   />
                                 )}
                                 <div className="text-left">
-                                  <h4 className="font-semibold text-gray-900">{kid.name}</h4>
+                                  <h4 className="font-semibold text-gray-900">{kid.displayname}</h4>
                                   <p className="text-xs text-gray-600">
                                     {childCompleted} of {childTotal} • {(childMinutes / 60).toFixed(1)}h
                                   </p>

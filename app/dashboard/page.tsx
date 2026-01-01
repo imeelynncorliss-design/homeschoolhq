@@ -11,6 +11,8 @@ import LessonCalendar from '@/components/LessonCalendar'
 import AllChildrenList from '@/components/AllChildrenList'
 import TodaysDashboard from '@/components/TodaysDashboard'
 import ThisWeekDashboard from '@/components/ThisWeekDashboard'
+import KidCard from '@/components/KidCard'
+import KidProfileForm from '@/components/KidProfileForm'
 
 const DURATION_OPTIONS = [
   '15 min',
@@ -41,7 +43,6 @@ const parseDurationToMinutes = (duration: string): number => {
 export default function Dashboard() {
   const [showGenerator, setShowGenerator] = useState(false);
   const [showImporter, setShowImporter] = useState(false);
-  const [showAddKidForm, setShowAddKidForm] = useState(false);
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [kids, setKids] = useState<any[]>([])
@@ -61,17 +62,10 @@ export default function Dashboard() {
   const [showCopyModal, setShowCopyModal] = useState(false)
   const [copyTargetChildId, setCopyTargetChildId] = useState('')
   
-  // Kid form state
-  const [name, setName] = useState('')
-  const [age, setAge] = useState('')
-  const [grade, setGrade] = useState('')
-  const [adding, setAdding] = useState(false)
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [editName, setEditName] = useState('')
-  const [editAge, setEditAge] = useState('')
-  const [editGrade, setEditGrade] = useState('')
-  const [photoFile, setPhotoFile] = useState<File | null>(null)
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null)
+
+  //Profile form state
+  const [showProfileForm, setShowProfileForm] = useState(false)
+  const [editingKid, setEditingKid] = useState<any | null>(null)
   
   // Lesson form state
   const [showLessonForm, setShowLessonForm] = useState(false)
@@ -156,87 +150,16 @@ export default function Dashboard() {
     }
   }
 
-  const addKid = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setAdding(true)
-  
-    const { data, error } = await supabase
-      .from('kids')
-      .insert([{ 
-        name, 
-        age: age ? parseInt(age) : null, 
-        grade 
-      }])
-      .select()
-  
-    if (!error && data && data.length > 0) {
-      const newKidId = data[0].id
-      
-      // Upload photo if one was selected
-      if (photoFile) {
-        const fileExt = photoFile.name.split('.').pop()
-        const fileName = `${newKidId}/${Date.now()}.${fileExt}`
-        
-        const { error: uploadError } = await supabase.storage
-          .from('child-photos')
-          .upload(fileName, photoFile)
-        
-        if (!uploadError) {
-          const { data: { publicUrl } } = supabase.storage
-            .from('child-photos')
-            .getPublicUrl(fileName)
-          
-          await supabase
-            .from('kids')
-            .update({ photo_url: publicUrl })
-            .eq('id', newKidId)
-        }
-      }
-      
-      setName('')
-      setAge('')
-      setGrade('')
-      setPhotoFile(null)
-      setPhotoPreview(null)
-      setShowAddKidForm(false)
-      loadKids()
-      setSelectedKid(newKidId)
-    }
-    setAdding(false)
-  }
 
-  const deleteKid = async (id: string, kidName: string) => {
-    if (confirm(`Delete ${kidName}? This will also delete all their lessons.`)) {
+  const deleteKid = async (id: string, kidDisplayName: string) => {
+    if (confirm(`Delete ${kidDisplayName}? This will also delete all their lessons.`)) {
       await supabase.from('kids').delete().eq('id', id)
       if (selectedKid === id) setSelectedKid(kids[0]?.id || null)
       loadKids()
     }
   }
 
-  const startEdit = (kid: any) => {
-    setEditingId(kid.id)
-    setEditName(kid.name)
-    setEditAge(kid.age?.toString() || '')
-    setEditGrade(kid.grade || '')
-  }
-
-  const cancelEdit = () => {
-    setEditingId(null)
-  }
-
-  const saveEdit = async (id: string) => {
-    await supabase
-      .from('kids')
-      .update({ 
-        name: editName, 
-        age: editAge ? parseInt(editAge) : null, 
-        grade: editGrade 
-      })
-      .eq('id', id)
-    
-    setEditingId(null)
-    loadKids()
-  }
+  
 
   const addLesson = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -376,7 +299,7 @@ export default function Dashboard() {
       }])
 
     if (!error) {
-      alert(`Lesson copied to ${targetChild.name}!`)
+      alert(`Lesson copied to ${targetChild.displayname}!`)
       setShowCopyModal(false)
       setCopyTargetChildId('')
       loadAllLessons()
@@ -389,18 +312,6 @@ export default function Dashboard() {
   const handleLogout = async () => {
     await supabase.auth.signOut()
     router.push('/')
-  }
-
-  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        alert('File too large. Maximum size is 5MB.')
-        return
-      }
-      setPhotoFile(file)
-      setPhotoPreview(URL.createObjectURL(file))
-    }
   }
 
   const completeTour = () => {
@@ -464,17 +375,17 @@ export default function Dashboard() {
                       setViewMode('list')
                     }}
                       className={`w-full p-2 rounded transition-colors ${selectedKid === kid.id ? 'bg-blue-100 ring-2 ring-blue-400' : 'hover:bg-gray-100'}`}
-                      title={kid.name}
+                      title={kid.displayname}
                     >
                       {kid.photo_url ? (
                         <img 
                           src={kid.photo_url} 
-                          alt={kid.name}
+                          alt={kid.displayname}
                           className="w-10 h-10 rounded-full object-cover mx-auto"
                         />
                       ) : (
                         <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center mx-auto text-sm font-bold">
-                          {kid.name.charAt(0)}
+                          {kid.displayname.charAt(0)}
                         </div>
                       )}
                     </button>
@@ -495,171 +406,38 @@ export default function Dashboard() {
                 </div>
                 <p className="text-sm text-gray-600 mb-3">👉 Click a child's name to view their lessons</p>
                 
-                {kids.length === 0 ? (
-                  <p className="text-gray-600 mb-4">No children added yet.</p>
-                ) : (
-                  <div className="space-y-3 mb-4">
-                    {kids.map((kid, index) => (
-                      <div key={kid.id} className={`border rounded p-3 ${index === 0 ? 'kid-card' : ''}`}>
-                        {editingId === kid.id ? (
-                          <div className="space-y-2">
-                            <ChildPhotoUpload
-                              childId={kid.id}
-                              currentPhotoUrl={kid.photo_url}
-                              onUploadComplete={() => loadKids()}
-                            />
-                            <input
-                              type="text"
-                              value={editName}
-                              onChange={(e) => setEditName(e.target.value)}
-                              className="w-full px-2 py-1 border rounded text-gray-900 text-sm"
-                            />
-                            <input
-                              type="number"
-                              value={editAge}
-                              onChange={(e) => setEditAge(e.target.value)}
-                              className="w-full px-2 py-1 border rounded text-gray-900 text-sm"
-                            />
-                            <input
-                              type="text"
-                              value={editGrade}
-                              onChange={(e) => setEditGrade(e.target.value)}
-                              className="w-full px-2 py-1 border rounded text-gray-900 text-sm"
-                            />
-                            <div className="flex gap-2">
-                              <button
-                                onClick={() => saveEdit(kid.id)}
-                                className="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700"
-                              >
-                                Save
-                              </button>
-                              <button
-                                onClick={cancelEdit}
-                                className="px-3 py-1 bg-gray-600 text-white text-sm rounded hover:bg-gray-700"
-                              >
-                                Cancel
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <div>
-                            <div className="flex justify-between items-start mb-2">
-                            <div 
-  className="cursor-pointer flex-1 hover:bg-blue-50 transition-colors"
+              {kids.length === 0 ? (
+  <p className="text-gray-600 mb-4">No children added yet.</p>
+) : (
+  <div className="space-y-3 mb-4">
+    {kids.map((kid) => (
+      <KidCard
+        key={kid.id}
+        kid={kid}
+        isSelected={selectedKid === kid.id}
+        onSelect={() => {
+          setSelectedKid(kid.id)
+          setViewMode('list')
+        }}
+        onEdit={() => {
+          setEditingKid(kid)
+          setShowProfileForm(true)
+        }}
+        onDelete={() => deleteKid(kid.id, kid.displayname)}
+      />
+    ))}
+  </div>
+)}
+
+<button
   onClick={() => {
-    setSelectedKid(kid.id)
-    setViewMode('list') 
+    setEditingKid(null)
+    setShowProfileForm(true)
   }}
+  className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
 >
-                                {kid.photo_url && (
-                                  <img 
-                                    src={kid.photo_url} 
-                                    alt={kid.name}
-                                    className="w-12 h-12 rounded-full object-cover mb-2"
-                                  />
-                                )}
-                                <h3 className={`font-semibold ${selectedKid === kid.id ? 'text-blue-600' : 'text-gray-900'} ${selectedKid === kid.id ? 'bg-blue-50 p-2 rounded' : ''}`}>
-                                  {kid.name}
-                                </h3>
-                                <p className="text-gray-600 text-sm">
-                                  {kid.age && `Age: ${kid.age}`}
-                                  {kid.age && kid.grade && ' • '}
-                                  {kid.grade && `Grade: ${kid.grade}`}
-                                </p>
-                              </div>
-                            </div>
-                            <div className="flex gap-2">
-                              <button
-                                onClick={() => startEdit(kid)}
-                                className="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
-                              >
-                                Edit
-                              </button>
-                              <button
-                                onClick={() => deleteKid(kid.id, kid.name)}
-                                className="px-2 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700"
-                              >
-                                Delete
-                              </button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-                
-                <button
-                  onClick={() => setShowAddKidForm(!showAddKidForm)}
-                  className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 mb-3"
-                >
-                  {showAddKidForm ? '− Cancel' : '+ Add a Child'}
-                </button>
-                
-                {showAddKidForm && (
-                  <form onSubmit={addKid} className="space-y-3 p-4 border rounded bg-gray-50">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Child's Photo (optional)
-                      </label>
-                      {photoPreview ? (
-                        <div className="flex items-center gap-3">
-                          <img 
-                            src={photoPreview} 
-                            alt="Preview"
-                            className="w-20 h-20 rounded-full object-cover"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setPhotoFile(null)
-                              setPhotoPreview(null)
-                            }}
-                            className="text-sm text-red-600 hover:text-red-700"
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      ) : (
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handlePhotoSelect}
-                          className="w-full px-3 py-2 border rounded text-gray-900 text-sm"
-                        />
-                      )}
-                    </div>
-                    <input
-                      type="text"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      className="w-full px-3 py-2 border rounded text-gray-900"
-                      placeholder="Name *"
-                      required
-                    />
-                    <input
-                      type="number"
-                      value={age}
-                      onChange={(e) => setAge(e.target.value)}
-                      className="w-full px-3 py-2 border rounded text-gray-900"
-                      placeholder="Age"
-                    />
-                    <input
-                      type="text"
-                      value={grade}
-                      onChange={(e) => setGrade(e.target.value)}
-                      className="w-full px-3 py-2 border rounded text-gray-900"
-                      placeholder="Grade"
-                    />
-                    <button
-                      type="submit"
-                      disabled={adding}
-                      className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700"
-                    >
-                      {adding ? 'Adding...' : 'Add Child'}
-                    </button>
-                  </form>
-                )}
+  + Add a Child
+</button>
               </div>
             )}
           </div>
@@ -764,7 +542,7 @@ export default function Dashboard() {
                       >
                         <option value="">Select Child *</option>
                         {kids.map(kid => (
-                          <option key={kid.id} value={kid.id}>{kid.name}</option>
+                          <option key={kid.id} value={kid.id}>{kid.displayname}</option>
                         ))}
                       </select>
                       <input
@@ -854,7 +632,7 @@ export default function Dashboard() {
   autoExpandKid={selectedKid}
   onEditLesson={(lesson) => {
     setSelectedLesson(lesson)
-    setSelectedLessonChild(kids.find(k => k.id === lesson.kid_id))
+    setSelectedLessonChild(kids.find(k => k.id === lesson.kid_id) || null)
     startEditLesson(lesson)
   }}
   onDeleteLesson={deleteLesson}
@@ -875,12 +653,12 @@ export default function Dashboard() {
                           {selectedLessonChild.photo_url && (
                             <img 
                               src={selectedLessonChild.photo_url} 
-                              alt={selectedLessonChild.name}
+                              alt={selectedLessonChild.displayname}
                               className="w-12 h-12 rounded-full object-cover"
                             />
                           )}
                           <div>
-                            <p className="text-sm text-gray-600">{selectedLessonChild.name}</p>
+                            <p className="text-sm text-gray-600">{selectedLessonChild.displayname}</p>
                             <h3 className="text-2xl font-bold text-gray-900">{selectedLesson.title}</h3>
                             <p className="text-gray-600">{selectedLesson.subject}</p>
                           </div>
@@ -1072,7 +850,7 @@ export default function Dashboard() {
                         <div className="text-4xl mb-2">📚</div>
                         <h3 className="text-xl font-bold text-gray-900">Copy Lesson to Another Child</h3>
                         <p className="text-sm text-gray-600 mt-2">
-                          "{selectedLesson.title}" will be copied from {selectedLessonChild.name}
+                          "{selectedLesson.title}" will be copied from {selectedLessonChild.displayname}
                         </p>
                       </div>
 
@@ -1090,7 +868,7 @@ export default function Dashboard() {
                             .filter(kid => kid.id !== selectedLessonChild.id)
                             .map(kid => (
                               <option key={kid.id} value={kid.id}>
-                                {kid.name}{kid.grade ? ` (${kid.grade})` : ''}
+                                {kid.displayname}{kid.grade ? ` (${kid.grade})` : ''}
                               </option>
                             ))}
                         </select>
@@ -1102,7 +880,7 @@ export default function Dashboard() {
                           disabled={!copyTargetChildId}
                           className="flex-1 bg-purple-600 text-white py-3 rounded-lg hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium"
                         >
-                          Copy to {copyTargetChildId ? kids.find(k => k.id === copyTargetChildId)?.name : 'Child'}
+                          Copy to {copyTargetChildId ? kids.find(k => k.id === copyTargetChildId)?.displayname : 'Child'}
                         </button>
                         <button
                           onClick={() => {
@@ -1128,7 +906,7 @@ export default function Dashboard() {
                 {showImporter && selectedKid && (
                   <CurriculumImporter
                     childId={selectedKid}
-                    childName={kids.find(k => k.id === selectedKid)?.name || ''}
+                    childName={kids.find(k => k.id === selectedKid)?.displayname || ''}
                     onClose={() => setShowImporter(false)}
                     onImportComplete={() => {
                       setShowImporter(false)
@@ -1146,7 +924,132 @@ export default function Dashboard() {
         </div>
       </div>
       
-      <OnboardingTour key={tourKey} run={showTour} onComplete={completeTour} />
-    </div>
-  )
+      {/* Kid Profile Form Modal */}
+      {showProfileForm && (
+         <KidProfileForm
+           kid={editingKid || undefined}
+   
+    onSave={async (data) => {
+      if (data.id) {
+        // Update existing kid
+        const updateData: any = {
+          firstname: data.firstname,
+          lastname: data.lastname,
+          displayname: data.displayname || data.firstname,
+          age: data.age,
+          grade: data.grade,
+          learning_style: data.learning_style,
+          pace_of_learning: data.pace_of_learning,
+          environmental_needs: data.environmental_needs,
+          current_hook: data.current_hook,
+          todays_vibe: data.todays_vibe,
+          current_focus: data.current_focus
+        }
+    
+        if (data.photoFile) {
+          const fileExt = data.photoFile.name.split('.').pop()
+          const fileName = `${data.id}/${Date.now()}.${fileExt}`
+          
+          const { error: uploadError } = await supabase.storage
+            .from('child-photos')
+            .upload(fileName, data.photoFile)
+          
+          if (!uploadError) {
+            const { data: { publicUrl } } = supabase.storage
+              .from('child-photos')
+              .getPublicUrl(fileName)
+            
+            updateData.photo_url = publicUrl
+          }
+        }
+    
+        await supabase
+          .from('kids')
+          .update(updateData)
+          .eq('id', data.id)
+    
+        if (data.subject_proficiencies?.length > 0) {
+          await supabase
+            .from('subject_proficiency')
+            .delete()
+            .eq('kid_id', data.id)
+    
+          const proficienciesToInsert = data.subject_proficiencies.map((sp: any) => ({
+            kid_id: data.id,
+            subject: sp.subject,
+            proficiency: sp.proficiency,
+            notes: sp.notes || ''
+          }))
+    
+          await supabase
+            .from('subject_proficiency')
+            .insert(proficienciesToInsert)
+        }
+      } else {
+        const { data: newKid, error } = await supabase
+          .from('kids')
+          .insert([{
+            firstname: data.firstname,
+            lastname: data.lastname,
+            displayname: data.displayname || data.firstname,
+            age: data.age,
+            grade: data.grade,
+            learning_style: data.learning_style,
+            pace_of_learning: data.pace_of_learning,
+            environmental_needs: data.environmental_needs,
+            current_hook: data.current_hook,
+            todays_vibe: data.todays_vibe,
+            current_focus: data.current_focus
+          }])
+          .select()
+    
+        if (!error && newKid?.length > 0) {
+          const newKidId = newKid[0].id
+    
+          if (data.photoFile) {
+            const fileExt = data.photoFile.name.split('.').pop()
+            const fileName = `${newKidId}/${Date.now()}.${fileExt}`
+            
+            const { error: uploadError } = await supabase.storage
+              .from('child-photos')
+              .upload(fileName, data.photoFile)
+            
+            if (!uploadError) {
+              const { data: { publicUrl } } = supabase.storage
+                .from('child-photos')
+                .getPublicUrl(fileName)
+              
+              await supabase
+                .from('kids')
+                .update({ photo_url: publicUrl })
+                .eq('id', newKidId)
+            }
+          }
+    
+          if (data.subject_proficiencies?.length > 0) {
+            const proficienciesToInsert = data.subject_proficiencies.map((sp: any) => ({
+              kid_id: newKidId,
+              subject: sp.subject,
+              proficiency: sp.proficiency,
+              notes: sp.notes || ''
+            }))
+    
+            await supabase
+              .from('subject_proficiency')
+              .insert(proficienciesToInsert)
+          }
+        }
+      }
+      loadKids()
+    }}
+    onCancel={() => {
+      setShowProfileForm(false)
+      setEditingKid(null)
+    }}
+  />
+)}
+
+<OnboardingTour key={tourKey} run={showTour} onComplete={completeTour} />
+</div>
+)
 }
