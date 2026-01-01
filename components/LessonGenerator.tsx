@@ -300,12 +300,25 @@ export default function LessonGenerator({ children, onClose }: Props) {
               ))}
             </div>
 
-            <button
-  onClick={() => setStep(2)}
-  className="w-full border border-gray-300 py-3 rounded-lg hover:bg-gray-50 text-gray-900"
->
-  ← Start Over
-</button>
+            {/* REGENERATE BUTTON - NEW */}
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center">
+              <p className="text-sm text-gray-600 mb-3">Don't like these options?</p>
+              <div className="flex gap-3">
+                <button
+                  onClick={generateLessons}
+                  disabled={loading}
+                  className="flex-1 bg-purple-600 text-white py-3 rounded-lg hover:bg-purple-700 disabled:bg-purple-400 font-medium transition-colors"
+                >
+                  {loading ? '🔄 Regenerating...' : '🔄 Try Different Options'}
+                </button>
+                <button
+                  onClick={() => setStep(2)}
+                  className="flex-1 border border-gray-300 py-3 rounded-lg hover:bg-gray-50 text-gray-900"
+                >
+                  ← Change Settings
+                </button>
+              </div>
+            </div>
           </div>
         )}
 

@@ -10,6 +10,7 @@ import OnboardingTour from '@/components/OnboardingTour'
 import LessonCalendar from '@/components/LessonCalendar'
 import AllChildrenList from '@/components/AllChildrenList'
 import TodaysDashboard from '@/components/TodaysDashboard'
+import ThisWeekDashboard from '@/components/ThisWeekDashboard'
 
 const DURATION_OPTIONS = [
   '15 min',
@@ -54,7 +55,7 @@ export default function Dashboard() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   
   // View mode state - DEFAULT TO TODAY
-  const [viewMode, setViewMode] = useState<'today' | 'calendar' | 'list'>('today')
+  const [viewMode, setViewMode] = useState<'today' | 'week' | 'calendar' | 'list'>('today')
   const [selectedLesson, setSelectedLesson] = useState<any | null>(null)
   const [selectedLessonChild, setSelectedLessonChild] = useState<any | null>(null)
   
@@ -639,7 +640,7 @@ export default function Dashboard() {
                       Family Schedule
                     </h2>
                     
-                    {/* View Toggle - 3 TABS */}
+                    {/* View Toggle - 4 TABS */}
                     <div className="flex bg-gray-100 rounded-lg p-1">
                       <button
                         onClick={() => setViewMode('today')}
@@ -652,6 +653,16 @@ export default function Dashboard() {
                         📚 Today
                       </button>
                       <button
+                        onClick={() => setViewMode('week')}
+                        className={`px-6 py-3 rounded transition-all ${
+                          viewMode === 'week'
+                            ? 'bg-white shadow text-gray-900 font-semibold'
+                            : 'text-gray-600 hover:text-gray-900'
+                        }`}
+                      >
+                        📅 This Week
+                      </button>
+                      <button
                         onClick={() => setViewMode('calendar')}
                         className={`px-6 py-3 rounded transition-all ${
                           viewMode === 'calendar'
@@ -659,7 +670,7 @@ export default function Dashboard() {
                             : 'text-gray-600 hover:text-gray-900'
                         }`}
                       >
-                        📅 Calendar
+                        🗓️ Calendar
                       </button>
                       <button
                         onClick={() => setViewMode('list')}
@@ -771,9 +782,19 @@ export default function Dashboard() {
                   </div>
                 )}
 
-                {/* TODAY / CALENDAR / LIST VIEW */}
+                {/* TODAY / WEEK / CALENDAR / LIST VIEW */}
                 {viewMode === 'today' ? (
                   <TodaysDashboard
+                    kids={kids}
+                    lessonsByKid={lessonsByKid}
+                    onStatusChange={handleStatusChange}
+                    onLessonClick={(lesson, child) => {
+                      setSelectedLesson(lesson)
+                      setSelectedLessonChild(child)
+                    }}
+                  />
+                ) : viewMode === 'week' ? (
+                  <ThisWeekDashboard
                     kids={kids}
                     lessonsByKid={lessonsByKid}
                     onStatusChange={handleStatusChange}
