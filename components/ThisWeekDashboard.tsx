@@ -36,7 +36,7 @@ export default function ThisWeekDashboard({ kids, lessonsByKid, onStatusChange, 
   const endOfWeek = moment().endOf('week').add(1, 'day') // Sunday
   
   // Create array of days in this week
-  const daysOfWeek = []
+  const daysOfWeek: moment.Moment[] = []
   let currentDay = startOfWeek.clone()
   while (currentDay.isSameOrBefore(endOfWeek)) {
     daysOfWeek.push(currentDay.clone())
