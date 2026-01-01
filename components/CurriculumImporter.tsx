@@ -116,6 +116,15 @@ export default function CurriculumImporter({ childId, childName, onClose, onImpo
     try {
       // Fetch existing lessons for this child using Supabase
       const { supabase } = await import('@/lib/supabase');
+      
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        alert('You must be logged in to import lessons');
+        setLoading(false);
+        return;
+      }
+      
       const { data: existingLessons } = await supabase
         .from('lessons')
         .select('title, subject')
@@ -130,27 +139,52 @@ export default function CurriculumImporter({ childId, childName, onClose, onImpo
       
       const duplicateCount = lessonsToImport.length - newLessons.length;
       
-      // Import only new lessons with their durations
+      // Prepare lessons for bulk insert
+      const lessonsToInsert = [];
       for (let i = 0; i < extractedLessons.length; i++) {
         const lesson = extractedLessons[i];
         if (selectedLessons.has(i) && newLessons.includes(lesson)) {
-          await fetch('/api/lessons', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              child_id: childId,
-              title: lesson.title,
-              subject: lesson.subject,
-              description: lesson.description,
-              date: lesson.lesson_date || null,
-              duration: lessonDurations[i] || null,
-            }),
+          // Parse duration string to minutes
+          let durationMinutes = null;
+          if (lessonDurations[i]) {
+            const durationStr = lessonDurations[i];
+            if (durationStr.includes('hour')) {
+              const hours = parseFloat(durationStr);
+              durationMinutes = hours * 60;
+            } else if (durationStr.includes('min')) {
+              durationMinutes = parseInt(durationStr);
+            }
+          }
+          
+          lessonsToInsert.push({
+            kid_id: childId,
+            user_id: user.id,
+            subject: lesson.subject,
+            title: lesson.title,
+            description: lesson.description,
+            lesson_date: null, // ✅ Always null - parent schedules later!
+            duration_minutes: durationMinutes,
+            status: 'not_started'
           });
         }
       }
       
+      // Bulk insert all lessons at once
+      if (lessonsToInsert.length > 0) {
+        const { error } = await supabase
+          .from('lessons')
+          .insert(lessonsToInsert);
+        
+        if (error) {
+          console.error('Import error:', error);
+          alert(`Failed to import lessons: ${error.message}`);
+          setLoading(false);
+          return;
+        }
+      }
+      
       // Store results for success message
-      setImportResults({ imported: newLessons.length, skipped: duplicateCount });
+      setImportResults({ imported: lessonsToInsert.length, skipped: duplicateCount });
       setStep('success');
     } catch (error) {
       console.error('Import error:', error);
@@ -263,9 +297,6 @@ export default function CurriculumImporter({ childId, childName, onClose, onImpo
                               {lesson.duration && (
                                 <span className="bg-gray-100 px-2 py-1 rounded">{lesson.duration}</span>
                               )}
-                              {lesson.lesson_date && (
-                                <span className="bg-gray-100 px-2 py-1 rounded">{lesson.lesson_date}</span>
-                              )}
                             </div>
                           </div>
                           <div className="flex flex-col gap-1">
@@ -313,8 +344,11 @@ export default function CurriculumImporter({ childId, childName, onClose, onImpo
               <h3 className="text-2xl font-bold text-gray-900 mb-2">
                 Import Complete!
               </h3>
-              <p className="text-gray-600">
-                {importResults.imported} new lesson{importResults.imported !== 1 ? 's' : ''} added to {childName}'s calendar
+              <p className="text-gray-600 mb-2">
+                {importResults.imported} new lesson{importResults.imported !== 1 ? 's' : ''} added to {childName}'s list
+              </p>
+              <p className="text-sm text-gray-500 mb-4">
+                📅 Lessons are unscheduled - assign dates when you're ready to teach them
               </p>
               {importResults.skipped > 0 && (
                 <p className="text-gray-500 text-sm mt-2">

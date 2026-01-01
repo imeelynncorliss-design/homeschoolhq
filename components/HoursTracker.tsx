@@ -72,7 +72,7 @@ export default function HoursTracker({ lessons, childName, childId, photoUrl }: 
             />
           )}
           <h3 className="text-lg font-bold text-gray-900">
-            📊 Hours Tracked for {childName}
+            📊 Total Hours Tracked for {childName}
           </h3>
         </div>
         <p className="text-gray-600">No hours tracked yet. Add lesson durations to see totals!</p>

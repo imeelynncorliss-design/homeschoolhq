@@ -42,6 +42,7 @@ export default function LessonGenerator({ children, onClose }: Props) {
     gradeLevel: '',
     subject: '',
     duration: 30,
+    startDate: new Date().toISOString().split('T')[0], // Default to today
     learningObjectives: '',
     materials: '',
     learningStyle: '',
@@ -102,7 +103,7 @@ export default function LessonGenerator({ children, onClose }: Props) {
           subject: formData.subject,
           title: variation.title,
           description: JSON.stringify(variation),
-          lesson_date: new Date().toISOString().split('T')[0],
+          lesson_date: formData.startDate,
           duration_minutes: formData.duration,
           status: 'not_started'
         }])
@@ -154,7 +155,7 @@ export default function LessonGenerator({ children, onClose }: Props) {
           subject: formData.subject,
           title: selectedVariation.title,
           description: JSON.stringify(selectedVariation),
-          lesson_date: new Date().toISOString().split('T')[0],
+          lesson_date: formData.startDate,
           duration_minutes: formData.duration,
           status: 'not_started'
         }])
@@ -233,6 +234,16 @@ export default function LessonGenerator({ children, onClose }: Props) {
                   </button>
                 ))}
               </div>
+            </div>
+
+            <div>
+            <label className="block text-sm font-medium text-gray-900 mb-2">Start Date</label>
+            <input
+  type="date"
+  value={formData.startDate}
+  onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+  className="w-full border rounded-lg px-3 py-2 text-gray-900"
+/>
             </div>
 
             <button
@@ -357,15 +368,16 @@ export default function LessonGenerator({ children, onClose }: Props) {
 
                   <button
                     onClick={() => saveLesson(variation)}
-                    className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700"
+                    disabled={loading}
+                    className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 disabled:bg-blue-400"
                   >
-                    Choose This
+                    {loading ? 'Saving...' : 'Choose This'}
                   </button>
                 </div>
               ))}
             </div>
 
-            {/* REGENERATE BUTTON - NEW */}
+            {/* REGENERATE BUTTON */}
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center">
               <p className="text-sm text-gray-600 mb-3">Don't like these options?</p>
               <div className="flex gap-3">
@@ -399,7 +411,12 @@ export default function LessonGenerator({ children, onClose }: Props) {
         {selectedVariation && !showAdaptModal && (
           <div className="text-center space-y-4">
             <div className="text-green-600 text-5xl">✓</div>
-            <h3 className="text-xl font-bold text-gray-900">Saved for {formData.childName}!</h3>
+            <h3 className="text-xl font-bold text-gray-900">Lesson Saved!</h3>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-left">
+              <p className="text-sm text-gray-600 mb-1">Added to {formData.childName}'s schedule:</p>
+              <p className="font-semibold text-gray-900">{selectedVariation.title}</p>
+              <p className="text-sm text-gray-600 mt-1">📅 {new Date(formData.startDate).toLocaleDateString()}</p>
+            </div>
             <div className="space-y-2">
               <button
                 onClick={adaptForAnotherChild}

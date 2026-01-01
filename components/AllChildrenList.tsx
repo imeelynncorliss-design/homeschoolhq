@@ -40,6 +40,11 @@ export default function AllChildrenList({
   // All children collapsed by default
   const [expandedKids, setExpandedKids] = useState<Set<string>>(new Set())
   
+  // Multiselect state
+  const [selectedLessons, setSelectedLessons] = useState<Set<string>>(new Set())
+  const [showBulkActions, setShowBulkActions] = useState(false)
+  const [bulkDate, setBulkDate] = useState(new Date().toISOString().split('T')[0])
+  
   // Collapse all statuses by default
   const [collapsedStatuses, setCollapsedStatuses] = useState<Set<string>>(() => {
     const defaultCollapsed = new Set<string>()
@@ -80,6 +85,72 @@ export default function AllChildrenList({
       newCollapsed.add(key)
     }
     setCollapsedSubjects(newCollapsed)
+  }
+
+  const toggleLessonSelect = (lessonId: string) => {
+    const newSelected = new Set(selectedLessons)
+    if (newSelected.has(lessonId)) {
+      newSelected.delete(lessonId)
+    } else {
+      newSelected.add(lessonId)
+    }
+    setSelectedLessons(newSelected)
+  }
+
+  const selectAllForKid = (kidId: string) => {
+    const kidLessons = lessonsByKid[kidId] || []
+    const newSelected = new Set(selectedLessons)
+    kidLessons.forEach(lesson => newSelected.add(lesson.id))
+    setSelectedLessons(newSelected)
+  }
+
+  const deselectAllForKid = (kidId: string) => {
+    const kidLessons = lessonsByKid[kidId] || []
+    const newSelected = new Set(selectedLessons)
+    kidLessons.forEach(lesson => newSelected.delete(lesson.id))
+    setSelectedLessons(newSelected)
+  }
+
+  const bulkSchedule = async () => {
+    if (selectedLessons.size === 0) return
+    
+    if (confirm(`Schedule ${selectedLessons.size} lesson(s) for ${new Date(bulkDate).toLocaleDateString()}?`)) {
+      const { supabase } = await import('@/lib/supabase')
+      
+      for (const lessonId of selectedLessons) {
+        await supabase
+          .from('lessons')
+          .update({ lesson_date: bulkDate })
+          .eq('id', lessonId)
+      }
+      
+      setSelectedLessons(new Set())
+      setShowBulkActions(false)
+      window.location.reload()
+    }
+  }
+
+  const bulkDelete = async () => {
+    if (selectedLessons.size === 0) return
+    
+    if (confirm(`Are you sure you want to delete ${selectedLessons.size} lesson(s)? This cannot be undone.`)) {
+      const { supabase } = await import('@/lib/supabase')
+      
+      // Delete all lessons in one operation
+      const { error } = await supabase
+        .from('lessons')
+        .delete()
+        .in('id', Array.from(selectedLessons))
+      
+      if (error) {
+        console.error('Bulk delete error:', error)
+        alert(`Failed to delete lessons: ${error.message}`)
+      } else {
+        setSelectedLessons(new Set())
+        setShowBulkActions(false)
+        window.location.reload()
+      }
+    }
   }
 
   const getLessonStatus = (lesson: Lesson) => {
@@ -139,6 +210,49 @@ export default function AllChildrenList({
 
   return (
     <div className="space-y-6">
+      {/* Bulk Actions Toolbar */}
+      {selectedLessons.size > 0 && (
+        <div className="sticky top-0 z-10 bg-blue-600 text-white p-4 rounded-lg shadow-lg">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div className="flex items-center gap-3">
+              <span className="font-semibold">{selectedLessons.size} lesson(s) selected</span>
+              <button
+                onClick={() => setSelectedLessons(new Set())}
+                className="text-sm underline hover:no-underline"
+              >
+                Clear Selection
+              </button>
+            </div>
+            
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex items-center gap-2 bg-white rounded-lg px-3 py-2">
+                <label className="text-sm text-gray-900 font-medium">Schedule for:</label>
+                <input
+                  type="date"
+                  value={bulkDate}
+                  onChange={(e) => setBulkDate(e.target.value)}
+                  className="border-0 text-gray-900 text-sm focus:ring-0 p-0"
+                />
+              </div>
+              
+              <button
+                onClick={bulkSchedule}
+                className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg font-medium transition-colors"
+              >
+                📅 Set Date
+              </button>
+              
+              <button
+                onClick={bulkDelete}
+                className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg font-medium transition-colors"
+              >
+                🗑️ Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {kids.map(kid => {
         const kidLessons = lessonsByKid[kid.id] || []
         const isExpanded = expandedKids.has(kid.id)
@@ -212,6 +326,26 @@ export default function AllChildrenList({
                 {kidLessons.length === 0 ? (
                   <p className="text-gray-600 text-center py-8">No lessons yet for {kid.name}</p>
                 ) : (
+                  <>
+                    {/* Select All Button - Right above lessons */}
+                    <div className="flex justify-end mb-3">
+                      {Array.from(selectedLessons).some(id => kidLessons.find(l => l.id === id)) ? (
+                        <button
+                          onClick={() => deselectAllForKid(kid.id)}
+                          className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                        >
+                          ❌ Deselect All for {kid.name}
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => selectAllForKid(kid.id)}
+                          className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                        >
+                          ✅ Select All for {kid.name}
+                        </button>
+                      )}
+                    </div>
+
                   <div className="space-y-4">
                     {Object.entries(grouped).map(([status, subjects]) => {
                       const statusLessonCount = Object.values(subjects).flat().length
@@ -266,6 +400,15 @@ export default function AllChildrenList({
                                             }`}
                                           >
                                             <div className="flex items-start gap-3">
+                                              {/* Multiselect Checkbox */}
+                                              <input
+                                                type="checkbox"
+                                                checked={selectedLessons.has(lesson.id)}
+                                                onChange={() => toggleLessonSelect(lesson.id)}
+                                                className="mt-1 w-5 h-5 cursor-pointer"
+                                                onClick={(e) => e.stopPropagation()}
+                                              />
+                                              
                                               <button
                                                 onClick={() => onCycleStatus(lesson.id, lesson.status)}
                                                 className={`mt-1 w-6 h-6 rounded border-2 flex items-center justify-center text-xs font-bold cursor-pointer ${
@@ -325,6 +468,7 @@ export default function AllChildrenList({
                       )
                     })}
                   </div>
+                  </>
                 )}
               </div>
             )}
