@@ -33,6 +33,23 @@ interface TodaysDashboardProps {
 export default function TodaysDashboard({ kids, lessonsByKid, onStatusChange, onLessonClick }: TodaysDashboardProps) {
   const today = moment().format('YYYY-MM-DD')
   
+  // Collapse all children by default
+  const [collapsedKids, setCollapsedKids] = useState<Set<string>>(() => {
+    const allKidsCollapsed = new Set<string>()
+    kids.forEach(kid => allKidsCollapsed.add(kid.id))
+    return allKidsCollapsed
+  })
+
+  const toggleKid = (kidId: string) => {
+    const newCollapsed = new Set(collapsedKids)
+    if (newCollapsed.has(kidId)) {
+      newCollapsed.delete(kidId)
+    } else {
+      newCollapsed.add(kidId)
+    }
+    setCollapsedKids(newCollapsed)
+  }
+  
   // Get today's lessons for each child
   const todaysLessonsByKid: { [kidId: string]: Lesson[] } = {}
   kids.forEach(kid => {
@@ -44,6 +61,21 @@ export default function TodaysDashboard({ kids, lessonsByKid, onStatusChange, on
       todaysLessonsByKid[kid.id] = todaysLessons
     }
   })
+
+  // Calculate per-child stats for header
+  const childStats = kids.map(kid => {
+    const kidLessons = todaysLessonsByKid[kid.id] || []
+    const completed = kidLessons.filter(l => l.status === 'completed').length
+    const total = kidLessons.length
+    const minutes = kidLessons.reduce((sum, l) => sum + (l.duration_minutes || 0), 0)
+    return {
+      id: kid.id,
+      name: kid.name,
+      total,
+      completed,
+      hours: (minutes / 60).toFixed(1)
+    }
+  }).filter(stat => stat.total > 0) // Only show kids with lessons today
 
   // Calculate overall stats for today
   const allTodaysLessons = Object.values(todaysLessonsByKid).flat()
@@ -149,7 +181,7 @@ export default function TodaysDashboard({ kids, lessonsByKid, onStatusChange, on
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-3 gap-4 mb-4">
           <div className="bg-white/10 rounded-lg p-3 text-center">
             <div className="text-2xl font-bold">{totalLessons}</div>
             <div className="text-xs text-blue-100">Total Lessons</div>
@@ -163,6 +195,23 @@ export default function TodaysDashboard({ kids, lessonsByKid, onStatusChange, on
             <div className="text-xs text-blue-100">Total Hours</div>
           </div>
         </div>
+
+        {/* Per-Child Stats */}
+        {childStats.length > 0 && (
+          <div className="border-t border-white/20 pt-4">
+            <div className="text-sm font-semibold text-blue-100 mb-2">By Child:</div>
+            <div className="space-y-2">
+              {childStats.map(stat => (
+                <div key={stat.id} className="flex items-center justify-between text-sm bg-white/10 rounded-lg px-3 py-2">
+                  <span className="font-medium">{stat.name}</span>
+                  <span className="text-blue-100">
+                    {stat.total} {stat.total === 1 ? 'lesson' : 'lessons'} ({stat.completed} done) • {stat.hours}h
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Lessons by Child */}
@@ -170,6 +219,7 @@ export default function TodaysDashboard({ kids, lessonsByKid, onStatusChange, on
         const kidLessons = todaysLessonsByKid[kid.id]
         if (!kidLessons || kidLessons.length === 0) return null
 
+        const isCollapsed = collapsedKids.has(kid.id)
         const kidCompleted = kidLessons.filter(l => l.status === 'completed').length
         const kidTotal = kidLessons.length
         const kidProgress = Math.round((kidCompleted / kidTotal) * 100)
@@ -177,8 +227,11 @@ export default function TodaysDashboard({ kids, lessonsByKid, onStatusChange, on
 
         return (
           <div key={kid.id} className="bg-white rounded-lg shadow-lg overflow-hidden">
-            {/* Child Header */}
-            <div className="bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200 p-4">
+            {/* Child Header - Clickable to expand/collapse */}
+            <button
+              onClick={() => toggleKid(kid.id)}
+              className="w-full bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200 p-4 hover:from-gray-100 hover:to-gray-200 transition-colors"
+            >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   {kid.photo_url && (
@@ -188,16 +241,21 @@ export default function TodaysDashboard({ kids, lessonsByKid, onStatusChange, on
                       className="w-12 h-12 rounded-full object-cover border-2 border-white shadow"
                     />
                   )}
-                  <div>
+                  <div className="text-left">
                     <h2 className="text-xl font-bold text-gray-900">{kid.name}</h2>
                     <p className="text-sm text-gray-600">
                       {kidCompleted} of {kidTotal} lessons • {(kidMinutes / 60).toFixed(1)} hours
                     </p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <div className="text-2xl font-bold text-gray-900">{kidProgress}%</div>
-                  <div className="text-xs text-gray-500">Complete</div>
+                <div className="flex items-center gap-4">
+                  <div className="text-right">
+                    <div className="text-2xl font-bold text-gray-900">{kidProgress}%</div>
+                    <div className="text-xs text-gray-500">Complete</div>
+                  </div>
+                  <div className="text-2xl text-gray-400">
+                    {isCollapsed ? '▶' : '▼'}
+                  </div>
                 </div>
               </div>
 
@@ -208,63 +266,65 @@ export default function TodaysDashboard({ kids, lessonsByKid, onStatusChange, on
                   style={{ width: `${kidProgress}%` }}
                 />
               </div>
-            </div>
+            </button>
 
-            {/* Lessons List */}
-            <div className="divide-y divide-gray-100">
-              {kidLessons.map(lesson => (
-                <div 
-                  key={lesson.id} 
-                  className="p-4 hover:bg-gray-50 transition-colors"
-                >
-                  <div className="flex items-center justify-between gap-4">
-                    <div 
-                      className="flex-1 cursor-pointer"
-                      onClick={() => onLessonClick(lesson, kid)}
-                    >
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="inline-block px-2 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded">
-                          {lesson.subject}
-                        </span>
-                        {lesson.duration_minutes && (
-                          <span className="inline-flex items-center gap-1 text-xs text-gray-500">
-                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            {lesson.duration_minutes} min
+            {/* Lessons List - Only shown when expanded */}
+            {!isCollapsed && (
+              <div className="divide-y divide-gray-100">
+                {kidLessons.map(lesson => (
+                  <div 
+                    key={lesson.id} 
+                    className="p-4 hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex items-center justify-between gap-4">
+                      <div 
+                        className="flex-1 cursor-pointer"
+                        onClick={() => onLessonClick(lesson, kid)}
+                      >
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="inline-block px-2 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded">
+                            {lesson.subject}
                           </span>
+                          {lesson.duration_minutes && (
+                            <span className="inline-flex items-center gap-1 text-xs text-gray-500">
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              {lesson.duration_minutes} min
+                            </span>
+                          )}
+                        </div>
+                        <h3 className="font-semibold text-gray-900 mb-1">{lesson.title}</h3>
+                        {lesson.description && (
+                          <p className="text-sm text-gray-600 line-clamp-2 mb-2">{lesson.description}</p>
                         )}
+                        {/* Date Information */}
+                        <div className="flex items-center gap-3 text-xs text-gray-500">
+                          {lesson.lesson_date && (
+                            <span className="inline-flex items-center gap-1">
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                              </svg>
+                              Scheduled: {new Date(lesson.lesson_date).toLocaleDateString()}
+                            </span>
+                          )}
+                          {lesson.status === 'completed' && lesson.completed_at && (
+                            <span className="inline-flex items-center gap-1 text-green-600 font-medium">
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              Completed: {new Date(lesson.completed_at).toLocaleDateString()}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      <h3 className="font-semibold text-gray-900 mb-1">{lesson.title}</h3>
-                      {lesson.description && (
-                        <p className="text-sm text-gray-600 line-clamp-2 mb-2">{lesson.description}</p>
-                      )}
-                      {/* Date Information */}
-                      <div className="flex items-center gap-3 text-xs text-gray-500">
-                        {lesson.lesson_date && (
-                          <span className="inline-flex items-center gap-1">
-                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
-                            Scheduled: {new Date(lesson.lesson_date).toLocaleDateString()}
-                          </span>
-                        )}
-                        {lesson.status === 'completed' && lesson.completed_at && (
-                          <span className="inline-flex items-center gap-1 text-green-600 font-medium">
-                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            Completed: {new Date(lesson.completed_at).toLocaleDateString()}
-                          </span>
-                        )}
-                      </div>
+
+                      <StatusButton lesson={lesson} child={kid} />
                     </div>
-
-                    <StatusButton lesson={lesson} child={kid} />
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         )
       })}

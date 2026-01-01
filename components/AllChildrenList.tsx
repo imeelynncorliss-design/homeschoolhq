@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import HoursTracker from './HoursTracker'
 
 interface Lesson {
@@ -37,6 +38,25 @@ export default function AllChildrenList({
   onDeleteLesson,
   onCycleStatus 
 }: AllChildrenListProps) {
+  const router = useRouter()
+  
+  // Helper function to parse date strings as local dates
+  const formatLocalDate = (dateString: string | null) => {
+    if (!dateString) return ''
+    // Parse as local date instead of UTC
+    const [year, month, day] = dateString.split('T')[0].split('-')
+    const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
+    return date.toLocaleDateString()
+  }
+
+  // Local state to track lessons (initialized from props, updates locally)
+  const [localLessonsByKid, setLocalLessonsByKid] = useState<{ [kidId: string]: Lesson[] }>(lessonsByKid)
+
+  // Sync local state when props change
+  useEffect(() => {
+    setLocalLessonsByKid(lessonsByKid)
+  }, [lessonsByKid])
+
   // All children collapsed by default
   const [expandedKids, setExpandedKids] = useState<Set<string>>(new Set())
   
@@ -98,25 +118,46 @@ export default function AllChildrenList({
   }
 
   const selectAllForKid = (kidId: string) => {
-    const kidLessons = lessonsByKid[kidId] || []
+    const kidLessons = localLessonsByKid[kidId] || []
     const newSelected = new Set(selectedLessons)
     kidLessons.forEach(lesson => newSelected.add(lesson.id))
     setSelectedLessons(newSelected)
   }
 
   const deselectAllForKid = (kidId: string) => {
-    const kidLessons = lessonsByKid[kidId] || []
+    const kidLessons = localLessonsByKid[kidId] || []
     const newSelected = new Set(selectedLessons)
     kidLessons.forEach(lesson => newSelected.delete(lesson.id))
     setSelectedLessons(newSelected)
   }
 
+  // Select all lessons for a specific status
+  const selectAllForStatus = (lessons: Lesson[]) => {
+    const newSelected = new Set(selectedLessons)
+    lessons.forEach(lesson => newSelected.add(lesson.id))
+    setSelectedLessons(newSelected)
+  }
+
+  // Deselect all lessons for a specific status
+  const deselectAllForStatus = (lessons: Lesson[]) => {
+    const newSelected = new Set(selectedLessons)
+    lessons.forEach(lesson => newSelected.delete(lesson.id))
+    setSelectedLessons(newSelected)
+  }
+
+  // Check if all lessons in a status are selected
+  const areAllStatusLessonsSelected = (lessons: Lesson[]) => {
+    if (lessons.length === 0) return false
+    return lessons.every(lesson => selectedLessons.has(lesson.id))
+  }
+
   const bulkSchedule = async () => {
     if (selectedLessons.size === 0) return
     
-    if (confirm(`Schedule ${selectedLessons.size} lesson(s) for ${new Date(bulkDate).toLocaleDateString()}?`)) {
+    if (confirm(`Schedule ${selectedLessons.size} lesson(s) for ${formatLocalDate(bulkDate)}?`)) {
       const { supabase } = await import('@/lib/supabase')
       
+      // Update database
       for (const lessonId of selectedLessons) {
         await supabase
           .from('lessons')
@@ -124,9 +165,20 @@ export default function AllChildrenList({
           .eq('id', lessonId)
       }
       
+      // Update local state immediately
+      const updatedLessonsByKid = { ...localLessonsByKid }
+      Object.keys(updatedLessonsByKid).forEach(kidId => {
+        updatedLessonsByKid[kidId] = updatedLessonsByKid[kidId].map(lesson => {
+          if (selectedLessons.has(lesson.id)) {
+            return { ...lesson, lesson_date: bulkDate }
+          }
+          return lesson
+        })
+      })
+      setLocalLessonsByKid(updatedLessonsByKid)
+      
       setSelectedLessons(new Set())
       setShowBulkActions(false)
-      window.location.reload()
     }
   }
 
@@ -146,9 +198,17 @@ export default function AllChildrenList({
         console.error('Bulk delete error:', error)
         alert(`Failed to delete lessons: ${error.message}`)
       } else {
+        // Update local state immediately by filtering out deleted lessons
+        const updatedLessonsByKid = { ...localLessonsByKid }
+        Object.keys(updatedLessonsByKid).forEach(kidId => {
+          updatedLessonsByKid[kidId] = updatedLessonsByKid[kidId].filter(
+            lesson => !selectedLessons.has(lesson.id)
+          )
+        })
+        setLocalLessonsByKid(updatedLessonsByKid)
+        
         setSelectedLessons(new Set())
         setShowBulkActions(false)
-        window.location.reload()
       }
     }
   }
@@ -254,7 +314,7 @@ export default function AllChildrenList({
       )}
 
       {kids.map(kid => {
-        const kidLessons = lessonsByKid[kid.id] || []
+        const kidLessons = localLessonsByKid[kid.id] || []
         const isExpanded = expandedKids.has(kid.id)
         const grouped = groupLessonsByStatus(kidLessons)
         const stats = getChildStats(kidLessons)
@@ -326,49 +386,53 @@ export default function AllChildrenList({
                 {kidLessons.length === 0 ? (
                   <p className="text-gray-600 text-center py-8">No lessons yet for {kid.name}</p>
                 ) : (
-                  <>
-                    {/* Select All Button - Right above lessons */}
-                    <div className="flex justify-end mb-3">
-                      {Array.from(selectedLessons).some(id => kidLessons.find(l => l.id === id)) ? (
-                        <button
-                          onClick={() => deselectAllForKid(kid.id)}
-                          className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-                        >
-                          ❌ Deselect All for {kid.name}
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => selectAllForKid(kid.id)}
-                          className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-                        >
-                          ✅ Select All for {kid.name}
-                        </button>
-                      )}
-                    </div>
-
                   <div className="space-y-4">
                     {Object.entries(grouped).map(([status, subjects]) => {
-                      const statusLessonCount = Object.values(subjects).flat().length
+                      const statusLessons = Object.values(subjects).flat()
+                      const statusLessonCount = statusLessons.length
                       if (statusLessonCount === 0) return null
                       
                       const statusKey = `${kid.id}-${status}`
                       const isStatusCollapsed = collapsedStatuses.has(statusKey)
+                      const allStatusSelected = areAllStatusLessonsSelected(statusLessons)
                       
                       return (
                         <div key={statusKey} className="border rounded-lg">
-                          <button
-                            onClick={() => toggleStatus(statusKey)}
-                            className={`w-full px-4 py-3 flex items-center justify-between font-semibold text-left ${
+                          <div
+                            className={`w-full px-4 py-3 flex items-center justify-between font-semibold ${
                               status === 'Completed' ? 'bg-green-50 text-green-800' :
                               status === 'In Progress' ? 'bg-yellow-50 text-yellow-800' :
                               'bg-blue-50 text-blue-800'
-                            } hover:opacity-80 transition-opacity rounded-t-lg`}
+                            } rounded-t-lg`}
                           >
-                            <span className="flex items-center gap-2">
-                              <span>{isStatusCollapsed ? '▶' : '▼'}</span>
-                              <span>{status} ({statusLessonCount})</span>
-                            </span>
-                          </button>
+                            {/* Left side: Checkbox + Select All label + Status name */}
+                            <div className="flex items-center gap-3">
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="checkbox"
+                                  checked={allStatusSelected}
+                                  onChange={(e) => {
+                                    e.stopPropagation()
+                                    if (allStatusSelected) {
+                                      deselectAllForStatus(statusLessons)
+                                    } else {
+                                      selectAllForStatus(statusLessons)
+                                    }
+                                  }}
+                                  className="w-5 h-5 cursor-pointer"
+                                  title={`Select all ${status} lessons`}
+                                />
+                                <span className="text-sm font-medium">Select All</span>
+                              </div>
+                              <button
+                                onClick={() => toggleStatus(statusKey)}
+                                className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+                              >
+                                <span>{isStatusCollapsed ? '▶' : '▼'}</span>
+                                <span>{status} ({statusLessonCount})</span>
+                              </button>
+                            </div>
+                          </div>
                           
                           {!isStatusCollapsed && (
                             <div className="p-2">
@@ -434,7 +498,7 @@ export default function AllChildrenList({
                                                     )}
                                                     {lesson.lesson_date && (
                                                       <p className="text-gray-500 text-xs mt-1">
-                                                        📅 {new Date(lesson.lesson_date).toLocaleDateString()}
+                                                        📅 {formatLocalDate(lesson.lesson_date)}
                                                       </p>
                                                     )}
                                                   </div>
@@ -468,7 +532,6 @@ export default function AllChildrenList({
                       )
                     })}
                   </div>
-                  </>
                 )}
               </div>
             )}
