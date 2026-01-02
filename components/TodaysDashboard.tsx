@@ -33,6 +33,20 @@ interface TodaysDashboardProps {
 }
 
 export default function TodaysDashboard({ kids, lessonsByKid, onStatusChange, onLessonClick }: TodaysDashboardProps) {
+  // Helper function to parse AI-generated lesson descriptions
+  const parseDescription = (description?: string) => {
+    if (!description) return null
+    
+    try {
+      // Try to parse as JSON (AI-generated lessons)
+      const parsed = JSON.parse(description)
+      return parsed.approach || description
+    } catch {
+      // If not JSON, return as-is (manually created lessons)
+      return description
+    }
+  }
+
   const today = moment().format('YYYY-MM-DD')
   
   // Collapse all children by default
@@ -301,7 +315,7 @@ export default function TodaysDashboard({ kids, lessonsByKid, onStatusChange, on
                         </div>
                         <h3 className="font-semibold text-gray-900 mb-1">{lesson.title}</h3>
                         {lesson.description && (
-                          <p className="text-sm text-gray-600 line-clamp-2 mb-2">{lesson.description}</p>
+                          <p className="text-sm text-gray-600 line-clamp-2 mb-2">{parseDescription(lesson.description)}</p>
                         )}
                         {/* Date Information */}
                         <div className="flex items-center gap-3 text-xs text-gray-500">

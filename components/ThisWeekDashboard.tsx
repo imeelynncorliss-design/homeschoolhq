@@ -33,6 +33,20 @@ interface ThisWeekDashboardProps {
 }
 
 export default function ThisWeekDashboard({ kids, lessonsByKid, onStatusChange, onLessonClick }: ThisWeekDashboardProps) {
+  // Helper function to parse AI-generated lesson descriptions
+  const parseDescription = (description?: string) => {
+    if (!description) return null
+    
+    try {
+      // Try to parse as JSON (AI-generated lessons)
+      const parsed = JSON.parse(description)
+      return parsed.approach || description
+    } catch {
+      // If not JSON, return as-is (manually created lessons)
+      return description
+    }
+  }
+
   // Get start and end of current week (Monday - Sunday)
   const startOfWeek = moment().startOf('week').add(1, 'day') // Monday
   const endOfWeek = moment().endOf('week').add(1, 'day') // Sunday
@@ -424,7 +438,7 @@ export default function ThisWeekDashboard({ kids, lessonsByKid, onStatusChange, 
                                       </div>
                                       <h5 className="font-semibold text-gray-900 text-sm">{lesson.title}</h5>
                                       {lesson.description && (
-                                        <p className="text-xs text-gray-600 line-clamp-1 mt-1">{lesson.description}</p>
+                                        <p className="text-xs text-gray-600 line-clamp-1 mt-1">{parseDescription(lesson.description)}</p>
                                       )}
                                     </div>
 

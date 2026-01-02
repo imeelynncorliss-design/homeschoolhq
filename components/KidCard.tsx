@@ -25,6 +25,8 @@ interface KidCardProps {
 
 export default function KidCard({ kid, isSelected, onSelect, onEdit, onDelete }: KidCardProps) {
   const [showMenu, setShowMenu] = useState(false)
+  const [showVibeModal, setShowVibeModal] = useState(false)
+  const [vibeValue, setVibeValue] = useState(kid.todays_vibe || '')
   const menuRef = useRef<HTMLDivElement>(null)
 
   // Close menu when clicking outside
@@ -37,6 +39,18 @@ export default function KidCard({ kid, isSelected, onSelect, onEdit, onDelete }:
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
+
+  const updateVibe = async () => {
+    const { supabase } = await import('@/lib/supabase')
+    await supabase
+      .from('kids')
+      .update({ todays_vibe: vibeValue })
+      .eq('id', kid.id)
+    
+    setShowVibeModal(false)
+    // Refresh the page to show updated vibe
+    window.location.reload()
+  }
 
   return (
     <div 
@@ -127,22 +141,94 @@ export default function KidCard({ kid, isSelected, onSelect, onEdit, onDelete }:
         </div>
       </div>
 
-      {/* Today's Vibe - Optional */}
-      {kid.current_hook && (
-         <p className="text-xs text-blue-800 mt-1 font-medium">
-    🪝 Hook: {kid.current_hook}
-    </p>
-    )}
-    {kid.todays_vibe && (
-        <div className="mb-2 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg p-2 border border-yellow-200">
-          <p className="text-xs font-semibold text-gray-700 mb-1">Today's Vibe</p>
-          <p className="text-sm">{kid.todays_vibe}</p>
+      {/* Hook and Today's Vibe - Right under name/grade info */}
+      <div className="space-y-1">
+        {kid.current_hook && (
+          <p className="text-xs text-blue-700 font-medium flex items-center gap-1">
+            <span>🎯</span>
+            <span>Hook: {kid.current_hook}</span>
+          </p>
+        )}
+        <div className="flex items-center justify-between">
+          {kid.todays_vibe ? (
+            <p className="text-xs text-purple-700 font-medium flex items-center gap-1">
+              <span>😊</span>
+              <span>Vibe: {kid.todays_vibe}</span>
+            </p>
+          ) : (
+            <p className="text-xs text-gray-400 italic">No vibe set today</p>
+          )}
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              setVibeValue(kid.todays_vibe || '')
+              setShowVibeModal(true)
+            }}
+            className="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
+            title="Update today's vibe"
+          >
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+            </svg>
+            Update
+          </button>
+        </div>
+      </div>
+
+      {/* Vibe Update Modal */}
+      {showVibeModal && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          onClick={() => setShowVibeModal(false)}
+        >
+          <div 
+            className="bg-white rounded-lg p-6 max-w-md w-full mx-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-bold text-gray-900">Today's Vibe 😊</h3>
+              <button
+                onClick={() => setShowVibeModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                ✕
+              </button>
+            </div>
+            
+            <p className="text-sm text-gray-600 mb-3">
+              Update daily to reflect {kid.displayname}'s mood and energy
+            </p>
+            
+            <input
+              type="text"
+              value={vibeValue}
+              onChange={(e) => setVibeValue(e.target.value)}
+              placeholder="e.g., Energetic 🎉, Focused 🎯, Tired 😴, Creative ✨"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 mb-4"
+              autoFocus
+            />
+            
+            <div className="flex gap-2">
+              <button
+                onClick={updateVibe}
+                className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 font-medium"
+              >
+                Save Vibe
+              </button>
+              <button
+                onClick={() => setShowVibeModal(false)}
+                className="flex-1 border border-gray-300 py-2 rounded-lg hover:bg-gray-50 text-gray-900"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
       {/* Current Focus - Optional */}
       {kid.current_focus && (
-        <div className="bg-blue-50 rounded-lg p-2 border border-blue-200">
+        <div className="mt-3 bg-blue-50 rounded-lg p-2 border border-blue-200">
           <p className="text-xs font-semibold text-gray-700 mb-1">Current Focus</p>
           <p className="text-sm text-blue-800 font-medium">{kid.current_focus}</p>
         </div>

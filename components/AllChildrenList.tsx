@@ -53,6 +53,20 @@ export default function AllChildrenList({
     return date.toLocaleDateString()
   }
 
+  // Helper function to parse AI-generated lesson descriptions
+  const parseDescription = (description?: string) => {
+    if (!description) return null
+    
+    try {
+      // Try to parse as JSON (AI-generated lessons)
+      const parsed = JSON.parse(description)
+      return parsed.approach || description
+    } catch {
+      // If not JSON, return as-is (manually created lessons)
+      return description
+    }
+  }
+
   // Local state to track lessons (initialized from props, updates locally)
   const [localLessonsByKid, setLocalLessonsByKid] = useState<{ [kidId: string]: Lesson[] }>(lessonsByKid)
 
@@ -421,11 +435,18 @@ export default function AllChildrenList({
                               'bg-blue-50 text-blue-800'
                             } rounded-t-lg`}
                           >
-                            {/* Left side: Checkbox + Select All label + Status name */}
+                            {/* Left side: Arrow + Status name + Select All label + Checkbox */}
                             <div className="flex items-center gap-3">
+                              <button
+                                onClick={() => toggleStatus(statusKey)}
+                                className="hover:opacity-80 transition-opacity"
+                              >
+                                <span>{isStatusCollapsed ? '▶' : '▼'}</span>
+                              </button>
+                              <span>{status} ({statusLessonCount})</span>
                               <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium">Select All</span>
-                              <input
+                                <span className="text-sm font-medium">Select All</span>
+                                <input
                                   type="checkbox"
                                   checked={allStatusSelected}
                                   onChange={(e) => {
@@ -440,13 +461,6 @@ export default function AllChildrenList({
                                   title={`Select all ${status} lessons`}
                                 />
                               </div>
-                              <button
-                                onClick={() => toggleStatus(statusKey)}
-                                className="flex items-center gap-2 hover:opacity-80 transition-opacity"
-                              >
-                                <span>{isStatusCollapsed ? '▶' : '▼'}</span>
-                                <span>{status} ({statusLessonCount})</span>
-                              </button>
                             </div>
                           </div>
                           
@@ -507,6 +521,11 @@ export default function AllChildrenList({
                                                     <h3 className={`font-semibold text-gray-900 text-sm ${lesson.status === 'completed' ? 'line-through' : ''}`}>
                                                       {lesson.title}
                                                     </h3>
+                                                    {lesson.description && (
+                                                      <p className="text-gray-600 text-xs mt-1 line-clamp-2">
+                                                        {parseDescription(lesson.description)}
+                                                      </p>
+                                                    )}
                                                     {lesson.duration_minutes && (
                                                       <span className="inline-block px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded mt-1">
                                                         ⏱️ {lesson.duration_minutes} min

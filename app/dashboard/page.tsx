@@ -363,7 +363,7 @@ export default function Dashboard() {
                   className="w-full p-3 bg-gray-100 hover:bg-gray-200 rounded flex items-center justify-center transition-colors mb-2"
                   title="Show children sidebar"
                 >
-                  <span className="text-2xl font-bold text-gray-800">→</span>
+                 <span className="text-3xl font-black text-black">→</span>
                 </button>
                 <div className="mt-4 space-y-2">
                   {kids.map((kid) => (
@@ -401,7 +401,7 @@ export default function Dashboard() {
                     className="p-2 bg-gray-100 hover:bg-gray-200 rounded transition-colors"
                     title="Collapse sidebar"
                   >
-                    <span className="text-xl font-bold text-gray-800">←</span>
+                    <span className="text-3xl font-black text-black">←</span>
                   </button>
                 </div>
                 <p className="text-sm text-gray-600 mb-3">👉 Click a child's name to view their lessons</p>
