@@ -148,7 +148,7 @@ export default function CoopManager({ userId }: CoopManagerProps) {
       return
     }
 
-    const { data: { user } } = await supabase.auth.getUser()
+    const { data: profile } = await supabase.auth.getUser()
     
     const { error } = await supabase
       .from('coop_classes')
@@ -157,7 +157,7 @@ export default function CoopManager({ userId }: CoopManagerProps) {
         class_name: classForm.class_name,
         subject: classForm.subject,
         teacher_id: userId,
-        teacher_name: user?.user_metadata?.full_name || user?.email || 'Teacher',
+        teacher_name: profile.data.user?.user_metadata?.full_name || profile.data.user?.email || 'Teacher',
         day_of_week: classForm.day_of_week,
         start_time: classForm.start_time,
         end_time: classForm.end_time,

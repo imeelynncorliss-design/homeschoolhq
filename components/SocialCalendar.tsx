@@ -78,23 +78,38 @@ export default function SocialCalendar({ userId }: SocialCalendarProps) {
       return
     }
 
+    if (!userProfile) {
+      alert('User profile not loaded. Please wait a moment and try again.')
+      return
+    }
+
+    const eventData = {
+      created_by: userId,
+      title: formData.title,
+      description: formData.description,
+      event_date: formData.event_date,
+      start_time: formData.start_time || null,
+      end_time: formData.end_time || null,
+      location: formData.location,
+      event_type: formData.event_type,
+      max_attendees: formData.max_attendees ? parseInt(formData.max_attendees) : null,
+      rsvp_deadline: formData.rsvp_deadline || null,
+      organizer_name: userProfile?.user_metadata?.full_name || userProfile?.email || 'Anonymous',
+      organizer_email: userProfile?.email || '',
+      is_public: formData.is_public
+    }
+
+    console.log('Creating event with data:', eventData)
+
     const { error } = await supabase
       .from('social_events')
-      .insert([{
-        created_by: userId,
-        title: formData.title,
-        description: formData.description,
-        event_date: formData.event_date,
-        start_time: formData.start_time,
-        end_time: formData.end_time,
-        location: formData.location,
-        event_type: formData.event_type,
-        max_attendees: formData.max_attendees ? parseInt(formData.max_attendees) : null,
-        rsvp_deadline: formData.rsvp_deadline || null,
-        organizer_name: userProfile?.user_metadata?.full_name || userProfile?.email || 'Anonymous',
-        organizer_email: userProfile?.email || '',
-        is_public: formData.is_public
-      }])
+      .insert([eventData])
+
+    if (error) {
+      console.error('Error creating event:', error)
+      alert('Error creating event: ' + error.message)
+      return
+    }
 
     if (!error) {
       setFormData({
