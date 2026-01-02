@@ -329,8 +329,8 @@ export default function ThisWeekDashboard({ kids, lessonsByKid, onStatusChange, 
                       </div>
                     </div>
                   )}
-                  <div className="text-gray-400">
-                    {isCollapsed ? '▼' : '▲'}
+                 <div className="text-gray-400">
+                    {isCollapsed ? '▶' : '▼'}
                   </div>
                 </div>
               </div>

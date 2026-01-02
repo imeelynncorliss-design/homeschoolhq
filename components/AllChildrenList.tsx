@@ -424,7 +424,8 @@ export default function AllChildrenList({
                             {/* Left side: Checkbox + Select All label + Status name */}
                             <div className="flex items-center gap-3">
                               <div className="flex items-center gap-2">
-                                <input
+                              <span className="text-sm font-medium">Select All</span>
+                              <input
                                   type="checkbox"
                                   checked={allStatusSelected}
                                   onChange={(e) => {
@@ -438,7 +439,6 @@ export default function AllChildrenList({
                                   className="w-5 h-5 cursor-pointer"
                                   title={`Select all ${status} lessons`}
                                 />
-                                <span className="text-sm font-medium">Select All</span>
                               </div>
                               <button
                                 onClick={() => toggleStatus(statusKey)}
