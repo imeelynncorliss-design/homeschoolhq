@@ -13,6 +13,8 @@ import TodaysDashboard from '@/components/TodaysDashboard'
 import ThisWeekDashboard from '@/components/ThisWeekDashboard'
 import KidCard from '@/components/KidCard'
 import KidProfileForm from '@/components/KidProfileForm'
+import { getTierForTesting } from '@/lib/tierTesting'
+import DevTierToggle from '@/components/DevTierToggle'
 
 const DURATION_OPTIONS = [
   '15 min',
@@ -46,6 +48,7 @@ export default function Dashboard() {
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [kids, setKids] = useState<any[]>([])
+  const [userTier, setUserTier] = useState<'FREE' | 'PREMIUM' | 'FAMILY'>('FREE')
   const [allLessons, setAllLessons] = useState<any[]>([])
   const [lessonsByKid, setLessonsByKid] = useState<{ [kidId: string]: any[] }>({})
   const [selectedKid, setSelectedKid] = useState<string | null>(null)
@@ -97,6 +100,12 @@ export default function Dashboard() {
   }, [kids])
 
   useEffect(() => {
+    if (user) {
+      checkUserTier()
+    }
+  }, [user])
+  
+  useEffect(() => {
     // Check if user has seen tour before
     const hasSeenTour = localStorage.getItem('hasSeenTour')
     if (!hasSeenTour && kids.length === 0) {
@@ -129,6 +138,24 @@ export default function Dashboard() {
     }
   }
 
+  const checkUserTier = async () => {
+    if (!user) return
+    
+    // FOR TESTING: Hardcode tier
+    setUserTier(getTierForTesting()) // Change to test different tiers
+    
+    // FOR PRODUCTION: Fetch from database
+    /*
+    const { data } = await supabase
+      .from('user_subscriptions')
+      .select('tier')
+      .eq('user_id', user.id)
+      .single()
+    
+    setUserTier(data?.tier || 'FREE')
+    */
+  } 
+  
   const loadAllLessons = async () => {
     const { data } = await supabase
       .from('lessons')
@@ -149,8 +176,20 @@ export default function Dashboard() {
       setLessonsByKid(grouped)
     }
   }
-
-
+  
+  const hasFeature = (feature: string) => {
+    const features = {
+      FREE: ['manual_lessons', 'basic_calendar'],
+      PREMIUM: ['manual_lessons', 'basic_calendar', 'ai_generation', 'curriculum_import', 'unlimited_kids', 'advanced_dashboards'],
+      FAMILY: ['manual_lessons', 'basic_calendar', 'ai_generation', 'curriculum_import', 'unlimited_kids', 'advanced_dashboards', 'social_hub']
+    }
+    return features[userTier].includes(feature)
+  }
+  
+  const canAddChild = () => {
+    return userTier !== 'FREE' || kids.length < 1
+  }
+  
   const deleteKid = async (id: string, kidDisplayName: string) => {
     if (confirm(`Delete ${kidDisplayName}? This will also delete all their lessons.`)) {
       await supabase.from('kids').delete().eq('id', id)
@@ -158,6 +197,9 @@ export default function Dashboard() {
       loadKids()
     }
   }
+  
+  
+  
 
   
 
@@ -342,6 +384,20 @@ export default function Dashboard() {
               >
                 👋 Take Tour
               </button>
+              <button
+  onClick={() => router.push('/admin')}
+  className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700"
+>
+  ⚙️ Admin Settings
+</button>
+
+<button
+  onClick={() => router.push('/social')}
+  className="px-4 py-2 bg-pink-600 text-white rounded hover:bg-pink-700"
+>
+  🤝 Social Hub
+</button>
+
               <button 
                 onClick={handleLogout}
                 className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
@@ -498,27 +554,56 @@ export default function Dashboard() {
                     </div>
 
                     <div className="flex gap-2">
-                      <button
-                        onClick={() => setShowImporter(true)}
-                        className="bg-gradient-to-r from-green-600 to-teal-600 text-white px-4 py-2 rounded-lg hover:from-green-700 hover:to-teal-700"
-                      >
-                        📥 Import
-                      </button>
-                      <button
-                        onClick={() => setShowLessonForm(!showLessonForm)}
-                        className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                      >
-                        + Add Lesson
-                      </button>
-                      <button
-                        onClick={() => setShowGenerator(true)}
-                        className="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded hover:from-purple-700 hover:to-blue-700"
-                      >
-                        ✨ Generate Lessons
-                      </button>
-                    </div>
-                  </div>
-                </div>
+  {/* Import Button - PREMIUM+ */}
+  {hasFeature('curriculum_import') ? (
+    <button
+      onClick={() => setShowImporter(true)}
+      className="bg-gradient-to-r from-green-600 to-teal-600 text-white px-4 py-2 rounded-lg hover:from-green-700 hover:to-teal-700"
+    >
+      📥 Import
+    </button>
+  ) : (
+    <button
+      onClick={() => {
+        alert('Curriculum Import requires PREMIUM! Upgrade to unlock.')
+        router.push('/pricing')
+      }}
+      className="px-4 py-2 bg-gray-300 text-gray-600 rounded-lg cursor-not-allowed relative"
+    >
+      📥 Import 🔒
+    </button>
+  )}
+
+  {/* Add Lesson - Always Available */}
+  <button
+    onClick={() => setShowLessonForm(!showLessonForm)}
+    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+  >
+    + Add Lesson
+  </button>
+
+  {/* Generate Lessons - PREMIUM+ */}
+  {hasFeature('ai_generation') ? (
+    <button
+      onClick={() => setShowGenerator(true)}
+      className="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded hover:from-purple-700 hover:to-blue-700"
+    >
+      ✨ Generate Lessons
+    </button>
+  ) : (
+    <button
+      onClick={() => {
+        alert('AI Lesson Generation requires PREMIUM! Upgrade to unlock.')
+        router.push('/pricing')
+      }}
+      className="px-4 py-2 bg-gray-300 text-gray-600 rounded-lg cursor-not-allowed relative"
+    >
+      ✨ Generate Lessons 🔒
+    </button>
+  )}
+</div>
+</div>
+</div>
 
                 {/* Add Lesson Form */}
                 {showLessonForm && (
@@ -1049,7 +1134,9 @@ export default function Dashboard() {
   />
 )}
 
-<OnboardingTour key={tourKey} run={showTour} onComplete={completeTour} />
-</div>
-)
+<OnboardingTour key={tourKey} run={showTour} onComplete={completeTour} /> 
+
+  <DevTierToggle /> 
+      </div>
+  )
 }
