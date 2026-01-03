@@ -32,6 +32,7 @@ interface AllChildrenListProps {
   onEditLesson: (lesson: Lesson) => void
   onDeleteLesson: (id: string) => void
   onCycleStatus: (id: string, currentStatus: string) => void
+  onGenerateAssessment?: (lesson: Lesson) => void  // ✅ NEW: Generate assessment callback
   autoExpandKid?: string | null
 }
 
@@ -41,9 +42,13 @@ export default function AllChildrenList({
   onEditLesson, 
   onDeleteLesson,
   onCycleStatus,
+  onGenerateAssessment,  // ✅ NEW
   autoExpandKid 
 }: AllChildrenListProps) {
   const router = useRouter()
+  
+  // ✅ NEW: Track which lesson menu is open
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
   
   // Helper function to parse date strings as local dates
   const formatLocalDate = (dateString: string | null) => {
@@ -52,6 +57,23 @@ export default function AllChildrenList({
     const [year, month, day] = dateString.split('T')[0].split('-')
     const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
     return date.toLocaleDateString()
+  }
+
+  // ✅ NEW: Calculate end date from start date + duration
+  const calculateEndDate = (startDate: string | null, durationMinutes: number | null): string => {
+    if (!startDate || !durationMinutes) return 'No end date'
+    
+    const start = new Date(startDate)
+    
+    // Simple calculation (will be improved with school calendar later)
+    // 1 day = 360 minutes (6 hours)
+    const durationDays = Math.ceil(durationMinutes / 360)
+    
+    // Add duration days to start date
+    const end = new Date(start)
+    end.setDate(start.getDate() + durationDays)
+    
+    return end.toLocaleDateString()
   }
 
   // Helper function to parse AI-generated lesson descriptions
@@ -96,17 +118,27 @@ export default function AllChildrenList({
   const [showBulkActions, setShowBulkActions] = useState(false)
   const [bulkDate, setBulkDate] = useState(new Date().toISOString().split('T')[0])
   
-  // Collapse all statuses by default
-  const [collapsedStatuses, setCollapsedStatuses] = useState<Set<string>>(() => {
-    const defaultCollapsed = new Set<string>()
-    kids.forEach(kid => {
-      defaultCollapsed.add(`${kid.id}-Not Started`)
-      defaultCollapsed.add(`${kid.id}-In Progress`)
-      defaultCollapsed.add(`${kid.id}-Completed`)
-    })
-    return defaultCollapsed
-  })
+  // ✅ UPDATED: Collapse subjects and statuses
   const [collapsedSubjects, setCollapsedSubjects] = useState<Set<string>>(new Set())
+  const [collapsedStatuses, setCollapsedStatuses] = useState<Set<string>>(new Set())
+  const [hasInitialized, setHasInitialized] = useState(false) // ✅ NEW: Track if we've initialized
+
+  // ✅ FIXED: Only initialize collapsed subjects ONCE, not on every data update
+  useEffect(() => {
+    if (Object.keys(lessonsByKid).length > 0 && !hasInitialized) {
+      const newCollapsed = new Set<string>()
+      // Collapse all subjects by default
+      kids.forEach(kid => {
+        const kidLessons = lessonsByKid[kid.id] || []
+        const grouped = groupLessonsBySubject(kidLessons)
+        Object.keys(grouped).forEach(subject => {
+          newCollapsed.add(`${kid.id}-${subject}`)
+        })
+      })
+      setCollapsedSubjects(newCollapsed)
+      setHasInitialized(true) // ✅ Mark as initialized
+    }
+  }, [lessonsByKid, kids, hasInitialized])
 
   const toggleKid = (kidId: string) => {
     const newExpanded = new Set(expandedKids)
@@ -118,16 +150,6 @@ export default function AllChildrenList({
     setExpandedKids(newExpanded)
   }
 
-  const toggleStatus = (key: string) => {
-    const newCollapsed = new Set(collapsedStatuses)
-    if (newCollapsed.has(key)) {
-      newCollapsed.delete(key)
-    } else {
-      newCollapsed.add(key)
-    }
-    setCollapsedStatuses(newCollapsed)
-  }
-
   const toggleSubject = (key: string) => {
     const newCollapsed = new Set(collapsedSubjects)
     if (newCollapsed.has(key)) {
@@ -136,6 +158,16 @@ export default function AllChildrenList({
       newCollapsed.add(key)
     }
     setCollapsedSubjects(newCollapsed)
+  }
+
+  const toggleStatus = (key: string) => {
+    const newCollapsed = new Set(collapsedStatuses)
+    if (newCollapsed.has(key)) {
+      newCollapsed.delete(key)
+    } else {
+      newCollapsed.add(key)
+    }
+    setCollapsedStatuses(newCollapsed)
   }
 
   const toggleLessonSelect = (lessonId: string) => {
@@ -253,27 +285,29 @@ export default function AllChildrenList({
     return statusMap[lesson.status] || 'Not Started'
   }
 
-  const groupLessonsByStatus = (lessons: Lesson[]) => {
-    const groups: { [status: string]: { [subject: string]: Lesson[] } } = {
-      'Not Started': {},
-      'In Progress': {},
-      'Completed': {}
-    }
+  // ✅ NEW: Group by SUBJECT first, then STATUS
+  const groupLessonsBySubject = (lessons: Lesson[]) => {
+    const groups: { [subject: string]: { [status: string]: Lesson[] } } = {}
 
     lessons.forEach(lesson => {
-      const status = getLessonStatus(lesson)
       const subject = lesson.subject || 'Other'
+      const status = getLessonStatus(lesson)
       
-      if (!groups[status][subject]) {
-        groups[status][subject] = []
+      if (!groups[subject]) {
+        groups[subject] = {
+          'Not Started': [],
+          'In Progress': [],
+          'Completed': []
+        }
       }
-      groups[status][subject].push(lesson)
+      
+      groups[subject][status].push(lesson)
     })
 
-    // Sort lessons within each subject
-    Object.keys(groups).forEach(status => {
-      Object.keys(groups[status]).forEach(subject => {
-        groups[status][subject].sort((a, b) => {
+    // Sort lessons within each status
+    Object.keys(groups).forEach(subject => {
+      Object.keys(groups[subject]).forEach(status => {
+        groups[subject][status].sort((a, b) => {
           const numA = parseInt(a.title.match(/\d+/)?.[0] || '0')
           const numB = parseInt(b.title.match(/\d+/)?.[0] || '0')
           return numA - numB
@@ -347,7 +381,7 @@ export default function AllChildrenList({
       {kids.map(kid => {
         const kidLessons = localLessonsByKid[kid.id] || []
         const isExpanded = expandedKids.has(kid.id)
-        const grouped = groupLessonsByStatus(kidLessons)
+        const grouped = groupLessonsBySubject(kidLessons) // ✅ CHANGED: Now groups by subject first
         const stats = getChildStats(kidLessons)
 
         return (
@@ -418,74 +452,87 @@ export default function AllChildrenList({
                   <p className="text-gray-600 text-center py-8">No lessons yet for {kid.displayname}</p>
                 ) : (
                   <div className="space-y-4">
-                    {Object.entries(grouped).map(([status, subjects]) => {
-                      const statusLessons = Object.values(subjects).flat()
-                      const statusLessonCount = statusLessons.length
-                      if (statusLessonCount === 0) return null
+                    {/* ✅ NEW STRUCTURE: Subject → Status → Lessons */}
+                    {Object.entries(grouped).map(([subject, statuses]) => {
+                      const subjectLessonCount = Object.values(statuses).flat().length
+                      if (subjectLessonCount === 0) return null
                       
-                      const statusKey = `${kid.id}-${status}`
-                      const isStatusCollapsed = collapsedStatuses.has(statusKey)
-                      const allStatusSelected = areAllStatusLessonsSelected(statusLessons)
+                      const subjectKey = `${kid.id}-${subject}`
+                      const isSubjectCollapsed = collapsedSubjects.has(subjectKey)
                       
                       return (
-                        <div key={statusKey} className="border rounded-lg">
-                          <div
-                            className={`w-full px-4 py-3 flex items-center justify-between font-semibold ${
-                              status === 'Completed' ? 'bg-green-50 text-green-800' :
-                              status === 'In Progress' ? 'bg-yellow-50 text-yellow-800' :
-                              'bg-blue-50 text-blue-800'
-                            } rounded-t-lg`}
+                        <div key={subjectKey} className="border-2 border-gray-200 rounded-lg">
+                          {/* Subject Header */}
+                          <button
+                            onClick={() => toggleSubject(subjectKey)}
+                            className="w-full px-4 py-3 flex items-center justify-between bg-gradient-to-r from-indigo-50 to-purple-50 hover:from-indigo-100 hover:to-purple-100 transition-colors rounded-t-lg font-bold text-gray-800"
                           >
-                            {/* Left side: Arrow + Status name + Select All label + Checkbox */}
                             <div className="flex items-center gap-3">
-                              <button
-                                onClick={() => toggleStatus(statusKey)}
-                                className="hover:opacity-80 transition-opacity"
-                              >
-                                <span>{isStatusCollapsed ? '▶' : '▼'}</span>
-                              </button>
-                              <span>{status} ({statusLessonCount})</span>
-                              <div className="flex items-center gap-2">
-                                <span className="text-sm font-medium">Select All</span>
-                                <input
-                                  type="checkbox"
-                                  checked={allStatusSelected}
-                                  onChange={(e) => {
-                                    e.stopPropagation()
-                                    if (allStatusSelected) {
-                                      deselectAllForStatus(statusLessons)
-                                    } else {
-                                      selectAllForStatus(statusLessons)
-                                    }
-                                  }}
-                                  className="w-5 h-5 cursor-pointer"
-                                  title={`Select all ${status} lessons`}
-                                />
-                              </div>
+                              <span className="text-lg">{isSubjectCollapsed ? '▶' : '▼'}</span>
+                              <span className="text-lg">📚 {subject}</span>
+                              <span className="text-sm font-normal text-gray-600">({subjectLessonCount} lessons)</span>
                             </div>
-                          </div>
+                          </button>
                           
-                          {!isStatusCollapsed && (
-                            <div className="p-2">
-                              {Object.entries(subjects).map(([subject, subjectLessons]) => {
-                                const subjectKey = `${kid.id}-${status}-${subject}`
-                                const isSubjectCollapsed = collapsedSubjects.has(subjectKey)
+                          {/* Status Groups within Subject */}
+                          {!isSubjectCollapsed && (
+                            <div className="p-2 space-y-2">
+                              {Object.entries(statuses).map(([status, statusLessons]) => {
+                                if (statusLessons.length === 0) return null
+                                
+                                const statusKey = `${kid.id}-${subject}-${status}`
+                                const isStatusCollapsed = collapsedStatuses.has(statusKey)
+                                const allStatusSelected = areAllStatusLessonsSelected(statusLessons)
                                 
                                 return (
-                                  <div key={subjectKey} className="mb-2">
-                                    <button
-                                      onClick={() => toggleSubject(subjectKey)}
-                                      className="w-full px-3 py-2 flex items-center justify-between text-left bg-gray-50 hover:bg-gray-100 rounded font-medium text-gray-700"
+                                  <div key={statusKey} className="border rounded-lg">
+                                    <div
+                                      className={`w-full px-4 py-2 flex items-center justify-between font-semibold text-sm ${
+                                        status === 'Completed' ? 'bg-green-50 text-green-800' :
+                                        status === 'In Progress' ? 'bg-yellow-50 text-yellow-800' :
+                                        'bg-blue-50 text-blue-800'
+                                      } rounded-t-lg`}
                                     >
-                                      <span className="flex items-center gap-2">
-                                        <span className="text-sm">{isSubjectCollapsed ? '▶' : '▼'}</span>
-                                        <span>{subject} ({subjectLessons.length})</span>
-                                      </span>
-                                    </button>
+                                      {/* Left side: Arrow + Status name */}
+                                      <div className="flex items-center gap-2">
+                                        <button
+                                          onClick={() => toggleStatus(statusKey)}
+                                          className="hover:opacity-80 transition-opacity"
+                                        >
+                                          <span className="text-xs">{isStatusCollapsed ? '▶' : '▼'}</span>
+                                        </button>
+                                        <span>{status} ({statusLessons.length})</span>
+                                      </div>
+                                      
+                                      {/* Right side: Select All / Deselect All text buttons */}
+                                      <div className="flex items-center gap-3 text-xs">
+                                        {allStatusSelected ? (
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation()
+                                              deselectAllForStatus(statusLessons)
+                                            }}
+                                            className="text-blue-600 hover:text-blue-800 font-medium"
+                                          >
+                                            Deselect All
+                                          </button>
+                                        ) : (
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation()
+                                              selectAllForStatus(statusLessons)
+                                            }}
+                                            className="text-blue-600 hover:text-blue-800 font-medium"
+                                          >
+                                            Select All
+                                          </button>
+                                        )}
+                                      </div>
+                                    </div>
                                     
-                                    {!isSubjectCollapsed && (
-                                      <div className="ml-4 mt-2 space-y-2">
-                                        {subjectLessons.map((lesson) => (
+                                    {!isStatusCollapsed && (
+                                      <div className="p-2 space-y-2">
+                                        {statusLessons.map((lesson) => (
                                           <div 
                                             key={lesson.id} 
                                             className={`border rounded p-3 ${
@@ -518,7 +565,7 @@ export default function AllChildrenList({
                                               </button>
                                               <div className="flex-1">
                                                 <div className="flex justify-between items-start">
-                                                  <div>
+                                                  <div className="flex-1">
                                                     <h3 className={`font-semibold text-gray-900 text-sm ${lesson.status === 'completed' ? 'line-through' : ''}`}>
                                                       {lesson.title}
                                                     </h3>
@@ -527,30 +574,85 @@ export default function AllChildrenList({
                                                         {formatLessonDescription(lesson.description)}
                                                       </p>
                                                     )}
-                                                    {lesson.duration_minutes && (
-                                                      <span className="inline-block px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded mt-1">
-                                                        ⏱️ {lesson.duration_minutes} min
-                                                      </span>
-                                                    )}
-                                                    {lesson.lesson_date && (
-                                                      <p className="text-gray-500 text-xs mt-1">
-                                                        📅 {formatLocalDate(lesson.lesson_date)}
-                                                      </p>
-                                                    )}
+                                                    
+                                                    {/* ✅ NEW: Duration and Dates */}
+                                                    <div className="flex flex-wrap gap-2 mt-2">
+                                                      {lesson.duration_minutes && (
+                                                        <span className="inline-block px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded">
+                                                          ⏱️ {lesson.duration_minutes} min
+                                                        </span>
+                                                      )}
+                                                      {lesson.lesson_date && (
+                                                        <span className="inline-block px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
+                                                          📅 Start: {formatLocalDate(lesson.lesson_date)}
+                                                        </span>
+                                                      )}
+                                                      {lesson.lesson_date && lesson.duration_minutes && (
+                                                        <span className="inline-block px-2 py-1 bg-green-100 text-green-800 text-xs rounded">
+                                                          🏁 End: {calculateEndDate(lesson.lesson_date, lesson.duration_minutes)}
+                                                        </span>
+                                                      )}
+                                                    </div>
                                                   </div>
-                                                  <div className="flex gap-1">
+                                                  {/* ✅ NEW: Ellipses Menu */}
+                                                  <div className="relative ml-2">
                                                     <button
-                                                      onClick={() => onEditLesson(lesson)}
-                                                      className="px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
+                                                      onClick={(e) => {
+                                                        e.stopPropagation()
+                                                        setOpenMenuId(openMenuId === lesson.id ? null : lesson.id)
+                                                      }}
+                                                      className="p-1 hover:bg-gray-100 rounded"
+                                                      title="More actions"
                                                     >
-                                                      Edit
+                                                      <span className="text-gray-600 text-xl">⋮</span>
                                                     </button>
-                                                    <button
-                                                      onClick={() => onDeleteLesson(lesson.id)}
-                                                      className="px-2 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700"
-                                                    >
-                                                      Delete
-                                                    </button>
+                                                    
+                                                    {openMenuId === lesson.id && (
+                                                      <>
+                                                        {/* Backdrop to close menu when clicking outside */}
+                                                        <div 
+                                                          className="fixed inset-0 z-10" 
+                                                          onClick={() => setOpenMenuId(null)}
+                                                        />
+                                                        
+                                                        {/* Dropdown Menu */}
+                                                        <div className="absolute right-0 top-8 z-20 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[180px]">
+                                                          <button
+                                                            onClick={() => {
+                                                              onEditLesson(lesson)
+                                                              setOpenMenuId(null)
+                                                            }}
+                                                            className="w-full text-left px-4 py-2 hover:bg-gray-100 text-gray-900 text-sm flex items-center gap-2"
+                                                          >
+                                                            <span>✏️</span> Edit Lesson
+                                                          </button>
+                                                          
+                                                          {onGenerateAssessment && (
+                                                            <button
+                                                              onClick={() => {
+                                                                onGenerateAssessment(lesson)
+                                                                setOpenMenuId(null)
+                                                              }}
+                                                              className="w-full text-left px-4 py-2 hover:bg-gray-100 text-gray-900 text-sm flex items-center gap-2"
+                                                            >
+                                                              <span>✨</span> Generate Assessment
+                                                            </button>
+                                                          )}
+                                                          
+                                                          <div className="border-t border-gray-200 my-1" />
+                                                          
+                                                          <button
+                                                            onClick={() => {
+                                                              onDeleteLesson(lesson.id)
+                                                              setOpenMenuId(null)
+                                                            }}
+                                                            className="w-full text-left px-4 py-2 hover:bg-red-50 text-red-600 text-sm flex items-center gap-2"
+                                                          >
+                                                            <span>🗑️</span> Delete Lesson
+                                                          </button>
+                                                        </div>
+                                                      </>
+                                                    )}
                                                   </div>
                                                 </div>
                                               </div>

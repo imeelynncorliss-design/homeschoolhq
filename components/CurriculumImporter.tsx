@@ -17,45 +17,81 @@ interface Props {
   onImportComplete: () => void;
 }
 
-const DURATION_OPTIONS = [
-  '15 min',
-  '30 min',
-  '45 min',
-  '1 hour',
-  '1.5 hours',
-  '2 hours',
-  '2.5 hours',
-  '3 hours'
-];
+// ✅ NEW: Duration units for days/weeks/minutes
+const DURATION_UNITS = ['minutes', 'days', 'weeks'] as const;
+type DurationUnit = typeof DURATION_UNITS[number];
 
 export default function CurriculumImporter({ childId, childName, onClose, onImportComplete }: Props) {
   const [file, setFile] = useState<File | null>(null);
   const [extractedLessons, setExtractedLessons] = useState<Lesson[]>([]);
   const [selectedLessons, setSelectedLessons] = useState<Set<number>>(new Set());
-  const [lessonDurations, setLessonDurations] = useState<{ [key: number]: string }>({});
+  const [lessonDurations, setLessonDurations] = useState<{ [key: number]: { value: number; unit: DurationUnit } }>({});
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<'upload' | 'preview' | 'success'>('upload');
   const [error, setError] = useState<string>('');
   const [importResults, setImportResults] = useState<{ imported: number; skipped: number }>({ imported: 0, skipped: 0 });
+  
+  // ✅ NEW: Subject selection
+  const [selectedSubject, setSelectedSubject] = useState<string>('');
+  const [customSubject, setCustomSubject] = useState<string>('');
+  const [existingSubjects, setExistingSubjects] = useState<string[]>([]);
+  
+  // ✅ NEW: Bulk duration settings
+  const [bulkDurationValue, setBulkDurationValue] = useState<number>(1);
+  const [bulkDurationUnit, setBulkDurationUnit] = useState<DurationUnit>('weeks');
+  const [applyBulkDuration, setApplyBulkDuration] = useState<boolean>(false);
+
+  // ✅ NEW: Load existing subjects when component mounts
+  useState(() => {
+    const loadSubjects = async () => {
+      const { supabase } = await import('@/lib/supabase');
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      
+      const { data } = await supabase
+        .from('lessons')
+        .select('subject')
+        .eq('user_id', user.id);
+      
+      if (data) {
+        const uniqueSubjects = [...new Set(data.map(d => d.subject))].filter(Boolean);
+        setExistingSubjects(uniqueSubjects);
+      }
+    };
+    loadSubjects();
+  });
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
-    if (selectedFile && selectedFile.type === 'application/pdf') {
-      setFile(selectedFile);
-      setError('');
-    } else {
-      alert('Please select a PDF file');
+    
+    // ✅ UPDATED: Accept PDF and images
+    if (selectedFile) {
+      const validTypes = ['application/pdf', 'image/jpeg', 'image/png'];
+      if (validTypes.includes(selectedFile.type)) {
+        setFile(selectedFile);
+        setError('');
+      } else {
+        alert('Please select a PDF or image file (JPEG/PNG)');
+      }
     }
   };
 
   const extractLessons = async () => {
     if (!file) return;
 
+    // ✅ NEW: Validate subject selection
+    const finalSubject = selectedSubject === 'custom' ? customSubject : selectedSubject;
+    if (!finalSubject || finalSubject.trim() === '') {
+      setError('Please select or enter a subject');
+      return;
+    }
+
     setLoading(true);
     setError('');
     const formData = new FormData();
     formData.append('file', file);
     formData.append('childId', childId);
+    formData.append('subject', finalSubject); // ✅ NEW: Pass subject to API
 
     try {
       const response = await fetch('/api/import-curriculum', {
@@ -79,8 +115,24 @@ export default function CurriculumImporter({ childId, childName, onClose, onImpo
           return numA - numB;
         });
         
-        setExtractedLessons(sortedLessons);
-        setSelectedLessons(new Set(sortedLessons.map((_: any, i: number) => i)));
+        // ✅ NEW: Apply subject to all lessons
+        const lessonsWithSubject = sortedLessons.map((lesson: Lesson) => ({
+          ...lesson,
+          subject: finalSubject
+        }));
+        
+        setExtractedLessons(lessonsWithSubject);
+        setSelectedLessons(new Set(lessonsWithSubject.map((_: any, i: number) => i)));
+        
+        // ✅ NEW: Apply bulk duration if checkbox is checked
+        if (applyBulkDuration) {
+          const bulkDurations: { [key: number]: { value: number; unit: DurationUnit } } = {};
+          lessonsWithSubject.forEach((_: any, i: number) => {
+            bulkDurations[i] = { value: bulkDurationValue, unit: bulkDurationUnit };
+          });
+          setLessonDurations(bulkDurations);
+        }
+        
         setStep('preview');
       }
     } catch (error) {
@@ -101,10 +153,10 @@ export default function CurriculumImporter({ childId, childName, onClose, onImpo
     setSelectedLessons(newSelected);
   };
 
-  const handleDurationChange = (index: number, duration: string) => {
+  const handleDurationChange = (index: number, value: number, unit: DurationUnit) => {
     setLessonDurations(prev => ({
       ...prev,
-      [index]: duration
+      [index]: { value, unit }
     }));
   };
 
@@ -144,15 +196,18 @@ export default function CurriculumImporter({ childId, childName, onClose, onImpo
       for (let i = 0; i < extractedLessons.length; i++) {
         const lesson = extractedLessons[i];
         if (selectedLessons.has(i) && newLessons.includes(lesson)) {
-          // Parse duration string to minutes
+          // ✅ UPDATED: Convert duration value/unit to minutes for storage
           let durationMinutes = null;
           if (lessonDurations[i]) {
-            const durationStr = lessonDurations[i];
-            if (durationStr.includes('hour')) {
-              const hours = parseFloat(durationStr);
-              durationMinutes = hours * 60;
-            } else if (durationStr.includes('min')) {
-              durationMinutes = parseInt(durationStr);
+            const { value, unit } = lessonDurations[i];
+            if (unit === 'minutes') {
+              durationMinutes = value;
+            } else if (unit === 'days') {
+              // Assuming 6 hours per school day
+              durationMinutes = value * 6 * 60;
+            } else if (unit === 'weeks') {
+              // Assuming 5 days per week, 6 hours per day
+              durationMinutes = value * 5 * 6 * 60;
             }
           }
           
@@ -210,8 +265,8 @@ export default function CurriculumImporter({ childId, childName, onClose, onImpo
           {step === 'upload' && (
             <div className="space-y-4">
               <p className="text-gray-600">
-  Upload your curriculum's <strong>table of contents</strong> (PDF, max 15MB) and we'll extract the lesson plans automatically.
-</p>
+                Upload your curriculum's <strong>table of contents</strong> (PDF or image, max 15MB) and we'll extract the lesson plans automatically.
+              </p>
               
               {error && (
                 <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
@@ -219,10 +274,79 @@ export default function CurriculumImporter({ childId, childName, onClose, onImpo
                 </div>
               )}
               
+              {/* ✅ NEW: Subject Selection */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  What subject is this curriculum for?
+                </label>
+                <select
+                  value={selectedSubject}
+                  onChange={(e) => setSelectedSubject(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-2 text-gray-900"
+                >
+                  <option value="">-- Select Subject --</option>
+                  {existingSubjects.map(subject => (
+                    <option key={subject} value={subject}>{subject}</option>
+                  ))}
+                  <option value="custom">➕ Create New Subject</option>
+                </select>
+                
+                {selectedSubject === 'custom' && (
+                  <input
+                    type="text"
+                    placeholder="Enter subject name (e.g., Math, Science, History)"
+                    value={customSubject}
+                    onChange={(e) => setCustomSubject(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg px-4 py-2 text-gray-900"
+                  />
+                )}
+              </div>
+
+              {/* ✅ NEW: Bulk Duration Settings */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="apply-bulk"
+                    checked={applyBulkDuration}
+                    onChange={(e) => setApplyBulkDuration(e.target.checked)}
+                    className="rounded"
+                  />
+                  <label htmlFor="apply-bulk" className="text-sm font-medium text-gray-700">
+                    Set duration for all lessons
+                  </label>
+                </div>
+                
+                {applyBulkDuration && (
+                  <div className="flex gap-3 items-center">
+                    <input
+                      type="number"
+                      min="1"
+                      value={bulkDurationValue}
+                      onChange={(e) => setBulkDurationValue(parseInt(e.target.value) || 1)}
+                      className="w-20 border border-gray-300 rounded px-3 py-2 text-gray-900"
+                    />
+                    <select
+                      value={bulkDurationUnit}
+                      onChange={(e) => setBulkDurationUnit(e.target.value as DurationUnit)}
+                      className="border border-gray-300 rounded px-3 py-2 text-gray-900"
+                    >
+                      {DURATION_UNITS.map(unit => (
+                        <option key={unit} value={unit}>
+                          {unit}
+                        </option>
+                      ))}
+                    </select>
+                    <span className="text-sm text-gray-600">per lesson</span>
+                  </div>
+                )}
+              </div>
+              
+              {/* ✅ UPDATED: File upload accepts images */}
               <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
                 <input
                   type="file"
-                  accept="application/pdf"
+                  accept="application/pdf,image/jpeg,image/png"
                   onChange={handleFileChange}
                   className="hidden"
                   id="pdf-upload"
@@ -231,7 +355,7 @@ export default function CurriculumImporter({ childId, childName, onClose, onImpo
                   htmlFor="pdf-upload"
                   className="cursor-pointer inline-block bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700"
                 >
-                  Choose PDF File
+                  Choose File (PDF or Image)
                 </label>
                 {file && (
                   <p className="mt-4 text-gray-700">
@@ -294,24 +418,45 @@ export default function CurriculumImporter({ childId, childName, onClose, onImpo
                             <p className="text-sm text-gray-600">{lesson.description}</p>
                             <div className="flex gap-3 mt-2 text-xs text-gray-500">
                               <span className="bg-gray-100 px-2 py-1 rounded">{lesson.subject}</span>
-                              {lesson.duration && (
-                                <span className="bg-gray-100 px-2 py-1 rounded">{lesson.duration}</span>
+                              {lessonDurations[index] && (
+                                <span className="bg-gray-100 px-2 py-1 rounded">
+                                  {lessonDurations[index].value} {lessonDurations[index].unit}
+                                </span>
                               )}
                             </div>
                           </div>
+                          {/* ✅ UPDATED: Duration with value + unit */}
                           <div className="flex flex-col gap-1">
                             <label className="text-xs text-gray-600">Duration (optional)</label>
-                            <select
-                              value={lessonDurations[index] || ''}
-                              onChange={(e) => handleDurationChange(index, e.target.value)}
-                              className="text-sm border rounded px-2 py-1 text-gray-900"
-                              disabled={!selectedLessons.has(index)}
-                            >
-                              <option value="">Not set</option>
-                              {DURATION_OPTIONS.map(duration => (
-                                <option key={duration} value={duration}>{duration}</option>
-                              ))}
-                            </select>
+                            <div className="flex gap-2">
+                              <input
+                                type="number"
+                                min="1"
+                                value={lessonDurations[index]?.value || ''}
+                                onChange={(e) => {
+                                  const value = parseInt(e.target.value) || 1;
+                                  const unit = lessonDurations[index]?.unit || 'weeks';
+                                  handleDurationChange(index, value, unit);
+                                }}
+                                placeholder="1"
+                                className="w-16 text-sm border rounded px-2 py-1 text-gray-900"
+                                disabled={!selectedLessons.has(index)}
+                              />
+                              <select
+                                value={lessonDurations[index]?.unit || 'weeks'}
+                                onChange={(e) => {
+                                  const value = lessonDurations[index]?.value || 1;
+                                  const unit = e.target.value as DurationUnit;
+                                  handleDurationChange(index, value, unit);
+                                }}
+                                className="text-sm border rounded px-2 py-1 text-gray-900"
+                                disabled={!selectedLessons.has(index)}
+                              >
+                                {DURATION_UNITS.map(unit => (
+                                  <option key={unit} value={unit}>{unit}</option>
+                                ))}
+                              </select>
+                            </div>
                           </div>
                         </div>
                       </div>

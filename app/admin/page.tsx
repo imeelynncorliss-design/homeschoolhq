@@ -7,14 +7,15 @@ import SchoolYearConfig from '@/components/SchoolYearConfig'
 import ProgressDashboard from '@/components/ProgressDashboard'
 import VacationPlanner from '@/components/VacationPlanner'
 import BulkLessonScheduler from '@/components/BulkLessonScheduler'
+import AttendanceTracker from '@/components/AttendanceTracker' // ✅ NEW: Import
 import { getTierForTesting } from '@/lib/tierTesting'
 import DevTierToggle from '@/components/DevTierToggle'
 
 // Feature flags based on subscription tier
 const FEATURES = {
   FREE: ['school_year_config'],
-  PREMIUM: ['school_year_config', 'progress_tracking', 'vacation_planner', 'bulk_scheduler'],
-  FAMILY: ['school_year_config', 'progress_tracking', 'vacation_planner', 'bulk_scheduler', 'advanced_analytics']
+  PREMIUM: ['school_year_config', 'progress_tracking', 'vacation_planner', 'bulk_scheduler', 'attendance_tracking'], // ✅ NEW: Add attendance
+  FAMILY: ['school_year_config', 'progress_tracking', 'vacation_planner', 'bulk_scheduler', 'attendance_tracking', 'advanced_analytics'] // ✅ NEW: Add attendance
 }
 
 export default function AdminPage() {
@@ -23,6 +24,7 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('school-year')
   const [userTier, setUserTier] = useState<'FREE' | 'PREMIUM' | 'FAMILY'>('FREE')
+  const [kids, setKids] = useState<any[]>([]) // ✅ NEW: Add kids state
   
   useEffect(() => {
     checkUser()
@@ -34,11 +36,20 @@ export default function AdminPage() {
       router.push('/')
     } else {
       setUser(user)
-      // TODO: Fetch actual subscription tier from database
-      // For now, defaulting to FREE for development
+      loadKids() // ✅ NEW: Load kids
       setUserTier(getTierForTesting())
     }
     setLoading(false)
+  }
+
+  // ✅ NEW: Load kids function
+  const loadKids = async () => {
+    const { data } = await supabase
+      .from('kids')
+      .select('*')
+      .order('created_at', { ascending: false })
+    
+    if (data) setKids(data)
   }
 
   const hasFeature = (feature: string) => {
@@ -76,6 +87,15 @@ export default function AdminPage() {
       feature: 'bulk_scheduler',
       description: 'Assign dates to imported lessons',
       premium: true
+    },
+    // ✅ NEW: Attendance tab
+    { 
+      id: 'attendance', 
+      label: '✅ Attendance', 
+      icon: '📋',
+      feature: 'attendance_tracking',
+      description: 'Track school days and hours',
+      premium: true
     }
   ]
 
@@ -90,7 +110,7 @@ export default function AdminPage() {
         <div className="bg-white rounded-lg shadow p-6 mb-6">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Admin Settings</h1>
+              <h1 className="text-3xl font-bold text-gray-900">Admin Page</h1>
               <p className="text-gray-600 mt-1">Manage your homeschool configuration and tracking</p>
             </div>
             <div className="flex gap-2">
@@ -175,6 +195,11 @@ export default function AdminPage() {
           
           {activeTab === 'bulk-schedule' && hasFeature('bulk_scheduler') && (
             <BulkLessonScheduler userId={user.id} />
+          )}
+
+          {/* ✅ NEW: Attendance Tab Content */}
+          {activeTab === 'attendance' && hasFeature('attendance_tracking') && (
+            <AttendanceTracker kids={kids} />
           )}
 
           {/* Premium Upsell for locked features */}
