@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import moment from 'moment'
+import { formatLessonDescription } from '@/lib/formatLessonDescription'
 
 interface Lesson {
   id: string
@@ -438,7 +439,7 @@ export default function ThisWeekDashboard({ kids, lessonsByKid, onStatusChange, 
                                       </div>
                                       <h5 className="font-semibold text-gray-900 text-sm">{lesson.title}</h5>
                                       {lesson.description && (
-                                        <p className="text-xs text-gray-600 line-clamp-1 mt-1">{parseDescription(lesson.description)}</p>
+                                        <p className="text-xs text-gray-600 line-clamp-1 mt-1">{formatLessonDescription(lesson.description)}</p>
                                       )}
                                     </div>
 

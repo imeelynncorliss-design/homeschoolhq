@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import HoursTracker from './HoursTracker'
+import { formatLessonDescription } from '@/lib/formatLessonDescription'
 
 interface Lesson {
   id: string
@@ -523,7 +524,7 @@ export default function AllChildrenList({
                                                     </h3>
                                                     {lesson.description && (
                                                       <p className="text-gray-600 text-xs mt-1 line-clamp-2">
-                                                        {parseDescription(lesson.description)}
+                                                        {formatLessonDescription(lesson.description)}
                                                       </p>
                                                     )}
                                                     {lesson.duration_minutes && (

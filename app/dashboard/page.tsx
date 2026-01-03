@@ -15,6 +15,7 @@ import KidCard from '@/components/KidCard'
 import KidProfileForm from '@/components/KidProfileForm'
 import { getTierForTesting } from '@/lib/tierTesting'
 import DevTierToggle from '@/components/DevTierToggle'
+import { formatLessonDescription } from '@/lib/formatLessonDescription'
 
 const DURATION_OPTIONS = [
   '15 min',
@@ -882,11 +883,13 @@ export default function Dashboard() {
                           </div>
 
                           {selectedLesson.description && (
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700">Description</label>
-                              <p className="mt-1 text-gray-900">{selectedLesson.description}</p>
-                            </div>
-                          )}
+  <div>
+    <label className="block text-sm font-medium text-gray-700">Description</label>
+    <p className="mt-1 text-gray-900 whitespace-pre-line">
+      {formatLessonDescription(selectedLesson.description)}
+    </p>
+  </div>
+)}
 
                           <div className="flex gap-2 pt-4 border-t">
                             <button
@@ -981,12 +984,13 @@ export default function Dashboard() {
                   </div>
                 )}
 
-                {showGenerator && (
-                  <LessonGenerator 
-                    children={kids} 
-                    onClose={() => setShowGenerator(false)} 
-                  />
-                )}
+{showGenerator && (
+  <LessonGenerator 
+    kids={kids}
+    userId={user.id}
+    onClose={() => setShowGenerator(false)} 
+  />
+)}
                 
                 {showImporter && selectedKid && (
                   <CurriculumImporter

@@ -6,8 +6,8 @@ import { supabase } from '@/lib/supabase';
 
 type Child = {
   id: string;
-  name: string;
-  grade_level: string;
+  displayname: string;
+  grade?: string;
 };
 
 type LessonVariation = {
@@ -24,11 +24,11 @@ type LessonVariation = {
 };
 
 type Props = {
-  children: Child[];
+  kids: Child[];
   onClose: () => void;
 };
 
-export default function LessonGenerator({ children, onClose }: Props) {
+export default function LessonGenerator({ kids, onClose }: Props) {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -50,13 +50,13 @@ export default function LessonGenerator({ children, onClose }: Props) {
   });
 
   const handleChildSelect = (childId: string) => {
-    const child = children.find(c => c.id === childId);
+    const child = kids.find(c => c.id === childId);
     if (child) {
       setFormData({
         ...formData,
         childId,
-        childName: child.name,
-        gradeLevel: child.grade_level
+        childName: child.displayname,
+        gradeLevel: child.grade
       });
     }
   };
@@ -135,7 +135,7 @@ export default function LessonGenerator({ children, onClose }: Props) {
     if (!adaptTargetChildId || !selectedVariation) return;
 
     try {
-      const targetChild = children.find(c => c.id === adaptTargetChildId);
+      const targetChild = kids.find(c => c.id === adaptTargetChildId);
       if (!targetChild) return;
 
       // Get current user
@@ -198,9 +198,9 @@ export default function LessonGenerator({ children, onClose }: Props) {
   className="w-full border rounded-lg px-3 py-2 text-gray-900"
 >
                 <option value="">Choose a child...</option>
-                {children.map(child => (
+                {kids.map(child => (
   <option key={child.id} value={child.id}>
-    {child.name}{child.grade_level ? ` (${child.grade_level})` : ''}
+    {child.displayname}{child.grade? ` (${child.grade})` : ''}
   </option>
 ))}
               </select>
@@ -455,11 +455,11 @@ export default function LessonGenerator({ children, onClose }: Props) {
                 className="w-full border rounded-lg px-3 py-2 text-gray-900"
               >
                 <option value="">Choose a child...</option>
-                {children
+                {kids
                   .filter(child => child.id !== formData.childId)
                   .map(child => (
                     <option key={child.id} value={child.id}>
-                      {child.name}{child.grade_level ? ` (${child.grade_level})` : ''}
+                      {child.displayname}{child.grade? ` (${child.grade})` : ''}
                     </option>
                   ))}
               </select>
@@ -471,7 +471,7 @@ export default function LessonGenerator({ children, onClose }: Props) {
                 disabled={!adaptTargetChildId}
                 className="flex-1 bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
               >
-                Save for {adaptTargetChildId ? children.find(c => c.id === adaptTargetChildId)?.name : 'Child'}
+                Save for {adaptTargetChildId ? kids.find(c => c.id === adaptTargetChildId)?.name : 'Child'}
               </button>
               <button
                 onClick={() => {
