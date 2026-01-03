@@ -16,8 +16,11 @@ import KidProfileForm from '@/components/KidProfileForm'
 import { getTierForTesting } from '@/lib/tierTesting'
 import DevTierToggle from '@/components/DevTierToggle'
 import { formatLessonDescription } from '@/lib/formatLessonDescription'
+import { ReactNode } from 'react'
 import AssessmentGenerator from '@/components/AssessmentGenerator'
 import AutoScheduleModal from '@/components/AutoScheduleModal' 
+import HelpWidget from '../../components/HelpWidget';
+
 
 const DURATION_UNITS = ['minutes', 'days', 'weeks'] as const;
 type DurationUnit = typeof DURATION_UNITS[number];
@@ -725,6 +728,7 @@ export default function Dashboard() {
 
       <OnboardingTour key={tourKey} run={showTour} onComplete={completeTour} /> 
       <DevTierToggle /> 
+      <HelpWidget />
     </div>
   )
 }
