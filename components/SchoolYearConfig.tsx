@@ -18,6 +18,13 @@ export default function SchoolYearConfig({ userId }: SchoolYearConfigProps) {
     annual_goal_value: 180, // default 180 days/hours
     weekly_goal_hours: 25
   })
+  
+  // ✅ NEW: Add homeschool days state
+  const [homeschoolDays, setHomeschoolDays] = useState<string[]>([
+    'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'
+  ])
+
+  const allDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 
   useEffect(() => {
     loadConfig()
@@ -32,8 +39,21 @@ export default function SchoolYearConfig({ userId }: SchoolYearConfigProps) {
 
     if (data) {
       setConfig(data)
+      // ✅ NEW: Load homeschool days
+      if (data.homeschool_days) {
+        setHomeschoolDays(data.homeschool_days)
+      }
     }
     setLoading(false)
+  }
+
+  // ✅ NEW: Toggle day function
+  const toggleDay = (day: string) => {
+    setHomeschoolDays(prev => 
+      prev.includes(day) 
+        ? prev.filter(d => d !== day)
+        : [...prev, day]
+    )
   }
 
   const saveConfig = async () => {
@@ -45,15 +65,21 @@ export default function SchoolYearConfig({ userId }: SchoolYearConfigProps) {
       .eq('user_id', userId)
       .single()
 
+    // ✅ UPDATED: Include homeschool_days in save
+    const dataToSave = {
+      ...config,
+      homeschool_days: homeschoolDays
+    }
+
     if (existing) {
       await supabase
         .from('school_year_settings')
-        .update(config)
+        .update(dataToSave)
         .eq('user_id', userId)
     } else {
       await supabase
         .from('school_year_settings')
-        .insert([{ ...config, user_id: userId }])
+        .insert([{ ...dataToSave, user_id: userId }])
     }
 
     setSaving(false)
@@ -98,6 +124,33 @@ export default function SchoolYearConfig({ userId }: SchoolYearConfigProps) {
             />
           </div>
         </div>
+      </div>
+
+      {/* ✅ NEW SECTION: Homeschool Days */}
+      <div className="bg-orange-50 rounded-lg p-6 border border-orange-200">
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">📆 Homeschool Days</h3>
+        <p className="text-sm text-gray-600 mb-4">
+          Select which days you typically homeschool. This helps with auto-scheduling lessons.
+        </p>
+        <div className="flex flex-wrap gap-3">
+          {allDays.map(day => (
+            <button
+              key={day}
+              onClick={() => toggleDay(day)}
+              type="button"
+              className={`px-6 py-3 rounded-lg font-semibold transition-all ${
+                homeschoolDays.includes(day)
+                  ? 'bg-orange-600 text-white shadow-md transform scale-105'
+                  : 'bg-white text-gray-700 border-2 border-gray-300 hover:border-orange-400'
+              }`}
+            >
+              {day}
+            </button>
+          ))}
+        </div>
+        <p className="text-xs text-gray-500 mt-3">
+          Selected: {homeschoolDays.length === 0 ? 'None' : homeschoolDays.join(', ')}
+        </p>
       </div>
 
       {/* School Type */}
