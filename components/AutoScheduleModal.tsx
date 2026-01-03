@@ -43,7 +43,7 @@ export default function AutoScheduleModal({
     'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'
   ]);
 
-  const allDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+  const allDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
   // Fetch school year settings on mount
   useEffect(() => {
