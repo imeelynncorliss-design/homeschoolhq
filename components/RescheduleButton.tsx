@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { supabase } from '@/lib/supabase';
 
 interface RescheduleButtonProps {
   lessonId: string;
@@ -14,7 +14,6 @@ export default function RescheduleButton({
   currentDate,
   onRescheduleComplete
 }: RescheduleButtonProps) {
-  const supabase = createClientComponentClient();
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [newDate, setNewDate] = useState(currentDate || '');
   const [loading, setLoading] = useState(false);
