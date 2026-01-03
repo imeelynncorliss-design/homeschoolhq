@@ -57,7 +57,7 @@ export default function LessonGenerator({ kids, userId, onClose }: LessonGenerat
         ...formData,
         childId,
         childName: child.displayname,
-        gradeLevel: child.grade
+        gradeLevel: child.grade || ''
       });
     }
   };
