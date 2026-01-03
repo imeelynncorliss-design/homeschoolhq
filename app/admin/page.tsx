@@ -7,15 +7,15 @@ import SchoolYearConfig from '@/components/SchoolYearConfig'
 import ProgressDashboard from '@/components/ProgressDashboard'
 import VacationPlanner from '@/components/VacationPlanner'
 import BulkLessonScheduler from '@/components/BulkLessonScheduler'
-import AttendanceTracker from '@/components/AttendanceTracker' // ✅ NEW: Import
+import AttendanceTracker from '@/components/AttendanceTracker'
 import { getTierForTesting } from '@/lib/tierTesting'
 import DevTierToggle from '@/components/DevTierToggle'
 
 // Feature flags based on subscription tier
 const FEATURES = {
   FREE: ['school_year_config'],
-  PREMIUM: ['school_year_config', 'progress_tracking', 'vacation_planner', 'bulk_scheduler', 'attendance_tracking'], // ✅ NEW: Add attendance
-  FAMILY: ['school_year_config', 'progress_tracking', 'vacation_planner', 'bulk_scheduler', 'attendance_tracking', 'advanced_analytics'] // ✅ NEW: Add attendance
+  PREMIUM: ['school_year_config', 'progress_tracking', 'vacation_planner', 'bulk_scheduler', 'attendance_tracking', 'transcripts'],
+  FAMILY: ['school_year_config', 'progress_tracking', 'vacation_planner', 'bulk_scheduler', 'attendance_tracking', 'transcripts', 'advanced_analytics']
 }
 
 export default function AdminPage() {
@@ -24,7 +24,7 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('school-year')
   const [userTier, setUserTier] = useState<'FREE' | 'PREMIUM' | 'FAMILY'>('FREE')
-  const [kids, setKids] = useState<any[]>([]) // ✅ NEW: Add kids state
+  const [kids, setKids] = useState<any[]>([])
   
   useEffect(() => {
     checkUser()
@@ -36,13 +36,12 @@ export default function AdminPage() {
       router.push('/')
     } else {
       setUser(user)
-      loadKids() // ✅ NEW: Load kids
+      loadKids()
       setUserTier(getTierForTesting())
     }
     setLoading(false)
   }
 
-  // ✅ NEW: Load kids function
   const loadKids = async () => {
     const { data } = await supabase
       .from('kids')
@@ -88,7 +87,6 @@ export default function AdminPage() {
       description: 'Assign dates to imported lessons',
       premium: true
     },
-    // ✅ NEW: Attendance tab
     { 
       id: 'attendance', 
       label: '✅ Attendance', 
@@ -140,6 +138,48 @@ export default function AdminPage() {
                 Upgrade to unlock all features →
               </a>
             )}
+          </div>
+        </div>
+
+        {/* Additional Tools Section */}
+        <div className="bg-white rounded-lg shadow p-6 mb-6">
+          <h2 className="text-xl font-bold text-gray-900 mb-4">Additional Tools</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Transcripts Card */}
+            <button
+              onClick={() => router.push('/transcript')}
+              disabled={!hasFeature('transcripts')}
+              className={`bg-gradient-to-br from-purple-50 to-purple-100 border-2 rounded-lg p-6 transition-all text-left ${
+                hasFeature('transcripts')
+                  ? 'border-purple-200 hover:shadow-lg hover:border-purple-300 cursor-pointer'
+                  : 'border-gray-200 opacity-60 cursor-not-allowed'
+              }`}
+            >
+              <div className="flex justify-between items-start mb-3">
+                <div className="text-4xl">📚</div>
+                {!hasFeature('transcripts') && (
+                  <span className="text-xl">🔒</span>
+                )}
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">High School Transcripts</h3>
+              <p className="text-sm text-gray-600 mb-3">
+                Create official transcripts for college applications with GPA calculations and course tracking
+              </p>
+              <div className="flex items-center gap-2">
+                <span className="text-xs px-2 py-1 bg-purple-600 text-white rounded-full font-semibold">
+                  PREMIUM
+                </span>
+                <span className="text-xs text-gray-500">Grades 9-12</span>
+              </div>
+            </button>
+
+            {/* Placeholder for future tools */}
+            <div className="border-2 border-dashed border-gray-200 rounded-lg p-6 flex items-center justify-center">
+              <div className="text-center text-gray-400">
+                <div className="text-3xl mb-2">➕</div>
+                <p className="text-sm">More tools coming soon!</p>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -197,7 +237,6 @@ export default function AdminPage() {
             <BulkLessonScheduler userId={user.id} />
           )}
 
-          {/* ✅ NEW: Attendance Tab Content */}
           {activeTab === 'attendance' && hasFeature('attendance_tracking') && (
             <AttendanceTracker kids={kids} />
           )}
