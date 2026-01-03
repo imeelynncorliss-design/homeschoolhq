@@ -23,12 +23,13 @@ type LessonVariation = {
   extensions: string[];
 };
 
-type Props = {
+type LessonGeneratorProps = {
   kids: Child[];
+  userId: string; 
   onClose: () => void;
 };
 
-export default function LessonGenerator({ kids, onClose }: Props) {
+export default function LessonGenerator({ kids, userId, onClose }: LessonGeneratorProps) {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -165,7 +166,7 @@ export default function LessonGenerator({ kids, onClose }: Props) {
         console.error('Adapt failed:', error);
         alert(`Failed to adapt lesson: ${error.message}`);
       } else {
-        alert(`Lesson adapted for ${targetChild.name}!`);
+        alert(`Lesson adapted for ${targetChild.displayname}!`);
         setShowAdaptModal(false);
         setAdaptTargetChildId('');
         router.refresh();
@@ -471,7 +472,7 @@ export default function LessonGenerator({ kids, onClose }: Props) {
                 disabled={!adaptTargetChildId}
                 className="flex-1 bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
               >
-                Save for {adaptTargetChildId ? kids.find(c => c.id === adaptTargetChildId)?.name : 'Child'}
+                Save for {adaptTargetChildId ? kids.find(c => c.id === adaptTargetChildId)?.displayname : 'Child'}
               </button>
               <button
                 onClick={() => {
