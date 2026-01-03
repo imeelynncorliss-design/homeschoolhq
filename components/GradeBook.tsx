@@ -12,6 +12,7 @@ interface Course {
   credits: number
   letter_grade: string
   final_percentage: number
+  status: string
 }
 
 interface GradeBookProps {
@@ -79,11 +80,11 @@ export default function GradeBook({ kidId, userId }: GradeBookProps) {
 
         unweightedPoints += baseGPA * courseCredits
 
-        let weightedGPA = baseGPA
+        let weightedGPAValue = baseGPA
         if (['Honors', 'AP', 'Dual Enrollment', 'IB'].includes(course.course_type)) {
-          weightedGPA += 1.0
+          weightedGPAValue += 1.0
         }
-        weightedPoints += weightedGPA * courseCredits
+        weightedPoints += weightedGPAValue * courseCredits
 
         credits += courseCredits
       }

@@ -24,7 +24,7 @@ export default function SchoolYearConfig({ userId }: SchoolYearConfigProps) {
     'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'
   ])
 
-  const allDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+  const allDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
 
   useEffect(() => {
     loadConfig()
