@@ -381,30 +381,43 @@ export default function Dashboard() {
             {kids.length > 0 ? (
               <>
                 <div className="bg-white rounded-lg shadow p-4 mb-6">
-                  <div className="flex justify-between items-center">
-                    <h2 className="text-2xl font-bold text-gray-900">Family Schedule</h2>
-                    <div className="flex bg-gray-100 rounded-lg p-1">
-                      <button onClick={() => setViewMode('today')} className={`px-6 py-3 rounded transition-all ${viewMode === 'today' ? 'bg-white shadow text-gray-900 font-semibold' : 'text-gray-600 hover:text-gray-900'}`}>📚 Today</button>
-                      <button onClick={() => setViewMode('week')} className={`px-6 py-3 rounded transition-all ${viewMode === 'week' ? 'bg-white shadow text-gray-900 font-semibold' : 'text-gray-600 hover:text-gray-900'}`}>📅 This Week</button>
-                      <button onClick={() => setViewMode('calendar')} className={`px-6 py-3 rounded transition-all ${viewMode === 'calendar' ? 'bg-white shadow text-gray-900 font-semibold' : 'text-gray-600 hover:text-gray-900'}`}>🗓️ Calendar</button>
-                      <button onClick={() => setViewMode('list')} className={`px-6 py-3 rounded transition-all ${viewMode === 'list' ? 'bg-white shadow text-gray-900 font-semibold' : 'text-gray-600 hover:text-gray-900'}`}>📋 List</button>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                    <button onClick={() => setShowAutoSchedule(true)} className="px-4 py-2 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg hover:from-orange-600 hover:to-red-600 font-medium shadow-sm">📅 Auto-Schedule</button>
-                      {hasFeature('curriculum_import') ? (
-                        <button onClick={() => setShowImporter(true)} className="bg-gradient-to-r from-green-600 to-teal-600 text-white px-4 py-2 rounded-lg hover:from-green-700 hover:to-teal-700">📥 Import</button>
-                      ) : (
-                        <button onClick={() => { alert('Curriculum Import requires PREMIUM! Upgrade to unlock.'); router.push('/pricing') }} className="px-4 py-2 bg-gray-300 text-gray-600 rounded-lg cursor-not-allowed relative">📥 Import 🔒</button>
-                      )}
-                      <button onClick={() => setShowLessonForm(!showLessonForm)} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">+ Add Lesson</button>
-                      {hasFeature('ai_generation') ? (
-                        <button onClick={() => setShowGenerator(true)} className="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded hover:from-purple-700 hover:to-blue-700">✨ Generate Lessons</button>
-                      ) : (
-                        <button onClick={() => { alert('AI Lesson Generation requires PREMIUM! Upgrade to unlock.'); router.push('/pricing') }} className="px-4 py-2 bg-gray-300 text-gray-600 rounded-lg cursor-not-allowed relative">✨ Generate Lessons 🔒</button>
-                      )}
-                    </div>
-                  </div>
-                </div>
+  <div className="space-y-4">
+    {/* Row 1: Header and Action Buttons */}
+    <div className="flex justify-between items-center">
+      <h2 className="text-2xl font-bold text-gray-900">Family Schedule</h2>
+      <div className="flex flex-wrap gap-2">
+        <button 
+          onClick={() => setShowAutoSchedule(true)} 
+          className="px-4 py-2 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg hover:from-orange-600 hover:to-red-600 font-medium shadow-sm"
+        >
+          📅 Auto-Schedule
+        </button>
+        
+        {hasFeature('curriculum_import') ? (
+          <button onClick={() => setShowImporter(true)} className="bg-gradient-to-r from-green-600 to-teal-600 text-white px-4 py-2 rounded-lg hover:from-green-700 hover:to-teal-700">📥 Import</button>
+        ) : (
+          <button onClick={() => { alert('Curriculum Import requires PREMIUM! Upgrade to unlock.'); router.push('/pricing') }} className="px-4 py-2 bg-gray-300 text-gray-600 rounded-lg cursor-not-allowed relative">📥 Import 🔒</button>
+        )}
+        <button onClick={() => setShowLessonForm(!showLessonForm)} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">+ Add Lesson</button>
+        {hasFeature('ai_generation') ? (
+          <button onClick={() => setShowGenerator(true)} className="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded hover:from-purple-700 hover:to-blue-700">✨ Generate Lessons</button>
+        ) : (
+          <button onClick={() => { alert('AI Lesson Generation requires PREMIUM! Upgrade to unlock.'); router.push('/pricing') }} className="px-4 py-2 bg-gray-300 text-gray-600 rounded-lg cursor-not-allowed relative">✨ Generate Lessons 🔒</button>
+        )}
+      </div>
+    </div>
+    
+    {/* Row 2: View Mode Tabs */}
+    <div className="flex justify-center">
+      <div className="flex bg-gray-100 rounded-lg p-1">
+        <button onClick={() => setViewMode('today')} className={`px-6 py-3 rounded transition-all ${viewMode === 'today' ? 'bg-white shadow text-gray-900 font-semibold' : 'text-gray-600 hover:text-gray-900'}`}>📚 Today</button>
+        <button onClick={() => setViewMode('week')} className={`px-6 py-3 rounded transition-all ${viewMode === 'week' ? 'bg-white shadow text-gray-900 font-semibold' : 'text-gray-600 hover:text-gray-900'}`}>📅 This Week</button>
+        <button onClick={() => setViewMode('calendar')} className={`px-6 py-3 rounded transition-all ${viewMode === 'calendar' ? 'bg-white shadow text-gray-900 font-semibold' : 'text-gray-600 hover:text-gray-900'}`}>🗓️ Calendar</button>
+        <button onClick={() => setViewMode('list')} className={`px-6 py-3 rounded transition-all ${viewMode === 'list' ? 'bg-white shadow text-gray-900 font-semibold' : 'text-gray-600 hover:text-gray-900'}`}>📋 List</button>
+      </div>
+    </div>
+  </div>
+</div>
 
                 {showLessonForm && (
                   <div className="bg-white rounded-lg shadow p-6 mb-6">
