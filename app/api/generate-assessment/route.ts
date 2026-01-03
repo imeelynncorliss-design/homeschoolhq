@@ -16,13 +16,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing lesson information' }, { status: 400 });
     }
 
-    const difficultyMap = {
+    // ✅ Type definitions
+    type DifficultyLevel = 'easy' | 'medium' | 'hard';
+    type AssessmentType = 'quiz' | 'worksheet' | 'project';
+
+    const difficultyMap: Record<DifficultyLevel, string> = {
       easy: 'appropriate for beginners with basic understanding',
       medium: 'grade-level appropriate with moderate challenge',
       hard: 'challenging questions that require deeper thinking and application'
     };
 
-    const typeInstructions = {
+    const typeInstructions: Record<AssessmentType, string> = {
       quiz: `Create a quiz with ${questionCount} questions that includes:
 - Multiple choice questions (with 4 options each)
 - Short answer questions
@@ -56,10 +60,10 @@ ${lesson.description ? `- Description: ${lesson.description}` : ''}
 
 **Assessment Requirements:**
 - Type: ${assessmentType}
-- Difficulty: ${difficulty} (${difficultyMap[difficulty]})
+- Difficulty: ${difficulty} (${difficultyMap[difficulty as DifficultyLevel]})
 - Number of items: ${questionCount}
 
-${typeInstructions[assessmentType]}
+${typeInstructions[assessmentType as AssessmentType]}
 
 **Important Guidelines:**
 1. Make questions/problems age-appropriate and engaging

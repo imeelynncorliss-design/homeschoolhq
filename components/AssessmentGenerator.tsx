@@ -35,7 +35,7 @@ export default function AssessmentGenerator({ lesson, childName, onClose }: Asse
           lesson: {
             title: lesson.title,
             subject: lesson.subject,
-            description: formatLessonDescription(lesson.description) // ✅ Format before sending
+            description: formatLessonDescription(lesson.description || '') // ✅ Handle undefined
           },
           assessmentType,
           difficulty,
