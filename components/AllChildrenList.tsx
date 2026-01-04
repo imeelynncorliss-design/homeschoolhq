@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import HoursTracker from './HoursTracker'
 import { formatLessonDescription } from '@/lib/formatLessonDescription'
+import LessonActionModal from './LessonActionModal'
 
 interface Lesson {
   id: string
@@ -32,7 +33,7 @@ interface AllChildrenListProps {
   onEditLesson: (lesson: Lesson) => void
   onDeleteLesson: (id: string) => void
   onCycleStatus: (id: string, currentStatus: string) => void
-  onGenerateAssessment?: (lesson: Lesson) => void  // ✅ NEW: Generate assessment callback
+  onGenerateAssessment?: (lesson: Lesson) => void
   autoExpandKid?: string | null
 }
 
@@ -42,63 +43,41 @@ export default function AllChildrenList({
   onEditLesson, 
   onDeleteLesson,
   onCycleStatus,
-  onGenerateAssessment,  // ✅ NEW
+  onGenerateAssessment,
   autoExpandKid 
 }: AllChildrenListProps) {
   const router = useRouter()
   
-  // ✅ NEW: Track which lesson menu is open
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
+  // Modal state - replaces openMenuId
+  const [selectedModalLesson, setSelectedModalLesson] = useState<Lesson | null>(null)
   
   // Helper function to parse date strings as local dates
   const formatLocalDate = (dateString: string | null) => {
     if (!dateString) return ''
-    // Parse as local date instead of UTC
     const [year, month, day] = dateString.split('T')[0].split('-')
     const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
     return date.toLocaleDateString()
   }
 
-  // ✅ NEW: Calculate end date from start date + duration
+  // Calculate end date from start date + duration
   const calculateEndDate = (startDate: string | null, durationMinutes: number | null): string => {
     if (!startDate || !durationMinutes) return 'No end date'
     
     const start = new Date(startDate)
-    
-    // Simple calculation (will be improved with school calendar later)
-    // 1 day = 360 minutes (6 hours)
     const durationDays = Math.ceil(durationMinutes / 360)
-    
-    // Add duration days to start date
     const end = new Date(start)
     end.setDate(start.getDate() + durationDays)
     
     return end.toLocaleDateString()
   }
 
-  // Helper function to parse AI-generated lesson descriptions
-  const parseDescription = (description?: string) => {
-    if (!description) return null
-    
-    try {
-      // Try to parse as JSON (AI-generated lessons)
-      const parsed = JSON.parse(description)
-      return parsed.approach || description
-    } catch {
-      // If not JSON, return as-is (manually created lessons)
-      return description
-    }
-  }
-
-  // Local state to track lessons (initialized from props, updates locally)
+  // Local state to track lessons
   const [localLessonsByKid, setLocalLessonsByKid] = useState<{ [kidId: string]: Lesson[] }>(lessonsByKid)
 
-  // Sync local state when props change
   useEffect(() => {
     setLocalLessonsByKid(lessonsByKid)
   }, [lessonsByKid])
 
-  // Auto-expand the specified child if autoExpandKid prop is provided
   const [expandedKids, setExpandedKids] = useState<Set<string>>(() => {
     if (autoExpandKid) {
       return new Set([autoExpandKid])
@@ -106,7 +85,6 @@ export default function AllChildrenList({
     return new Set()
   })
 
-  // Update expanded kids when autoExpandKid changes
   useEffect(() => {
     if (autoExpandKid) {
       setExpandedKids(new Set([autoExpandKid]))
@@ -118,16 +96,17 @@ export default function AllChildrenList({
   const [showBulkActions, setShowBulkActions] = useState(false)
   const [bulkDate, setBulkDate] = useState(new Date().toISOString().split('T')[0])
   
-  // ✅ UPDATED: Collapse subjects and statuses
+  // Bulk copy to child state
+  const [showCopyModal, setShowCopyModal] = useState(false)
+  const [copyTargetChildId, setCopyTargetChildId] = useState('')
+  
   const [collapsedSubjects, setCollapsedSubjects] = useState<Set<string>>(new Set())
   const [collapsedStatuses, setCollapsedStatuses] = useState<Set<string>>(new Set())
-  const [hasInitialized, setHasInitialized] = useState(false) // ✅ NEW: Track if we've initialized
+  const [hasInitialized, setHasInitialized] = useState(false)
 
-  // ✅ FIXED: Only initialize collapsed subjects ONCE, not on every data update
   useEffect(() => {
     if (Object.keys(lessonsByKid).length > 0 && !hasInitialized) {
       const newCollapsed = new Set<string>()
-      // Collapse all subjects by default
       kids.forEach(kid => {
         const kidLessons = lessonsByKid[kid.id] || []
         const grouped = groupLessonsBySubject(kidLessons)
@@ -136,7 +115,7 @@ export default function AllChildrenList({
         })
       })
       setCollapsedSubjects(newCollapsed)
-      setHasInitialized(true) // ✅ Mark as initialized
+      setHasInitialized(true)
     }
   }, [lessonsByKid, kids, hasInitialized])
 
@@ -194,21 +173,18 @@ export default function AllChildrenList({
     setSelectedLessons(newSelected)
   }
 
-  // Select all lessons for a specific status
   const selectAllForStatus = (lessons: Lesson[]) => {
     const newSelected = new Set(selectedLessons)
     lessons.forEach(lesson => newSelected.add(lesson.id))
     setSelectedLessons(newSelected)
   }
 
-  // Deselect all lessons for a specific status
   const deselectAllForStatus = (lessons: Lesson[]) => {
     const newSelected = new Set(selectedLessons)
     lessons.forEach(lesson => newSelected.delete(lesson.id))
     setSelectedLessons(newSelected)
   }
 
-  // Check if all lessons in a status are selected
   const areAllStatusLessonsSelected = (lessons: Lesson[]) => {
     if (lessons.length === 0) return false
     return lessons.every(lesson => selectedLessons.has(lesson.id))
@@ -220,7 +196,6 @@ export default function AllChildrenList({
     if (confirm(`Schedule ${selectedLessons.size} lesson(s) for ${formatLocalDate(bulkDate)}?`)) {
       const { supabase } = await import('@/lib/supabase')
       
-      // Update database
       for (const lessonId of selectedLessons) {
         await supabase
           .from('lessons')
@@ -228,7 +203,6 @@ export default function AllChildrenList({
           .eq('id', lessonId)
       }
       
-      // Update local state immediately
       const updatedLessonsByKid = { ...localLessonsByKid }
       Object.keys(updatedLessonsByKid).forEach(kidId => {
         updatedLessonsByKid[kidId] = updatedLessonsByKid[kidId].map(lesson => {
@@ -251,7 +225,6 @@ export default function AllChildrenList({
     if (confirm(`Are you sure you want to delete ${selectedLessons.size} lesson(s)? This cannot be undone.`)) {
       const { supabase } = await import('@/lib/supabase')
       
-      // Delete all lessons in one operation
       const { error } = await supabase
         .from('lessons')
         .delete()
@@ -261,7 +234,6 @@ export default function AllChildrenList({
         console.error('Bulk delete error:', error)
         alert(`Failed to delete lessons: ${error.message}`)
       } else {
-        // Update local state immediately by filtering out deleted lessons
         const updatedLessonsByKid = { ...localLessonsByKid }
         Object.keys(updatedLessonsByKid).forEach(kidId => {
           updatedLessonsByKid[kidId] = updatedLessonsByKid[kidId].filter(
@@ -276,6 +248,68 @@ export default function AllChildrenList({
     }
   }
 
+  // Bulk copy to child function
+  const bulkCopyToChild = async () => {
+    if (selectedLessons.size === 0 || !copyTargetChildId) return
+    
+    const targetChild = kids.find(k => k.id === copyTargetChildId)
+    if (!targetChild) return
+    
+    if (confirm(`Copy ${selectedLessons.size} lesson(s) to ${targetChild.displayname}?`)) {
+      const { supabase } = await import('@/lib/supabase')
+      
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        alert('You must be logged in to copy lessons')
+        return
+      }
+      
+      // Get all selected lessons details
+      const lessonsToCopy: Lesson[] = []
+      Object.values(localLessonsByKid).forEach(lessons => {
+        lessons.forEach(lesson => {
+          if (selectedLessons.has(lesson.id)) {
+            lessonsToCopy.push(lesson)
+          }
+        })
+      })
+      
+      // Prepare lessons for bulk insert
+      const lessonsToInsert = lessonsToCopy.map(lesson => ({
+        kid_id: copyTargetChildId,
+        user_id: user.id,
+        subject: lesson.subject,
+        title: lesson.title,
+        description: lesson.description,
+        lesson_date: lesson.lesson_date,
+        duration_minutes: lesson.duration_minutes,
+        status: 'not_started' // Reset status for copied lessons
+      }))
+      
+      // Bulk insert
+      const { error } = await supabase
+        .from('lessons')
+        .insert(lessonsToInsert)
+      
+      if (error) {
+        console.error('Bulk copy error:', error)
+        alert(`Failed to copy lessons: ${error.message}`)
+      } else {
+        alert(`✅ ${lessonsToCopy.length} lesson(s) copied to ${targetChild.displayname}!`)
+        
+        const updatedLessonsByKid = { ...localLessonsByKid }
+        if (!updatedLessonsByKid[copyTargetChildId]) {
+          updatedLessonsByKid[copyTargetChildId] = []
+        }
+        setLocalLessonsByKid(updatedLessonsByKid)
+        
+        setSelectedLessons(new Set())
+        setShowCopyModal(false)
+        setCopyTargetChildId('')
+      }
+    }
+  }
+
   const getLessonStatus = (lesson: Lesson) => {
     const statusMap: { [key: string]: string } = {
       'not_started': 'Not Started',
@@ -285,7 +319,6 @@ export default function AllChildrenList({
     return statusMap[lesson.status] || 'Not Started'
   }
 
-  // ✅ NEW: Group by SUBJECT first, then STATUS
   const groupLessonsBySubject = (lessons: Lesson[]) => {
     const groups: { [subject: string]: { [status: string]: Lesson[] } } = {}
 
@@ -304,7 +337,6 @@ export default function AllChildrenList({
       groups[subject][status].push(lesson)
     })
 
-    // Sort lessons within each status
     Object.keys(groups).forEach(subject => {
       Object.keys(groups[subject]).forEach(status => {
         groups[subject][status].sort((a, b) => {
@@ -318,7 +350,6 @@ export default function AllChildrenList({
     return groups
   }
 
-  // Calculate stats for a child
   const getChildStats = (lessons: Lesson[]) => {
     const total = lessons.length
     const completed = lessons.filter(l => l.status === 'completed').length
@@ -368,6 +399,13 @@ export default function AllChildrenList({
               </button>
               
               <button
+                onClick={() => setShowCopyModal(true)}
+                className="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg font-medium transition-colors"
+              >
+                📋 Copy to Child
+              </button>
+              
+              <button
                 onClick={bulkDelete}
                 className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg font-medium transition-colors"
               >
@@ -381,7 +419,7 @@ export default function AllChildrenList({
       {kids.map(kid => {
         const kidLessons = localLessonsByKid[kid.id] || []
         const isExpanded = expandedKids.has(kid.id)
-        const grouped = groupLessonsBySubject(kidLessons) // ✅ CHANGED: Now groups by subject first
+        const grouped = groupLessonsBySubject(kidLessons)
         const stats = getChildStats(kidLessons)
 
         return (
@@ -406,7 +444,6 @@ export default function AllChildrenList({
                     {kid.age && kid.grade && ' • '}
                     {kid.grade && `Grade: ${kid.grade}`}
                   </p>
-                  {/* Summary when collapsed */}
                   {!isExpanded && kidLessons.length > 0 && (
                     <div className="mt-2 flex items-center gap-4 text-sm text-gray-600">
                       <span>{stats.total} lessons</span>
@@ -419,7 +456,6 @@ export default function AllChildrenList({
                 </div>
               </div>
               <div className="flex items-center gap-4">
-                {/* Progress indicator when collapsed */}
                 {!isExpanded && kidLessons.length > 0 && (
                   <div className="text-right">
                     <div className="text-2xl font-bold text-gray-900">{stats.completedPercent}%</div>
@@ -452,7 +488,6 @@ export default function AllChildrenList({
                   <p className="text-gray-600 text-center py-8">No lessons yet for {kid.displayname}</p>
                 ) : (
                   <div className="space-y-4">
-                    {/* ✅ NEW STRUCTURE: Subject → Status → Lessons */}
                     {Object.entries(grouped).map(([subject, statuses]) => {
                       const subjectLessonCount = Object.values(statuses).flat().length
                       if (subjectLessonCount === 0) return null
@@ -493,7 +528,6 @@ export default function AllChildrenList({
                                         'bg-blue-50 text-blue-800'
                                       } rounded-t-lg`}
                                     >
-                                      {/* Left side: Arrow + Status name */}
                                       <div className="flex items-center gap-2">
                                         <button
                                           onClick={() => toggleStatus(statusKey)}
@@ -504,7 +538,6 @@ export default function AllChildrenList({
                                         <span>{status} ({statusLessons.length})</span>
                                       </div>
                                       
-                                      {/* Right side: Select All / Deselect All text buttons */}
                                       <div className="flex items-center gap-3 text-xs">
                                         {allStatusSelected ? (
                                           <button
@@ -542,7 +575,6 @@ export default function AllChildrenList({
                                             }`}
                                           >
                                             <div className="flex items-start gap-3">
-                                              {/* Multiselect Checkbox */}
                                               <input
                                                 type="checkbox"
                                                 checked={selectedLessons.has(lesson.id)}
@@ -552,7 +584,10 @@ export default function AllChildrenList({
                                               />
                                               
                                               <button
-                                                onClick={() => onCycleStatus(lesson.id, lesson.status)}
+                                                onClick={(e) => {
+                                                  e.stopPropagation()
+                                                  onCycleStatus(lesson.id, lesson.status)
+                                                }}
                                                 className={`mt-1 w-6 h-6 rounded border-2 flex items-center justify-center text-xs font-bold cursor-pointer ${
                                                   lesson.status === 'completed' ? 'bg-green-500 border-green-600 text-white' :
                                                   lesson.status === 'in_progress' ? 'bg-yellow-400 border-yellow-500 text-gray-800' :
@@ -563,97 +598,37 @@ export default function AllChildrenList({
                                                 {lesson.status === 'completed' ? '✓' : 
                                                  lesson.status === 'in_progress' ? '◐' : '○'}
                                               </button>
-                                              <div className="flex-1">
-                                                <div className="flex justify-between items-start">
-                                                  <div className="flex-1">
-                                                    <h3 className={`font-semibold text-gray-900 text-sm ${lesson.status === 'completed' ? 'line-through' : ''}`}>
-                                                      {lesson.title}
-                                                    </h3>
-                                                    {lesson.description && (
-                                                      <p className="text-gray-600 text-xs mt-1 line-clamp-2">
-                                                        {formatLessonDescription(lesson.description)}
-                                                      </p>
-                                                    )}
-                                                    
-                                                    {/* ✅ NEW: Duration and Dates */}
-                                                    <div className="flex flex-wrap gap-2 mt-2">
-                                                      {lesson.duration_minutes && (
-                                                        <span className="inline-block px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded">
-                                                          ⏱️ {lesson.duration_minutes} min
-                                                        </span>
-                                                      )}
-                                                      {lesson.lesson_date && (
-                                                        <span className="inline-block px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
-                                                          📅 Start: {formatLocalDate(lesson.lesson_date)}
-                                                        </span>
-                                                      )}
-                                                      {lesson.lesson_date && lesson.duration_minutes && (
-                                                        <span className="inline-block px-2 py-1 bg-green-100 text-green-800 text-xs rounded">
-                                                          🏁 End: {calculateEndDate(lesson.lesson_date, lesson.duration_minutes)}
-                                                        </span>
-                                                      )}
-                                                    </div>
-                                                  </div>
-                                                  {/* ✅ NEW: Ellipses Menu */}
-                                                  <div className="relative ml-2">
-                                                    <button
-                                                      onClick={(e) => {
-                                                        e.stopPropagation()
-                                                        setOpenMenuId(openMenuId === lesson.id ? null : lesson.id)
-                                                      }}
-                                                      className="p-1 hover:bg-gray-100 rounded"
-                                                      title="More actions"
-                                                    >
-                                                      <span className="text-gray-600 text-xl">⋮</span>
-                                                    </button>
-                                                    
-                                                    {openMenuId === lesson.id && (
-                                                      <>
-                                                        {/* Backdrop to close menu when clicking outside */}
-                                                        <div 
-                                                          className="fixed inset-0 z-10" 
-                                                          onClick={() => setOpenMenuId(null)}
-                                                        />
-                                                        
-                                                        {/* Dropdown Menu */}
-                                                        <div className="absolute right-0 top-8 z-20 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[180px]">
-                                                          <button
-                                                            onClick={() => {
-                                                              onEditLesson(lesson)
-                                                              setOpenMenuId(null)
-                                                            }}
-                                                            className="w-full text-left px-4 py-2 hover:bg-gray-100 text-gray-900 text-sm flex items-center gap-2"
-                                                          >
-                                                            <span>✏️</span> Edit Lesson
-                                                          </button>
-                                                          
-                                                          {onGenerateAssessment && (
-                                                            <button
-                                                              onClick={() => {
-                                                                onGenerateAssessment(lesson)
-                                                                setOpenMenuId(null)
-                                                              }}
-                                                              className="w-full text-left px-4 py-2 hover:bg-gray-100 text-gray-900 text-sm flex items-center gap-2"
-                                                            >
-                                                              <span>✨</span> Generate Assessment
-                                                            </button>
-                                                          )}
-                                                          
-                                                          <div className="border-t border-gray-200 my-1" />
-                                                          
-                                                          <button
-                                                            onClick={() => {
-                                                              onDeleteLesson(lesson.id)
-                                                              setOpenMenuId(null)
-                                                            }}
-                                                            className="w-full text-left px-4 py-2 hover:bg-red-50 text-red-600 text-sm flex items-center gap-2"
-                                                          >
-                                                            <span>🗑️</span> Delete Lesson
-                                                          </button>
-                                                        </div>
-                                                      </>
-                                                    )}
-                                                  </div>
+                                              
+                                              {/* Clickable lesson content */}
+                                              <div 
+                                                className="flex-1 cursor-pointer hover:bg-gray-50 -m-2 p-2 rounded transition-colors"
+                                                onClick={() => setSelectedModalLesson(lesson)}
+                                              >
+                                                <h3 className={`font-semibold text-gray-900 text-sm ${lesson.status === 'completed' ? 'line-through' : ''}`}>
+                                                  {lesson.title}
+                                                </h3>
+                                                {lesson.description && (
+                                                  <p className="text-gray-600 text-xs mt-1 line-clamp-2">
+                                                    {formatLessonDescription(lesson.description)}
+                                                  </p>
+                                                )}
+                                                
+                                                <div className="flex flex-wrap gap-2 mt-2">
+                                                  {lesson.duration_minutes && (
+                                                    <span className="inline-block px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded">
+                                                      ⏱️ {lesson.duration_minutes} min
+                                                    </span>
+                                                  )}
+                                                  {lesson.lesson_date && (
+                                                    <span className="inline-block px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
+                                                      📅 Start: {formatLocalDate(lesson.lesson_date)}
+                                                    </span>
+                                                  )}
+                                                  {lesson.lesson_date && lesson.duration_minutes && (
+                                                    <span className="inline-block px-2 py-1 bg-green-100 text-green-800 text-xs rounded">
+                                                      🏁 End: {calculateEndDate(lesson.lesson_date, lesson.duration_minutes)}
+                                                    </span>
+                                                  )}
                                                 </div>
                                               </div>
                                             </div>
@@ -676,6 +651,69 @@ export default function AllChildrenList({
           </div>
         )
       })}
+
+      {/* Lesson Action Modal */}
+      <LessonActionModal
+        lesson={selectedModalLesson}
+        isOpen={selectedModalLesson !== null}
+        onClose={() => setSelectedModalLesson(null)}
+        onEdit={onEditLesson}
+        onDelete={onDeleteLesson}
+        onGenerateAssessment={onGenerateAssessment}
+      />
+
+      {/* Bulk Copy Modal */}
+      {showCopyModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="text-center mb-4">
+              <div className="text-4xl mb-2">📋</div>
+              <h3 className="text-xl font-bold text-gray-900">Copy Lessons to Another Child</h3>
+              <p className="text-sm text-gray-600 mt-2">
+                {selectedLessons.size} lesson(s) selected
+              </p>
+            </div>
+            
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-900 mb-2">
+                Select Child
+              </label>
+              <select
+                value={copyTargetChildId}
+                onChange={(e) => setCopyTargetChildId(e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900"
+              >
+                <option value="">Choose a child...</option>
+                {kids.map(kid => (
+                  <option key={kid.id} value={kid.id}>
+                    {kid.displayname}
+                    {kid.grade ? ` (${kid.grade})` : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            <div className="flex gap-2">
+              <button
+                onClick={bulkCopyToChild}
+                disabled={!copyTargetChildId}
+                className="flex-1 bg-purple-600 text-white py-3 rounded-lg hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium"
+              >
+                Copy to {copyTargetChildId ? kids.find(k => k.id === copyTargetChildId)?.displayname : 'Child'}
+              </button>
+              <button
+                onClick={() => {
+                  setShowCopyModal(false)
+                  setCopyTargetChildId('')
+                }}
+                className="flex-1 border border-gray-300 py-3 rounded-lg hover:bg-gray-50 text-gray-900 font-medium"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

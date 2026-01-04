@@ -41,6 +41,10 @@ export default function CurriculumImporter({ childId, childName, onClose, onImpo
   const [bulkDurationUnit, setBulkDurationUnit] = useState<DurationUnit>('weeks');
   const [applyBulkDuration, setApplyBulkDuration] = useState<boolean>(false);
 
+  // ✅ NEW: Start date for scheduling lessons
+  const [useStartDate, setUseStartDate] = useState<boolean>(false);
+  const [startDate, setStartDate] = useState<string>('');
+
   // ✅ NEW: Load existing subjects when component mounts
   useState(() => {
     const loadSubjects = async () => {
@@ -193,21 +197,43 @@ export default function CurriculumImporter({ childId, childName, onClose, onImpo
       
       // Prepare lessons for bulk insert
       const lessonsToInsert = [];
+      let currentDate = useStartDate && startDate ? new Date(startDate) : null;
+      
       for (let i = 0; i < extractedLessons.length; i++) {
         const lesson = extractedLessons[i];
         if (selectedLessons.has(i) && newLessons.includes(lesson)) {
           // ✅ UPDATED: Convert duration value/unit to minutes for storage
           let durationMinutes = null;
+          let durationDays = 0;
+          
           if (lessonDurations[i]) {
             const { value, unit } = lessonDurations[i];
             if (unit === 'minutes') {
               durationMinutes = value;
+              durationDays = 0;
             } else if (unit === 'days') {
               // Assuming 6 hours per school day
               durationMinutes = value * 6 * 60;
+              durationDays = value;
             } else if (unit === 'weeks') {
               // Assuming 5 days per week, 6 hours per day
               durationMinutes = value * 5 * 6 * 60;
+              durationDays = value * 5;
+            }
+          }
+          
+          // ✅ NEW: Calculate lesson date based on start date and sequential scheduling
+          let lessonDate = null;
+          if (currentDate) {
+            lessonDate = currentDate.toISOString().split('T')[0];
+            // Advance date by duration for next lesson
+            if (durationDays > 0) {
+              currentDate = new Date(currentDate);
+              currentDate.setDate(currentDate.getDate() + durationDays);
+            } else {
+              // If no duration, assume 1 day per lesson
+              currentDate = new Date(currentDate);
+              currentDate.setDate(currentDate.getDate() + 1);
             }
           }
           
@@ -217,7 +243,7 @@ export default function CurriculumImporter({ childId, childName, onClose, onImpo
             subject: lesson.subject,
             title: lesson.title,
             description: lesson.description,
-            lesson_date: null, // ✅ Always null - parent schedules later!
+            lesson_date: lessonDate,
             duration_minutes: durationMinutes,
             status: 'not_started'
           });
@@ -341,6 +367,43 @@ export default function CurriculumImporter({ childId, childName, onClose, onImpo
                   </div>
                 )}
               </div>
+
+              {/* ✅ NEW: Start Date Selection */}
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="use-start-date"
+                    checked={useStartDate}
+                    onChange={(e) => setUseStartDate(e.target.checked)}
+                    className="rounded"
+                  />
+                  <label htmlFor="use-start-date" className="text-sm font-medium text-gray-700">
+                    Schedule lessons starting from a specific date
+                  </label>
+                </div>
+                
+                {useStartDate && (
+                  <div className="space-y-2">
+                    <input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg px-4 py-2 text-gray-900"
+                    />
+                    <p className="text-xs text-gray-600">
+                      📅 Lessons will be scheduled sequentially based on their duration, starting from this date.
+                      If no duration is set, each lesson will be 1 day apart.
+                    </p>
+                  </div>
+                )}
+                
+                {!useStartDate && (
+                  <p className="text-xs text-gray-600">
+                    Lessons will be imported without dates - you can schedule them later from the calendar.
+                  </p>
+                )}
+              </div>
               
               {/* ✅ UPDATED: File upload accepts images */}
               <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
@@ -395,6 +458,16 @@ export default function CurriculumImporter({ childId, childName, onClose, onImpo
                   {selectedLessons.size === extractedLessons.length ? '❌ Deselect All' : '✅ Select All'}
                 </button>
               </div>
+
+              {/* ✅ NEW: Show scheduling info if start date is set */}
+              {useStartDate && startDate && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <p className="text-sm text-blue-900">
+                    📅 Lessons will be scheduled starting from <strong>{new Date(startDate).toLocaleDateString()}</strong>, 
+                    spaced according to their duration.
+                  </p>
+                </div>
+              )}
 
               <div className="space-y-2 max-h-96 overflow-y-auto">
                 {extractedLessons.map((lesson, index) => (
@@ -492,9 +565,15 @@ export default function CurriculumImporter({ childId, childName, onClose, onImpo
               <p className="text-gray-600 mb-2">
                 {importResults.imported} new lesson{importResults.imported !== 1 ? 's' : ''} added to {childName}'s list
               </p>
-              <p className="text-sm text-gray-500 mb-4">
-                📅 Lessons are unscheduled - assign dates when you're ready to teach them
-              </p>
+              {useStartDate && startDate ? (
+                <p className="text-sm text-gray-500 mb-4">
+                  📅 Lessons scheduled starting from {new Date(startDate).toLocaleDateString()}
+                </p>
+              ) : (
+                <p className="text-sm text-gray-500 mb-4">
+                  📅 Lessons are unscheduled - assign dates when you're ready to teach them
+                </p>
+              )}
               {importResults.skipped > 0 && (
                 <p className="text-gray-500 text-sm mt-2">
                   {importResults.skipped} duplicate{importResults.skipped !== 1 ? 's' : ''} skipped

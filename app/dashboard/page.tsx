@@ -60,7 +60,7 @@ export default function Dashboard() {
   const [showAssessmentGenerator, setShowAssessmentGenerator] = useState(false)
   const [showAutoSchedule, setShowAutoSchedule] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
-  const [viewMode, setViewMode] = useState<'today' | 'week' | 'calendar' | 'list'>('today')
+  const [viewMode, setViewMode] = useState<'today' | 'week' | 'calendar' | 'list'>('calendar')
   const [selectedLesson, setSelectedLesson] = useState<any | null>(null)
   const [selectedLessonChild, setSelectedLessonChild] = useState<any | null>(null)
   const [showCopyModal, setShowCopyModal] = useState(false)
@@ -83,7 +83,15 @@ export default function Dashboard() {
   const [editLessonEndDate, setEditLessonEndDate] = useState('')
   const [editLessonDurationValue, setEditLessonDurationValue] = useState<number>(30)
   const [editLessonDurationUnit, setEditLessonDurationUnit] = useState<DurationUnit>('minutes')
-  
+  const [showCascadeModal, setShowCascadeModal] = useState(false)
+  const [cascadeData, setCascadeData] = useState<{
+    lessonId: string
+    originalDate: string
+    newDate: string
+    affectedCount: number
+    kidId: string
+  } | null>(null)
+  const [cascadeDays, setCascadeDays] = useState<number>(1)
   
   const router = useRouter()
 
@@ -180,7 +188,6 @@ export default function Dashboard() {
     setEditingLessonId(lesson.id)
     setEditLessonTitle(lesson.title)
     setEditLessonSubject(lesson.subject)
-    // ✅ FIXED: Format JSON descriptions for editing
     setEditLessonDescription(formatLessonDescription(lesson.description) || '')
     setEditLessonDate(lesson.lesson_date || '')
     const duration = convertMinutesToDuration(lesson.duration_minutes);
@@ -210,7 +217,41 @@ export default function Dashboard() {
       duration_minutes: durationInMinutes
     }
     
-    // ✅ Optimistic update - update local state immediately
+    const currentLesson = allLessons.find(l => l.id === id)
+    if (currentLesson && 
+        currentLesson.lesson_date && 
+        editLessonDate && 
+        currentLesson.lesson_date !== editLessonDate) {
+      
+      const subsequentLessons = allLessons.filter(lesson => 
+        lesson.kid_id === currentLesson.kid_id &&
+        lesson.id !== id &&
+        lesson.lesson_date &&
+        lesson.lesson_date > currentLesson.lesson_date
+      )
+      
+      if (subsequentLessons.length > 0) {
+        const oldDate = new Date(currentLesson.lesson_date)
+        const newDateObj = new Date(editLessonDate)
+        const suggestedShift = Math.round((newDateObj.getTime() - oldDate.getTime()) / (1000 * 60 * 60 * 24))
+        
+        setCascadeData({
+          lessonId: id,
+          originalDate: currentLesson.lesson_date,
+          newDate: editLessonDate,
+          affectedCount: subsequentLessons.length,
+          kidId: currentLesson.kid_id
+        })
+        setCascadeDays(suggestedShift)
+        setShowCascadeModal(true)
+        return
+      }
+    }
+    
+    await performLessonUpdate(id, updates)
+  }
+
+  const performLessonUpdate = async (id: string, updates: any) => {
     setAllLessons(prev => prev.map(lesson => 
       lesson.id === id ? { ...lesson, ...updates } : lesson
     ))
@@ -224,7 +265,6 @@ export default function Dashboard() {
       return updated
     })
     
-    // Update selected lesson if it's still open
     if (selectedLesson?.id === id) {
       setSelectedLesson({ ...selectedLesson, ...updates })
     }
@@ -234,11 +274,10 @@ export default function Dashboard() {
     if (error) {
       console.error('Error saving lesson:', error)
       alert('Failed to save lesson changes')
-      // Reload to revert optimistic update
       loadAllLessons()
+    } else {
+      setEditingLessonId(null)
     }
-    
-    setEditingLessonId(null)
   }
 
   const handleStatusChange = async (lessonId: string, newStatus: 'not_started' | 'in_progress' | 'completed') => {
@@ -246,7 +285,6 @@ export default function Dashboard() {
     if (newStatus === 'completed') updates.completed_at = new Date().toISOString()
     if (newStatus === 'not_started') updates.completed_at = null
     
-    // ✅ Optimistic update - update local state immediately
     setAllLessons(prev => prev.map(lesson => 
       lesson.id === lessonId ? { ...lesson, ...updates } : lesson
     ))
@@ -264,8 +302,74 @@ export default function Dashboard() {
     if (error) {
       console.error('Error updating lesson status:', error)
       alert('Failed to update lesson status')
-      // Reload to revert optimistic update
       loadAllLessons()
+    }
+  }
+
+  const handleCascadeUpdate = async (updateAll: boolean) => {
+    if (!cascadeData) return
+    
+    const { lessonId, originalDate, kidId } = cascadeData
+    const daysDiff = cascadeDays
+    
+    const durationInMinutes = convertDurationToMinutes(editLessonDurationValue, editLessonDurationUnit)
+    const updates = {
+      title: editLessonTitle,
+      subject: editLessonSubject,
+      description: editLessonDescription,
+      lesson_date: editLessonDate || null,
+      duration_minutes: durationInMinutes
+    }
+    
+    await performLessonUpdate(lessonId, updates)
+    
+    if (updateAll && daysDiff !== 0) {
+      const subsequentLessons = allLessons.filter(lesson => 
+        lesson.kid_id === kidId &&
+        lesson.id !== lessonId &&
+        lesson.lesson_date &&
+        lesson.lesson_date > originalDate
+      )
+      
+      // ✅ UPDATE ALL LESSONS IN PARALLEL (MUCH FASTER!)
+      const updatePromises = subsequentLessons.map(lesson => {
+        const lessonDate = new Date(lesson.lesson_date!)
+        lessonDate.setDate(lessonDate.getDate() + daysDiff)
+        const newLessonDate = lessonDate.toISOString().split('T')[0]
+        
+        return supabase
+          .from('lessons')
+          .update({ lesson_date: newLessonDate })
+          .eq('id', lesson.id)
+      })
+      
+      // Wait for ALL updates to complete at once
+      const results = await Promise.all(updatePromises)
+      
+      // Count successful updates
+      const updatedCount = results.filter(result => !result.error).length
+      
+      await loadAllLessons()
+      
+      // Close modal first
+      setShowCascadeModal(false)
+      setCascadeData(null)
+      setCascadeDays(1)
+      
+      // Then show alert
+      setTimeout(() => {
+        alert(`✅ Updated ${updatedCount} subsequent lesson${updatedCount !== 1 ? 's' : ''}. All dates shifted by ${Math.abs(daysDiff)} day${Math.abs(daysDiff) !== 1 ? 's' : ''} ${daysDiff > 0 ? 'later' : 'earlier'}.`)
+      }, 100)
+    } else {
+      // Close modal first
+      setShowCascadeModal(false)
+      setCascadeData(null)
+      setCascadeDays(1)
+      
+      // Then show alert
+      setTimeout(() => {
+        alert('✅ Lesson date updated. Other lessons unchanged.')
+      }, 100)
     }
   }
 
@@ -286,7 +390,7 @@ export default function Dashboard() {
     }
     if (confirm(confirmMessage)) {
       await supabase.from('lessons').delete().eq('id', id)
-      loadAllLessons()
+      await loadAllLessons()
     }
   }
 
@@ -307,7 +411,7 @@ export default function Dashboard() {
       alert(`Lesson copied to ${targetChild.displayname}!`)
       setShowCopyModal(false)
       setCopyTargetChildId('')
-      loadAllLessons()
+      await loadAllLessons()
     } else {
       console.error('Copy error:', error)
       alert('Failed to copy lesson. Please try again.')
@@ -385,12 +489,10 @@ export default function Dashboard() {
               <>
                <div className="bg-white rounded-lg shadow p-4 mb-6">
   <div className="space-y-4">
-    {/* Row 1: Header (centered) */}
     <div className="flex justify-center items-center">
       <h2 className="text-2xl font-bold text-gray-900">Family Schedule</h2>
     </div>
     
-    {/* Row 2: Action Buttons (centered, wrapping) */}
     <div className="flex justify-center">
       <div className="flex flex-wrap gap-2 justify-center">
         <button 
@@ -414,13 +516,12 @@ export default function Dashboard() {
       </div>
     </div>
     
-    {/* Row 3: View Mode Tabs (centered) */}
     <div className="flex justify-center">
       <div className="flex bg-gray-100 rounded-lg p-1">
         <button onClick={() => setViewMode('today')} className={`px-5 py-2 text-sm rounded transition-all ${viewMode === 'today' ? 'bg-white shadow text-gray-900 font-semibold' : 'text-gray-600 hover:text-gray-900'}`}>📚 Today</button>
         <button onClick={() => setViewMode('week')} className={`px-5 py-2 text-sm rounded transition-all ${viewMode === 'week' ? 'bg-white shadow text-gray-900 font-semibold' : 'text-gray-600 hover:text-gray-900'}`}>📅 This Week</button>
         <button onClick={() => setViewMode('calendar')} className={`px-5 py-2 text-sm rounded transition-all ${viewMode === 'calendar' ? 'bg-white shadow text-gray-900 font-semibold' : 'text-gray-600 hover:text-gray-900'}`}>🗓️ Calendar</button>
-        <button onClick={() => setViewMode('list')} className={`px-5 py-2 text-sm rounded transition-all ${viewMode === 'list' ? 'bg-white shadow text-gray-900 font-semibold' : 'text-gray-600 hover:text-gray-900'}`}>📋 List</button>
+        <button onClick={() => setViewMode('list')} className={`px-5 py-2 text-sm rounded transition-all ${viewMode === 'list' ? 'bg-white shadow text-gray-900 font-semibold' : 'text-gray-600 hover:text-gray-900'}`}>📋 Lessons</button>
       </div>
     </div>
   </div>
@@ -457,7 +558,7 @@ export default function Dashboard() {
                 ) : viewMode === 'week' ? (
                   <ThisWeekDashboard kids={kids} lessonsByKid={lessonsByKid} onStatusChange={handleStatusChange} onLessonClick={(lesson, child) => { setSelectedLesson(lesson); setSelectedLessonChild(child) }} />
                 ) : viewMode === 'calendar' ? (
-                  <LessonCalendar kids={kids} lessonsByKid={lessonsByKid} onLessonClick={(lesson, child) => { setSelectedLesson(lesson); setSelectedLessonChild(child) }} />
+                  <LessonCalendar kids={kids} lessonsByKid={lessonsByKid} onLessonClick={(lesson, child) => {setSelectedLesson(lesson); setSelectedLessonChild(child) }} onStatusChange={handleStatusChange}/>
                 ) : (
                   <AllChildrenList 
                     kids={kids} 
@@ -531,7 +632,6 @@ export default function Dashboard() {
                               onClick={async () => { 
                                 await saveEditLesson(selectedLesson.id)
                                 setEditingLessonId(null)
-                                // ✅ Don't close modal - just exit edit mode
                               }} 
                               className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
                             >
@@ -712,18 +812,122 @@ export default function Dashboard() {
         <AssessmentGenerator lesson={{ title: selectedLesson.title, subject: selectedLesson.subject, description: selectedLesson.description }} childName={selectedLessonChild?.displayname || ''} onClose={() => setShowAssessmentGenerator(false)} />
       )}
 
-{showAutoSchedule && selectedKid && (
-  <AutoScheduleModal
-    isOpen={showAutoSchedule}
-    onClose={() => setShowAutoSchedule(false)}
-    kidId={selectedKid}
-    kidName={kids.find(k => k.id === selectedKid)?.displayname}
-    onScheduleComplete={() => {
-      loadAllLessons()
-      setShowAutoSchedule(false)
-      setViewMode('calendar') // ✅ Auto-switch to calendar view!
+      {showAutoSchedule && selectedKid && (
+        <AutoScheduleModal
+          isOpen={showAutoSchedule}
+          onClose={() => setShowAutoSchedule(false)}
+          kidId={selectedKid}
+          kidName={kids.find(k => k.id === selectedKid)?.displayname}
+          onScheduleComplete={() => {
+            loadAllLessons()
+            setShowAutoSchedule(false)
+            setViewMode('calendar')
+          }}
+        />
+      )}
+
+      {/* UPDATED CASCADE MODAL - Replace your existing cascade modal with this */}
+{showCascadeModal && cascadeData && (
+  <div 
+    className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+    onClick={() => {
+      // Click outside modal to close
+      setShowCascadeModal(false)
+      setCascadeData(null)
+      setCascadeDays(1)
     }}
-  />
+  >
+    <div 
+      className="bg-white rounded-lg p-6 max-w-md w-full mx-4 relative"
+      onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside modal
+    >
+      {/* X Close Button */}
+      <button
+        onClick={() => {
+          setShowCascadeModal(false)
+          setCascadeData(null)
+          setCascadeDays(1)
+        }}
+        className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-2xl leading-none"
+        title="Close"
+      >
+        ×
+      </button>
+
+      <div className="text-center mb-4">
+        <div className="text-4xl mb-2">📅</div>
+        <h3 className="text-xl font-bold text-gray-900">Update Subsequent Lessons?</h3>
+      </div>
+      
+      <div className="mb-6 space-y-3">
+        <p className="text-gray-700">
+          You're moving this lesson from <strong>{new Date(cascadeData.originalDate).toLocaleDateString()}</strong> to{' '}
+          <strong>{new Date(cascadeData.newDate).toLocaleDateString()}</strong>
+        </p>
+        
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+          <p className="text-sm text-blue-900">
+            This will affect <strong>{cascadeData.affectedCount} lesson{cascadeData.affectedCount !== 1 ? 's' : ''}</strong> scheduled after{' '}
+            {new Date(cascadeData.originalDate).toLocaleDateString()}.
+          </p>
+        </div>
+        
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-gray-900">
+            How many days would you like to shift all subsequent lessons?
+          </label>
+          <div className="flex items-center gap-3">
+            <input
+              type="number"
+              value={cascadeDays}
+              onChange={(e) => setCascadeDays(parseInt(e.target.value) || 0)}
+              className="w-24 px-3 py-2 border border-gray-300 rounded-lg text-gray-900 text-center font-semibold text-lg"
+              placeholder="0"
+            />
+            <span className="text-gray-700 font-medium">days</span>
+          </div>
+          <p className="text-xs text-gray-500">
+            💡 Positive numbers = shift later | Negative numbers = shift earlier
+          </p>
+        </div>
+      </div>
+      
+      <div className="flex gap-2">
+        <button
+          onClick={async () => {
+            await handleCascadeUpdate(true)
+          }}
+          disabled={cascadeDays === 0}
+          className="flex-1 bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium"
+        >
+          {cascadeDays === 0 
+            ? 'Enter Days to Shift' 
+            : `Yes, Shift by ${Math.abs(cascadeDays)} Day${Math.abs(cascadeDays) !== 1 ? 's' : ''} ${cascadeDays > 0 ? 'Later' : 'Earlier'}`
+          }
+        </button>
+        <button
+          onClick={async () => {
+            await handleCascadeUpdate(false)
+          }}
+          className="flex-1 border border-gray-300 py-3 rounded-lg hover:bg-gray-50 text-gray-900 font-medium"
+        >
+          No, Just This One
+        </button>
+      </div>
+      
+      {/* Optional: Cancel button at the bottom */}
+      <button
+        onClick={() => {
+          setShowCascadeModal(false)
+          setCascadeData(null)
+          setCascadeDays(1)
+        }}
+        className="w-full mt-3 px-4 py-2 text-gray-600 hover:text-gray-800 text-sm font-medium"
+      >
+        Cancel
+      </button>
+    </div>
+  </div>
 )}
 
       <OnboardingTour key={tourKey} run={showTour} onComplete={completeTour} /> 

@@ -5,6 +5,7 @@ import { Calendar, momentLocalizer, ToolbarProps } from 'react-big-calendar'
 import moment from 'moment'
 import FamilyNotes from './FamilyNotes'
 import DailyNotes from './DailyNotes'
+import DayViewModal from './DayViewModal'
 import { supabase } from '@/lib/supabase'
 import './calendar-print.css' // Import print styles
 
@@ -35,6 +36,7 @@ interface LessonCalendarProps {
   kids: Child[]
   lessonsByKid: { [kidId: string]: Lesson[] }
   onLessonClick: (lesson: Lesson, child: Child) => void
+  onStatusChange?: (lessonId: string, newStatus: 'not_started' | 'in_progress' | 'completed') => void
 }
 
 // Color palette for children
@@ -49,10 +51,11 @@ const CHILD_COLORS = [
   '#8b5cf6', // Violet
 ]
 
-export default function LessonCalendar({ kids, lessonsByKid, onLessonClick }: LessonCalendarProps) {
+export default function LessonCalendar({ kids, lessonsByKid, onLessonClick, onStatusChange }: LessonCalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [showFamilyNotes, setShowFamilyNotes] = useState(false)
   const [showDailyNotes, setShowDailyNotes] = useState(false)
+  const [showDayView, setShowDayView] = useState(false)
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [datesWithNotes, setDatesWithNotes] = useState<Set<string>>(new Set())
 
@@ -82,13 +85,19 @@ export default function LessonCalendar({ kids, lessonsByKid, onLessonClick }: Le
     window.print()
   }
 
-  // Custom date cell to show note indicator and clickable icon
+  // Custom date cell to show note indicator and make day clickable
   const DateCellWrapper = ({ children, value }: any) => {
     const dateStr = moment(value).format('YYYY-MM-DD')
     const hasNotes = datesWithNotes.has(dateStr)
     
     return (
-      <div className="rbc-day-bg relative group">
+      <div 
+        className="rbc-day-bg relative group cursor-pointer"
+        onClick={() => {
+          setSelectedDate(value)
+          setShowDayView(true)
+        }}
+      >
         {children}
         {/* Note icon - always visible, highlighted if has notes */}
         <button
@@ -97,7 +106,7 @@ export default function LessonCalendar({ kids, lessonsByKid, onLessonClick }: Le
             setSelectedDate(value)
             setShowDailyNotes(true)
           }}
-          className={`print-hide absolute bottom-1 right-1 p-1 rounded transition-all ${
+          className={`print-hide absolute bottom-1 right-1 p-1 rounded transition-all z-10 ${
             hasNotes 
               ? 'bg-yellow-400 text-gray-900 shadow-sm' 
               : 'bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-600'
@@ -113,6 +122,9 @@ export default function LessonCalendar({ kids, lessonsByKid, onLessonClick }: Le
             <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
           </svg>
         </button>
+        
+        {/* Clickable overlay hint */}
+        <div className="print-hide absolute inset-0 bg-blue-50 opacity-0 group-hover:opacity-10 transition-opacity pointer-events-none" />
       </div>
     )
   }
@@ -223,7 +235,10 @@ export default function LessonCalendar({ kids, lessonsByKid, onLessonClick }: Le
     return lessons
       .filter(lesson => lesson.lesson_date)
       .map(lesson => {
-        const startDate = new Date(lesson.lesson_date!)
+        // Parse date in UTC to prevent timezone shifting
+        const dateStr = lesson.lesson_date!.split('T')[0] // Get YYYY-MM-DD part
+        const [year, month, day] = dateStr.split('-').map(Number)
+        const startDate = new Date(year, month - 1, day, 0, 0, 0)
         const endDate = new Date(startDate)
         
         if (lesson.duration_minutes) {
@@ -385,6 +400,21 @@ export default function LessonCalendar({ kids, lessonsByKid, onLessonClick }: Le
         popup
       />
     </div>
+    
+    {/* Day View Modal */}
+    {showDayView && selectedDate && (
+      <DayViewModal
+        date={selectedDate}
+        kids={kids}
+        lessonsByKid={lessonsByKid}
+        onClose={() => {
+          setShowDayView(false)
+          setSelectedDate(null)
+        }}
+        onLessonClick={onLessonClick}
+        onStatusChange={onStatusChange || (() => {})}
+      />
+    )}
     
     {/* Family Notes Modal */}
     {showFamilyNotes && (
