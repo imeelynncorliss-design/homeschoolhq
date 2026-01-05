@@ -35,6 +35,7 @@ interface AllChildrenListProps {
   onCycleStatus: (id: string, currentStatus: string) => void
   onGenerateAssessment?: (lesson: Lesson) => void
   autoExpandKid?: string | null
+  onViewPastAssessments?: (kidId: string, kidName: string) => void 
 }
 
 export default function AllChildrenList({ 
@@ -44,7 +45,8 @@ export default function AllChildrenList({
   onDeleteLesson,
   onCycleStatus,
   onGenerateAssessment,
-  autoExpandKid 
+  autoExpandKid,
+  onViewPastAssessments 
 }: AllChildrenListProps) {
   const router = useRouter()
   
@@ -473,6 +475,18 @@ export default function AllChildrenList({
             {/* Child Content */}
             {isExpanded && (
               <div className="px-6 pb-6 space-y-6 border-t border-gray-100">
+                {/* View Past Assessments Button */}
+                {onViewPastAssessments && (
+                  <div className="pt-4">
+                    <button
+                      onClick={() => onViewPastAssessments(kid.id, kid.displayname)}
+                      className="w-full px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium flex items-center justify-center gap-2 transition-colors"
+                    >
+                      📊 View Past Assessments
+                    </button>
+                  </div>
+                )}
+                
                 {/* Hours Tracker */}
                 <div className="pt-6">
                   <HoursTracker

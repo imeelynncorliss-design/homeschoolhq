@@ -17,10 +17,11 @@ import { getTierForTesting } from '@/lib/tierTesting'
 import DevTierToggle from '@/components/DevTierToggle'
 import { formatLessonDescription } from '@/lib/formatLessonDescription'
 import { ReactNode } from 'react'
-import AssessmentGenerator from '@/components/AssessmentGenerator'
+import PersonalizedAssessmentCreator from '@/components/PersonalizedAssessmentCreator'
+import AssessmentTaking from '@/components/AssessmentTaking'
 import AutoScheduleModal from '@/components/AutoScheduleModal' 
-import HelpWidget from '../../components/HelpWidget';
-
+import HelpWidget from '../../components/HelpWidget'
+import PastAssessmentsViewer from '@/components/PastAssessmentsViewer'
 
 const DURATION_UNITS = ['minutes', 'days', 'weeks'] as const;
 type DurationUnit = typeof DURATION_UNITS[number];
@@ -84,6 +85,14 @@ export default function Dashboard() {
   const [editLessonDurationValue, setEditLessonDurationValue] = useState<number>(30)
   const [editLessonDurationUnit, setEditLessonDurationUnit] = useState<DurationUnit>('minutes')
   const [showCascadeModal, setShowCascadeModal] = useState(false)
+  const [showPersonalizedAssessment, setShowPersonalizedAssessment] = useState(false);
+  const [showAssessmentTaking, setShowAssessmentTaking] = useState(false);
+  const [generatedAssessment, setGeneratedAssessment] = useState<any>(null);
+  const [assessmentForLesson, setAssessmentForLesson] = useState<any>(null);
+  const [showPastAssessments, setShowPastAssessments] = useState(false)
+  const [pastAssessmentsKidId, setPastAssessmentsKidId] = useState<string | null>(null)
+  const [pastAssessmentsKidName, setPastAssessmentsKidName] = useState('')
+  const [lessonAssessmentScore, setLessonAssessmentScore] = useState<number | null>(null)
   const [cascadeData, setCascadeData] = useState<{
     lessonId: string
     originalDate: string
@@ -102,6 +111,37 @@ export default function Dashboard() {
     const hasSeenTour = localStorage.getItem('hasSeenTour')
     if (!hasSeenTour && kids.length === 0) setShowTour(true)
   }, [kids])
+
+  // Load assessment score when a lesson is selected
+useEffect(() => {
+  const loadLessonAssessmentScore = async () => {
+    if (!selectedLesson) {
+      setLessonAssessmentScore(null);
+      return;
+    }
+
+    const { data: assessments } = await supabase
+      .from('assessments')
+      .select(`
+        id,
+        assessment_results (
+          auto_score,
+          submitted_at
+        )
+      `)
+      .eq('lesson_id', selectedLesson.id)
+      .limit(1);
+
+    if (assessments && assessments.length > 0 && assessments[0].assessment_results.length > 0) {
+      const latestResult = assessments[0].assessment_results[0];
+      setLessonAssessmentScore(latestResult.auto_score);
+    } else {
+      setLessonAssessmentScore(null);
+    }
+  };
+
+  loadLessonAssessmentScore();
+}, [selectedLesson]);
 
   const checkUser = async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -280,6 +320,35 @@ export default function Dashboard() {
     }
   }
 
+  const handleViewPastAssessments = (kidId: string, kidName: string) => {
+    setPastAssessmentsKidId(kidId);
+    setPastAssessmentsKidName(kidName);
+    setShowPastAssessments(true);
+  };
+  
+  const handleGeneratePersonalizedAssessment = (lesson: any) => {
+    setAssessmentForLesson(lesson);
+    setShowPersonalizedAssessment(true);
+  };
+  
+  const handleAssessmentCreated = (assessmentData: any) => {
+    setGeneratedAssessment(assessmentData);
+    setShowPersonalizedAssessment(false);
+    setShowAssessmentTaking(true);
+  };
+  
+  const handleAssessmentSubmitted = (results: any) => {
+    console.log('Assessment submitted:', results);
+    loadAllLessons();
+  };
+  
+  const handleClosePersonalizedAssessment = () => {
+    setShowPersonalizedAssessment(false);
+    setShowAssessmentTaking(false);
+    setGeneratedAssessment(null);
+    setAssessmentForLesson(null);
+  };
+  
   const handleStatusChange = async (lessonId: string, newStatus: 'not_started' | 'in_progress' | 'completed') => {
     const updates: any = { status: newStatus }
     if (newStatus === 'completed') updates.completed_at = new Date().toISOString()
@@ -331,7 +400,6 @@ export default function Dashboard() {
         lesson.lesson_date > originalDate
       )
       
-      // ✅ UPDATE ALL LESSONS IN PARALLEL (MUCH FASTER!)
       const updatePromises = subsequentLessons.map(lesson => {
         const lessonDate = new Date(lesson.lesson_date!)
         lessonDate.setDate(lessonDate.getDate() + daysDiff)
@@ -343,30 +411,23 @@ export default function Dashboard() {
           .eq('id', lesson.id)
       })
       
-      // Wait for ALL updates to complete at once
       const results = await Promise.all(updatePromises)
-      
-      // Count successful updates
       const updatedCount = results.filter(result => !result.error).length
       
       await loadAllLessons()
       
-      // Close modal first
       setShowCascadeModal(false)
       setCascadeData(null)
       setCascadeDays(1)
       
-      // Then show alert
       setTimeout(() => {
         alert(`✅ Updated ${updatedCount} subsequent lesson${updatedCount !== 1 ? 's' : ''}. All dates shifted by ${Math.abs(daysDiff)} day${Math.abs(daysDiff) !== 1 ? 's' : ''} ${daysDiff > 0 ? 'later' : 'earlier'}.`)
       }, 100)
     } else {
-      // Close modal first
       setShowCascadeModal(false)
       setCascadeData(null)
       setCascadeDays(1)
       
-      // Then show alert
       setTimeout(() => {
         alert('✅ Lesson date updated. Other lessons unchanged.')
       }, 100)
@@ -560,6 +621,7 @@ export default function Dashboard() {
                 ) : viewMode === 'calendar' ? (
                   <LessonCalendar kids={kids} lessonsByKid={lessonsByKid} onLessonClick={(lesson, child) => {setSelectedLesson(lesson); setSelectedLessonChild(child) }} onStatusChange={handleStatusChange}/>
                 ) : (
+                  
                   <AllChildrenList 
                     kids={kids} 
                     lessonsByKid={lessonsByKid} 
@@ -571,11 +633,8 @@ export default function Dashboard() {
                     }} 
                     onDeleteLesson={deleteLesson} 
                     onCycleStatus={cycleLessonStatus}
-                    onGenerateAssessment={(lesson) => {
-                      setSelectedLesson(lesson);
-                      setSelectedLessonChild(kids.find(k => k.id === lesson.kid_id) || null);
-                      setShowAssessmentGenerator(true);
-                    }}
+                    onGenerateAssessment={handleGeneratePersonalizedAssessment}
+                    onViewPastAssessments={handleViewPastAssessments}
                   />
                 )}
 
@@ -650,7 +709,7 @@ export default function Dashboard() {
                               </button>
                             </div>
                           </div>
-                          <div className="grid grid-cols-3 gap-4">
+                          <div className="grid grid-cols-4 gap-4">
                             <div>
                               <label className="block text-sm font-medium text-gray-700">Start Date</label>
                               <p className="mt-1 text-gray-900">{selectedLesson.lesson_date ? new Date(selectedLesson.lesson_date).toLocaleDateString() : 'No date set'}</p>
@@ -678,14 +737,57 @@ export default function Dashboard() {
                             </div>
                           </div>
                           {selectedLesson.description && (
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700">Description</label>
-                              <p className="mt-1 text-gray-900 whitespace-pre-line">{formatLessonDescription(selectedLesson.description)}</p>
-                            </div>
-                          )}
+  <div>
+    <label className="block text-sm font-medium text-gray-700">Description</label>
+    <div className="mt-1 text-gray-900 whitespace-pre-line">
+      {(() => {
+        // Check the RAW description, not the formatted one
+        const rawDesc = selectedLesson.description;
+        
+        // Try to parse as JSON first
+        try {
+          const parsed = typeof rawDesc === 'string' ? JSON.parse(rawDesc) : rawDesc;
+          
+          // If it's an object with our expected structure, display nicely
+          if (typeof parsed === 'object' && parsed !== null) {
+            return (
+              <div className="space-y-3">
+                {parsed.overview && (
+                  <p className="text-gray-900">{parsed.overview}</p>
+                )}
+                {parsed.activities && parsed.activities.length > 0 && (
+                  <div>
+                    <p className="font-semibold text-gray-900 mb-1">Activities:</p>
+                    <ul className="list-disc ml-5 space-y-1">
+                      {parsed.activities.map((activity: string, i: number) => (
+                        <li key={i} className="text-gray-900">{activity}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {parsed.materials && parsed.materials.length > 0 && (
+                  <div>
+                    <p className="font-semibold text-gray-900 mb-1">Materials:</p>
+                    <p className="text-gray-900">{parsed.materials.join(', ')}</p>
+                  </div>
+                )}
+              </div>
+            );
+          }
+        } catch (e) {
+          // Not JSON, use the formatter
+        }
+        
+        // Fallback to formatted text
+        return <p className="text-gray-900">{formatLessonDescription(rawDesc)}</p>;
+      })()}
+    </div>
+  </div>
+)}
+                          
                           <div className="flex gap-2 pt-4 border-t">
                             <button onClick={() => startEditLesson(selectedLesson)} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Edit</button>
-                            <button onClick={() => setShowAssessmentGenerator(true)} className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded hover:from-purple-700 hover:to-indigo-700">✨ Generate Assessment</button>
+                            <button onClick={() => handleGeneratePersonalizedAssessment(selectedLesson)} className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded hover:from-purple-700 hover:to-indigo-700">✨ Generate Assessment</button>
                             <button onClick={() => setShowCopyModal(true)} className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700">Copy to Another Child</button>
                             <button onClick={() => { deleteLesson(selectedLesson.id); setSelectedLesson(null); setSelectedLessonChild(null) }} className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">Delete</button>
                           </div>
@@ -805,11 +907,9 @@ export default function Dashboard() {
             }
           }
           loadKids()
+          setShowProfileForm(false)
+          setEditingKid(null)
         }} onCancel={() => { setShowProfileForm(false); setEditingKid(null) }} />
-      )}
-
-      {showAssessmentGenerator && selectedLesson && (
-        <AssessmentGenerator lesson={{ title: selectedLesson.title, subject: selectedLesson.subject, description: selectedLesson.description }} childName={selectedLessonChild?.displayname || ''} onClose={() => setShowAssessmentGenerator(false)} />
       )}
 
       {showAutoSchedule && selectedKid && (
@@ -826,110 +926,144 @@ export default function Dashboard() {
         />
       )}
 
-      {/* UPDATED CASCADE MODAL - Replace your existing cascade modal with this */}
-{showCascadeModal && cascadeData && (
-  <div 
-    className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
-    onClick={() => {
-      // Click outside modal to close
-      setShowCascadeModal(false)
-      setCascadeData(null)
-      setCascadeDays(1)
-    }}
-  >
-    <div 
-      className="bg-white rounded-lg p-6 max-w-md w-full mx-4 relative"
-      onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside modal
-    >
-      {/* X Close Button */}
-      <button
-        onClick={() => {
-          setShowCascadeModal(false)
-          setCascadeData(null)
-          setCascadeDays(1)
-        }}
-        className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-2xl leading-none"
-        title="Close"
-      >
-        ×
-      </button>
+      {showCascadeModal && cascadeData && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          onClick={() => {
+            setShowCascadeModal(false)
+            setCascadeData(null)
+            setCascadeDays(1)
+          }}
+        >
+          <div 
+            className="bg-white rounded-lg p-6 max-w-md w-full mx-4 relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => {
+                setShowCascadeModal(false)
+                setCascadeData(null)
+                setCascadeDays(1)
+              }}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-2xl leading-none"
+              title="Close"
+            >
+              ×
+            </button>
 
-      <div className="text-center mb-4">
-        <div className="text-4xl mb-2">📅</div>
-        <h3 className="text-xl font-bold text-gray-900">Update Subsequent Lessons?</h3>
-      </div>
-      
-      <div className="mb-6 space-y-3">
-        <p className="text-gray-700">
-          You're moving this lesson from <strong>{new Date(cascadeData.originalDate).toLocaleDateString()}</strong> to{' '}
-          <strong>{new Date(cascadeData.newDate).toLocaleDateString()}</strong>
-        </p>
-        
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-          <p className="text-sm text-blue-900">
-            This will affect <strong>{cascadeData.affectedCount} lesson{cascadeData.affectedCount !== 1 ? 's' : ''}</strong> scheduled after{' '}
-            {new Date(cascadeData.originalDate).toLocaleDateString()}.
-          </p>
-        </div>
-        
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-900">
-            How many days would you like to shift all subsequent lessons?
-          </label>
-          <div className="flex items-center gap-3">
-            <input
-              type="number"
-              value={cascadeDays}
-              onChange={(e) => setCascadeDays(parseInt(e.target.value) || 0)}
-              className="w-24 px-3 py-2 border border-gray-300 rounded-lg text-gray-900 text-center font-semibold text-lg"
-              placeholder="0"
-            />
-            <span className="text-gray-700 font-medium">days</span>
+            <div className="text-center mb-4">
+              <div className="text-4xl mb-2">📅</div>
+              <h3 className="text-xl font-bold text-gray-900">Update Subsequent Lessons?</h3>
+            </div>
+            
+            <div className="mb-6 space-y-3">
+              <p className="text-gray-700">
+                You're moving this lesson from <strong>{new Date(cascadeData.originalDate).toLocaleDateString()}</strong> to{' '}
+                <strong>{new Date(cascadeData.newDate).toLocaleDateString()}</strong>
+              </p>
+              
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p className="text-sm text-blue-900">
+                  This will affect <strong>{cascadeData.affectedCount} lesson{cascadeData.affectedCount !== 1 ? 's' : ''}</strong> scheduled after{' '}
+                  {new Date(cascadeData.originalDate).toLocaleDateString()}.
+                </p>
+              </div>
+              
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-900">
+                  How many days would you like to shift all subsequent lessons?
+                </label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="number"
+                    value={cascadeDays}
+                    onChange={(e) => setCascadeDays(parseInt(e.target.value) || 0)}
+                    className="w-24 px-3 py-2 border border-gray-300 rounded-lg text-gray-900 text-center font-semibold text-lg"
+                    placeholder="0"
+                  />
+                  <span className="text-gray-700 font-medium">days</span>
+                </div>
+                <p className="text-xs text-gray-500">
+                  💡 Positive numbers = shift later | Negative numbers = shift earlier
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex gap-2">
+              <button
+                onClick={async () => {
+                  await handleCascadeUpdate(true)
+                }}
+                disabled={cascadeDays === 0}
+                className="flex-1 bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium"
+              >
+                {cascadeDays === 0 
+                  ? 'Enter Days to Shift' 
+                  : `Yes, Shift by ${Math.abs(cascadeDays)} Day${Math.abs(cascadeDays) !== 1 ? 's' : ''} ${cascadeDays > 0 ? 'Later' : 'Earlier'}`
+                }
+              </button>
+              <button
+                onClick={async () => {
+                  await handleCascadeUpdate(false)
+                }}
+                className="flex-1 border border-gray-300 py-3 rounded-lg hover:bg-gray-50 text-gray-900 font-medium"
+              >
+                No, Just This One
+              </button>
+            </div>
+            
+            <button
+              onClick={() => {
+                setShowCascadeModal(false)
+                setCascadeData(null)
+                setCascadeDays(1)
+              }}
+              className="w-full mt-3 px-4 py-2 text-gray-600 hover:text-gray-800 text-sm font-medium"
+            >
+              Cancel
+            </button>
           </div>
-          <p className="text-xs text-gray-500">
-            💡 Positive numbers = shift later | Negative numbers = shift earlier
-          </p>
         </div>
-      </div>
-      
-      <div className="flex gap-2">
-        <button
-          onClick={async () => {
-            await handleCascadeUpdate(true)
-          }}
-          disabled={cascadeDays === 0}
-          className="flex-1 bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium"
-        >
-          {cascadeDays === 0 
-            ? 'Enter Days to Shift' 
-            : `Yes, Shift by ${Math.abs(cascadeDays)} Day${Math.abs(cascadeDays) !== 1 ? 's' : ''} ${cascadeDays > 0 ? 'Later' : 'Earlier'}`
-          }
-        </button>
-        <button
-          onClick={async () => {
-            await handleCascadeUpdate(false)
-          }}
-          className="flex-1 border border-gray-300 py-3 rounded-lg hover:bg-gray-50 text-gray-900 font-medium"
-        >
-          No, Just This One
-        </button>
-      </div>
-      
-      {/* Optional: Cancel button at the bottom */}
-      <button
-        onClick={() => {
-          setShowCascadeModal(false)
-          setCascadeData(null)
-          setCascadeDays(1)
-        }}
-        className="w-full mt-3 px-4 py-2 text-gray-600 hover:text-gray-800 text-sm font-medium"
-      >
-        Cancel
-      </button>
-    </div>
-  </div>
-)}
+      )}
 
+      {showPersonalizedAssessment && assessmentForLesson && (
+        <PersonalizedAssessmentCreator
+          lessonId={assessmentForLesson.id}
+          lessonTitle={assessmentForLesson.title}
+          kidId={assessmentForLesson.kid_id}
+          kidName={
+            kids.find(k => k.id === assessmentForLesson.kid_id)?.displayname || 'Student'
+          }
+          onClose={handleClosePersonalizedAssessment}
+          onAssessmentCreated={handleAssessmentCreated}
+        />
+      )}
+
+      {showAssessmentTaking && generatedAssessment && assessmentForLesson && (
+        <AssessmentTaking
+          assessmentData={generatedAssessment.assessment}
+          assessmentId={generatedAssessment.assessmentId}
+          childName={
+            kids.find(k => k.id === assessmentForLesson.kid_id)?.displayname || 'Student'
+          }
+          lessonTitle={generatedAssessment.lessonTitle}
+          personalizedFor={generatedAssessment.personalizedFor}
+          onClose={handleClosePersonalizedAssessment}
+          onSubmit={handleAssessmentSubmitted}
+        />
+      )}
+      {/* Past Assessments Viewer */}
+      {showPastAssessments && pastAssessmentsKidId && (
+        <PastAssessmentsViewer
+          kidId={pastAssessmentsKidId}
+          kidName={pastAssessmentsKidName}
+          onClose={() => {
+            setShowPastAssessments(false);
+            setPastAssessmentsKidId(null);
+            setPastAssessmentsKidName('');
+          }}
+        />
+      )}
       <OnboardingTour key={tourKey} run={showTour} onComplete={completeTour} /> 
       <DevTierToggle /> 
       <HelpWidget />
