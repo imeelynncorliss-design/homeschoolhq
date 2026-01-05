@@ -40,14 +40,15 @@ export default function OnboardingTour({ run, onComplete }: OnboardingTourProps)
       target: 'body',
       content: (
         <div>
-          <h2 className="text-xl font-bold mb-2">What's Next?</h2>
-          <p><strong>After adding a child:</strong></p>
+          <h1 className="text-xl font-bold mb-2">Where Do I start?</h1>
+
+          <h2 className="text-xl font-bold mb-2">Core Info</h2>
+
           <ul className="list-disc ml-5 mt-2 space-y-1">
-            <li>Click their name to select them</li>
-            <li>Use <strong>Import Curriculum</strong> - upload table of contents</li>
-            <li>Use <strong>Add Lesson</strong> - create individual lessons</li>
-            <li>Use <strong>Lesson Generator</strong> - guided custom lesson creation</li>
-            <li>Track hours automatically as you add lessons!</li>
+            <li>Click the <strong>"Add a Child"</strong> button </li>
+            <li>Upload their picture</li>
+            <li>Add their <strong>First Name (required) </strong> and <strong> Last Name </strong></li>
+            <li>Then add their <strong>Display Name, Age, and Grade Level</strong></li>
           </ul>
         </div>
       ),
@@ -58,8 +59,64 @@ export default function OnboardingTour({ run, onComplete }: OnboardingTourProps)
       target: 'body',
       content: (
         <div>
+          <h2 className="text-xl font-bold mb-2">How They Learn</h2>
+         
+          <ul className="list-disc ml-5 mt-2 space-y-1">
+
+            <li>Enter your child's <strong>Learning Style, Pace of Learning and Environmental Needs</strong> </li>
+            <li>If you don't know what your child's learning style is, take the learning style assessment</li>
+          </ul>
+        </div>
+      ),
+      placement: 'center',
+      disableBeacon: true,
+    },
+    {
+      target: 'body',
+      content: (
+        <div>
+          <h2 className="text-xl font-bold mb-2">Subject Pacing</h2>
+          
+          <ul className="list-disc ml-5 mt-2 space-y-1">
+
+            Track how your student learns in each subject
+            <li>Click <strong>"Add a Subject"</strong></li>
+            <li>Select the subject from the dropdown</li>
+            <li>Click <strong>"Add Subject"</strong></li>
+            <li>Click the dropdown for the subject you selected and determine your child's learning pace for that subject</li>
+            <li>Click <strong>"Add a Subject"</strong> to add additional subjects</li>
+          </ul>
+        </div>
+      ),
+      placement: 'center',
+      disableBeacon: true,
+    },
+    {
+      target: 'body',
+      content: (
+        <div>
+          <h2 className="text-xl font-bold mb-2">Current Focus</h2>
+          
+          <ul className="list-disc ml-5 mt-2 space-y-1">
+
+            Enter infomation for
+            <li><strong>The "Hook": What are they loving right now? 🌟</strong></li>
+            <li><strong>Today's Vibe 😊</strong></li>
+            <li><strong>Current Academic Focus</strong></li>
+            <li>Click <strong> Save Changes</strong></li>
+          </ul>
+        </div>
+      ),
+      placement: 'center',
+      disableBeacon: true,
+    },
+    
+    {
+      target: 'body',
+      content: (
+        <div>
           <h2 className="text-xl font-bold mb-2">You're All Set! 🚀</h2>
-          <p>Start by adding your first child, then create some lessons. You can replay this tour anytime from the "👋 Take Tour" button.</p>
+          <p> Follow the previous steps to add additional children. You can replay this tour anytime from the "👋 Take Tour" button.</p>
         </div>
       ),
       placement: 'center',
