@@ -38,7 +38,7 @@ export default function SocialCalendar({ userId }: SocialCalendarProps) {
     start_time: '',
     end_time: '',
     location: '',
-    event_type: 'field_trip' as const,
+    event_type: 'field_trip' as 'field_trip' | 'park_day' | 'coop_class' | 'playdate' | 'other',
     max_attendees: '',
     rsvp_deadline: '',
     is_public: true
@@ -79,7 +79,7 @@ export default function SocialCalendar({ userId }: SocialCalendarProps) {
       start_time: '',
       end_time: '',
       location: '',
-      event_type: 'field_trip',
+      event_type: 'field_trip' as 'field_trip' | 'park_day' | 'coop_class' | 'playdate' | 'other',
       max_attendees: '',
       rsvp_deadline: '',
       is_public: true
