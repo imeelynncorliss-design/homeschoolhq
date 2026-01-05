@@ -41,13 +41,13 @@ export async function POST(request: Request) {
     }
 
     // Build personalized prompt
-    const difficultyMap = {
+    const difficultyMap: { [key: string]: string } = {
       easy: 'appropriate for beginners with basic understanding',
       medium: 'grade-level appropriate with moderate challenge',
       hard: 'challenging questions that require deeper thinking and application'
     };
 
-    const learningStyleGuidance = {
+    const learningStyleGuidance: { [key: string]: string } = {
       'Visual (learns best by seeing)': `
 - Include questions that reference diagrams, charts, or visual patterns
 - Use color-coding suggestions in multiple choice options
@@ -73,7 +73,7 @@ export async function POST(request: Request) {
 - Emphasize note-taking and summarization skills`
     };
 
-    const paceGuidance = {
+    const paceGuidance: { [key: string]: string } = {
       'Accelerated (moves quickly, grasps concepts fast)': `
 - Include extension questions for deeper exploration
 - Add challenging "bonus" questions
@@ -93,7 +93,7 @@ export async function POST(request: Request) {
 - Add encouraging notes and hints`
     };
 
-    const typeInstructions = {
+    const typeInstructions: { [key: string]: string } = {
       quiz: `Create an interactive quiz with ${questionCount} questions in JSON format.
 
 For each question, include:
@@ -170,7 +170,7 @@ ${lesson.description ? `Description: ${lesson.description}` : ''}
 
 **ASSESSMENT REQUIREMENTS:**
 Type: ${assessmentType}
-Difficulty: ${difficulty} (${difficultyMap[difficulty]})
+Difficulty: ${difficulty} (${difficultyMap[difficulty as keyof typeof difficultyMap] || difficulty})
 Number of items: ${questionCount}
 
 **PERSONALIZATION GUIDELINES:**
@@ -179,7 +179,7 @@ ${kid.pace_of_learning ? paceGuidance[kid.pace_of_learning] || '' : ''}
 
 ${kid.environmental_needs ? `Environmental Considerations: ${kid.environmental_needs}` : ''}
 
-${typeInstructions[assessmentType]}
+${typeInstructions[assessmentType as string]}
 
 CRITICAL: Return ONLY the JSON object. No markdown formatting, no backticks, no explanatory text before or after.`;
 

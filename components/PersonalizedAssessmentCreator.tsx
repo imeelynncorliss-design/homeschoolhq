@@ -21,7 +21,7 @@ export default function PersonalizedAssessmentCreator({
   kidName,
   onClose,
   onAssessmentCreated
-}: AssessmentGeneratorProps) {
+}: PersonalizedAssessmentCreatorProps) {
   const [assessmentType, setAssessmentType] = useState<'quiz' | 'worksheet' | 'project'>('quiz');
   const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   const [questionCount, setQuestionCount] = useState(5);
