@@ -145,33 +145,54 @@ export default function AdminPage() {
         <div className="bg-white rounded-lg shadow p-6 mb-6">
           <h2 className="text-xl font-bold text-gray-900 mb-4">Additional Tools</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {/* Transcripts Card */}
-            <button
-              onClick={() => router.push('/transcript')}
-              disabled={!hasFeature('transcripts')}
-              className={`bg-gradient-to-br from-purple-50 to-purple-100 border-2 rounded-lg p-6 transition-all text-left ${
-                hasFeature('transcripts')
-                  ? 'border-purple-200 hover:shadow-lg hover:border-purple-300 cursor-pointer'
-                  : 'border-gray-200 opacity-60 cursor-not-allowed'
-              }`}
-            >
-              <div className="flex justify-between items-start mb-3">
-                <div className="text-4xl">📚</div>
-                {!hasFeature('transcripts') && (
-                  <span className="text-xl">🔒</span>
-                )}
-              </div>
-              <h3 className="text-lg font-bold text-gray-900 mb-2">High School Transcripts</h3>
-              <p className="text-sm text-gray-600 mb-3">
-                Create official transcripts for college applications with GPA calculations and course tracking
-              </p>
-              <div className="flex items-center gap-2">
-                <span className="text-xs px-2 py-1 bg-purple-600 text-white rounded-full font-semibold">
-                  PREMIUM
-                </span>
-                <span className="text-xs text-gray-500">Grades 9-12</span>
-              </div>
-            </button>
+  {/* Assessments & Standards Card - NEW! */}
+  <button
+    onClick={() => router.push('/teacher/assessments')}
+    className="bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-200 rounded-lg p-6 transition-all text-left hover:shadow-lg hover:border-blue-300 cursor-pointer"
+  >
+    <div className="flex justify-between items-start mb-3">
+      <div className="text-4xl">📊</div>
+    </div>
+    <h3 className="text-lg font-bold text-gray-900 mb-2">Assessments & Standards</h3>
+    <p className="text-sm text-gray-600 mb-3">
+      Manage assessments and align them with educational standards. Track learning objectives and student progress.
+    </p>
+    <div className="flex items-center gap-2">
+      <span className="text-xs px-2 py-1 bg-blue-600 text-white rounded-full font-semibold">
+        FREE
+      </span>
+      <span className="text-xs text-gray-500">All Grades</span>
+    </div>
+  </button>
+
+  {/* Transcripts Card */}
+  <button
+    onClick={() => router.push('/transcript')}
+    disabled={!hasFeature('transcripts')}
+    className={`bg-gradient-to-br from-purple-50 to-purple-100 border-2 rounded-lg p-6 transition-all text-left ${
+      hasFeature('transcripts')
+        ? 'border-purple-200 hover:shadow-lg hover:border-purple-300 cursor-pointer'
+        : 'border-gray-200 opacity-60 cursor-not-allowed'
+    }`}
+  >
+    <div className="flex justify-between items-start mb-3">
+      <div className="text-4xl">📚</div>
+      {!hasFeature('transcripts') && (
+        <span className="text-xl">🔒</span>
+      )}
+    </div>
+    <h3 className="text-lg font-bold text-gray-900 mb-2">High School Transcripts</h3>
+    <p className="text-sm text-gray-600 mb-3">
+      Create official transcripts for college applications with GPA calculations and course tracking
+    </p>
+    <div className="flex items-center gap-2">
+      <span className="text-xs px-2 py-1 bg-purple-600 text-white rounded-full font-semibold">
+        PREMIUM
+      </span>
+      <span className="text-xs text-gray-500">Grades 9-12</span>
+    </div>
+  </button>
+
 
             {/* Placeholder for future tools */}
             <div className="border-2 border-dashed border-gray-200 rounded-lg p-6 flex items-center justify-center">
