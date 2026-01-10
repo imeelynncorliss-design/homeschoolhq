@@ -8,6 +8,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import {
   getStandardById,
   getStudentProficiency,
+  getActivitiesForStandard, 
   saveGeneratedActivity,
 } from '@/lib/utils-standards';
 
@@ -18,10 +19,10 @@ const anthropic = new Anthropic({
 // POST - Generate an activity for a standard
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise< { id: string }> }
 ) {
   try {
-    const standardId = params.id;
+    const { id: standardId } = await params;
     const body = await request.json();
     const {
       kid_id,
@@ -205,14 +206,12 @@ Return ONLY the JSON object, no other text.`;
 // GET - Get previously generated activities for a standard
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const standardId = params.id;
+    const { id: standardId } = await params;
     const searchParams = request.nextUrl.searchParams;
     const kidId = searchParams.get('kid_id') || undefined;
-
-    const { getActivitiesForStandard } = await import('@/lib/utils-standards');
     const activities = await getActivitiesForStandard(standardId, kidId);
 
     return NextResponse.json({

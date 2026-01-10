@@ -288,3 +288,212 @@ export function getProficiencyColor(level: ProficiencyLevel): string {
   };
   return colorMap[level];
 }
+
+// ============================================================================
+// STUDENT PROFICIENCY QUERIES (Single student lookup)
+// ============================================================================
+
+/**
+ * Get proficiency for a specific student and standard
+ */
+export async function getStudentProficiency(
+  kidId: string,
+  standardId: string
+) {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from('student_standard_proficiency')
+    .select('*')
+    .eq('kid_id', kidId)
+    .eq('standard_id', standardId)
+    .single();
+
+  if (error && error.code !== 'PGRST116') throw error; // PGRST116 = not found, which is ok
+  return data;
+}
+
+// ============================================================================
+// GENERATED ACTIVITIES
+// ============================================================================
+
+/**
+ * Save a generated activity
+ */
+export async function saveGeneratedActivity(
+  activity: {
+    standard_id: string;
+    kid_id?: string | null;
+    organization_id: string;
+    title: string;
+    activity_type: string;
+    difficulty_level: string;
+    description: string;
+    materials_needed: string;
+    instructions: string;
+    duration_minutes: number;
+    generated_by_ai: boolean;
+    ai_prompt_context: any;
+    used_count: number;
+    is_favorite: boolean;
+    is_archived: boolean;
+    created_by?: string;
+  }
+) {
+  const supabase = getSupabaseClient();
+
+  const { data, error } = await supabase
+    .from('generated_activities')
+    .insert(activity)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Get activities for a standard
+ */
+export async function getActivitiesForStandard(
+  standardId: string,
+  kidId?: string
+) {
+  const supabase = getSupabaseClient();
+  
+  let query = supabase
+    .from('generated_activities')
+    .select('*')
+    .eq('standard_id', standardId)
+    .eq('is_archived', false)
+    .order('created_at', { ascending: false });
+
+  if (kidId) {
+    query = query.or(`kid_id.eq.${kidId},kid_id.is.null`);
+  }
+
+  const { data, error } = await query;
+  
+  if (error) throw error;
+  return data || [];
+}
+
+// ============================================================================
+// ADVANCED PROFICIENCY ANALYTICS
+// ============================================================================
+
+/**
+ * Get student coverage summary by subject
+ */
+export async function getStudentCoverage(
+  kidId: string,
+  subject?: string,
+  gradeLevel?: string
+) {
+  const supabase = getSupabaseClient();
+
+  let query = supabase
+    .from('student_standard_proficiency')
+    .select(`
+      *,
+      standard:standards(subject, grade_level, domain)
+    `)
+    .eq('kid_id', kidId);
+
+  const { data, error } = await query;
+
+  if (error) throw error;
+
+  // Group by subject and calculate coverage
+  const coverage: Record<string, any> = {};
+  
+  data?.forEach((prof: any) => {
+    const subj = prof.standard?.subject;
+    if (!subj) return;
+    
+    if (!coverage[subj]) {
+      coverage[subj] = {
+        subject: subj,
+        total: 0,
+        not_started: 0,
+        introduced: 0,
+        developing: 0,
+        proficient: 0,
+        mastered: 0
+      };
+    }
+    
+    coverage[subj].total++;
+    coverage[subj][prof.proficiency_level]++;
+  });
+
+  return Object.values(coverage);
+}
+
+/**
+ * Gap analysis - find standards not yet addressed for a student
+ */
+export async function getStandardsGaps(
+  kidId: string,
+  gradeLevel: string,
+  subject: string,
+  stateCode: string = 'CCSS'
+) {
+  const supabase = getSupabaseClient();
+
+  // Get all standards for this grade/subject
+  const allStandards = await getStandardsByGradeAndSubject(
+    gradeLevel,
+    subject,
+    stateCode
+  );
+
+  // Get standards already addressed by this student
+  const { data: addressedData } = await supabase
+    .from('student_standard_proficiency')
+    .select('standard_id')
+    .eq('kid_id', kidId)
+    .neq('proficiency_level', 'not_started');
+
+  const addressedIds = new Set(
+    addressedData?.map((p) => p.standard_id) || []
+  );
+
+  // Find gaps
+  const gapStandards = allStandards.filter(
+    (s) => !addressedIds.has(s.id)
+  );
+
+  return {
+    kid_id: kidId,
+    grade_level: gradeLevel,
+    subject,
+    total_standards: allStandards.length,
+    addressed_standards: addressedIds.size,
+    gap_standards: gapStandards,
+    coverage_percentage: Math.round(
+      (addressedIds.size / allStandards.length) * 100
+    ),
+  };
+}
+
+/**
+ * Get standards by proficiency level for a student
+ */
+export async function getStandardsByProficiency(
+  kidId: string,
+  proficiencyLevel: ProficiencyLevel
+) {
+  const supabase = getSupabaseClient();
+
+  const { data, error } = await supabase
+    .from('student_standard_proficiency')
+    .select(`
+      *,
+      standard:standards(*)
+    `)
+    .eq('kid_id', kidId)
+    .eq('proficiency_level', proficiencyLevel);
+
+  if (error) throw error;
+  return data || [];
+}

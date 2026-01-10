@@ -17,10 +17,10 @@ import type { ProficiencyLevel } from '@/types/standards';
 // GET - Get proficiency data for a student
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise< { id: string }> }
 ) {
   try {
-    const kidId = params.id;
+    const { id: kidId } = await params;
     const searchParams = request.nextUrl.searchParams;
     const standardId = searchParams.get('standard_id');
     const action = searchParams.get('action'); // 'coverage', 'gaps', 'by_level'
@@ -88,10 +88,10 @@ export async function GET(
 // PUT - Update student proficiency for a standard
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const kidId = params.id;
+    const { id: kidId } = await params;
     const body = await request.json();
     const {
       standard_id,
@@ -168,10 +168,10 @@ export async function PUT(
 // POST - Bulk update proficiencies (e.g., after grading an assessment)
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const kidId = params.id;
+    const { id:kidId } = await params;
     const body = await request.json();
     const { updates, organization_id, user_id } = body;
 
