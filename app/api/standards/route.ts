@@ -29,31 +29,9 @@ async function getUserOrganization(request?: NextRequest) {
       }
     }
     
-    // Fall back to cookies (from server-side)
+    // For cookie-based auth, we skip it since we always use Bearer tokens now
     if (!user) {
-      const cookieStore = await cookies();
-      const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-        {
-          cookies: {
-            get(name: string) {
-              return cookieStore.get(name)?.value;
-            },
-          },
-        }
-      );
-
-      const { data: { user: cookieUser }, error: userError } = await supabase.auth.getUser();
-      
-      if (userError || !cookieUser) {
-        console.error('getUserOrganization - no user:', userError);
-        return { error: 'Unauthorized', organizationId: null };
-      }
-      user = cookieUser;
-    }
-
-    if (!user) {
+      console.error('getUserOrganization - no user from token');
       return { error: 'Unauthorized', organizationId: null };
     }
 
@@ -74,7 +52,6 @@ async function getUserOrganization(request?: NextRequest) {
     return { error: 'Internal error', organizationId: null };
   }
 }
-
 export async function GET(request: NextRequest) {
   try {
     // Get user's organization - pass request for auth header
