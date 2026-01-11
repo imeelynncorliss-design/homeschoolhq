@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { StandardsPicker } from '@/components/StandardsPicker';
 import type { Standard } from '@/types/standards';
-
+import { createClient } from '@supabase/supabase-js';
 
 interface Assessment {
   id: string;
@@ -19,15 +19,6 @@ interface Assessment {
   updated_at: string;
 }
 
-//interface Standard {
- // id: string;
-  //framework: string;
-  //code: string;
-  //description: string;
-  //subject?: string;
-  //grade_level?: string;
-//}
-
 interface AssessmentStandard {
   id: string;
   standard_id: string;
@@ -36,11 +27,9 @@ interface AssessmentStandard {
 }
 
 export default function AssessmentDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  // 1. Unwrap the params promise
   const unwrappedParams = use(params);
   const assessmentId = unwrappedParams.id;
 
-  // 2. State Management
   const [assessment, setAssessment] = useState<Assessment | null>(null);
   const [assessmentStandards, setAssessmentStandards] = useState<AssessmentStandard[]>([]);
   const [loading, setLoading] = useState(true);
@@ -50,15 +39,12 @@ export default function AssessmentDetailPage({ params }: { params: Promise<{ id:
   
   const router = useRouter();
 
-  // 3. Data Fetching
   const fetchAssessmentData = async () => {
-    // PROTECT: Don't fetch if assessmentId is missing or "undefined"
     if (!assessmentId || assessmentId === 'undefined') return;
 
     try {
       setLoading(true);
       
-      // Fetch assessment details
       const assessmentResponse = await fetch(`/api/assessments/${assessmentId}`);
       if (!assessmentResponse.ok) {
         throw new Error('Failed to fetch assessment');
@@ -66,7 +52,6 @@ export default function AssessmentDetailPage({ params }: { params: Promise<{ id:
       const assessmentData = await assessmentResponse.json();
       setAssessment(assessmentData);
 
-      // Fetch assessment standards
       const standardsResponse = await fetch(`/api/assessments/${assessmentId}/standards`);
       if (!standardsResponse.ok) {
         throw new Error('Failed to fetch standards');
@@ -82,32 +67,57 @@ export default function AssessmentDetailPage({ params }: { params: Promise<{ id:
   };
 
   useEffect(() => {
-    // Only fetch if assessmentId is a real string and not the word "undefined"
     if (assessmentId && assessmentId !== 'undefined') {
       fetchAssessmentData();
     }
-  }, [assessmentId]); // Make sure assessmentId is in this dependency array
+  }, [assessmentId]);
 
-  // 4. Handlers
   const handleAddStandards = async (selected: Standard[]) => {
     if (!assessmentId) return;
     
+    // Add validation
+  if (!selected || selected.length === 0) {
+    alert('Please select at least one standard');
+    return;
+  }
+  
+  console.log('Selected standards:', selected); // Debug log
     try {
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      );
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (!session) {
+        alert('You must be logged in to add standards');
+        return;
+      }
+
       const selectedStandardIds = selected.map(s => s.id);
+      console.log('Selected IDs:', selectedStandardIds); // Debug log
+    
+      if (selectedStandardIds.length === 0 || selectedStandardIds.some(id => !id)) {
+        alert('Invalid standard IDs');
+        console.error('Invalid IDs:', selectedStandardIds);
+        return;
+      }
 
       const response = await fetch(`/api/assessments/${assessmentId}/standards`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({ standard_ids: selectedStandardIds }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to add standards');
+        const errorData = await response.json();
+        console.error('API Error:', errorData);
+        throw new Error(errorData.error || errorData.details || 'Failed to add standards');
       }
 
-      // Refresh data and close picker
       await fetchAssessmentData();
       setShowStandardsPicker(false);
     } catch (err) {
@@ -135,7 +145,6 @@ export default function AssessmentDetailPage({ params }: { params: Promise<{ id:
         throw new Error('Failed to remove standard');
       }
 
-      // Refresh the list
       await fetchAssessmentData();
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to remove standard');
@@ -144,7 +153,6 @@ export default function AssessmentDetailPage({ params }: { params: Promise<{ id:
     }
   };
 
-  // 5. Render Loading State
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 p-8">
@@ -155,7 +163,6 @@ export default function AssessmentDetailPage({ params }: { params: Promise<{ id:
     );
   }
 
-  // 6. Render Error State
   if (error || !assessment) {
     return (
       <div className="min-h-screen bg-gray-50 p-8">
@@ -172,7 +179,6 @@ export default function AssessmentDetailPage({ params }: { params: Promise<{ id:
     );
   }
 
-  // 7. Main Render
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-5xl mx-auto">
@@ -208,14 +214,32 @@ export default function AssessmentDetailPage({ params }: { params: Promise<{ id:
           ) : (
             <div className="space-y-3">
               {assessmentStandards.map((as) => (
-                <div key={as.id} className="border border-gray-200 rounded-lg p-4 flex justify-between items-center">
-                  <div>
-                    <span className="bg-blue-100 text-blue-800 text-xs font-bold px-2 py-1 rounded mr-2">{as.standard.standard_code}</span>
-                    <p className="text-gray-900 mt-1">{as.standard.description}</p>
+                <div key={as.id} className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors">
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="font-mono text-sm font-semibold text-blue-600">
+                          {as.standard.code}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          {as.standard.framework}
+                        </span>
+                      </div>
+                      <p className="text-gray-700 text-sm">
+                        {as.standard.description}
+                      </p>
+                      <div className="mt-2 text-xs text-gray-500">
+                        {as.standard.domain}
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => handleRemoveStandard(as.id)} 
+                      disabled={removingStandardId === as.id}
+                      className="ml-4 text-red-600 hover:bg-red-50 px-3 py-1 rounded text-sm font-medium transition-colors"
+                    >
+                      {removingStandardId === as.id ? '...' : 'Remove'}
+                    </button>
                   </div>
-                  <button onClick={() => handleRemoveStandard(as.id)} disabled={removingStandardId === as.id} className="text-red-600 hover:bg-red-50 p-2 rounded">
-                    {removingStandardId === as.id ? '...' : 'Remove'}
-                  </button>
                 </div>
               ))}
             </div>
@@ -230,15 +254,15 @@ export default function AssessmentDetailPage({ params }: { params: Promise<{ id:
                 <button onClick={() => setShowStandardsPicker(false)} className="text-gray-400 text-2xl">×</button>
               </div>
               <div className="flex-1 overflow-auto p-6">
-              <StandardsPicker
-                isOpen={showStandardsPicker}
-                onClose={() => setShowStandardsPicker(false)}
-                onSelect={handleAddStandards}
-                selectedStandards={assessmentStandards.map(as => as.standard)}
-                defaultSubject={assessment?.subject || 'Mathematics'}
-                defaultGradeLevel={assessment?.grade_level?.replace('Grade ', '') || '5'}
-                multiSelect={true}
-                title="Select Standards"
+                <StandardsPicker
+                  isOpen={showStandardsPicker}
+                  onClose={() => setShowStandardsPicker(false)}
+                  onSelect={handleAddStandards}
+                  selectedStandards={assessmentStandards.map(as => as.standard)}
+                  defaultSubject={assessment?.subject || 'Mathematics'}
+                  defaultGradeLevel={assessment?.grade_level?.replace('Grade ', '') || '5'}
+                  multiSelect={true}
+                  title="Select Standards"
                 />
               </div>
             </div>

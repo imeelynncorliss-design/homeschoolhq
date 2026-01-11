@@ -11,6 +11,23 @@ if (!supabaseUrl || !supabaseKey) {
 
 const supabase = createClient(supabaseUrl!, supabaseKey!);
 
+// Add this helper function
+async function getUserFromRequest(request: NextRequest) {
+  const authHeader = request.headers.get('authorization');
+  if (!authHeader) {
+    return null;
+  }
+  
+  const token = authHeader.replace('Bearer ', '');
+  const { data: { user }, error } = await supabase.auth.getUser(token);
+  
+  if (error || !user) {
+    return null;
+  }
+  
+  return user;
+}
+
 // GET - Fetch all standards for an assessment
 export async function GET(
   request: NextRequest,
@@ -20,27 +37,26 @@ export async function GET(
     const { id: assessmentId } = await params;
     console.log('Fetching standards for assessment:', assessmentId);
 
-    // Query using YOUR actual column names
+    // Query using user_standards (not standards)
     const { data, error } = await supabase
       .from('assessment_standards')
       .select(`
         id,
         assessment_id,
-        standard_id,
+        user_standard_id,
         alignment_strength,
         notes,
         created_at,
-        standards (
+        user_standards (
           id,
-          framework,
-          code,
           standard_code,
           description,
-          full_statement,
           subject,
           grade_level,
           domain,
-          state_code
+          state_code,
+          source,
+          template_version
         )
       `)
       .eq('assessment_id', assessmentId)
@@ -56,17 +72,17 @@ export async function GET(
 
     // Transform to match frontend expectations
     const result = data?.map(item => {
-      const standard = Array.isArray(item.standards) ? item.standards[0] : item.standards;
+      const standard = Array.isArray(item.user_standards) ? item.user_standards[0] : item.user_standards;
       return {
         id: item.id,
         assessment_id: item.assessment_id,
-        standard_id: item.standard_id,
+        standard_id: item.user_standard_id,
         added_at: item.created_at,
         standard: {
           id: standard.id,
-          framework: standard.framework || 'Not specified',
-          code: standard.code || standard.standard_code || 'N/A',
-          description: standard.description || standard.full_statement || 'No description',
+          framework: standard.template_version || standard.source || 'Custom',
+          code: standard.standard_code || 'N/A',
+          description: standard.description || 'No description',
           subject: standard.subject,
           grade_level: standard.grade_level,
           domain: standard.domain,
@@ -92,9 +108,18 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Check authentication (FIXED - was missing one slash)
+    const user = await getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+    
     const { id: assessmentId } = await params;
     const body = await request.json();
-    const { standard_ids, alignment_strength = 'full', notes, created_by } = body;
+    const { standard_ids, alignment_strength = 'full', notes } = body;
 
     console.log('Adding standards to assessment:', assessmentId, standard_ids);
 
@@ -108,11 +133,11 @@ export async function POST(
     // Check for existing associations
     const { data: existing } = await supabase
       .from('assessment_standards')
-      .select('standard_id')
+      .select('user_standard_id')
       .eq('assessment_id', assessmentId)
-      .in('standard_id', standard_ids);
+      .in('user_standard_id', standard_ids);
 
-    const existingIds = new Set(existing?.map(e => e.standard_id) || []);
+    const existingIds = new Set(existing?.map(e => e.user_standard_id) || []);
     const newStandardIds = standard_ids.filter(id => !existingIds.has(id));
 
     if (newStandardIds.length === 0) {
@@ -123,13 +148,12 @@ export async function POST(
       });
     }
 
-    // Insert new associations with YOUR schema
+    // Insert new associations - using user_standard_id
     const insertData = newStandardIds.map(standard_id => ({
       assessment_id: assessmentId,
-      standard_id,
+      user_standard_id: standard_id,
       alignment_strength,
       notes,
-      created_by,
       created_at: new Date().toISOString()
     }));
 

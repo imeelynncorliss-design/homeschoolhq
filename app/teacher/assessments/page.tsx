@@ -89,12 +89,25 @@ export default function AssessmentsPage() {
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Assessments</h1>
-          <p className="text-gray-600">Manage educational standards for your assessments</p>
+        
+        {/* Header - YOUR NEW CODE GOES HERE */}
+        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => router.push('/admin')}
+              className="text-gray-600 hover:text-gray-900 font-medium"
+            >
+              ← Back to Admin
+            </button>
+            <div className="h-6 w-px bg-gray-300"></div>
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Assessments</h1>
+              <p className="text-gray-600 mt-1">Manage educational standards for your assessments</p>
+            </div>
+          </div>
         </div>
 
+    
         {/* Filters */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
           <h2 className="text-lg font-semibold mb-4 text-gray-900">Filters</h2>

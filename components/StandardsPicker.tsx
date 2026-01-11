@@ -6,7 +6,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import type { Standard } from '@/types/standards';
+import type { Standard } from '@/types/standards'
+import { createClient } from '@supabase/supabase-js'
 
 interface StandardsPickerProps {
   isOpen: boolean;
@@ -29,6 +30,11 @@ export function StandardsPicker({
   multiSelect = true,
   title = 'Select Standards',
 }: StandardsPickerProps) {
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+  
   // State
   const [standards, setStandards] = useState<Standard[]>([]);
   const [loading, setLoading] = useState(false);
@@ -39,13 +45,13 @@ export function StandardsPicker({
   const [showCustomForm, setShowCustomForm] = useState(false);
   const [creatingStandard, setCreatingStandard] = useState(false);
   const [customStandard, setCustomStandard] = useState({
-      standard_code: '',
-      description: '',
-      domain: ''
-    });
+    standard_code: '',
+    description: '',
+    domain: ''
+  });
 
   // Filters
-  const [stateCode, setStateCode] = useState('CCSS');
+  const [stateCode, setStateCode] = useState('CA');
   const [gradeLevel, setGradeLevel] = useState(defaultGradeLevel);
   const [subject, setSubject] = useState(defaultSubject);
   const [customSubject, setCustomSubject] = useState('');
@@ -53,100 +59,154 @@ export function StandardsPicker({
 
   // Available options
   const gradeLevels = ['K', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
-  const subjects = ['Mathematics','English Language Arts','Science','Physics','Chemistry','Biology','History','Social Studies', 'Physical Education', 'Art', 'Music', 'Other'];
+  const subjects = ['Mathematics', 'English Language Arts', 'Science', 'Physics', 'Chemistry', 'Biology', 'History', 'Social Studies', 'Physical Education', 'Art', 'Music', 'Other'];
 
-  // Fetch standards when filters change
-  useEffect(() => {
-    if (!isOpen) return;
+  // Fetch standards function - defined here so it can be reused
+  const fetchStandards = async () => {
+    try {
+      setLoading(true);
 
-    async function fetchStandards() {
-      try {
-        setLoading(true);
-        const params = new URLSearchParams({
-          state_code: stateCode,
-          grade_level: gradeLevel,
-          subject: subject === 'Other' ? customSubject : subject,
-        });
-
-        if (searchQuery) {
-          params.set('search', searchQuery);
-        }
-
-        const response = await fetch(`/api/standards?${params.toString()}`);
-        const result = await response.json();
-
-        if (result.success) {
-          setStandards(result.data.standards);
-        }
-      } catch (error) {
-        console.error('Error fetching standards:', error);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchStandards();
-  }, [isOpen, stateCode, gradeLevel, subject, searchQuery]);
-
-  // Create custom standard
-async function createCustomStandard() {
-  if (!customStandard.description.trim()) {
-    alert('Description is required');
-    return;
-  }
-
-  try {
-    setCreatingStandard(true);
-    
-    const response = await fetch('/api/standards', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        state_code: stateCode,
-        grade_level: gradeLevel,
-        subject: subject === 'Other' ? customSubject : subject,
-        standard_code: customStandard.standard_code || `CUSTOM-${Date.now()}`,
-        description: customStandard.description,
-        domain: customStandard.domain || 'Custom',
-        source: 'User Created',
-        framework: 'Custom'
-      })
-    });
-
-    const result = await response.json();
-
-    if (result.success) {
-      // Reset form
-      setCustomStandard({ standard_code: '', description: '', domain: '' });
-      setShowCustomForm(false);
+      // Get auth token
+      const { data: { session } } = await supabase.auth.getSession();
       
-      // Refresh standards list
+      if (!session) {
+        console.error('No session found');
+        setStandards([]);
+        return;
+      }
+      
       const params = new URLSearchParams({
         state_code: stateCode,
         grade_level: gradeLevel,
         subject: subject === 'Other' ? customSubject : subject,
       });
-      const refreshResponse = await fetch(`/api/standards?${params.toString()}`);
-      const refreshResult = await refreshResponse.json();
-      if (refreshResult.success) {
-        setStandards(refreshResult.data.standards);
+
+      if (searchQuery) {
+        params.set('search', searchQuery);
       }
+
+      const response = await fetch(`/api/standards?${params.toString()}`, {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`
+        }
+      });
       
-      alert('Custom standard created successfully!');
-    } else {
-      alert('Failed to create standard: ' + result.error?.message);
+      const result = await response.json();
+
+      if (result.success) {
+        setStandards(result.data.standards);
+      } else {
+        console.error('Failed to fetch standards:', result);
+        setStandards([]);
+      }
+    } catch (error) {
+      console.error('Error fetching standards:', error);
+      setStandards([]);
+    } finally {
+      setLoading(false);
     }
+  };
+
+  // Fetch standards when filters change
+  useEffect(() => {
+    if (!isOpen) return;
+    fetchStandards();
+  }, [isOpen, stateCode, gradeLevel, subject, searchQuery]);
+
+  // Create custom standard
+  async function createCustomStandard() {
+    if (!customStandard.description.trim()) {
+      alert('Description is required');
+      return;
+    }
+
+    try {
+      setCreatingStandard(true);
+      
+      // Get auth token
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (!session) {
+        alert('You must be logged in to create standards');
+        return;
+      }
+
+      const response = await fetch('/api/standards', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          state_code: stateCode,
+          grade_level: gradeLevel,
+          subject: subject === 'Other' ? customSubject : subject,
+          standard_code: customStandard.standard_code || `CUSTOM-${Date.now()}`,
+          description: customStandard.description,
+          domain: customStandard.domain || 'Custom',
+          source: 'User Created',
+          framework: 'Custom'
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        // Reset form
+        setCustomStandard({ standard_code: '', description: '', domain: '' });
+        setShowCustomForm(false);
+        
+        // Refresh standards list
+        await fetchStandards();
+        
+        alert('Custom standard created successfully!');
+      } else {
+        alert('Failed to create standard: ' + result.error?.message);
+      }
     } catch (error) {
       console.error('Error creating standard:', error);
       alert('Failed to create custom standard');
     } finally {
       setCreatingStandard(false);
-   }
+    }
   }
 
+  // Delete custom standard
+async function deleteCustomStandard(standardId: string) {
+  if (!confirm('Are you sure you want to delete this custom standard?')) {
+    return;
+  }
+
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session) {
+      alert('You must be logged in to delete standards');
+      return;
+    }
+
+    const response = await fetch(`/api/standards?id=${standardId}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`
+      }
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      await fetchStandards();
+      alert('Custom standard deleted successfully!');
+    } else {
+      alert('Failed to delete standard: ' + result.error?.message);
+    }
+  } catch (error) {
+    console.error('Error deleting standard:', error);
+    alert('Failed to delete custom standard');
+  }
+}
   // Get unique domains from current standards
-  const domains = Array.from(new Set(standards.map((s) => s.domain).filter(Boolean))
-  ) as string [];
+  const domains = Array.from(new Set(standards.map((s) => s.domain).filter(Boolean))) as string[];
 
   // Filter by domain
   const filteredStandards = selectedDomain
@@ -222,9 +282,9 @@ async function createCustomStandard() {
                   onChange={(e) => setStateCode(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                 >
-                  <option value="CCSS">Common Core</option>
-                  <option value="NC">North Carolina</option>
-                  {/* Add more states as needed */}
+                  <option value="CA">California (Common Core)</option>
+                  <option value="MA">Massachusetts (Common Core)</option>
+                  <option value="VT">Vermont (Common Core)</option>
                 </select>
               </div>
 
@@ -249,16 +309,15 @@ async function createCustomStandard() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Subject
                 </label>
-                {/* Subject dropdown */}
-            <select
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-            >
-              {subjects.map((s) => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </select>
+                <select
+                  value={subject}
+                  onChange={(e) => setSubject(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                >
+                  {subjects.map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
 
                 {/* Show text input if "Other" is selected */}
                 {subject === 'Other' && (
@@ -316,30 +375,30 @@ async function createCustomStandard() {
                   onClick={() => setShowCustomForm(true)}
                   className="w-full py-2 px-4 border-2 border-dashed border-blue-300 text-blue-600 rounded-lg hover:bg-blue-50 hover:border-blue-400 transition-colors font-medium flex items-center justify-center gap-2"
                 >
-                 <span className="text-xl">+</span>
-                 Create Custom Standard
-               </button>
-             ) : (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <div className="flex justify-between items-center mb-3">
-                  <h4 className="font-semibold text-gray-900">Create Custom Standard</h4>
-                  <button
-                    onClick={() => {
-                      setShowCustomForm(false);
-                      setCustomStandard({ standard_code: '', description: '', domain: '' });
-                     }}
-                    className="text-gray-400 hover:text-gray-600"
-                  >
-                     ✕
-                  </button>
-                </div>
+                  <span className="text-xl">+</span>
+                  Create Custom Standard
+                </button>
+              ) : (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex justify-between items-center mb-3">
+                    <h4 className="font-semibold text-gray-900">Create Custom Standard</h4>
+                    <button
+                      onClick={() => {
+                        setShowCustomForm(false);
+                        setCustomStandard({ standard_code: '', description: '', domain: '' });
+                      }}
+                      className="text-gray-400 hover:text-gray-600"
+                    >
+                      ✕
+                    </button>
+                  </div>
 
-                <div className="space-y-3">
-                  <div>
-                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                       Standard Code (Optional)
-                     </label>
-                     <input
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Standard Code (Optional)
+                      </label>
+                      <input
                         type="text"
                         placeholder="e.g., TX.PHY.11.2A"
                         value={customStandard.standard_code}
@@ -350,7 +409,7 @@ async function createCustomStandard() {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                         Description <span className="text-red-500">*</span>
+                        Description <span className="text-red-500">*</span>
                       </label>
                       <textarea
                         placeholder="Describe what the student should know or be able to do..."
@@ -393,13 +452,13 @@ async function createCustomStandard() {
                       </button>
                     </div>
 
-                     <p className="text-xs text-gray-500">
-                        Will be created for: {subject === 'Other' ? customSubject : subject}, Grade {gradeLevel}
-                      </p>
-                    </div>
+                    <p className="text-xs text-gray-500">
+                      Will be created for: {subject === 'Other' ? customSubject : subject}, Grade {gradeLevel}
+                    </p>
                   </div>
-                )}
-              </div>
+                </div>
+              )}
+            </div>
 
             {loading ? (
               <div className="text-center py-8 text-gray-500">Loading standards...</div>
@@ -445,6 +504,18 @@ async function createCustomStandard() {
                                   {standard.description}
                                 </div>
                               </div>
+                              {standard.customized && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    deleteCustomStandard(standard.id);
+                                  }}
+                                  className="ml-2 text-red-600 hover:text-red-800 hover:bg-red-50 px-2 py-1 rounded text-sm"
+                                  title="Delete custom standard"
+                                >
+                                  Remove
+                                </button>
+                              )}
                             </div>
                           </div>
                         );

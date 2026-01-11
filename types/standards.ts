@@ -9,19 +9,27 @@
 
 export type Standard = {
   id: string;
-  standard_code: string; // Matches 'code' column in DB via aliasing
+  organization_id: string;
   state_code: string;
   grade_level: string;
   subject: string;
-  domain: string | null;
+  standard_code: string;
   description: string;
-  full_statement: string | null;
+  domain: string | null;
   parent_standard_id: string | null;
   source: string | null;
-  effective_year: number | null;
-  is_active: boolean;
+  template_id: string | null;
+  template_version: string | null;
+  imported_date: string | null;
+  verified_date: string | null;
+  customized: boolean;  // ← THIS IS THE KEY FIELD WE NEED
+  active: boolean;
+  user_notes: string | null;
   created_at: string;
   updated_at: string;
+  // Aliased fields for backward compatibility
+  code?: string; // Alias for standard_code
+  framework?: string; // Alias for template_version or source
 };
 
 export interface AssessmentStandard {
