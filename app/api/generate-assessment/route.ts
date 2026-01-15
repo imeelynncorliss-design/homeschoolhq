@@ -1,5 +1,5 @@
 // app/api/generate-assessment/route.ts
-// UPDATED VERSION - Works with your 'kids' table
+// FIXED: Better worksheet generation with explicit question text
 
 import Anthropic from '@anthropic-ai/sdk';
 import { createClient } from '@supabase/supabase-js';
@@ -17,7 +17,6 @@ export async function POST(request: Request) {
     );
     const { lessonId, kidId, assessmentType, difficulty, questionCount } = await request.json();
 
-    // Fetch lesson details
     const { data: lesson, error: lessonError } = await supabase
       .from('lessons')
       .select('*')
@@ -28,7 +27,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Lesson not found' }, { status: 404 });
     }
 
-    // Fetch kid profile for personalization
     const { data: kid, error: kidError } = await supabase
       .from('kids')
       .select('displayname, learning_style, pace_of_learning, environmental_needs')
@@ -39,158 +37,101 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Kid profile not found' }, { status: 404 });
     }
 
-    // Build personalized prompt
-    const difficultyMap: { [key: string]: string } = {
-      easy: 'appropriate for beginners with basic understanding',
-      medium: 'grade-level appropriate with moderate challenge',
-      hard: 'challenging questions that require deeper thinking and application'
-    };
-
-    const learningStyleGuidance: { [key: string]: string } = {
-      'Visual (learns best by seeing)': `
-- Include questions that reference diagrams, charts, or visual patterns
-- Use color-coding suggestions in multiple choice options
-- Ask students to "draw" or "diagram" their understanding
-- Include image-based questions when possible`,
-      
-      'Auditory (learns best by listening)': `
-- Include verbal explanation prompts
-- Ask for oral presentation or discussion-based responses
-- Include "explain out loud" instructions
-- Reference listening to lesson content`,
-      
-      'Kinesthetic (learns best by doing)': `
-- Include hands-on demonstration questions
-- Ask students to physically show or build something
-- Include movement-based learning checks
-- Emphasize practical application and real-world scenarios`,
-      
-      'Reading/Writing (learns best through text)': `
-- Include written explanation questions
-- Ask for essay-style or paragraph responses
-- Include reading comprehension elements
-- Emphasize note-taking and summarization skills`
-    };
-
-    const paceGuidance: { [key: string]: string } = {
-      'Accelerated (moves quickly, grasps concepts fast)': `
-- Include extension questions for deeper exploration
-- Add challenging "bonus" questions
-- Reduce repetitive practice, focus on application
-- Include critical thinking and synthesis questions`,
-      
-      'Average (steady, grade-level pace)': `
-- Balance between practice and application
-- Include mix of recall and understanding questions
-- Standard scaffolding and support`,
-      
-      'Needs more time (benefits from repetition and extra support)': `
-- Include more scaffolded questions with step-by-step guidance
-- Provide visual aids and examples for each question
-- Break complex questions into smaller parts
-- Include more practice questions on foundational concepts
-- Add encouraging notes and hints`
-    };
-
     const typeInstructions: { [key: string]: string } = {
-      quiz: `Create an interactive quiz with ${questionCount} questions in JSON format.
+      quiz: `Create an interactive quiz with ${questionCount} questions based on: ${lesson.title}.
 
 For each question, include:
-- question text
+- question: The actual question text (REQUIRED - must not be empty)
 - type: "multiple_choice", "true_false", or "short_answer"
-- options: array of 4 choices (for multiple choice)
-- correct_answer: the correct option letter (A/B/C/D) or "true"/"false" or example answer
-- explanation: brief explanation of why this is correct
+- options: array of 4 choices for multiple choice
+- correct_answer: the correct answer
+- explanation: brief explanation
 
-Return ONLY valid JSON with this structure:
+Return ONLY valid JSON:
 {
-  "title": "Quiz Title",
-  "instructions": "Brief instructions for student",
+  "title": "Quiz: ${lesson.title}",
+  "instructions": "Complete all questions",
   "questions": [
     {
       "id": 1,
-      "question": "Question text here",
+      "question": "ACTUAL QUESTION TEXT HERE - MUST NOT BE EMPTY",
       "type": "multiple_choice",
-      "options": ["A) First option", "B) Second option", "C) Third option", "D) Fourth option"],
-      "correct_answer": "B",
-      "explanation": "Explanation of correct answer"
+      "options": ["A) Option 1", "B) Option 2", "C) Option 3", "D) Option 4"],
+      "correct_answer": "A",
+      "explanation": "Why this is correct"
     }
   ]
 }`,
       
-      worksheet: `Create an interactive practice worksheet with ${questionCount} problems in JSON format.
+      worksheet: `Create ${questionCount} practice problems for: ${lesson.title} (${lesson.subject}).
 
-Return ONLY valid JSON with this structure:
+CRITICAL: Each "problem" field must contain the FULL QUESTION TEXT that students will read and answer.
+
+${lesson.description ? `Lesson content: ${lesson.description}` : ''}
+
+Return ONLY valid JSON:
 {
-  "title": "Worksheet Title",
-  "instructions": "Brief instructions for student",
+  "title": "Practice Worksheet: ${lesson.title}",
+  "instructions": "Complete all practice problems below",
   "problems": [
     {
       "id": 1,
-      "problem": "Problem text or question",
+      "problem": "WRITE THE COMPLETE QUESTION HERE - This is what the student will see. Example: 'Find the area of a rectangle with length 5cm and width 3cm.'",
       "type": "short_answer",
-      "hint": "Optional hint for student",
-      "sample_answer": "Example of correct answer"
+      "hint": "Optional hint to help solve",
+      "sample_answer": "Example correct answer"
+    },
+    {
+      "id": 2,
+      "problem": "ANOTHER COMPLETE QUESTION - Never leave this empty",
+      "type": "short_answer",
+      "hint": "Another hint",
+      "sample_answer": "Another answer"
     }
   ]
-}`,
-      
-      project: `Create ${questionCount} hands-on project ideas in JSON format.
+}
 
-Return ONLY valid JSON with this structure:
+REMEMBER: The "problem" field is the actual question text. It must NEVER be empty or just a number!`,
+      
+      project: `Create ${questionCount} hands-on project ideas for: ${lesson.title}.
+
+${lesson.description ? `Lesson content: ${lesson.description}` : ''}
+
+Return ONLY valid JSON:
 {
-  "title": "Project Ideas",
-  "instructions": "Choose one project to complete",
+  "title": "Project Options: ${lesson.title}",
+  "instructions": "Choose ONE project to complete",
   "projects": [
     {
       "id": 1,
-      "title": "Project Title",
-      "description": "What the student will do",
+      "title": "Project title",
+      "objective": "What student will learn",
+      "description": "What to create",
       "materials": ["item 1", "item 2"],
-      "estimated_time": "30 minutes",
-      "learning_goals": "What they'll learn"
+      "estimated_time": "X minutes",
+      "steps": ["Step 1", "Step 2"]
     }
   ]
 }`
     };
 
-    const prompt = `You are creating a personalized educational assessment for a homeschool student.
+    const prompt = `You are creating a personalized ${assessmentType} for: ${lesson.title} (${lesson.subject}).
 
-**STUDENT PROFILE:**
+**LESSON:**
+${lesson.description || 'No description provided'}
+
+**STUDENT:**
 Name: ${kid.displayname}
 Learning Style: ${kid.learning_style || 'Not specified'}
-Pace of Learning: ${kid.pace_of_learning || 'Average'}
-Environmental Needs: ${kid.environmental_needs || 'None specified'}
 
-**LESSON INFORMATION:**
-Title: ${lesson.title}
-Subject: ${lesson.subject}
-${lesson.description ? `Description: ${lesson.description}` : ''}
+${typeInstructions[assessmentType]}
 
-**ASSESSMENT REQUIREMENTS:**
-Type: ${assessmentType}
-Difficulty: ${difficulty} (${difficultyMap[difficulty as keyof typeof difficultyMap] || difficulty})
-Number of items: ${questionCount}
-
-**PERSONALIZATION GUIDELINES:**
-${kid.learning_style ? learningStyleGuidance[kid.learning_style] || '' : ''}
-${kid.pace_of_learning ? paceGuidance[kid.pace_of_learning] || '' : ''}
-
-${kid.environmental_needs ? `Environmental Considerations: ${kid.environmental_needs}` : ''}
-
-${typeInstructions[assessmentType as string]}
-
-CRITICAL: Return ONLY the JSON object. No markdown formatting, no backticks, no explanatory text before or after.`;
+CRITICAL: Return ONLY the JSON object. No markdown, no backticks, no explanatory text.`;
 
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 4000,
-      messages: [
-        {
-          role: 'user',
-          content: prompt
-        }
-      ]
+      messages: [{ role: 'user', content: prompt }]
     });
 
     const textContent = message.content.find((block) => block.type === 'text');
@@ -198,14 +139,11 @@ CRITICAL: Return ONLY the JSON object. No markdown formatting, no backticks, no 
       return NextResponse.json({ error: 'No response from AI' }, { status: 500 });
     }
 
-    // Parse the JSON response
     let assessmentData;
     try {
-      // Remove any markdown code fences if present
       let cleanedText = textContent.text.trim();
       cleanedText = cleanedText.replace(/^```json\n/, '').replace(/\n```$/, '');
       cleanedText = cleanedText.replace(/^```\n/, '').replace(/\n```$/, '');
-      
       assessmentData = JSON.parse(cleanedText);
     } catch (parseError) {
       console.error('Failed to parse AI response:', textContent.text);
@@ -215,13 +153,55 @@ CRITICAL: Return ONLY the JSON object. No markdown formatting, no backticks, no 
       }, { status: 500 });
     }
 
-    // Save assessment to database
+    // Normalize to questions array
+    if (assessmentType === 'worksheet' && assessmentData.problems) {
+      console.log('Worksheet problems before normalization:', assessmentData.problems);
+      
+      assessmentData.questions = assessmentData.problems.map((problem: any) => ({
+        id: problem.id,
+        question: problem.problem || "Question text missing",  // Fallback if empty
+        type: 'short_answer',
+        correct_answer: problem.sample_answer || '',
+        explanation: problem.hint || ''
+      }));
+      
+      console.log('Normalized questions:', assessmentData.questions);
+    }
+
+    if (assessmentType === 'project' && assessmentData.projects) {
+      assessmentData.questions = [{
+        id: 1,
+        question: "Select which project you completed:",
+        type: 'project_selection',
+        options: assessmentData.projects.map((p: any) => p.id),
+        correct_answer: 'any'
+      }];
+    }
+
+    if (!assessmentData.questions || !Array.isArray(assessmentData.questions)) {
+      console.error('Assessment data missing questions array:', assessmentData);
+      return NextResponse.json({ 
+        error: 'Invalid assessment format',
+        assessmentType,
+        rawData: assessmentData
+      }, { status: 500 });
+    }
+
+    // Validate that questions have text
+    const emptyQuestions = assessmentData.questions.filter((q: any) => !q.question || q.question.trim() === '');
+    if (emptyQuestions.length > 0) {
+      console.error('Some questions have no text:', emptyQuestions);
+    }
+
     const { data: savedAssessment, error: saveError } = await supabase
       .from('assessments')
       .insert({
+        title: assessmentData.title || `${lesson.title} Assessment`,
         lesson_id: lessonId,
         kid_id: kidId,
+        organization_id: lesson.organization_id,
         type: assessmentType,
+        assessment_type: assessmentType,
         difficulty: difficulty,
         content: assessmentData,
         created_at: new Date().toISOString()
@@ -231,7 +211,6 @@ CRITICAL: Return ONLY the JSON object. No markdown formatting, no backticks, no 
 
     if (saveError) {
       console.error('Failed to save assessment:', saveError);
-      // Still return the assessment even if save fails
     }
 
     return NextResponse.json({ 

@@ -482,7 +482,7 @@ export default function AllChildrenList({
                       onClick={() => onViewPastAssessments(kid.id, kid.displayname)}
                       className="w-full px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium flex items-center justify-center gap-2 transition-colors"
                     >
-                      📊 View Past Assessments
+                      📊 Assessments & Reviews
                     </button>
                   </div>
                 )}

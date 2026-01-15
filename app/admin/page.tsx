@@ -147,7 +147,7 @@ export default function AdminPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
   {/* Assessments & Standards Card - NEW! */}
   <button
-    onClick={() => router.push('/teacher/assessments')}
+    onClick={() => router.push('/admin/assessments')}
     className="bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-200 rounded-lg p-6 transition-all text-left hover:shadow-lg hover:border-blue-300 cursor-pointer"
   >
     <div className="flex justify-between items-start mb-3">
