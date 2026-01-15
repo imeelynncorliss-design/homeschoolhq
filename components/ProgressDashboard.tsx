@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import moment from 'moment'
+import { calculateTotalSchoolDays, isValidHomeschoolDay } from '@/utils/schoolYearUtils'
+import { DEFAULT_HOLIDAYS_2025_2026, Holiday } from '@/app/utils/holidayUtils'
 
 interface ProgressDashboardProps {
   userId: string
@@ -10,6 +12,8 @@ interface ProgressDashboardProps {
 
 export default function ProgressDashboard({ userId }: ProgressDashboardProps) {
   const [loading, setLoading] = useState(true)
+  const [settings, setSettings] = useState<any>(null)
+  const [vacationHolidays, setVacationHolidays] = useState<Holiday[]>([])
   const [stats, setStats] = useState({
     totalHours: 0,
     totalLessons: 0,
@@ -29,11 +33,15 @@ export default function ProgressDashboard({ userId }: ProgressDashboardProps) {
 
   const loadProgress = async () => {
     // Load school year settings
-    const { data: settings } = await supabase
+    const { data: settingsData } = await supabase
       .from('school_year_settings')
       .select('*')
       .eq('user_id', userId)
       .single()
+
+    if (settingsData) {
+      setSettings(settingsData)
+    }
 
     // Load all lessons
     const { data: lessons } = await supabase
@@ -46,6 +54,15 @@ export default function ProgressDashboard({ userId }: ProgressDashboardProps) {
       .from('vacation_periods')
       .select('*')
       .eq('user_id', userId)
+
+    const vacationHolidaysData: Holiday[] = vacations?.map(v => ({
+      name: v.name,
+      start: v.start_date,
+      end: v.end_date,
+      enabled: true
+    })) || []
+
+    setVacationHolidays(vacationHolidaysData)
 
     const totalVacationDays = vacations?.reduce((sum, v) => {
       const start = moment(v.start_date)
@@ -65,26 +82,17 @@ export default function ProgressDashboard({ userId }: ProgressDashboardProps) {
       totalLessons,
       completedHours,
       completedLessons,
-      goalHours: settings?.annual_goal_value || 180,
-      goalLessons: settings?.annual_goal_value || 180,
-      trackingType: settings?.annual_goal_type || 'hours',
-      schoolYearStart: settings?.school_year_start || '',
-      schoolYearEnd: settings?.school_year_end || '',
+      goalHours: settingsData?.annual_goal_value || 180,
+      goalLessons: settingsData?.annual_goal_value || 180,
+      trackingType: settingsData?.annual_goal_type || 'hours',
+      schoolYearStart: settingsData?.school_year_start || '',
+      schoolYearEnd: settingsData?.school_year_end || '',
       vacationDays: totalVacationDays
     })
     setLoading(false)
   }
 
-  if (loading) {
-    return <div className="text-center py-8">Loading progress data...</div>
-  }
-
-  const isTrackingHours = stats.trackingType === 'hours'
-  const completed = isTrackingHours ? stats.completedHours : stats.completedLessons
-  const goal = isTrackingHours ? stats.goalHours : stats.goalLessons
-  const percentComplete = goal > 0 ? Math.round((completed / goal) * 100) : 0
-
-  // Calculate expected progress based on date
+  // Enhanced calculation that accounts for homeschool days and vacations
   const calculateExpectedProgress = () => {
     if (!stats.schoolYearStart || !stats.schoolYearEnd) return 0
     
@@ -95,13 +103,47 @@ export default function ProgressDashboard({ userId }: ProgressDashboardProps) {
     if (today.isBefore(start)) return 0
     if (today.isAfter(end)) return 100
     
-    const totalDays = end.diff(start, 'days')
-    const daysElapsed = today.diff(start, 'days')
-    const adjustedDays = totalDays - stats.vacationDays
-    const adjustedElapsed = Math.max(0, daysElapsed - stats.vacationDays)
+    // Get homeschool days from settings
+    const homeschoolDays = settings?.homeschool_days || [
+      'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'
+    ]
     
-    return Math.round((adjustedElapsed / adjustedDays) * 100)
+    // Combine default holidays with vacations
+    const allHolidays = [...DEFAULT_HOLIDAYS_2025_2026, ...vacationHolidays]
+    
+    // Calculate total possible school days for the entire year
+    const totalSchoolDays = calculateTotalSchoolDays(
+      start.format('YYYY-MM-DD'),
+      end.format('YYYY-MM-DD'),
+      homeschoolDays,
+      allHolidays
+    )
+    
+    // Calculate elapsed school days (not calendar days!)
+    let elapsedSchoolDays = 0
+    let currentDate = moment(start)
+    
+    while (currentDate.isSameOrBefore(today) && currentDate.isSameOrBefore(end)) {
+      const dateStr = currentDate.format('YYYY-MM-DD')
+      if (isValidHomeschoolDay(dateStr, homeschoolDays, allHolidays)) {
+        elapsedSchoolDays++
+      }
+      currentDate.add(1, 'day')
+    }
+    
+    return totalSchoolDays > 0 
+      ? Math.round((elapsedSchoolDays / totalSchoolDays) * 100) 
+      : 0
   }
+
+  if (loading) {
+    return <div className="text-center py-8">Loading progress data...</div>
+  }
+
+  const isTrackingHours = stats.trackingType === 'hours'
+  const completed = isTrackingHours ? stats.completedHours : stats.completedLessons
+  const goal = isTrackingHours ? stats.goalHours : stats.goalLessons
+  const percentComplete = goal > 0 ? Math.round((completed / goal) * 100) : 0
 
   const expectedProgress = calculateExpectedProgress()
   const progressStatus = 
