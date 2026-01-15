@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { createClient } from '@supabase/supabase-js'
 import AssessmentStandardsManager from '@/components/AssessmentStandardsManager'
+import StandardsImportManager from '@/components/StandardsImportManager'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -29,18 +30,44 @@ type AssessmentWithDetails = {
   }
 }
 
-type FilterStatus = 'all' | 'completed' | 'pending' | 'needs_review' | null;
+type Standard = {
+  id: string
+  state_code: string
+  grade_level: string
+  subject: string
+  standard_code: string
+  description: string
+  domain: string
+  source: string
+  customized: boolean
+  active: boolean
+}
 
 export default function AssessmentsPage() {
+  const [currentView, setCurrentView] = useState<'results' | 'standards'>('results')
   const [assessments, setAssessments] = useState<AssessmentWithDetails[]>([])
   const [loading, setLoading] = useState(true)
-  const [currentView, setCurrentView] = useState<'results' | 'standards'>('results')
-  const [statusFilter, setStatusFilter] = useState<FilterStatus>(null);
   const [managingStandards, setManagingStandards] = useState<AssessmentWithDetails | null>(null)
+  const [showImportManager, setShowImportManager] = useState(false)
+  
+  // Standards state
+  const [standards, setStandards] = useState<Standard[]>([])
+  const [standardsLoading, setStandardsLoading] = useState(false)
+  const [filters, setFilters] = useState({
+    subject: '',
+    grade_level: '',
+    search: ''
+  })
 
   useEffect(() => {
     loadAssessments()
   }, [])
+
+  useEffect(() => {
+    if (currentView === 'standards') {
+      loadStandards()
+    }
+  }, [currentView, filters])
 
   const loadAssessments = async () => {
     const supabase = createClient(supabaseUrl, supabaseKey)
@@ -96,58 +123,62 @@ export default function AssessmentsPage() {
     setLoading(false)
   }
 
-  // --- NEW HANDLER FUNCTIONS ---
+  const loadStandards = async () => {
+    setStandardsLoading(true)
+    const supabase = createClient(supabaseUrl, supabaseKey)
+    
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) {
+      console.error('No session found')
+      setStandardsLoading(false)
+      return
+    }
 
-  const handleAssign = (id: string) => {
-    alert(`Assigning Assessment ${id}. You can now trigger your student selection logic here!`);
-  }
+    const params = new URLSearchParams()
+    if (filters.subject) params.append('subject', filters.subject)
+    if (filters.grade_level) params.append('grade_level', filters.grade_level)
+    if (filters.search) params.append('search', filters.search)
 
-  const handleEdit = (id: string) => {
-    window.location.href = `/admin/assessments/edit/${id}`;
-  }
+    try {
+      const response = await fetch(`/api/standards?${params.toString()}`, {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`
+        }
+      })
 
-  const handleDuplicate = async (assessment: AssessmentWithDetails) => {
-    const supabase = createClient(supabaseUrl, supabaseKey);
-    const { error } = await supabase
-      .from('assessments')
-      .insert([{
-        lesson_id: assessment.lesson_id,
-        kid_id: assessment.kid_id,
-        type: assessment.type,
-        difficulty: assessment.difficulty,
-        content: assessment.content,
-        organization_id: 'd52497c0-42a9-49b7-ba3b-849bffa27fc4'
-      }]);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
 
-    if (error) alert("Failed to duplicate");
-    else loadAssessments();
+      const result = await response.json()
+      
+      if (result.success) {
+        setStandards(result.data.standards)
+      }
+    } catch (error) {
+      console.error('Error loading standards:', error)
+    }
+    
+    setStandardsLoading(false)
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this assessment? This cannot be undone.")) return;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-    const { error } = await supabase.from('assessments').delete().eq('id', id);
+    if (!confirm("Are you sure you want to delete this assessment?")) return
+    const supabase = createClient(supabaseUrl, supabaseKey)
+    const { error } = await supabase.from('assessments').delete().eq('id', id)
     
-    if (error) alert("Error deleting assessment");
-    else loadAssessments();
+    if (error) alert("Error deleting assessment")
+    else loadAssessments()
   }
 
-  const filteredAssessments = assessments.filter(assessment => {
-    if (!statusFilter || statusFilter === 'all') return true;
-    const needsReview = assessment.result?.needs_manual_grading;
-    const isFinished = !!assessment.result;
-    if (statusFilter === 'needs_review') return needsReview;
-    if (statusFilter === 'completed') return isFinished && !needsReview;
-    if (statusFilter === 'pending') return !isFinished;
-    return true;
-  });
-
-  if (loading) return <div className="p-20 text-center text-slate-500 font-bold">Loading Assessments...</div>
+  // Get unique subjects and grades for filters
+  const availableSubjects = [...new Set(standards.map(s => s.subject))].sort()
+  const availableGrades = [...new Set(standards.map(s => s.grade_level))].sort()
 
   return (
     <div className="min-h-screen bg-slate-50 pb-20">
-      {/* HEADER SECTION */}
-      <div className="bg-gradient-to-r from-[#9333ea] to-[#4f46e5] text-white p-10 pb-20">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-10 pb-20">
         <div className="max-w-7xl mx-auto">
           <Link href="/admin" className="text-white/80 hover:text-white flex items-center gap-2 mb-6 font-medium">
             ← Back to Admin
@@ -158,66 +189,85 @@ export default function AssessmentsPage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 -mt-12">
-        {/* VIEW TOGGLE */}
+        {/* Tabs */}
         <div className="flex gap-4 mb-8">
           <button 
             onClick={() => setCurrentView('results')}
-            className={`px-8 py-4 rounded-2xl font-bold transition-all shadow-sm ${currentView === 'results' ? 'bg-white text-[#9333ea] scale-105' : 'bg-white/50 text-slate-500 hover:bg-white'}`}
+            className={`px-8 py-4 rounded-2xl font-bold transition-all shadow-sm ${
+              currentView === 'results' 
+                ? 'bg-white text-purple-600 scale-105' 
+                : 'bg-white/50 text-slate-500 hover:bg-white'
+            }`}
           >
             📊 Assessment Results
           </button>
           <button 
             onClick={() => setCurrentView('standards')}
-            className={`px-8 py-4 rounded-2xl font-bold transition-all shadow-sm ${currentView === 'standards' ? 'bg-white text-[#9333ea] scale-105' : 'bg-white/50 text-slate-500 hover:bg-white'}`}
+            className={`px-8 py-4 rounded-2xl font-bold transition-all shadow-sm ${
+              currentView === 'standards' 
+                ? 'bg-white text-purple-600 scale-105' 
+                : 'bg-white/50 text-slate-500 hover:bg-white'
+            }`}
           >
             📚 Standards Tracking
           </button>
         </div>
 
+        {/* Assessment Results View */}
         {currentView === 'results' && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            
-            {/* LEFT COLUMN: LIST OF ASSESSMENTS */}
             <div className="lg:col-span-2 space-y-4">
-              {filteredAssessments.map((assessment) => (
-                <div key={assessment.id} className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm hover:border-[#9333ea]/30 transition-all">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h3 className="text-xl font-black text-slate-900">{assessment.lesson_title}</h3>
-                      <p className="text-slate-500 font-medium">{assessment.kid_name} • {assessment.type}</p>
-                      
-                      <div className="flex gap-3 mt-4">
-                        <button 
-                          onClick={() => setManagingStandards(assessment)}
-                          className="bg-slate-100 text-slate-600 px-4 py-2 rounded-xl text-xs font-bold hover:bg-purple-50 hover:text-[#9333ea] transition-all"
-                        >
-                          {assessment.standards_count > 0 ? `📚 ${assessment.standards_count} Standards Aligned` : '+ Add Standards'}
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="text-right">
-                      <div className={`text-3xl font-black ${assessment.result ? 'text-emerald-600' : 'text-slate-300'}`}>
-                        {assessment.result ? `${assessment.result.auto_score}%` : '--'}
-                      </div>
-                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                        {assessment.result ? 'Score' : 'Pending'}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* QUICK ACTIONS FOR EACH LIST ITEM */}
-                  <div className="grid grid-cols-4 gap-2 mt-6 pt-6 border-t border-slate-50">
-                    <button onClick={() => handleAssign(assessment.id)} className="py-2 bg-[#9333ea] text-white rounded-lg text-xs font-bold hover:opacity-90">Assign</button>
-                    <button onClick={() => handleEdit(assessment.id)} className="py-2 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold hover:bg-slate-200">Edit</button>
-                    <button onClick={() => handleDuplicate(assessment)} className="py-2 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold hover:bg-slate-200">Duplicate</button>
-                    <button onClick={() => handleDelete(assessment.id)} className="py-2 text-rose-500 font-bold text-xs hover:bg-rose-50 rounded-lg">Delete</button>
-                  </div>
+              {loading ? (
+                <div className="bg-white rounded-3xl p-12 text-center">
+                  <div className="text-slate-400 font-bold">Loading assessments...</div>
                 </div>
-              ))}
+              ) : assessments.length === 0 ? (
+                <div className="bg-white rounded-3xl p-12 text-center">
+                  <div className="text-6xl mb-4">📝</div>
+                  <h3 className="text-xl font-black text-slate-900 mb-2">No Assessments Yet</h3>
+                  <p className="text-slate-500">Create your first assessment to get started!</p>
+                </div>
+              ) : (
+                assessments.map((assessment) => (
+                  <div key={assessment.id} className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm hover:border-purple-300 transition-all">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="text-xl font-black text-slate-900">{assessment.lesson_title}</h3>
+                        <p className="text-slate-500 font-medium">{assessment.kid_name} • {assessment.type}</p>
+                        
+                        <div className="flex gap-3 mt-4">
+                          <button 
+                            onClick={() => setManagingStandards(assessment)}
+                            className="bg-slate-100 text-slate-600 px-4 py-2 rounded-xl text-xs font-bold hover:bg-purple-50 hover:text-purple-600 transition-all"
+                          >
+                            {assessment.standards_count > 0 ? `📚 ${assessment.standards_count} Standards` : '+ Add Standards'}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="text-right">
+                        <div className={`text-3xl font-black ${assessment.result ? 'text-emerald-600' : 'text-slate-300'}`}>
+                          {assessment.result ? `${assessment.result.auto_score}%` : '--'}
+                        </div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                          {assessment.result ? 'Score' : 'Pending'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-6 pt-6 border-t border-slate-50">
+                      <button 
+                        onClick={() => handleDelete(assessment.id)} 
+                        className="text-rose-500 font-bold text-xs hover:bg-rose-50 px-4 py-2 rounded-lg"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
 
-            {/* RIGHT COLUMN: STATS & TOOLS */}
             <div className="space-y-6">
               <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm">
                 <h3 className="font-black text-slate-900 mb-6">Quick Overview</h3>
@@ -233,18 +283,143 @@ export default function AssessmentsPage() {
                 </div>
               </div>
             </div>
+          </div>
+        )}
 
+        {/* Standards Tracking View */}
+        {currentView === 'standards' && (
+          <div className="space-y-6">
+            {/* Import Button */}
+            <div className="flex justify-end">
+              <button
+                onClick={() => setShowImportManager(true)}
+                className="px-6 py-3 bg-purple-600 text-white rounded-xl font-bold hover:bg-purple-700 transition-all flex items-center gap-2"
+              >
+                <span className="text-xl">+</span> Import Standards
+              </button>
+            </div>
+
+            {/* Filters */}
+            <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 mb-2 uppercase">Subject</label>
+                  <select
+                    value={filters.subject}
+                    onChange={(e) => setFilters({ ...filters, subject: e.target.value })}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 font-medium text-slate-900 focus:border-purple-600 focus:ring-2 focus:ring-purple-600/20 outline-none"
+                  >
+                    <option value="">All Subjects</option>
+                    {availableSubjects.map(subject => (
+                      <option key={subject} value={subject}>{subject}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 mb-2 uppercase">Grade Level</label>
+                  <select
+                    value={filters.grade_level}
+                    onChange={(e) => setFilters({ ...filters, grade_level: e.target.value })}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 font-medium text-slate-900 focus:border-purple-600 focus:ring-2 focus:ring-purple-600/20 outline-none"
+                  >
+                    <option value="">All Grades</option>
+                    {availableGrades.map(grade => (
+                      <option key={grade} value={grade}>Grade {grade}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 mb-2 uppercase">Search</label>
+                  <input
+                    type="text"
+                    value={filters.search}
+                    onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+                    placeholder="Search standards..."
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 font-medium text-slate-900 placeholder:text-slate-400 focus:border-purple-600 focus:ring-2 focus:ring-purple-600/20 outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Standards List */}
+            {standardsLoading ? (
+              <div className="bg-white rounded-3xl p-12 text-center">
+                <div className="text-slate-400 font-bold">Loading standards...</div>
+              </div>
+            ) : standards.length === 0 ? (
+              <div className="bg-white rounded-3xl p-12 border border-slate-200 text-center">
+                <div className="text-6xl mb-4">📚</div>
+                <h3 className="text-xl font-black text-slate-900 mb-2">No Standards Found</h3>
+                <p className="text-slate-500 mb-6">
+                  {filters.subject || filters.grade_level || filters.search 
+                    ? "Try adjusting your filters" 
+                    : "You haven't imported any standards yet"}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="font-black text-slate-900">{standards.length} Standards</h3>
+                </div>
+                
+                {standards.map((standard) => (
+                  <div key={standard.id} className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm hover:border-purple-300 transition-all">
+                    <div className="flex justify-between items-start gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2 flex-wrap">
+                          <span className="px-3 py-1 bg-purple-50 text-purple-600 rounded-lg text-xs font-black">
+                            {standard.standard_code}
+                          </span>
+                          <span className="px-3 py-1 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold">
+                            {standard.subject}
+                          </span>
+                          <span className="px-3 py-1 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold">
+                            Grade {standard.grade_level}
+                          </span>
+                          {standard.customized && (
+                            <span className="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-lg text-xs font-bold">
+                              Custom
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-slate-700 font-medium leading-relaxed">
+                          {standard.description}
+                        </p>
+                        {standard.domain && (
+                          <p className="text-sm text-slate-500 mt-2">
+                            <span className="font-bold">Domain:</span> {standard.domain}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
 
-      {/* STANDARDS MODAL */}
+      {/* Standards Modal */}
       {managingStandards && (
         <AssessmentStandardsManager
           assessmentId={managingStandards.id}
           assessmentTitle={managingStandards.lesson_title}
           onClose={() => setManagingStandards(null)}
           onUpdate={() => loadAssessments()}
+        />
+      )}
+
+      {/* Import Manager Modal */}
+      {showImportManager && (
+        <StandardsImportManager
+          onClose={() => setShowImportManager(false)}
+          onImport={() => {
+            setShowImportManager(false);
+            loadStandards(); // Reload standards after import
+          }}
         />
       )}
     </div>
