@@ -1047,7 +1047,6 @@ useEffect(() => {
             kids.find(k => k.id === assessmentForLesson.kid_id)?.displayname || 'Student'
           }
           lessonTitle={generatedAssessment.lessonTitle}
-          personalizedFor={generatedAssessment.personalizedFor}
           onClose={handleClosePersonalizedAssessment}
           onSubmit={handleAssessmentSubmitted}
         />
