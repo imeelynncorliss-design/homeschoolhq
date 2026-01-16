@@ -1,14 +1,26 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { SchoolYearConfig, VacationPeriod } from '@/types/school-year';
-import { schoolYearScheduler, ScheduledDate } from '@/lib/scheduling/school-year-scheduler';
+
+interface SchoolYearConfig {
+  school_year_start: string;
+  school_year_end: string;
+  homeschool_days?: string[];
+  organization_id?: string;
+}
+
+interface VacationPeriod {
+  id: string;
+  name: string;
+  start_date: string;
+  end_date: string;
+  vacation_type: string;
+}
 
 interface UseSchoolYearScheduleReturn {
   config: SchoolYearConfig | null;
   vacationPeriods: VacationPeriod[];
   loading: boolean;
   error: Error | null;
-  getScheduledDates: (startDate: Date, endDate: Date) => ScheduledDate[];
   isSchoolDay: (date: Date) => boolean;
   isVacation: (date: Date) => boolean;
 }
@@ -70,18 +82,35 @@ export function useSchoolYearSchedule(): UseSchoolYearScheduleReturn {
     };
   }, []);
 
-  const getScheduledDates = (startDate: Date, endDate: Date): ScheduledDate[] => {
-    if (!config) return [];
-    return schoolYearScheduler.getScheduledDates(config, vacationPeriods, startDate, endDate);
-  };
-
   const isSchoolDay = (date: Date): boolean => {
     if (!config) return false;
-    return schoolYearScheduler.isSchoolDay(config, vacationPeriods, date);
+    
+    // Check if date is within school year
+    const dateStr = date.toISOString().split('T')[0];
+    if (dateStr < config.school_year_start || dateStr > config.school_year_end) {
+      return false;
+    }
+    
+    // Check if it's a configured school day
+    const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'long' });
+    const homeschoolDays = config.homeschool_days || ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+    if (!homeschoolDays.includes(dayOfWeek)) {
+      return false;
+    }
+    
+    // Check if it's a vacation
+    if (isVacation(date)) {
+      return false;
+    }
+    
+    return true;
   };
 
   const isVacation = (date: Date): boolean => {
-    return schoolYearScheduler.isVacation(vacationPeriods, date);
+    const dateStr = date.toISOString().split('T')[0];
+    return vacationPeriods.some(
+      vacation => dateStr >= vacation.start_date && dateStr <= vacation.end_date
+    );
   };
 
   return {
@@ -89,7 +118,6 @@ export function useSchoolYearSchedule(): UseSchoolYearScheduleReturn {
     vacationPeriods,
     loading,
     error,
-    getScheduledDates,
     isSchoolDay,
     isVacation,
   };
