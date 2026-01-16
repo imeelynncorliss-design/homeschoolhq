@@ -396,7 +396,7 @@ export default function AssessmentTaking({
               <div className="bg-blue-50 border border-blue-100 p-6 rounded-2xl shadow-sm text-center">
                 <h3 className="font-bold text-blue-900 mb-2 uppercase tracking-wide text-sm">✅ Submitted Successfully</h3>
                 <p className="text-blue-800 text-sm">
-                  This assessment has been submitted and is waiting for parent review. Check the "Needs Review" tab in the Assessments & Reviews section to grade it.
+                  This assessment has been submitted and is waiting for parent review. Check the "Needs Review" tab in the Assessments & Reviews section  to grade it.
                 </p>
               </div>
             )}

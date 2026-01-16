@@ -488,7 +488,11 @@ export default function CurriculumImporter({ childId, childName, onClose, onImpo
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex-1">
                             <h3 className="font-semibold text-gray-900">{lesson.title}</h3>
-                            <p className="text-sm text-gray-600">{lesson.description}</p>
+                            <p className="text-sm text-gray-600">
+                              {typeof lesson.description === 'string' 
+                                ? lesson.description 
+                                : JSON.stringify(lesson.description)}
+                            </p>
                             <div className="flex gap-3 mt-2 text-xs text-gray-500">
                               <span className="bg-gray-100 px-2 py-1 rounded">{lesson.subject}</span>
                               {lessonDurations[index] && (

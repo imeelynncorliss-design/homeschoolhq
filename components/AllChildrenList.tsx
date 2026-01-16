@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import HoursTracker from './HoursTracker'
 import { formatLessonDescription } from '@/lib/formatLessonDescription'
 import LessonActionModal from './LessonActionModal'
+import RescheduleButton from './RescheduleButton'
 
 interface Lesson {
   id: string
@@ -613,21 +614,33 @@ export default function AllChildrenList({
                                                  lesson.status === 'in_progress' ? '◐' : '○'}
                                               </button>
                                               
-                                              {/* Clickable lesson content */}
+                                             {/* Clickable lesson content */}
                                               <div 
                                                 className="flex-1 cursor-pointer hover:bg-gray-50 -m-2 p-2 rounded transition-colors"
                                                 onClick={() => setSelectedModalLesson(lesson)}
                                               >
                                                 <h3 className={`font-semibold text-gray-900 text-sm ${lesson.status === 'completed' ? 'line-through' : ''}`}>
-                                                  {lesson.title}
+                                                  {String(lesson.title || 'Untitled')}
                                                 </h3>
                                                 {lesson.description && (
                                                   <p className="text-gray-600 text-xs mt-1 line-clamp-2">
-                                                    {formatLessonDescription(lesson.description)}
+                                                    {(() => {
+                                                      try {
+                                                        // Try to format the description
+                                                        const formatted = formatLessonDescription(lesson.description);
+                                                        // Ensure it's a string
+                                                        return typeof formatted === 'string' ? formatted : String(formatted);
+                                                      } catch (err) {
+                                                        // If formatting fails, try to stringify the description
+                                                        return typeof lesson.description === 'string' 
+                                                          ? lesson.description 
+                                                          : JSON.stringify(lesson.description);
+                                                      }
+                                                    })()}
                                                   </p>
                                                 )}
                                                 
-                                                <div className="flex flex-wrap gap-2 mt-2">
+                                                <div className="flex flex-wrap items-center gap-2 mt-2">
                                                   {lesson.duration_minutes && (
                                                     <span className="inline-block px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded">
                                                       ⏱️ {lesson.duration_minutes} min
@@ -642,6 +655,18 @@ export default function AllChildrenList({
                                                     <span className="inline-block px-2 py-1 bg-green-100 text-green-800 text-xs rounded">
                                                       🏁 End: {calculateEndDate(lesson.lesson_date, lesson.duration_minutes)}
                                                     </span>
+                                                  )}
+                                                  {lesson.lesson_date && (
+                                                    <RescheduleButton
+                                                      lessonId={lesson.id}
+                                                      currentDate={lesson.lesson_date}
+                                                      kidId={lesson.kid_id}
+                                                      subjectId={lesson.subject}
+                                                      onRescheduleComplete={() => {
+                                                        // Force a clean reload
+                                                        window.location.reload()
+                                                      }}
+                                                    />
                                                   )}
                                                 </div>
                                               </div>

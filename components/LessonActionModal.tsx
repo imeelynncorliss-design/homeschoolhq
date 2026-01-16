@@ -1,4 +1,5 @@
 import React from 'react';
+import { formatLessonDescription } from '@/lib/formatLessonDescription';
 
 interface Lesson {
   id: string;
@@ -50,6 +51,11 @@ export default function LessonActionModal({
     }
   };
 
+  // Safely format description
+  const formattedDescription = lesson.description 
+    ? formatLessonDescription(lesson.description)
+    : '';
+
   return (
     <div 
       className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
@@ -62,8 +68,10 @@ export default function LessonActionModal({
         <h3 className="text-xl font-semibold mb-2 text-gray-900">
           {lesson.title}
         </h3>
-        {lesson.description && (
-          <p className="text-sm text-gray-600 mb-6 line-clamp-2">{lesson.description}</p>
+        {formattedDescription && (
+          <p className="text-sm text-gray-600 mb-6 line-clamp-2">
+            {formattedDescription}
+          </p>
         )}
         
         <div className="space-y-3">

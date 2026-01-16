@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import SchoolYearConfig from '@/components/SchoolYearConfig'
 import ProgressDashboard from '@/components/ProgressDashboard'
-import VacationPlanner from '@/components/VacationPlanner'
+import EnhancedVacationManager from '@/components/admin/EnhancedVacationManager'
 import BulkLessonScheduler from '@/components/BulkLessonScheduler'
 import AttendanceTracker from '@/components/AttendanceTracker'
 import { getTierForTesting } from '@/lib/tierTesting'
@@ -251,7 +251,7 @@ export default function AdminPage() {
           )}
           
           {activeTab === 'vacation' && hasFeature('vacation_planner') && (
-            <VacationPlanner userId={user.id} />
+            <EnhancedVacationManager organizationId="d52497c0-42a9-49b7-ba3b-849bffa27fc4" />
           )}
           
           {activeTab === 'bulk-schedule' && hasFeature('bulk_scheduler') && (

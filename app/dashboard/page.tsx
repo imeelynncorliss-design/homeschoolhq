@@ -18,6 +18,7 @@ import DevTierToggle from '@/components/DevTierToggle'
 import { formatLessonDescription } from '@/lib/formatLessonDescription'
 import { ReactNode } from 'react'
 import PersonalizedAssessmentCreator from '@/components/PersonalizedAssessmentCreator'
+import { DEFAULT_HOLIDAYS_2025_2026 } from '@/app/utils/holidayUtils'
 import AssessmentTaking from '@/components/AssessmentTaking'
 import AutoScheduleModal from '@/components/AutoScheduleModal' 
 import HelpWidget from '../../components/HelpWidget'
@@ -93,6 +94,8 @@ export default function Dashboard() {
   const [pastAssessmentsKidId, setPastAssessmentsKidId] = useState<string | null>(null)
   const [pastAssessmentsKidName, setPastAssessmentsKidName] = useState('')
   const [lessonAssessmentScore, setLessonAssessmentScore] = useState<number | null>(null)
+  const [vacationPeriods, setVacationPeriods] = useState<any[]>([])
+  const [schoolYearSettings, setSchoolYearSettings] = useState<any>(null)
   const [cascadeData, setCascadeData] = useState<{
     lessonId: string
     originalDate: string
@@ -107,6 +110,53 @@ export default function Dashboard() {
   useEffect(() => { checkUser() }, [])
   useEffect(() => { if (kids.length > 0) loadAllLessons() }, [kids])
   useEffect(() => { if (user) checkUserTier() }, [user])
+  useEffect(() => {
+    if (!user) return
+    
+    let mounted = true
+    
+    const loadSettings = async () => {
+      try {
+        const { data: settings, error: settingsError } = await supabase
+          .from('school_year_settings')
+          .select('*')
+          .eq('user_id', user.id)
+          .maybeSingle()
+        
+        if (settingsError) {
+          console.error('Settings error:', settingsError)
+          return
+        }
+        
+        if (settings && mounted) {
+          setSchoolYearSettings(settings)
+          
+          const orgId = settings.organization_id || user.id
+          
+          const { data: vacations, error: vacationError } = await supabase
+            .from('vacation_periods')
+            .select('*')
+            .eq('organization_id', orgId)
+          
+          if (vacationError) {
+            console.error('Vacation error:', vacationError)
+          }
+          
+          if (vacations && mounted) {
+            setVacationPeriods(vacations)
+          }
+        }
+      } catch (err: any) {
+        console.error('Error loading vacation settings:', err)
+      }
+    }
+    
+    loadSettings()
+    
+    return () => {
+      mounted = false
+    }
+  }, [user])
   useEffect(() => {
     const hasSeenTour = localStorage.getItem('hasSeenTour')
     if (!hasSeenTour && kids.length === 0) setShowTour(true)
@@ -255,6 +305,33 @@ useEffect(() => {
       description: editLessonDescription,
       lesson_date: editLessonDate || null,
       duration_minutes: durationInMinutes
+    }
+    
+    // Check if the new date falls on a holiday or vacation
+    if (editLessonDate && vacationPeriods.length > 0) {
+      const vacation = vacationPeriods.find(v => 
+        editLessonDate >= v.start_date && editLessonDate <= v.end_date
+      )
+      
+      if (vacation) {
+        if (!confirm(`⚠️ ${editLessonDate} falls during ${vacation.name}.\n\nSave lesson anyway?`)) {
+          return
+        }
+      }
+    }
+    
+    // Check default holidays
+    if (editLessonDate) {
+      const holiday = DEFAULT_HOLIDAYS_2025_2026.find((h: any) => {
+        const holidayDate = h.date || h.start
+        return holidayDate === editLessonDate
+      })
+      
+      if (holiday) {
+        if (!confirm(`⚠️ ${editLessonDate} is ${holiday.name}.\n\nSave lesson anyway?`)) {
+          return
+        }
+      }
     }
     
     const currentLesson = allLessons.find(l => l.id === id)
@@ -737,53 +814,59 @@ useEffect(() => {
                             </div>
                           </div>
                           {selectedLesson.description && (
-  <div>
-    <label className="block text-sm font-medium text-gray-700">Description</label>
-    <div className="mt-1 text-gray-900 whitespace-pre-line">
-      {(() => {
-        // Check the RAW description, not the formatted one
-        const rawDesc = selectedLesson.description;
-        
-        // Try to parse as JSON first
-        try {
-          const parsed = typeof rawDesc === 'string' ? JSON.parse(rawDesc) : rawDesc;
-          
-          // If it's an object with our expected structure, display nicely
-          if (typeof parsed === 'object' && parsed !== null) {
-            return (
-              <div className="space-y-3">
-                {parsed.overview && (
-                  <p className="text-gray-900">{parsed.overview}</p>
-                )}
-                {parsed.activities && parsed.activities.length > 0 && (
-                  <div>
-                    <p className="font-semibold text-gray-900 mb-1">Activities:</p>
-                    <ul className="list-disc ml-5 space-y-1">
-                      {parsed.activities.map((activity: string, i: number) => (
-                        <li key={i} className="text-gray-900">{activity}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                {parsed.materials && parsed.materials.length > 0 && (
-                  <div>
-                    <p className="font-semibold text-gray-900 mb-1">Materials:</p>
-                    <p className="text-gray-900">{parsed.materials.join(', ')}</p>
-                  </div>
-                )}
-              </div>
-            );
-          }
-        } catch (e) {
-          // Not JSON, use the formatter
-        }
-        
-        // Fallback to formatted text
-        return <p className="text-gray-900">{formatLessonDescription(rawDesc)}</p>;
-      })()}
-    </div>
-  </div>
-)}
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700">Description</label>
+                              <div className="mt-1 text-gray-900 whitespace-pre-line">
+                                {(() => {
+                                  const rawDesc = selectedLesson.description;
+                                  
+                                  try {
+                                    const parsed = typeof rawDesc === 'string' ? JSON.parse(rawDesc) : rawDesc;
+                                    
+                                    if (typeof parsed === 'object' && parsed !== null) {
+                                      return (
+                                        <div className="space-y-3">
+                                          {parsed.overview && (
+                                            <p className="text-gray-900">{parsed.overview}</p>
+                                          )}
+                                          {parsed.activities && parsed.activities.length > 0 && (
+                                            <div>
+                                              <p className="font-semibold text-gray-900 mb-1">Activities:</p>
+                                              <ul className="list-disc ml-5 space-y-1">
+                                                {parsed.activities.map((activity: any, i: number) => (
+                                                  <li key={i} className="text-gray-900">
+                                                    {typeof activity === 'string' ? (
+                                                      activity
+                                                    ) : (
+                                                      <div>
+                                                        <span className="font-medium">{activity.name || 'Activity'}</span>
+                                                        {activity.duration && <span className="text-gray-600 text-sm ml-2">({activity.duration})</span>}
+                                                        {activity.description && <div className="text-sm text-gray-600 mt-1">{activity.description}</div>}
+                                                      </div>
+                                                    )}
+                                                  </li>
+                                                ))}
+                                              </ul>
+                                            </div>
+                                          )}
+                                          {parsed.materials && parsed.materials.length > 0 && (
+                                            <div>
+                                              <p className="font-semibold text-gray-900 mb-1">Materials:</p>
+                                              <p className="text-gray-900">{parsed.materials.join(', ')}</p>
+                                            </div>
+                                          )}
+                                        </div>
+                                      );
+                                    }
+                                  } catch (e) {
+                                    // Not JSON, use the formatter
+                                  }
+                                  
+                                  return <p className="text-gray-900">{formatLessonDescription(rawDesc)}</p>;
+                                })()}
+                              </div>
+                            </div>
+                          )}
                           
                           <div className="flex gap-2 pt-4 border-t">
                             <button onClick={() => startEditLesson(selectedLesson)} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Edit</button>
