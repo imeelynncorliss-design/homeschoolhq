@@ -1,122 +1,96 @@
-// hooks/useSchoolYearSchedule.ts
-
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
 import { SchoolYearConfig, VacationPeriod } from '@/types/school-year';
 import { schoolYearScheduler, ScheduledDate } from '@/lib/scheduling/school-year-scheduler';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 
 interface UseSchoolYearScheduleReturn {
   config: SchoolYearConfig | null;
-  vacations: VacationPeriod[];
+  vacationPeriods: VacationPeriod[];
   loading: boolean;
-  error: string | null;
-  isSchoolDay: (date: Date) => Promise<boolean>;
-  getNextSchoolDay: (afterDate: Date) => Promise<Date | null>;
-  countSchoolDays: (startDate: Date, endDate: Date) => Promise<number>;
-  generateSchedule: (startDate: Date, numberOfLessons: number) => Promise<ScheduledDate[]>;
-  reload: () => Promise<void>;
+  error: Error | null;
+  getScheduledDates: (startDate: Date, endDate: Date) => ScheduledDate[];
+  isSchoolDay: (date: Date) => boolean;
+  isVacation: (date: Date) => boolean;
 }
 
-export function useSchoolYearSchedule(organizationId: string): UseSchoolYearScheduleReturn {
-  const supabase = createClientComponentClient();
+export function useSchoolYearSchedule(): UseSchoolYearScheduleReturn {
   const [config, setConfig] = useState<SchoolYearConfig | null>(null);
-  const [vacations, setVacations] = useState<VacationPeriod[]>([]);
+  const [vacationPeriods, setVacationPeriods] = useState<VacationPeriod[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const loadData = useCallback(async () => {
-    if (!organizationId) return;
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      // Load school year config
-      const { data: configData, error: configError } = await supabase
-        .from('school_year_config')
-        .select('*')
-        .eq('organization_id', organizationId)
-        .eq('active', true)
-        .single();
-
-      if (configError && configError.code !== 'PGRST116') {
-        throw configError;
-      }
-
-      setConfig(configData);
-
-      // Load vacations
-      const { data: vacationData, error: vacationError } = await supabase
-        .from('vacation_periods')
-        .select('*')
-        .eq('organization_id', organizationId)
-        .order('start_date', { ascending: true });
-
-      if (vacationError) throw vacationError;
-
-      setVacations(vacationData || []);
-
-      // Load configuration into scheduler
-      await schoolYearScheduler.loadConfiguration(organizationId);
-    } catch (err) {
-      console.error('Error loading school year data:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load school year data');
-    } finally {
-      setLoading(false);
-    }
-  }, [organizationId, supabase]);
+  const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    let mounted = true;
 
-  const isSchoolDay = useCallback(
-    async (date: Date): Promise<boolean> => {
-      const schedule = await schoolYearScheduler.generateSchedule({
-        organizationId,
-        startDate: date,
-        numberOfLessons: 1,
-      });
+    async function loadScheduleData() {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user || !mounted) return;
 
-      return schedule.length > 0 && schedule[0].isSchoolDay;
-    },
-    [organizationId]
-  );
+        // Load school year config
+        const { data: configData, error: configError } = await supabase
+          .from('school_year_settings')
+          .select('*')
+          .eq('user_id', user.id)
+          .maybeSingle();
 
-  const getNextSchoolDay = useCallback(
-    async (afterDate: Date): Promise<Date | null> => {
-      return schoolYearScheduler.getNextSchoolDay(organizationId, afterDate);
-    },
-    [organizationId]
-  );
+        if (configError) throw configError;
 
-  const countSchoolDays = useCallback(
-    async (startDate: Date, endDate: Date): Promise<number> => {
-      return schoolYearScheduler.countSchoolDays(organizationId, startDate, endDate);
-    },
-    [organizationId]
-  );
+        if (configData && mounted) {
+          setConfig(configData as SchoolYearConfig);
 
-  const generateSchedule = useCallback(
-    async (startDate: Date, numberOfLessons: number): Promise<ScheduledDate[]> => {
-      return schoolYearScheduler.generateSchedule({
-        organizationId,
-        startDate,
-        numberOfLessons,
-      });
-    },
-    [organizationId]
-  );
+          // Load vacation periods
+          const orgId = configData.organization_id || user.id;
+          const { data: vacations, error: vacationError } = await supabase
+            .from('vacation_periods')
+            .select('*')
+            .eq('organization_id', orgId);
+
+          if (vacationError) throw vacationError;
+
+          if (vacations && mounted) {
+            setVacationPeriods(vacations as VacationPeriod[]);
+          }
+        }
+      } catch (err) {
+        if (mounted) {
+          setError(err instanceof Error ? err : new Error('Failed to load schedule'));
+        }
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadScheduleData();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const getScheduledDates = (startDate: Date, endDate: Date): ScheduledDate[] => {
+    if (!config) return [];
+    return schoolYearScheduler.getScheduledDates(config, vacationPeriods, startDate, endDate);
+  };
+
+  const isSchoolDay = (date: Date): boolean => {
+    if (!config) return false;
+    return schoolYearScheduler.isSchoolDay(config, vacationPeriods, date);
+  };
+
+  const isVacation = (date: Date): boolean => {
+    return schoolYearScheduler.isVacation(vacationPeriods, date);
+  };
 
   return {
     config,
-    vacations,
+    vacationPeriods,
     loading,
     error,
+    getScheduledDates,
     isSchoolDay,
-    getNextSchoolDay,
-    countSchoolDays,
-    generateSchedule,
-    reload: loadData,
+    isVacation,
   };
 }
