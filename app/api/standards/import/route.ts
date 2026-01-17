@@ -99,10 +99,8 @@ ${htmlContent.slice(0, 50000)}`
         claudeResponse = textContent.text;
       }
 
-    } else if (type === 'pdf' || type === 'image') {
-      // Handle PDF or image upload
-      const mediaType = type === 'pdf' ? 'application/pdf' : 'image/jpeg';
-
+    } else if (type === 'pdf') {
+      // Handle PDF upload
       const message = await anthropic.messages.create({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 4000,
@@ -110,16 +108,65 @@ ${htmlContent.slice(0, 50000)}`
           role: 'user',
           content: [
             {
-              type: type === 'pdf' ? 'document' : 'image',
+              type: 'document',
               source: {
                 type: 'base64',
-                media_type: mediaType,
+                media_type: 'application/pdf',
                 data: file
               }
             },
             {
               type: 'text',
-              text: `Extract all educational standards from this ${type}. For each standard, provide:
+              text: `Extract all educational standards from this PDF. For each standard, provide:
+- grade_level: Single value (K, P, or 1-12). For ranges like "3-5", use the first number "3"
+- subject (e.g., "Mathematics", "English Language Arts", "Science")
+- standard_code (the official code if available)
+- description (what the student should know/do)
+- domain (the category/topic area)
+- state_code: 2-letter US state code (CA, TX, NY, etc.) or "CC" for Common Core. Use "XX" if unknown.
+
+Return ONLY a valid JSON object with this exact structure (no markdown, no extra text):
+{
+  "standards": [
+    {
+      "grade_level": "3",
+      "subject": "Mathematics",
+      "standard_code": "3.OA.A.1",
+      "description": "Interpret products of whole numbers",
+      "domain": "Operations & Algebraic Thinking",
+      "state_code": "CA"
+    }
+  ]
+}`
+            }
+          ]
+        }]
+      });
+
+      const textContent = message.content.find(c => c.type === 'text');
+      if (textContent && 'text' in textContent) {
+        claudeResponse = textContent.text;
+      }
+
+    } else if (type === 'image') {
+      // Handle image upload
+      const message = await anthropic.messages.create({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 4000,
+        messages: [{
+          role: 'user',
+          content: [
+            {
+              type: 'image',
+              source: {
+                type: 'base64',
+                media_type: 'image/jpeg',
+                data: file
+              }
+            },
+            {
+              type: 'text',
+              text: `Extract all educational standards from this image. For each standard, provide:
 - grade_level: Single value (K, P, or 1-12). For ranges like "3-5", use the first number "3"
 - subject (e.g., "Mathematics", "English Language Arts", "Science")
 - standard_code (the official code if available)
