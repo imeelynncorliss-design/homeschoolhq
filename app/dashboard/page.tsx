@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import LessonGenerator from '@/components/LessonGenerator'
 import CurriculumImporter from '@/components/CurriculumImporter'
 import ChildPhotoUpload from '@/components/ChildPhotoUpload'
@@ -48,6 +48,7 @@ const convertDurationToMinutes = (value: number, unit: DurationUnit): number => 
 };
 
 export default function Dashboard() {
+  const searchParams = useSearchParams();
   const [showGenerator, setShowGenerator] = useState(false);
   const [showImporter, setShowImporter] = useState(false);
   const [user, setUser] = useState<any>(null)
@@ -110,6 +111,26 @@ export default function Dashboard() {
   useEffect(() => { checkUser() }, [])
   useEffect(() => { if (kids.length > 0) loadAllLessons() }, [kids])
   useEffect(() => { if (user) checkUserTier() }, [user])
+  
+  // Handle query parameter actions
+  useEffect(() => {
+    const action = searchParams.get('action');
+    if (!action || !kids.length || !selectedKid) return;
+
+    // Small delay to ensure everything is loaded
+    const timer = setTimeout(() => {
+      if (action === 'import') {
+        setShowImporter(true);
+      } else if (action === 'students') {
+        setShowProfileForm(true);
+      } else if (action === 'schedule') {
+        setShowAutoSchedule(true);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchParams, kids, selectedKid]);
+
   useEffect(() => {
     if (!user) return
     
@@ -157,6 +178,7 @@ export default function Dashboard() {
       mounted = false
     }
   }, [user])
+  
   useEffect(() => {
     const hasSeenTour = localStorage.getItem('hasSeenTour')
     if (!hasSeenTour && kids.length === 0) setShowTour(true)
@@ -576,7 +598,7 @@ useEffect(() => {
             <h1 className="text-3xl font-bold text-gray-900">HomeschoolHQ Dashboard</h1>
             <div className="flex gap-2">
               <button onClick={() => { setShowTour(false); setTimeout(() => { setTourKey(prev => prev + 1); setShowTour(true) }, 0) }} className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700">👋 Take Tour</button>
-              <button onClick={() => router.push('/admin')} className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700">⚙️ Admin Page</button>
+              <button onClick={() => router.push('/admin')} className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700">⚙️ Admin</button>
               <button onClick={() => router.push('/social')} className="px-4 py-2 bg-pink-600 text-white rounded hover:bg-pink-700">🤝 Social Hub</button>
               <button onClick={handleLogout} className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">Logout</button>
             </div>
@@ -593,7 +615,13 @@ useEffect(() => {
                 </button>
                 <div className="mt-4 space-y-2">
                   {kids.map((kid) => (
-                    <button key={kid.id} onClick={() => setSelectedKid(kid.id)} className={`w-full p-2 rounded transition-colors ${selectedKid === kid.id ? 'bg-blue-100 ring-2 ring-blue-400' : 'hover:bg-gray-100'}`} title={kid.displayname}>
+                    <button 
+                      key={kid.id}
+                      onClick={() => {
+                      setSelectedKid(kid.id); 
+                      setViewMode('list');
+                    }}
+                      className={`w-full p-2 rounded transition-colors ${selectedKid === kid.id ? 'bg-blue-100 ring-2 ring-blue-400' : 'hover:bg-gray-100'}`} title={kid.displayname}>
                       {kid.photo_url ? <img src={kid.photo_url} alt={kid.displayname} className="w-10 h-10 rounded-full object-cover mx-auto" /> : <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center mx-auto text-sm font-bold">{kid.displayname.charAt(0)}</div>}
                     </button>
                   ))}
@@ -613,7 +641,16 @@ useEffect(() => {
                 ) : (
                   <div className="space-y-3 mb-4">
                     {kids.map((kid) => (
-                      <KidCard key={kid.id} kid={kid} isSelected={selectedKid === kid.id} onSelect={() => setSelectedKid(kid.id)} onEdit={() => { setEditingKid(kid); setShowProfileForm(true) }} onDelete={() => deleteKid(kid.id, kid.displayname)} />
+                      <KidCard 
+                        key={kid.id} 
+                        kid={kid} 
+                        isSelected={selectedKid === kid.id} 
+                        onSelect={() => {
+                          setSelectedKid(kid.id) 
+                          setViewMode('list');
+                        }}
+                          onEdit={() => { setEditingKid(kid); setShowProfileForm(true) }} 
+                          onDelete={() => deleteKid(kid.id, kid.displayname)} />
                     ))}
                   </div>
                 )}
@@ -992,8 +1029,16 @@ useEffect(() => {
           loadKids()
           setShowProfileForm(false)
           setEditingKid(null)
-        }} onCancel={() => { setShowProfileForm(false); setEditingKid(null) }} />
-      )}
+          if (data.id) {
+            setSelectedKid(data.id)
+          }
+        }} 
+        onCancel={() => { 
+          setShowProfileForm(false); 
+          setEditingKid(null) 
+        }} 
+      />
+    )}
 
       {showAutoSchedule && selectedKid && (
         <AutoScheduleModal

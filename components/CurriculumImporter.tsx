@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { usePlanningAutoComplete } from '@/lib/usePlanningAutoComplete';
 
 interface Lesson {
   title: string;
@@ -45,8 +46,18 @@ export default function CurriculumImporter({ childId, childName, onClose, onImpo
   const [useStartDate, setUseStartDate] = useState<boolean>(false);
   const [startDate, setStartDate] = useState<string>('');
 
-  // ✅ NEW: Load existing subjects when component mounts
-  useState(() => {
+  // ✅ NEW: Planning mode integration
+  const { triggerAutoComplete } = usePlanningAutoComplete();
+  const [activePlanningPeriod, setActivePlanningPeriod] = useState<{
+    id: string;
+    period_name: string;
+    start_date: string;
+    end_date: string;
+  } | null>(null);
+  const [organizationId, setOrganizationId] = useState<string>('');
+
+  // ✅ Load existing subjects when component mounts
+  useEffect(() => {
     const loadSubjects = async () => {
       const { supabase } = await import('@/lib/supabase');
       const { data: { user } } = await supabase.auth.getUser();
@@ -63,7 +74,42 @@ export default function CurriculumImporter({ childId, childName, onClose, onImpo
       }
     };
     loadSubjects();
-  });
+  }, []);
+
+  // ✅ NEW: Load planning period
+  useEffect(() => {
+    const loadPlanningPeriod = async () => {
+      const { supabase } = await import('@/lib/supabase');
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      
+      // Get organization
+      const { data: org } = await supabase
+        .from('organizations')
+        .select('id')
+        .limit(1)
+        .single();
+      
+      if (org) {
+        setOrganizationId(org.id);
+        
+        // Check for active planning period
+        const { data: period } = await supabase
+          .from('planning_periods')
+          .select('*')
+          .eq('organization_id', org.id)
+          .eq('is_active', true)
+          .lte('start_date', new Date().toISOString().split('T')[0])
+          .gte('end_date', new Date().toISOString().split('T')[0])
+          .maybeSingle();
+        
+        if (period) {
+          setActivePlanningPeriod(period);
+        }
+      }
+    };
+    loadPlanningPeriod();
+  }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -166,6 +212,12 @@ export default function CurriculumImporter({ childId, childName, onClose, onImpo
 
   const importLessons = async () => {
     setLoading(true);
+
+    if (!organizationId) {
+      alert('Organization not loaded. Please refresh and try again.');
+      setLoading(false);
+      return;
+    }
     
     const lessonsToImport = extractedLessons.filter((_, i) => selectedLessons.has(i));
     
@@ -240,12 +292,15 @@ export default function CurriculumImporter({ childId, childName, onClose, onImpo
           lessonsToInsert.push({
             kid_id: childId,
             user_id: user.id,
+            organization_id: organizationId,  
             subject: lesson.subject,
             title: lesson.title,
             description: lesson.description,
             lesson_date: lessonDate,
             duration_minutes: durationMinutes,
-            status: 'not_started'
+            status: 'not_started',
+            // ✅ NEW: Link to planning period if active
+            planning_period_id: activePlanningPeriod?.id || null,
           });
         }
       }
@@ -261,6 +316,36 @@ export default function CurriculumImporter({ childId, childName, onClose, onImpo
           alert(`Failed to import lessons: ${error.message}`);
           setLoading(false);
           return;
+        }
+        
+        // ✅ NEW: Track curriculum import for planning auto-completion
+        if (activePlanningPeriod && organizationId) {
+          await supabase
+            .from('curriculum_imports')
+            .insert({
+              organization_id: organizationId,
+              planning_period_id: activePlanningPeriod.id,
+              import_source: file?.type.includes('pdf') ? 'pdf' : 'image',
+              lessons_created: lessonsToInsert.length,
+              file_url: file?.name,
+              metadata: {
+                subject: lessonsToInsert[0]?.subject,
+                total_lessons: lessonsToInsert.length,
+                start_date: startDate || null,
+              }
+            });
+          
+          // Trigger auto-completion check
+          const result = await triggerAutoComplete(
+            'curriculum_import',
+            organizationId,
+            activePlanningPeriod.id
+          );
+          
+          // Log results (optional - you can show this to user later)
+          if (result.completed_tasks.length > 0) {
+            console.log('✨ Auto-completed planning tasks:', result.completed_tasks);
+          }
         }
       }
       
@@ -297,6 +382,22 @@ export default function CurriculumImporter({ childId, childName, onClose, onImpo
               {error && (
                 <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
                   {error}
+                </div>
+              )}
+              
+              {/* ✅ NEW: Planning Context Banner */}
+              {activePlanningPeriod && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl">🎨</span>
+                    <div>
+                      <p className="font-semibold text-blue-900">Planning Mode Active</p>
+                      <p className="text-sm text-blue-700">
+                        You're planning for {activePlanningPeriod.period_name}. 
+                        Importing curriculum will auto-complete your planning task!
+                      </p>
+                    </div>
+                  </div>
                 </div>
               )}
               
