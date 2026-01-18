@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter, useSearchParams } from 'next/navigation'
 import LessonGenerator from '@/components/LessonGenerator'
@@ -23,6 +23,7 @@ import AssessmentTaking from '@/components/AssessmentTaking'
 import AutoScheduleModal from '@/components/AutoScheduleModal' 
 import HelpWidget from '../../components/HelpWidget'
 import PastAssessmentsViewer from '@/components/PastAssessmentsViewer'
+import PlanningModeDashboard from '@/components/PlanningModeDashboard';
 
 const DURATION_UNITS = ['minutes', 'days', 'weeks'] as const;
 type DurationUnit = typeof DURATION_UNITS[number];
@@ -47,7 +48,7 @@ const convertDurationToMinutes = (value: number, unit: DurationUnit): number => 
   else return value * 5 * 6 * 60;
 };
 
-export default function Dashboard() {
+export default function DashboardContent() {
   const searchParams = useSearchParams();
   const [showGenerator, setShowGenerator] = useState(false);
   const [showImporter, setShowImporter] = useState(false);
@@ -170,6 +171,17 @@ export default function Dashboard() {
       } catch (err: any) {
         console.error('Error loading vacation settings:', err)
       }
+    }
+    export default function Dashboard() {
+      return (
+        <Suspense fallback={
+          <div className="min-h-screen flex items-center justify-center">
+            Loading...
+          </div>
+        }>
+          <DashboardContent />
+        </Suspense>
+      )
     }
     
     loadSettings()
@@ -1197,3 +1209,4 @@ useEffect(() => {
     </div>
   )
 }
+
