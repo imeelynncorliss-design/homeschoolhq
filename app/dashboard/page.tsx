@@ -28,6 +28,16 @@ import PlanningModeDashboard from '@/components/PlanningModeDashboard';
 const DURATION_UNITS = ['minutes', 'days', 'weeks'] as const;
 type DurationUnit = typeof DURATION_UNITS[number];
 
+// Color mapping for children - cycles through these colors
+const CHILD_COLORS = [
+  { border: 'border-blue-400', bg: 'bg-blue-50', dot: 'bg-blue-500' },
+  { border: 'border-purple-400', bg: 'bg-purple-50', dot: 'bg-purple-500' },
+  { border: 'border-green-400', bg: 'bg-green-50', dot: 'bg-green-500' },
+  { border: 'border-pink-400', bg: 'bg-pink-50', dot: 'bg-pink-500' },
+  { border: 'border-orange-400', bg: 'bg-orange-50', dot: 'bg-orange-500' },
+  { border: 'border-teal-400', bg: 'bg-teal-50', dot: 'bg-teal-500' },
+];
+
 const convertMinutesToDuration = (minutes: number | null): { value: number; unit: DurationUnit } => {
   if (!minutes) return { value: 30, unit: 'minutes' };
   if (minutes >= 1800 && minutes % 1800 === 0) {
@@ -107,6 +117,11 @@ function DashboardContent() {
   const [cascadeDays, setCascadeDays] = useState<number>(1)
   
   const router = useRouter()
+
+  // Helper function to get child color
+  const getChildColor = (index: number) => {
+    return CHILD_COLORS[index % CHILD_COLORS.length];
+  };
 
   useEffect(() => { checkUser() }, [])
   useEffect(() => { if (kids.length > 0) loadAllLessons() }, [kids])
@@ -319,7 +334,7 @@ useEffect(() => {
   const cancelEditLesson = () => setEditingLessonId(null)
 
   const saveEditLesson = async (id: string) => {
-    const durationInMinutes = convertDurationToMinutes(editLessonDurationValue, editLessonDurationUnit);
+    const durationInMinutes = convertDurationToMinutes(editLessonDurationValue, editLessonDurationUnit)
     
     const updates = {
       title: editLessonTitle,
@@ -606,7 +621,8 @@ useEffect(() => {
           <p className="text-gray-900">Welcome, {user?.email}!</p>
         </div>
 
-        <div className="flex gap-6">
+        <div className="flex gap-8">
+          {/* IMPROVEMENT #1: Increased gap from gap-6 to gap-8 for more whitespace */}
           <div className={`${sidebarCollapsed ? 'w-16' : 'w-[350px]'} flex-shrink-0 transition-all duration-300`}>
             {sidebarCollapsed ? (
               <div className="bg-white rounded-lg shadow p-2 sticky top-4">
@@ -614,44 +630,127 @@ useEffect(() => {
                  <span className="text-3xl font-black text-black">→</span>
                 </button>
                 <div className="mt-4 space-y-2">
-                  {kids.map((kid) => (
-                    <button 
-                      key={kid.id}
-                      onClick={() => {
-                      setSelectedKid(kid.id); 
-                      setViewMode('list');
-                    }}
-                      className={`w-full p-2 rounded transition-colors ${selectedKid === kid.id ? 'bg-blue-100 ring-2 ring-blue-400' : 'hover:bg-gray-100'}`} title={kid.displayname}>
-                      {kid.photo_url ? <img src={kid.photo_url} alt={kid.displayname} className="w-10 h-10 rounded-full object-cover mx-auto" /> : <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center mx-auto text-sm font-bold">{kid.displayname.charAt(0)}</div>}
-                    </button>
-                  ))}
+                  {kids.map((kid, index) => {
+                    const colors = getChildColor(index);
+                    return (
+                      <button 
+                        key={kid.id}
+                        onClick={() => {
+                          setSelectedKid(kid.id); 
+                          setViewMode('list');
+                        }}
+                        className={`w-full p-2 rounded transition-colors border-2 ${selectedKid === kid.id ? `${colors.border} ${colors.bg} ring-2 ring-offset-1` : 'border-transparent hover:bg-gray-100'}`} 
+                        title={kid.displayname}
+                      >
+                        {kid.photo_url ? (
+                          <img src={kid.photo_url} alt={kid.displayname} className="w-10 h-10 rounded-full object-cover mx-auto" />
+                        ) : (
+                          <div className={`w-10 h-10 rounded-full ${colors.bg} flex items-center justify-center mx-auto text-sm font-bold`}>
+                            {kid.displayname.charAt(0)}
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             ) : (
-              <div className="bg-white rounded-lg shadow p-6 mb-6 kids-section">
-                <div className="flex justify-between items-center mb-4">
+              <div className="bg-white rounded-lg shadow p-8 mb-6 kids-section">
+                {/* IMPROVEMENT #1: Increased padding from p-6 to p-8 */}
+                <div className="flex justify-between items-center mb-6">
+                  {/* IMPROVEMENT #1: Increased margin from mb-4 to mb-6 */}
                   <h2 className="text-xl font-bold text-gray-900">Your Children</h2>
                   <button onClick={() => setSidebarCollapsed(true)} className="p-2 bg-gray-100 hover:bg-gray-200 rounded transition-colors" title="Collapse sidebar">
                     <span className="text-3xl font-black text-black">←</span>
                   </button>
                 </div>
-                <p className="text-sm text-gray-600 mb-3">👉 Click a child's name to view their lessons</p>
+                <p className="text-sm text-gray-600 mb-4">👉 Click a child's name to view their lessons</p>
                 {kids.length === 0 ? (
                   <p className="text-gray-600 mb-4">No children added yet.</p>
                 ) : (
-                  <div className="space-y-3 mb-4">
-                    {kids.map((kid) => (
-                      <KidCard 
-                        key={kid.id} 
-                        kid={kid} 
-                        isSelected={selectedKid === kid.id} 
-                        onSelect={() => {
-                          setSelectedKid(kid.id) 
-                          setViewMode('list');
-                        }}
-                          onEdit={() => { setEditingKid(kid); setShowProfileForm(true) }} 
-                          onDelete={() => deleteKid(kid.id, kid.displayname)} />
-                    ))}
+                  <div className="space-y-4 mb-6">
+                    {/* IMPROVEMENT #1 & #2: Increased spacing from space-y-3 to space-y-4, and added color-coding */}
+                    {kids.map((kid, index) => {
+                      const colors = getChildColor(index);
+                      return (
+                        <div
+                          key={kid.id}
+                          className={`rounded-lg border-3 transition-all ${
+                            selectedKid === kid.id 
+                              ? `${colors.border} ${colors.bg} border-3 shadow-md` 
+                              : 'border-gray-200 border-2 hover:border-gray-300'
+                          }`}
+                        >
+                          {/* IMPROVEMENT #2: Added color-coded border */}
+                          <div 
+                            className="p-4 cursor-pointer"
+                            onClick={() => {
+                              setSelectedKid(kid.id);
+                              setViewMode('list');
+                            }}
+                          >
+                            <div className="flex items-center gap-3 mb-3">
+                              {kid.photo_url ? (
+                                <img src={kid.photo_url} alt={kid.displayname} className="w-12 h-12 rounded-full object-cover ring-2 ring-white shadow" />
+                              ) : (
+                                <div className={`w-12 h-12 rounded-full ${colors.bg} flex items-center justify-center text-lg font-bold ring-2 ring-white shadow`}>
+                                  {kid.displayname.charAt(0)}
+                                </div>
+                              )}
+                              <div className="flex-1">
+                                <h3 className="font-bold text-gray-900">{kid.displayname}</h3>
+                                {kid.grade && <p className="text-sm text-gray-600">Grade {kid.grade} • Age {kid.age}</p>}
+                              </div>
+                              <div className={`w-3 h-3 rounded-full ${colors.dot}`}></div>
+                              {/* IMPROVEMENT #2: Color dot indicator */}
+                            </div>
+                            
+                            {/* IMPROVEMENT #4: Pill-style badges for Hook and Vibe */}
+                            <div className="flex flex-wrap gap-2 mb-3">
+                              {kid.current_hook && (
+                                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-red-100 text-red-800 border border-red-200">
+                                  🎣 {kid.current_hook}
+                                </span>
+                              )}
+                              {kid.todays_vibe && (
+                                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-yellow-100 text-yellow-800 border border-yellow-200">
+                                  😊 {kid.todays_vibe}
+                                </span>
+                              )}
+                            </div>
+                            
+                            {kid.current_focus && (
+                              <div className="mt-2 pt-2 border-t border-gray-200">
+                                <p className="text-xs font-semibold text-gray-700 mb-1">Current Focus</p>
+                                <p className="text-sm text-gray-900">{kid.current_focus}</p>
+                              </div>
+                            )}
+                          </div>
+                          
+                          <div className="px-4 pb-3 flex gap-2">
+                            <button 
+                              onClick={(e) => { 
+                                e.stopPropagation(); 
+                                setEditingKid(kid); 
+                                setShowProfileForm(true); 
+                              }} 
+                              className="text-xs px-3 py-1 text-blue-600 hover:bg-blue-50 rounded border border-blue-200 font-medium"
+                            >
+                              ✏️ Update
+                            </button>
+                            <button 
+                              onClick={(e) => { 
+                                e.stopPropagation(); 
+                                deleteKid(kid.id, kid.displayname); 
+                              }} 
+                              className="text-xs px-3 py-1 text-red-600 hover:bg-red-50 rounded border border-red-200 font-medium"
+                            >
+                              🗑️
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
                 <button onClick={() => { setEditingKid(null); setShowProfileForm(true) }} className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700">+ Add a Child</button>
@@ -662,31 +761,59 @@ useEffect(() => {
           <div className="flex-1 min-w-0">
             {kids.length > 0 ? (
               <>
-               <div className="bg-white rounded-lg shadow p-4 mb-6">
-  <div className="space-y-4">
+               <div className="bg-white rounded-lg shadow p-8 mb-8">
+  {/* IMPROVEMENT #1: Increased padding from p-4 to p-8, and margin from mb-6 to mb-8 */}
+  <div className="space-y-6">
+    {/* IMPROVEMENT #1: Increased spacing from space-y-4 to space-y-6 */}
     <div className="flex justify-center items-center">
       <h2 className="text-2xl font-bold text-gray-900">Family Schedule</h2>
     </div>
     
     <div className="flex justify-center">
-      <div className="flex flex-wrap gap-2 justify-center">
+      {/* IMPROVEMENT #3: Simplified button styling - unified color scheme */}
+      <div className="flex flex-wrap gap-3 justify-center">
         <button 
           onClick={() => setShowAutoSchedule(true)} 
-          className="px-3 py-2 text-sm bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg hover:from-orange-600 hover:to-red-600 font-medium shadow-sm"
+          className="px-4 py-2.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium shadow-sm transition-all"
         >
           📅 Auto-Schedule
         </button>
         
         {hasFeature('curriculum_import') ? (
-          <button onClick={() => setShowImporter(true)} className="bg-gradient-to-r from-green-600 to-teal-600 text-white px-3 py-2 text-sm rounded-lg hover:from-green-700 hover:to-teal-700">📥 Import</button>
+          <button 
+            onClick={() => setShowImporter(true)} 
+            className="px-4 py-2.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium shadow-sm transition-all"
+          >
+            📥 Import
+          </button>
         ) : (
-          <button onClick={() => { alert('Curriculum Import requires PREMIUM! Upgrade to unlock.'); router.push('/pricing') }} className="px-3 py-2 text-sm bg-gray-300 text-gray-600 rounded-lg cursor-not-allowed relative">📥 Import 🔒</button>
+          <button 
+            onClick={() => { alert('Curriculum Import requires PREMIUM! Upgrade to unlock.'); router.push('/pricing') }} 
+            className="px-4 py-2.5 text-sm bg-gray-300 text-gray-600 rounded-lg cursor-not-allowed relative"
+          >
+            📥 Import 🔒
+          </button>
         )}
-        <button onClick={() => setShowLessonForm(!showLessonForm)} className="px-3 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700">+ Add Lesson</button>
+        <button 
+          onClick={() => setShowLessonForm(!showLessonForm)} 
+          className="px-4 py-2.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium shadow-sm transition-all"
+        >
+          + Add Lesson
+        </button>
         {hasFeature('ai_generation') ? (
-          <button onClick={() => setShowGenerator(true)} className="px-3 py-2 text-sm bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded hover:from-purple-700 hover:to-blue-700">✨ Generate Lessons</button>
+          <button 
+            onClick={() => setShowGenerator(true)} 
+            className="px-4 py-2.5 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium shadow-sm transition-all"
+          >
+            ✨ Generate Lessons
+          </button>
         ) : (
-          <button onClick={() => { alert('AI Lesson Generation requires PREMIUM! Upgrade to unlock.'); router.push('/pricing') }} className="px-3 py-2 text-sm bg-gray-300 text-gray-600 rounded-lg cursor-not-allowed relative">✨ Generate Lessons 🔒</button>
+          <button 
+            onClick={() => { alert('AI Lesson Generation requires PREMIUM! Upgrade to unlock.'); router.push('/pricing') }} 
+            className="px-4 py-2.5 text-sm bg-gray-300 text-gray-600 rounded-lg cursor-not-allowed relative"
+          >
+            ✨ Generate Lessons 🔒
+          </button>
         )}
       </div>
     </div>

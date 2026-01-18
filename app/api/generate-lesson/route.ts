@@ -1,5 +1,4 @@
-// app/api/generate-assessment/route.ts
-// UPDATED VERSION - Works with your 'kids' table
+// app/api/generate-lesson/route.ts
 
 import Anthropic from '@anthropic-ai/sdk';
 import { createClient } from '@supabase/supabase-js';
@@ -15,179 +14,83 @@ export async function POST(request: Request) {
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
-    const { lessonId, kidId, assessmentType, difficulty, questionCount } = await request.json();
-
-    // Fetch lesson details
-    const { data: lesson, error: lessonError } = await supabase
-      .from('lessons')
-      .select('*')
-      .eq('id', lessonId)
-      .single();
-
-    if (lessonError || !lesson) {
-      return NextResponse.json({ error: 'Lesson not found' }, { status: 404 });
-    }
+    
+    const formData = await request.json();
+    const { childId, subject, gradeLevel, duration, topic, focusAreas, learningStyle, additionalNotes } = formData;
 
     // Fetch kid profile for personalization
     const { data: kid, error: kidError } = await supabase
       .from('kids')
-      .select('displayname, learning_style, pace_of_learning, environmental_needs')
-      .eq('id', kidId)
+      .select('displayname, age, grade, learning_style, pace_of_learning, environmental_needs, current_hook, todays_vibe, current_focus')
+      .eq('id', childId)
       .single();
 
     if (kidError || !kid) {
-      return NextResponse.json({ error: 'Kid profile not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Student profile not found' }, { status: 404 });
     }
 
     // Build personalized prompt
-    const difficultyMap: { [key: string]: string } = {
-      easy: 'appropriate for beginners with basic understanding',
-      medium: 'grade-level appropriate with moderate challenge',
-      hard: 'challenging questions that require deeper thinking and application'
-    };
-
-    const learningStyleGuidance: { [key: string]: string } = {
-      'Visual (learns best by seeing)': `
-- Include questions that reference diagrams, charts, or visual patterns
-- Use color-coding suggestions in multiple choice options
-- Ask students to "draw" or "diagram" their understanding
-- Include image-based questions when possible`,
-      
-      'Auditory (learns best by listening)': `
-- Include verbal explanation prompts
-- Ask for oral presentation or discussion-based responses
-- Include "explain out loud" instructions
-- Reference listening to lesson content`,
-      
-      'Kinesthetic (learns best by doing)': `
-- Include hands-on demonstration questions
-- Ask students to physically show or build something
-- Include movement-based learning checks
-- Emphasize practical application and real-world scenarios`,
-      
-      'Reading/Writing (learns best through text)': `
-- Include written explanation questions
-- Ask for essay-style or paragraph responses
-- Include reading comprehension elements
-- Emphasize note-taking and summarization skills`
-    };
-
-    const paceGuidance: { [key: string]: string } = {
-      'Accelerated (moves quickly, grasps concepts fast)': `
-- Include extension questions for deeper exploration
-- Add challenging "bonus" questions
-- Reduce repetitive practice, focus on application
-- Include critical thinking and synthesis questions`,
-      
-      'Average (steady, grade-level pace)': `
-- Balance between practice and application
-- Include mix of recall and understanding questions
-- Standard scaffolding and support`,
-      
-      'Needs more time (benefits from repetition and extra support)': `
-- Include more scaffolded questions with step-by-step guidance
-- Provide visual aids and examples for each question
-- Break complex questions into smaller parts
-- Include more practice questions on foundational concepts
-- Add encouraging notes and hints`,
-      
-      'Variable (depends on subject/interest)': `
-- Include a range of question types from foundational to advanced
-- Mix scaffolded questions with challenge questions
-- Provide optional bonus questions for when student is engaged
-- Balance support with opportunities to excel
-- Adapt difficulty based on the specific subject matter`
-    };
-
-    const typeInstructions: { [key: string]: string } = {
-      quiz: `Create an interactive quiz with ${questionCount} questions in JSON format.
-
-For each question, include:
-- question text
-- type: "multiple_choice", "true_false", or "short_answer"
-- options: array of 4 choices (for multiple choice)
-- correct_answer: the correct option letter (A/B/C/D) or "true"/"false" or example answer
-- explanation: brief explanation of why this is correct
-
-Return ONLY valid JSON with this structure:
-{
-  "title": "Quiz Title",
-  "instructions": "Brief instructions for student",
-  "questions": [
-    {
-      "id": 1,
-      "question": "Question text here",
-      "type": "multiple_choice",
-      "options": ["A) First option", "B) Second option", "C) Third option", "D) Fourth option"],
-      "correct_answer": "B",
-      "explanation": "Explanation of correct answer"
-    }
-  ]
-}`,
-      
-      worksheet: `Create an interactive practice worksheet with ${questionCount} problems in JSON format.
-
-Return ONLY valid JSON with this structure:
-{
-  "title": "Worksheet Title",
-  "instructions": "Brief instructions for student",
-  "problems": [
-    {
-      "id": 1,
-      "problem": "Problem text or question",
-      "type": "short_answer",
-      "hint": "Optional hint for student",
-      "sample_answer": "Example of correct answer"
-    }
-  ]
-}`,
-      
-      project: `Create ${questionCount} hands-on project ideas in JSON format.
-
-Return ONLY valid JSON with this structure:
-{
-  "title": "Project Ideas",
-  "instructions": "Choose one project to complete",
-  "projects": [
-    {
-      "id": 1,
-      "title": "Project Title",
-      "description": "What the student will do",
-      "materials": ["item 1", "item 2"],
-      "estimated_time": "30 minutes",
-      "learning_goals": "What they'll learn"
-    }
-  ]
-}`
-    };
-
-    const prompt = `You are creating a personalized educational assessment for a homeschool student.
+    const prompt = `You are an expert homeschool curriculum designer creating personalized lesson plans.
 
 **STUDENT PROFILE:**
 Name: ${kid.displayname}
-Learning Style: ${kid.learning_style || 'Not specified'}
+Age: ${kid.age || 'Not specified'}
+Grade Level: ${gradeLevel || kid.grade || 'Not specified'}
+Learning Style: ${learningStyle || kid.learning_style || 'Not specified'}
 Pace of Learning: ${kid.pace_of_learning || 'Average'}
-Environmental Needs: ${kid.environmental_needs || 'None specified'}
+Current Hook (Interest): ${kid.current_hook || 'None specified'}
+Today's Vibe (Mood/Energy): ${kid.todays_vibe || 'Balanced'}
+Current Focus: ${kid.current_focus || 'General learning'}
 
-**LESSON INFORMATION:**
-Title: ${lesson.title}
-Subject: ${lesson.subject}
-${lesson.description ? `Description: ${lesson.description}` : ''}
+**LESSON REQUIREMENTS:**
+Subject: ${subject}
+Topic: ${topic || 'General subject overview'}
+Duration: ${duration} minutes
+${focusAreas ? `Focus Areas: ${focusAreas}` : ''}
+${additionalNotes ? `Additional Notes: ${additionalNotes}` : ''}
 
-**ASSESSMENT REQUIREMENTS:**
-Type: ${assessmentType}
-Difficulty: ${difficulty} (${difficultyMap[difficulty as string] || difficulty})
-Number of items: ${questionCount}
+**TASK:**
+Create 3 different lesson plan variations for this student. Each variation should have a different approach or emphasis while covering the same core content.
 
-**PERSONALIZATION GUIDELINES:**
-${kid.learning_style ? learningStyleGuidance[kid.learning_style as string] || '' : ''}
-${kid.pace_of_learning ? paceGuidance[kid.pace_of_learning as string] || '' : ''}
+For EACH variation, include:
+1. A creative, engaging title
+2. Brief description (2-3 sentences)
+3. Detailed lesson overview
+4. Activities (3-5 specific activities with timing)
+5. Materials needed
+6. Learning objectives
+7. Assessment ideas
 
-${kid.environmental_needs ? `Environmental Considerations: ${kid.environmental_needs}` : ''}
+**PERSONALIZATION:**
+- Adapt content to ${kid.displayname}'s learning style (${learningStyle || kid.learning_style})
+- Consider their current interest: ${kid.current_hook || 'general topics'}
+- Match their energy level: ${kid.todays_vibe || 'balanced'}
+- Align with their current focus: ${kid.current_focus || 'broad learning goals'}
 
-${typeInstructions[assessmentType as string]}
+Return ONLY valid JSON with this exact structure:
+{
+  "variations": [
+    {
+      "title": "Engaging Lesson Title",
+      "description": "Brief 2-3 sentence overview of this approach",
+      "overview": "Detailed explanation of the lesson (2-3 paragraphs)",
+      "activities": [
+        {
+          "name": "Activity name",
+          "duration": "15 minutes",
+          "description": "What the student will do"
+        }
+      ],
+      "materials": ["item 1", "item 2", "item 3"],
+      "learningObjectives": ["objective 1", "objective 2", "objective 3"],
+      "assessmentIdeas": ["assessment idea 1", "assessment idea 2"]
+    }
+  ]
+}
 
 CRITICAL: Return ONLY the JSON object. No markdown formatting, no backticks, no explanatory text before or after.`;
+
+    console.log('Generating lessons for:', kid.displayname);
 
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
@@ -206,57 +109,39 @@ CRITICAL: Return ONLY the JSON object. No markdown formatting, no backticks, no 
     }
 
     // Parse the JSON response
-    let assessmentData;
+    let lessonData;
     try {
       // Remove any markdown code fences if present
       let cleanedText = textContent.text.trim();
       cleanedText = cleanedText.replace(/^```json\n/, '').replace(/\n```$/, '');
       cleanedText = cleanedText.replace(/^```\n/, '').replace(/\n```$/, '');
       
-      assessmentData = JSON.parse(cleanedText);
+      lessonData = JSON.parse(cleanedText);
     } catch (parseError) {
       console.error('Failed to parse AI response:', textContent.text);
       return NextResponse.json({ 
-        error: 'Failed to parse assessment data',
+        error: 'Failed to parse lesson data',
         rawResponse: textContent.text 
       }, { status: 500 });
     }
 
-    // Save assessment to database
-    const { data: savedAssessment, error: saveError } = await supabase
-      .from('assessments')
-      .insert({
-        lesson_id: lessonId,
-        kid_id: kidId,
-        type: assessmentType,
-        difficulty: difficulty,
-        content: assessmentData,
-        created_at: new Date().toISOString()
-      })
-      .select()
-      .single();
-
-    if (saveError) {
-      console.error('Failed to save assessment:', saveError);
-      // Still return the assessment even if save fails
-    }
-
+    // Return the generated lessons
     return NextResponse.json({ 
-      assessment: assessmentData,
-      assessmentId: savedAssessment?.id,
-      lessonTitle: lesson.title,
-      kidName: kid.displayname,
+      success: true,
+      variations: lessonData.variations || [],
+      childName: kid.displayname,
       personalizedFor: {
-        learningStyle: kid.learning_style,
+        learningStyle: learningStyle || kid.learning_style,
+        currentHook: kid.current_hook,
         pace: kid.pace_of_learning
       }
     });
 
   } catch (error) {
-    console.error('Generate assessment error:', error);
+    console.error('Generate lesson error:', error);
     return NextResponse.json(
       { 
-        error: 'Failed to generate assessment', 
+        error: 'Failed to generate lessons', 
         details: error instanceof Error ? error.message : 'Unknown error'
       }, 
       { status: 500 }

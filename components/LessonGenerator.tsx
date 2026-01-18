@@ -64,64 +64,79 @@ export default function LessonGenerator({ kids, userId, onClose }: LessonGenerat
 
   const generateLessons = async () => {
     setLoading(true);
+    setStep(2);
     try {
       const response = await fetch('/api/generate-lesson', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
       });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate lessons');
+      }
       
       const data = await response.json();
-      setVariations(data.variations);
-      setStep(3);
-    } catch (error) {
-      console.error('Generation failed:', error);
-      alert('Failed to generate lessons. Please try again.');
+      setVariations(data.variations || []);
+      setStep(3); // Show results
+    } catch (error: any) {
+      console.error('Generation error:', error);
+      alert(`Failed to generate lessons: ${error.message}`);
+      setStep(1); // Go back to form
     } finally {
       setLoading(false);
     }
   };
 
   const saveLesson = async (variation: LessonVariation) => {
-    setLoading(true)
+    if (!formData.childId) {
+      alert('Please select a child first');
+      return;
+    }
+
     try {
-      // Get current user
-      const { data } = await supabase.auth.getUser()
-      const currentUser = data.user
-      
-      if (!currentUser) {
-        alert('You must be logged in to save lessons')
-        setLoading(false)
-        return
+      // Fetch the kid's organization_id
+      const { data: kid, error: kidError } = await supabase
+        .from('kids')
+        .select('organization_id, displayname')
+        .eq('id', formData.childId)
+        .single();
+
+      if (kidError) {
+        console.error('Error fetching kid:', kidError);
       }
 
-      // Use Supabase directly - no API endpoint needed
-      const { data: insertData, error } = await supabase
+      // Use kid's organization_id, or fall back to your default org ID
+      const organizationId = kid?.organization_id || 'd52497c0-42a9-49b7-ba3b-849bffa27fc4';
+
+      const { data: savedLesson, error } = await supabase
         .from('lessons')
         .insert([{
           kid_id: formData.childId,
-          user_id: currentUser.id,
           subject: formData.subject,
           title: variation.title,
           description: JSON.stringify(variation),
-          lesson_date: formData.startDate,
-          duration_minutes: formData.duration,
-          status: 'not_started'
-        }])
-        .select()
+          lesson_date: null,
+          duration_minutes: Number(formData.duration) || 30,
+          status: 'not_started',
+          organization_id: organizationId 
+        }]);
 
       if (error) {
         console.error('Save failed:', error);
-        alert(`Failed to save lesson: ${error.message}`);
+        alert(`❌ Failed to save lesson: ${error.message}`);
       } else {
-        setSelectedVariation(variation);
-        router.refresh();
+        const childName = kid?.displayname || 'your student';
+        alert(`✅ Lesson saved successfully!\n\n"${variation.title}" has been added to ${childName}'s lessons.\n\nClick OK to return to your dashboard where you can view and schedule this lesson.`);
+        onClose();
+        // Small delay before reload so user sees the success message
+        setTimeout(() => {
+          window.location.reload();
+        }, 300);
       }
-    } catch (error) {
-      console.error('Save failed:', error);
-      alert('Failed to save lesson. Please try again.');
-    } finally {
-      setLoading(false)
+    } catch (error: any) {
+      console.error('Unexpected error:', error);
+      alert(`❌ Failed to save lesson: ${error.message}`);
     }
   };
 
@@ -182,8 +197,8 @@ export default function LessonGenerator({ kids, userId, onClose }: LessonGenerat
       <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto p-6">
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-900"> 📚 Lesson Generator</h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+          <h2 className="text-2xl font-bold text-gray-900">📚 Lesson Generator</h2>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-700 text-2xl leading-none">
             ✕
           </button>
         </div>
@@ -192,34 +207,34 @@ export default function LessonGenerator({ kids, userId, onClose }: LessonGenerat
         {step === 1 && (
           <div className="space-y-4">
             <div>
-            <label className="block text-sm font-medium text-gray-900 mb-2">Select Child</label>
-            <select
-          value={formData.childId}
-  onChange={(e) => handleChildSelect(e.target.value)}
-  className="w-full border rounded-lg px-3 py-2 text-gray-900"
->
+              <label className="block text-sm font-medium text-gray-900 mb-2">Select Child</label>
+              <select
+                value={formData.childId}
+                onChange={(e) => handleChildSelect(e.target.value)}
+                className="w-full border rounded-lg px-3 py-2 text-gray-900"
+              >
                 <option value="">Choose a child...</option>
                 {kids.map(child => (
-  <option key={child.id} value={child.id}>
-    {child.displayname}{child.grade? ` (${child.grade})` : ''}
-  </option>
-))}
+                  <option key={child.id} value={child.id}>
+                    {child.displayname}{child.grade ? ` (${child.grade})` : ''}
+                  </option>
+                ))}
               </select>
             </div>
 
             <div>
-            <label className="block text-sm font-medium text-gray-900 mb-2">Subject</label>
-            <input
-  type="text"
-  value={formData.subject}
-  onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-  placeholder="e.g., Math, Science, History..."
-  className="w-full border rounded-lg px-3 py-2 text-gray-900"
-/>
+              <label className="block text-sm font-medium text-gray-900 mb-2">Subject</label>
+              <input
+                type="text"
+                value={formData.subject}
+                onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                placeholder="e.g., Math, Science, History..."
+                className="w-full border rounded-lg px-3 py-2 text-gray-900"
+              />
             </div>
 
             <div>
-            <label className="block text-sm font-medium text-gray-900 mb-2">Duration</label>
+              <label className="block text-sm font-medium text-gray-900 mb-2">Duration</label>
               <div className="flex gap-2">
                 {[15, 30, 45, 60].map(min => (
                   <button
@@ -238,27 +253,27 @@ export default function LessonGenerator({ kids, userId, onClose }: LessonGenerat
             </div>
 
             <div>
-            <label className="block text-sm font-medium text-gray-900 mb-2">Start Date</label>
-            <input
-  type="date"
-  value={formData.startDate}
-  onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-  className="w-full border rounded-lg px-3 py-2 text-gray-900"
-/>
+              <label className="block text-sm font-medium text-gray-900 mb-2">Start Date</label>
+              <input
+                type="date"
+                value={formData.startDate}
+                onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                className="w-full border rounded-lg px-3 py-2 text-gray-900"
+              />
             </div>
 
             <button
-  onClick={() => setStep(2)}
-  disabled={!formData.childId || !formData.subject}
-  className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed"
->
-  Continue
-</button>
+              onClick={() => setStep(2)}
+              disabled={!formData.childId || !formData.subject}
+              className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed"
+            >
+              Continue
+            </button>
           </div>
         )}
 
         {/* Step 2: Details (Optional) */}
-        {step === 2 && (
+        {step === 2 && !loading && (
           <div className="space-y-4">
             <div className="flex items-center gap-2 mb-4">
               <input
@@ -269,15 +284,15 @@ export default function LessonGenerator({ kids, userId, onClose }: LessonGenerat
                 className="w-4 h-4"
               />
               <label htmlFor="surpriseMe" className="text-sm font-medium text-gray-900">
-  Just surprise me! (Skip details)
-</label>
+                Just surprise me! (Skip details)
+              </label>
             </div>
 
             {!formData.surpriseMe && (
               <details open className="border rounded-lg p-4">
                 <summary className="font-medium cursor-pointer mb-4 text-gray-900">
-  Advanced Options (Optional)
-</summary>
+                  Advanced Options (Optional)
+                </summary>
                 
                 <div className="space-y-4">
                   <div>
@@ -286,7 +301,7 @@ export default function LessonGenerator({ kids, userId, onClose }: LessonGenerat
                       value={formData.learningObjectives}
                       onChange={(e) => setFormData({ ...formData, learningObjectives: e.target.value })}
                       placeholder="What should they learn from this lesson?"
-                     className="w-full border rounded-lg px-3 py-2 text-gray-900"
+                      className="w-full border rounded-lg px-3 py-2 text-gray-900"
                       rows={3}
                     />
                   </div>
@@ -298,7 +313,7 @@ export default function LessonGenerator({ kids, userId, onClose }: LessonGenerat
                       value={formData.materials}
                       onChange={(e) => setFormData({ ...formData, materials: e.target.value })}
                       placeholder="e.g., Building blocks, art supplies, computer..."
-                     className="w-full border rounded-lg px-3 py-2 text-gray-900"
+                      className="w-full border rounded-lg px-3 py-2 text-gray-900"
                     />
                   </div>
 
@@ -338,8 +353,54 @@ export default function LessonGenerator({ kids, userId, onClose }: LessonGenerat
           </div>
         )}
 
+        {/* Step 2: Loading State (NEW!) */}
+        {step === 2 && loading && (
+          <div className="flex flex-col items-center justify-center py-16 px-8">
+            {/* Spinner */}
+            <div className="relative">
+              <div className="w-20 h-20 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-12 h-12 bg-blue-100 rounded-full animate-pulse"></div>
+              </div>
+            </div>
+            
+            <div className="mt-8 text-center space-y-3">
+              <h3 className="text-2xl font-bold text-gray-900">
+                ✨ Creating Personalized Lessons
+              </h3>
+              <p className="text-gray-600 max-w-md">
+                HomeschoolHQ Assistant is generating 3 unique lesson variations tailored to{' '}
+                <span className="font-semibold text-blue-600">
+                  {formData.childName || 'your student'}
+                </span>
+                's learning style...
+              </p>
+              
+              {/* Progress indicators */}
+              <div className="mt-6 space-y-2 text-sm text-gray-500">
+                <div className="flex items-center justify-center gap-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  <span>Analyzing student profile</span>
+                </div>
+                <div className="flex items-center justify-center gap-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  <span>Designing activities and materials</span>
+                </div>
+                <div className="flex items-center justify-center gap-2">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  <span>Creating learning objectives</span>
+                </div>
+              </div>
+              
+              <p className="text-xs text-gray-400 mt-6 italic">
+                This usually takes 15-20 seconds...
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Step 3: Preview & Choose */}
-        {step === 3 && variations.length > 0 && (
+        {step === 3 && variations && variations.length > 0 && (
           <div className="space-y-4">
             <p className="text-gray-600 mb-4">
               Choose the lesson that works best for {formData.childName}:
@@ -353,7 +414,7 @@ export default function LessonGenerator({ kids, userId, onClose }: LessonGenerat
                   
                   <div className="space-y-2 text-sm mb-4">
                     <div>
-                    <strong className="text-gray-900">Materials:</strong>
+                      <strong className="text-gray-900">Materials:</strong>
                       <ul className="list-disc list-inside text-gray-600">
                         {variation.materials.slice(0, 3).map((m, i) => (
                           <li key={i}>{m}</li>
@@ -362,7 +423,7 @@ export default function LessonGenerator({ kids, userId, onClose }: LessonGenerat
                     </div>
                     
                     <div>
-                    <strong className="text-gray-900">Activities:</strong>
+                      <strong className="text-gray-900">Activities:</strong>
                       <p className="text-gray-600">{variation.activities.length} activities</p>
                     </div>
                   </div>
@@ -426,11 +487,11 @@ export default function LessonGenerator({ kids, userId, onClose }: LessonGenerat
                 📚 Use this lesson for another child
               </button>
               <button
-  onClick={onClose}
-  className="w-full border border-gray-300 py-3 rounded-lg hover:bg-gray-50 text-gray-900"
->
-  Done
-</button>
+                onClick={onClose}
+                className="w-full border border-gray-300 py-3 rounded-lg hover:bg-gray-50 text-gray-900"
+              >
+                Done
+              </button>
             </div>
           </div>
         )}
@@ -460,7 +521,7 @@ export default function LessonGenerator({ kids, userId, onClose }: LessonGenerat
                   .filter(child => child.id !== formData.childId)
                   .map(child => (
                     <option key={child.id} value={child.id}>
-                      {child.displayname}{child.grade? ` (${child.grade})` : ''}
+                      {child.displayname}{child.grade ? ` (${child.grade})` : ''}
                     </option>
                   ))}
               </select>

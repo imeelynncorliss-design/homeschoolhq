@@ -202,7 +202,7 @@ export default function AdminPage() {
             </div>
             <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm text-center">
               <h3 className="font-bold text-gray-900 mb-2">⌨️ Keyboard</h3>
-              <p className="text-[11px] text-gray-500 uppercase font-black tracking-widest">[1-8] Open • [ESC] Close • [ALT] Hints</p>
+              <p className="text-[11px] text-gray-500 uppercase font-black tracking-widest">[1-8] Open • [ESC] Close • [Windows: Alt] [MacOS: "⌥"] Hints</p>
             </div>
             <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
               <h3 className="font-bold text-gray-900 mb-1">💡 Pro Tip</h3>
