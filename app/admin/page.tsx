@@ -206,7 +206,7 @@ export default function AdminPage() {
             </div>
             <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
               <h3 className="font-bold text-gray-900 mb-1">💡 Pro Tip</h3>
-              <p className="text-gray-500 text-[11px]">Hold ALT to see your shortcut map instantly!</p>
+              <p className="text-gray-500 text-[11px]">Windows: Hold ALT, MacOS: "⌥" - to see your shortcut map instantly!</p>
             </div>
           </div>
         )}
