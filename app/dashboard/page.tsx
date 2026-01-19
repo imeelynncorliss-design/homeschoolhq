@@ -768,7 +768,7 @@ function DashboardContent() {
                                   <h3 className="font-bold text-gray-900">{kid.displayname}</h3>
                                   {kid.grade && <p className="text-sm text-gray-600">Grade {kid.grade} • Age {kid.age}</p>}
                                 </div>
-                                <div className={`w-3 h-3 rounded-full ${colors.dot}`}></div>
+                                <div className={`w-3 h-3 rounded-full ${colors.accent}`}></div>
                               </div>
                               
                               <div className="flex flex-wrap gap-2 mb-3">
