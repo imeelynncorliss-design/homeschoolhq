@@ -11,7 +11,6 @@ export default function Home() {
   const router = useRouter()
 
   useEffect(() => {
-    // Check if user is already logged in
     const checkUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
@@ -20,7 +19,6 @@ export default function Home() {
     }
     checkUser()
 
-    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session) {
         router.push('/dashboard')
@@ -35,7 +33,13 @@ export default function Home() {
     setLoading(true)
     setMessage('')
 
-    const { error } = await supabase.auth.signInWithOtp({ email })
+    // FIX: emailRedirectTo ensures the link sends you back to localhost:3000
+    const { error } = await supabase.auth.signInWithOtp({ 
+      email,
+      options: {
+        emailRedirectTo: `${window.location.origin}/dashboard`
+      }
+    })
     
     if (error) {
       setMessage('Error: ' + error.message)
@@ -66,6 +70,17 @@ export default function Home() {
             {loading ? 'Sending...' : 'Send Magic Link'}
           </button>
         </form>
+
+        {/* Only show this button during local development */}
+        {process.env.NODE_ENV === 'development' && (
+          <button
+            onClick={() => router.push('/dashboard')}
+            className="mt-4 w-full border-2 border-dashed border-gray-300 text-gray-500 py-2 rounded hover:bg-gray-100 transition-colors"
+          >
+            Dev Mode: Skip to Dashboard
+          </button>
+        )}
+
         {message && <p className="text-center text-sm text-gray-900 font-medium">{message}</p>}
       </div>
     </div>

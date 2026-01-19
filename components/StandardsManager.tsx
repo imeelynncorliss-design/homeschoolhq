@@ -15,7 +15,9 @@ interface Standard {
   description: string;
   domain?: string;
   source?: string;
-  customized: boolean;
+  source_url?: string;
+  is_verified: boolean;
+  organization_id: string | null;
   created_at: string;
 }
 
@@ -25,52 +27,44 @@ interface StandardsManagerProps {
 }
 
 export default function StandardsManager({ organizationId, onClose }: StandardsManagerProps) {
-  const [standards, setStandards] = useState<Standard[]>([]);
+  // --- 1. Consolidated State ---
+  const [allStandards, setAllStandards] = useState<Standard[]>([]); 
   const [filteredStandards, setFilteredStandards] = useState<Standard[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [error, setError] = useState('');
   
-  // Filters
   const [searchTerm, setSearchTerm] = useState('');
   const [filterSubject, setFilterSubject] = useState('');
   const [filterGrade, setFilterGrade] = useState('');
-  const [filterState, setFilterState] = useState('');
 
-  // Get unique values for filters
-  const subjects = Array.from(new Set(standards.map(s => s.subject))).sort();
-  const grades = Array.from(new Set(standards.map(s => s.grade_level))).sort();
-  const states = Array.from(new Set(standards.map(s => s.state_code))).sort();
-
+  // --- 2. Data Loading ---
   useEffect(() => {
     loadStandards();
   }, [organizationId]);
 
+  // Re-run filters whenever search terms OR the master list changes
   useEffect(() => {
     applyFilters();
-  }, [standards, searchTerm, filterSubject, filterGrade, filterState]);
+  }, [allStandards, searchTerm, filterSubject, filterGrade]);
 
   const loadStandards = async () => {
     setLoading(true);
     setError('');
-
-    console.log('Loading standards for organization:', organizationId);
-
     try {
       const supabase = createClient(supabaseUrl, supabaseKey);
       const { data, error: fetchError } = await supabase
-        .from('user_standards')
+        .from('standards')
         .select('*')
-        .eq('organization_id', organizationId)
-        .order('created_at', { ascending: false });
+        .or(`organization_id.is.null,organization_id.eq.${organizationId}`)
+        .order('is_verified', { ascending: false })
+        .order('grade_level', { ascending: true });
 
-      console.log('Standards loaded:', data?.length || 0);
-      if (fetchError) {
-        console.error('Error loading standards:', fetchError);
-        throw fetchError;
-      }
-
-      setStandards(data || []);
+      if (fetchError) throw fetchError;
+      
+      const loadedData = data || [];
+      setAllStandards(loadedData);
+      setFilteredStandards(loadedData); // Initialize filtered list too
     } catch (err: any) {
       console.error('Error loading standards:', err);
       setError('Failed to load standards');
@@ -79,265 +73,199 @@ export default function StandardsManager({ organizationId, onClose }: StandardsM
     }
   };
 
+  // --- 3. Robust Filtering Logic ---
   const applyFilters = () => {
-    let filtered = [...standards];
+    let filtered = [...allStandards];
 
-    // Search filter
+    // Search term filter (Code or Description)
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(s =>
         s.standard_code.toLowerCase().includes(term) ||
-        s.description.toLowerCase().includes(term) ||
-        s.domain?.toLowerCase().includes(term)
+        s.description.toLowerCase().includes(term)
       );
     }
-
-    // Subject filter
+  
+    // Robust Subject Filter
     if (filterSubject) {
-      filtered = filtered.filter(s => s.subject === filterSubject);
+      filtered = filtered.filter(s => 
+        s.subject?.toLowerCase().trim().includes(filterSubject.toLowerCase().trim())
+      );
     }
-
-    // Grade filter
+  
+    // Robust Grade Level Filter
     if (filterGrade) {
-      filtered = filtered.filter(s => s.grade_level === filterGrade);
+      filtered = filtered.filter(s => {
+        const standardGrade = String(s.grade_level || "").toLowerCase().trim();
+        const searchGrade = String(filterGrade).toLowerCase().trim();
+        return standardGrade.includes(searchGrade) || searchGrade.includes(standardGrade);
+      });
     }
-
-    // State filter
-    if (filterState) {
-      filtered = filtered.filter(s => s.state_code === filterState);
-    }
-
+  
     setFilteredStandards(filtered);
   };
 
   const handleDelete = async (standardId: string) => {
-    if (!confirm('Are you sure you want to delete this standard? This action cannot be undone.')) {
+    if (!confirm('Are you sure you want to delete this standard?')) return;
+    
+    const standardToDelete = allStandards.find(s => s.id === standardId);
+    if (standardToDelete?.is_verified) {
+      alert("System-provided standards cannot be deleted.");
       return;
     }
 
     setDeleting(standardId);
-    setError('');
-
     try {
       const supabase = createClient(supabaseUrl, supabaseKey);
-      const { data: { session } } = await supabase.auth.getSession();
+      const { error: deleteError } = await supabase
+        .from('standards')
+        .delete()
+        .eq('id', standardId)
+        .eq('organization_id', organizationId);
 
-      if (!session) {
-        setError('Please sign in to delete standards');
-        setDeleting(null);
-        return;
-      }
-
-      const response = await fetch(`/api/standards/${standardId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`
-        }
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        // Remove from local state
-        setStandards(prev => prev.filter(s => s.id !== standardId));
-        alert('Standard deleted successfully');
-      } else {
-        setError(result.error?.message || 'Failed to delete standard');
-      }
+      if (deleteError) throw deleteError;
+      
+      // Update the master list so the UI refreshes
+      setAllStandards(prev => prev.filter(s => s.id !== standardId));
     } catch (err: any) {
-      console.error('Delete error:', err);
       setError(err.message || 'Error deleting standard');
     } finally {
       setDeleting(null);
     }
   };
 
-  const clearFilters = () => {
-    setSearchTerm('');
-    setFilterSubject('');
-    setFilterGrade('');
-    setFilterState('');
-  };
-
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-3xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+    <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-3xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl border border-slate-200">
+        
         {/* Header */}
-        <div className="p-6 border-b border-slate-200">
-          <div className="flex justify-between items-start mb-4">
+        <div className="p-8 border-b border-slate-100">
+          <div className="flex justify-between items-start mb-6">
             <div>
-              <h2 className="text-2xl font-black text-slate-900">Manage Standards</h2>
-              <p className="text-sm text-slate-600 mt-1">
-                View, search, and delete standards for your organization
-              </p>
+              <h2 className="text-3xl font-black text-slate-900 tracking-tight">Manage Standards</h2>
+              <p className="text-slate-500 font-bold mt-1">Review verified core standards and your custom imports.</p>
             </div>
-            <button
-              onClick={onClose}
-              className="text-slate-400 hover:text-slate-600 text-2xl font-bold"
-            >
-              ×
-            </button>
+            <button onClick={onClose} className="text-slate-400 hover:text-slate-900 text-3xl font-bold transition-colors">×</button>
           </div>
 
-          {/* Stats */}
-          <div className="grid grid-cols-3 gap-4 mt-4">
-            <div className="bg-blue-50 rounded-xl p-3">
-              <p className="text-xs text-blue-600 font-semibold">Total Standards</p>
-              <p className="text-2xl font-black text-blue-900">{standards.length}</p>
+          <div className="grid grid-cols-2 gap-6">
+            <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-4">
+              <p className="text-[10px] text-indigo-600 font-black uppercase tracking-widest">Verified Core</p>
+              <p className="text-3xl font-black text-indigo-900">{allStandards.filter(s => s.is_verified).length}</p>
             </div>
-            <div className="bg-green-50 rounded-xl p-3">
-              <p className="text-xs text-green-600 font-semibold">After Filters</p>
-              <p className="text-2xl font-black text-green-900">{filteredStandards.length}</p>
-            </div>
-            <div className="bg-purple-50 rounded-xl p-3">
-              <p className="text-xs text-purple-600 font-semibold">Custom Standards</p>
-              <p className="text-2xl font-black text-purple-900">
-                {standards.filter(s => s.customized).length}
-              </p>
+            <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4">
+              <p className="text-[10px] text-amber-600 font-black uppercase tracking-widest">Your Imports</p>
+              <p className="text-3xl font-black text-amber-900">{allStandards.filter(s => !s.is_verified).length}</p>
             </div>
           </div>
         </div>
 
         {/* Filters */}
-        <div className="p-6 border-b border-slate-200 bg-slate-50">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+        <div className="px-8 py-6 bg-slate-50 border-b border-slate-200">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <input
               type="text"
-              placeholder="Search code, description..."
+              placeholder="Search code or keywords..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="px-3 py-2 rounded-lg border border-slate-200 text-sm text-slate-900"
+              className="px-4 py-3 rounded-xl border-2 border-slate-200 text-slate-900 font-bold outline-none focus:border-purple-600 transition-all placeholder:text-slate-400"
             />
-            <select
-              value={filterSubject}
-              onChange={(e) => setFilterSubject(e.target.value)}
-              className="px-3 py-2 rounded-lg border border-slate-200 text-sm text-slate-900"
-            >
+            <select value={filterSubject} onChange={(e) => setFilterSubject(e.target.value)} className="px-4 py-3 rounded-xl border-2 border-slate-200 text-slate-900 font-bold">
               <option value="">All Subjects</option>
-              {subjects.map(subject => (
-                <option key={subject} value={subject}>{subject}</option>
-              ))}
+              {Array.from(new Set(allStandards.map(s => s.subject))).filter(Boolean).sort().map(s => <option key={s} value={s}>{s}</option>)}
             </select>
-            <select
-              value={filterGrade}
-              onChange={(e) => setFilterGrade(e.target.value)}
-              className="px-3 py-2 rounded-lg border border-slate-200 text-sm text-slate-900"
-            >
+            <select value={filterGrade} onChange={(e) => setFilterGrade(e.target.value)} className="px-4 py-3 rounded-xl border-2 border-slate-200 text-slate-900 font-bold">
               <option value="">All Grades</option>
-              {grades.map(grade => (
-                <option key={grade} value={grade}>Grade {grade}</option>
-              ))}
-            </select>
-            <select
-              value={filterState}
-              onChange={(e) => setFilterState(e.target.value)}
-              className="px-3 py-2 rounded-lg border border-slate-200 text-sm text-slate-900"
-            >
-              <option value="">All States</option>
-              {states.map(state => (
-                <option key={state} value={state}>{state}</option>
-              ))}
+              {Array.from(new Set(allStandards.map(s => s.grade_level))).filter(Boolean).sort().map(g => <option key={g} value={g}>Grade {g}</option>)}
             </select>
           </div>
-          {(searchTerm || filterSubject || filterGrade || filterState) && (
-            <button
-              onClick={clearFilters}
-              className="text-sm text-purple-600 hover:text-purple-700 font-semibold"
-            >
-              Clear all filters
-            </button>
-          )}
         </div>
 
-        {/* Standards List */}
-        <div className="flex-1 overflow-y-auto p-6">
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-4">
-              <p className="text-red-900 text-sm">{error}</p>
-            </div>
-          )}
-
+        {/* List Content */}
+        <div className="flex-1 overflow-y-auto p-8 bg-white min-h-[400px]">
+          {error && <div className="bg-red-50 border-2 border-red-100 rounded-xl p-4 mb-6 text-red-700 font-bold text-sm">{error}</div>}
+          
           {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="animate-spin h-8 w-8 border-4 border-purple-600 border-t-transparent rounded-full"></div>
-            </div>
-          ) : filteredStandards.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-slate-500">
-                {standards.length === 0 
-                  ? 'No standards found. Import some standards to get started!'
-                  : 'No standards match your filters. Try adjusting your search.'}
-              </p>
+            <div className="flex flex-col items-center justify-center py-20 gap-4">
+              <div className="animate-spin h-10 w-10 border-4 border-indigo-600 border-t-transparent rounded-full"></div>
+              <p className="text-slate-500 font-black uppercase tracking-widest text-xs">Loading Standards...</p>
             </div>
           ) : (
-            <div className="space-y-3">
-              {filteredStandards.map(standard => (
-                <div
-                  key={standard.id}
-                  className="border border-slate-200 rounded-xl p-4 hover:border-slate-300 transition-colors"
-                >
-                  <div className="flex justify-between items-start gap-4">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-2 flex-wrap">
-                        <span className="inline-flex items-center px-2 py-1 rounded-md bg-blue-100 text-blue-700 text-xs font-bold">
-                          {standard.state_code}
-                        </span>
-                        <span className="inline-flex items-center px-2 py-1 rounded-md bg-green-100 text-green-700 text-xs font-bold">
-                          Grade {standard.grade_level}
-                        </span>
-                        <span className="inline-flex items-center px-2 py-1 rounded-md bg-purple-100 text-purple-700 text-xs font-bold">
-                          {standard.subject}
-                        </span>
-                        {standard.customized && (
-                          <span className="inline-flex items-center px-2 py-1 rounded-md bg-orange-100 text-orange-700 text-xs font-bold">
-                            Custom
-                          </span>
-                        )}
-                      </div>
-                      <p className="font-bold text-slate-900 mb-1">{standard.standard_code}</p>
-                      <p className="text-sm text-slate-700 mb-2">{standard.description}</p>
-                      {standard.domain && (
-                        <p className="text-xs text-slate-500">
-                          <strong>Domain:</strong> {standard.domain}
-                        </p>
-                      )}
-                      {standard.source && (
-                        <p className="text-xs text-slate-500">
-                          <strong>Source:</strong> {standard.source}
-                        </p>
-                      )}
-                    </div>
-                    <button
-                      onClick={() => handleDelete(standard.id)}
-                      disabled={deleting === standard.id}
-                      className="flex-shrink-0 p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
-                      title="Delete standard"
-                    >
-                      {deleting === standard.id ? (
-                        <div className="animate-spin h-5 w-5 border-2 border-red-600 border-t-transparent rounded-full"></div>
-                      ) : (
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      )}
-                    </button>
+            <div className="space-y-4">
+             {filteredStandards.map(standard => (
+              <div key={standard.id} className={`border-2 rounded-2xl p-6 transition-all flex gap-6 ${standard.is_verified ? 'border-slate-100' : 'border-amber-100 bg-amber-50/20'}`}>
+                
+                <div className="flex-shrink-0">
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-lg border ${standard.is_verified ? 'bg-slate-900 border-slate-700' : 'bg-amber-600 border-amber-500'}`}>
+                    <span className="text-white font-black text-xl">
+                      {standard.subject?.toLowerCase().includes('math') ? '🔢' : '📚'}
+                    </span>
                   </div>
                 </div>
-              ))}
+
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-3 flex-wrap">
+                    <span className="px-2 py-1 rounded-lg bg-slate-100 text-slate-700 text-[10px] font-black uppercase tracking-wider border border-slate-200">
+                      {standard.standard_code}
+                    </span>
+                    {standard.is_verified ? (
+                      <span className="px-2 py-1 rounded-lg bg-indigo-100 text-indigo-700 text-[10px] font-black uppercase tracking-wider border border-indigo-200">
+                        Official Core
+                      </span>
+                    ) : (
+                      <span className="px-2 py-1 rounded-lg bg-amber-100 text-amber-700 text-[10px] font-black uppercase tracking-wider border border-amber-200">
+                        User Uploaded
+                      </span>
+                    )}
+                    <span className="px-2 py-1 rounded-lg bg-green-50 text-green-700 text-[10px] font-black uppercase tracking-wider border border-green-100">
+                      Grade {standard.grade_level}
+                    </span>
+                  </div>
+                  
+                  <p className="text-slate-900 font-medium text-lg leading-relaxed mb-2 whitespace-normal break-words">
+                    {standard.description}
+                  </p>
+                  
+                  <div className="flex gap-4 items-center">
+                    {standard.domain && (
+                      <p className="text-xs text-slate-500 font-bold">
+                        Domain: <span className="text-slate-700">{standard.domain}</span>
+                      </p>
+                    )}
+                    {standard.source_url && (
+                      <a href={standard.source_url} target="_blank" className="text-[10px] text-blue-500 font-black uppercase hover:underline">
+                        View Document Source ↗
+                      </a>
+                    )}
+                  </div>
+                </div>
+
+                {!standard.is_verified && (
+                  <button
+                    onClick={() => handleDelete(standard.id)}
+                    disabled={deleting === standard.id}
+                    className="self-start p-3 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
+                  >
+                    {deleting === standard.id ? (
+                      <div className="animate-spin h-5 w-5 border-2 border-red-600 border-t-transparent rounded-full"></div>
+                    ) : (
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    )}
+                  </button>
+                )}
+              </div>
+            ))}
             </div>
           )}
         </div>
 
         {/* Footer */}
-        <div className="p-6 border-t border-slate-200 flex justify-between items-center">
-          <p className="text-sm text-slate-600">
-            Showing {filteredStandards.length} of {standards.length} standards
-          </p>
-          <button
-            onClick={onClose}
-            className="px-6 py-3 bg-slate-600 text-white rounded-xl font-bold hover:bg-slate-700 transition-colors"
-          >
-            Close
+        <div className="p-8 border-t border-slate-100 flex justify-between items-center bg-slate-50">
+          <p className="text-sm text-slate-500 font-bold italic">Showing {filteredStandards.length} standards</p>
+          <button onClick={onClose} className="px-10 py-4 bg-slate-900 text-white rounded-2xl font-black hover:bg-black transition-all shadow-lg active:scale-95">
+            Close Manager
           </button>
         </div>
       </div>

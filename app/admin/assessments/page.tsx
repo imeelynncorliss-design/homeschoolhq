@@ -1,4 +1,3 @@
-// app/admin/assessments/page.tsx
 'use client';
 
 import { useState, useEffect } from 'react'
@@ -10,6 +9,9 @@ import StandardsManager from '@/components/StandardsManager'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+
+// Unified Supabase client instance for this file
+const supabase = createClient(supabaseUrl, supabaseKey)
 
 type AssessmentWithDetails = {
   id: string
@@ -52,10 +54,8 @@ export default function AssessmentsPage() {
   const [showImporter, setShowImporter] = useState(false)
   const [showStandardsManager, setShowStandardsManager] = useState(false)
   
-  // Use the same hardcoded org ID that's used throughout this page
   const organizationId = 'd52497c0-42a9-49b7-ba3b-849bffa27fc4'
   
-  // Standards state
   const [standards, setStandards] = useState<Standard[]>([])
   const [standardsLoading, setStandardsLoading] = useState(false)
   const [filters, setFilters] = useState({
@@ -64,6 +64,7 @@ export default function AssessmentsPage() {
     search: ''
   })
 
+  // --- 1. Effect Hooks ---
   useEffect(() => {
     loadAssessments()
   }, [])
@@ -72,116 +73,101 @@ export default function AssessmentsPage() {
     if (currentView === 'standards') {
       loadStandards()
     }
-  }, [currentView, filters])
+  }, [currentView, filters]) // removed organizationID
 
+  // --- 2. Load Assessments ---
   const loadAssessments = async () => {
-    const supabase = createClient(supabaseUrl, supabaseKey)
     setLoading(true)
-
-    const { data: assessmentsData, error } = await supabase
-      .from('assessments')
-      .select(`*, lessons!inner(title, subject), kids!inner(displayname)`)
-      .eq('organization_id', organizationId)
-      .order('created_at', { ascending: false })
-
-    if (error || !assessmentsData) {
-      console.error('Error fetching assessments:', error)
-      setLoading(false)
-      return
-    }
-
-    const assessmentIds = assessmentsData.map(a => a.id)
-    const { data: results } = await supabase.from('assessment_results').select('*').in('assessment_id', assessmentIds)
-    const { data: standardsCounts } = await supabase.from('assessment_standards').select('assessment_id').in('assessment_id', assessmentIds)
-
-    const standardsMap = new Map<string, number>()
-    standardsCounts?.forEach(s => standardsMap.set(s.assessment_id, (standardsMap.get(s.assessment_id) || 0) + 1))
-
-    const combined = assessmentsData.map(assessment => {
-      const lessonData = Array.isArray(assessment.lessons) ? assessment.lessons[0] : assessment.lessons
-      const kidData = Array.isArray(assessment.kids) ? assessment.kids[0] : assessment.kids
-      const result = results?.find(r => r.assessment_id === assessment.id)
-
-      return {
-        id: assessment.id,
-        lesson_id: assessment.lesson_id,
-        kid_id: assessment.kid_id,
-        type: assessment.type,
-        difficulty: assessment.difficulty,
-        created_at: assessment.created_at,
-        content: assessment.content,
-        lesson_title: lessonData?.title || 'Unknown Lesson',
-        lesson_subject: lessonData?.subject || 'Unknown Subject',
-        kid_name: kidData?.displayname || 'Unknown Student',
-        standards_count: standardsMap.get(assessment.id) || 0,
-        result: result ? {
-          id: result.id,
-          auto_score: result.auto_score,
-          submitted_at: result.submitted_at,
-          needs_manual_grading: result.needs_manual_grading
-        } : undefined
-      }
-    })
-
-    setAssessments(combined)
-    setLoading(false)
-  }
-
-  const loadStandards = async () => {
-    setStandardsLoading(true)
-    const supabase = createClient(supabaseUrl, supabaseKey)
-    
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) {
-      console.error('No session found')
-      setStandardsLoading(false)
-      return
-    }
-
-    const params = new URLSearchParams()
-    if (filters.subject) params.append('subject', filters.subject)
-    if (filters.grade_level) params.append('grade_level', filters.grade_level)
-    if (filters.search) params.append('search', filters.search)
-
     try {
-      const response = await fetch(`/api/standards?${params.toString()}`, {
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`
+      const { data: assessmentsData, error } = await supabase
+        .from('assessments')
+        .select(`*, lessons!inner(title, subject), kids!inner(displayname)`)
+        .eq('organization_id', organizationId)
+        .order('created_at', { ascending: false })
+
+      if (error || !assessmentsData) throw error
+
+      const assessmentIds = assessmentsData.map(a => a.id)
+      const { data: results } = await supabase.from('assessment_results').select('*').in('assessment_id', assessmentIds)
+      const { data: standardsCounts } = await supabase.from('assessment_standards').select('assessment_id').in('assessment_id', assessmentIds)
+
+      const standardsMap = new Map<string, number>()
+      standardsCounts?.forEach(s => standardsMap.set(s.assessment_id, (standardsMap.get(s.assessment_id) || 0) + 1))
+
+      const combined = assessmentsData.map(assessment => {
+        const lessonData = Array.isArray(assessment.lessons) ? assessment.lessons[0] : assessment.lessons
+        const kidData = Array.isArray(assessment.kids) ? assessment.kids[0] : assessment.kids
+        const result = results?.find(r => r.assessment_id === assessment.id)
+
+        return {
+          id: assessment.id,
+          lesson_id: assessment.lesson_id,
+          kid_id: assessment.kid_id,
+          type: assessment.type,
+          difficulty: assessment.difficulty,
+          created_at: assessment.created_at,
+          content: assessment.content,
+          lesson_title: lessonData?.title || 'Unknown Lesson',
+          lesson_subject: lessonData?.subject || 'Unknown Subject',
+          kid_name: kidData?.displayname || 'Unknown Student',
+          standards_count: standardsMap.get(assessment.id) || 0,
+          result: result ? {
+            id: result.id,
+            auto_score: result.auto_score,
+            submitted_at: result.submitted_at,
+            needs_manual_grading: result.needs_manual_grading
+          } : undefined
         }
       })
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+      setAssessments(combined)
+    } catch (err) {
+      console.error('Error fetching assessments:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // --- 3. Unified Load Standards ---
+  const loadStandards = async () => {
+    setStandardsLoading(true)
+    try {
+      // Logic for filtering
+      let query = supabase
+        .from('standards')
+        .select('*')
+        .or(`organization_id.is.null,organization_id.eq.${organizationId}`)
+
+      // Apply Filter Logic
+      if (filters.subject) query = query.ilike('subject', `%${filters.subject}%`)
+      if (filters.grade_level) query = query.eq('grade_level', filters.grade_level)
+      if (filters.search) {
+        query = query.or(`standard_code.ilike.%${filters.search}%,description.ilike.%${filters.search}%`)
       }
 
-      const result = await response.json()
-      
-      if (result.success) {
-        setStandards(result.data.standards)
-      }
+      const { data, error } = await query.order('grade_level', { ascending: true })
+
+      if (error) throw error
+      setStandards(data || [])
     } catch (error) {
       console.error('Error loading standards:', error)
+    } finally {
+      setStandardsLoading(false)
     }
-    
-    setStandardsLoading(false)
   }
 
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this assessment?")) return
-    const supabase = createClient(supabaseUrl, supabaseKey)
     const { error } = await supabase.from('assessments').delete().eq('id', id)
-    
     if (error) alert("Error deleting assessment")
     else loadAssessments()
   }
 
-  // Get unique subjects and grades for filters
-  const availableSubjects = [...new Set(standards.map(s => s.subject))].sort()
-  const availableGrades = [...new Set(standards.map(s => s.grade_level))].sort()
+  const availableSubjects = [...new Set(standards.map(s => s.subject))].filter(Boolean).sort()
+  const availableGrades = [...new Set(standards.map(s => s.grade_level))].filter(Boolean).sort()
 
   return (
     <div className="min-h-screen bg-slate-50 pb-20">
-      {/* Header */}
       <div className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-10 pb-20">
         <div className="max-w-7xl mx-auto">
           <Link href="/admin" className="text-white/80 hover:text-white flex items-center gap-2 mb-6 font-medium">
@@ -193,7 +179,6 @@ export default function AssessmentsPage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 -mt-12">
-        {/* Tabs */}
         <div className="flex gap-4 mb-8">
           <button 
             onClick={() => setCurrentView('results')}
@@ -217,12 +202,12 @@ export default function AssessmentsPage() {
           </button>
         </div>
 
-        {/* Assessment Results View */}
         {currentView === 'results' && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-4">
               {loading ? (
                 <div className="bg-white rounded-3xl p-12 text-center">
+                  <div className="animate-spin h-8 w-8 border-4 border-purple-600 border-t-transparent rounded-full mx-auto mb-4"></div>
                   <div className="text-slate-400 font-bold">Loading assessments...</div>
                 </div>
               ) : assessments.length === 0 ? (
@@ -238,7 +223,6 @@ export default function AssessmentsPage() {
                       <div>
                         <h3 className="text-xl font-black text-slate-900">{assessment.lesson_title}</h3>
                         <p className="text-slate-500 font-medium">{assessment.kid_name} • {assessment.type}</p>
-                        
                         <div className="flex gap-3 mt-4">
                           <button 
                             onClick={() => setManagingStandards(assessment)}
@@ -248,7 +232,6 @@ export default function AssessmentsPage() {
                           </button>
                         </div>
                       </div>
-
                       <div className="text-right">
                         <div className={`text-3xl font-black ${assessment.result ? 'text-emerald-600' : 'text-slate-300'}`}>
                           {assessment.result ? `${assessment.result.auto_score}%` : '--'}
@@ -258,12 +241,8 @@ export default function AssessmentsPage() {
                         </p>
                       </div>
                     </div>
-
                     <div className="mt-6 pt-6 border-t border-slate-50">
-                      <button 
-                        onClick={() => handleDelete(assessment.id)} 
-                        className="text-rose-500 font-bold text-xs hover:bg-rose-50 px-4 py-2 rounded-lg"
-                      >
+                      <button onClick={() => handleDelete(assessment.id)} className="text-rose-500 font-bold text-xs hover:bg-rose-50 px-4 py-2 rounded-lg">
                         Delete
                       </button>
                     </div>
@@ -290,30 +269,23 @@ export default function AssessmentsPage() {
           </div>
         )}
 
-        {/* Standards Tracking View */}
         {currentView === 'standards' && (
           <div className="space-y-6">
-            {/* Action Buttons */}
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => setShowStandardsManager(true)}
                 className="px-6 py-3 bg-slate-600 text-white rounded-xl font-bold hover:bg-slate-700 transition-all flex items-center gap-2"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
                 Manage Standards
               </button>
               <button
                 onClick={() => setShowImporter(true)}
                 className="px-6 py-3 bg-purple-600 text-white rounded-xl font-bold hover:bg-purple-700 transition-all flex items-center gap-2"
               >
-                <span className="text-xl">+</span> Import Standards
+                + Import Standards
               </button>
             </div>
 
-            {/* Filters */}
             <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
@@ -321,29 +293,23 @@ export default function AssessmentsPage() {
                   <select
                     value={filters.subject}
                     onChange={(e) => setFilters({ ...filters, subject: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 font-medium text-slate-900 focus:border-purple-600 focus:ring-2 focus:ring-purple-600/20 outline-none"
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 font-medium text-slate-900 focus:border-purple-600 outline-none"
                   >
                     <option value="">All Subjects</option>
-                    {availableSubjects.map(subject => (
-                      <option key={subject} value={subject}>{subject}</option>
-                    ))}
+                    {availableSubjects.map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
                 </div>
-
                 <div>
                   <label className="block text-xs font-bold text-slate-600 mb-2 uppercase">Grade Level</label>
                   <select
                     value={filters.grade_level}
                     onChange={(e) => setFilters({ ...filters, grade_level: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 font-medium text-slate-900 focus:border-purple-600 focus:ring-2 focus:ring-purple-600/20 outline-none"
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 font-medium text-slate-900 focus:border-purple-600 outline-none"
                   >
                     <option value="">All Grades</option>
-                    {availableGrades.map(grade => (
-                      <option key={grade} value={grade}>Grade {grade}</option>
-                    ))}
+                    {availableGrades.map(g => <option key={g} value={g}>Grade {g}</option>)}
                   </select>
                 </div>
-
                 <div>
                   <label className="block text-xs font-bold text-slate-600 mb-2 uppercase">Search</label>
                   <input
@@ -351,70 +317,31 @@ export default function AssessmentsPage() {
                     value={filters.search}
                     onChange={(e) => setFilters({ ...filters, search: e.target.value })}
                     placeholder="Search standards..."
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 font-medium text-slate-900 placeholder:text-slate-400 focus:border-purple-600 focus:ring-2 focus:ring-purple-600/20 outline-none"
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 font-medium text-slate-900 outline-none focus:border-purple-600"
                   />
                 </div>
               </div>
             </div>
 
-            {/* Standards List */}
             {standardsLoading ? (
-              <div className="bg-white rounded-3xl p-12 text-center">
-                <div className="text-slate-400 font-bold">Loading standards...</div>
-              </div>
-            ) : standards.length === 0 ? (
-              <div className="bg-white rounded-3xl p-12 border border-slate-200 text-center">
-                <div className="text-6xl mb-4">📚</div>
-                <h3 className="text-xl font-black text-slate-900 mb-2">No Standards Found</h3>
-                <p className="text-slate-500 mb-6">
-                  {filters.subject || filters.grade_level || filters.search 
-                    ? "Try adjusting your filters" 
-                    : "You haven't imported any standards yet"}
-                </p>
-                {!filters.subject && !filters.grade_level && !filters.search && (
-                  <button
-                    onClick={() => setShowImporter(true)}
-                    className="px-6 py-3 bg-purple-600 text-white rounded-xl font-bold hover:bg-purple-700 transition-all inline-flex items-center gap-2"
-                  >
-                    <span className="text-xl">+</span> Import Your First Standards
-                  </button>
-                )}
-              </div>
+              <div className="bg-white rounded-3xl p-12 text-center text-slate-400 font-bold">Loading...</div>
             ) : (
               <div className="space-y-3">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="font-black text-slate-900">{standards.length} Standards</h3>
-                </div>
-                
+                <h3 className="font-black text-slate-900">{standards.length} Standards</h3>
                 {standards.map((standard) => (
-                  <div key={standard.id} className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm hover:border-purple-300 transition-all">
-                    <div className="flex justify-between items-start gap-4">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2 flex-wrap">
-                          <span className="px-3 py-1 bg-purple-50 text-purple-600 rounded-lg text-xs font-black">
-                            {standard.standard_code}
-                          </span>
-                          <span className="px-3 py-1 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold">
-                            {standard.subject}
-                          </span>
-                          <span className="px-3 py-1 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold">
-                            Grade {standard.grade_level}
-                          </span>
-                          {standard.customized && (
-                            <span className="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-lg text-xs font-bold">
-                              Custom
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-slate-700 font-medium leading-relaxed">
-                          {standard.description}
-                        </p>
-                        {standard.domain && (
-                          <p className="text-sm text-slate-500 mt-2">
-                            <span className="font-bold">Domain:</span> {standard.domain}
-                          </p>
-                        )}
+                  <div key={standard.id} className="bg-white rounded-3xl p-6 border border-slate-200 flex gap-6">
+                    <div className="flex-shrink-0">
+                      <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-slate-50 border text-xl">
+                        {standard.subject?.toLowerCase().includes('math') ? '🔢' : '📚'}
                       </div>
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-3 flex-wrap">
+                        <span className="px-2 py-1 rounded-lg bg-slate-900 text-white text-[10px] font-black uppercase tracking-wider">{standard.standard_code}</span>
+                        <span className="px-2 py-1 rounded-lg bg-blue-50 text-blue-700 text-[10px] font-black uppercase tracking-wider">{standard.subject}</span>
+                        <span className="px-2 py-1 rounded-lg bg-green-50 text-green-700 text-[10px] font-black uppercase tracking-wider">Grade {standard.grade_level}</span>
+                      </div>
+                      <p className="text-slate-600 font-medium text-lg leading-snug mb2">{standard.description}</p>
                     </div>
                   </div>
                 ))}
@@ -424,7 +351,6 @@ export default function AssessmentsPage() {
         )}
       </div>
 
-      {/* Standards Modal */}
       {managingStandards && (
         <AssessmentStandardsManager
           assessmentId={managingStandards.id}
@@ -434,24 +360,22 @@ export default function AssessmentsPage() {
         />
       )}
 
-      {/* Import Manager Modal */}
       {showImporter && (
         <StandardsImporter
           onClose={() => setShowImporter(false)}
           onImport={() => {
             setShowImporter(false);
-            loadStandards(); // Reload standards after import
+            loadStandards();
           }}
         />
       )}
 
-      {/* Standards Manager Modal */}
       {showStandardsManager && (
         <StandardsManager
           organizationId={organizationId}
           onClose={() => {
             setShowStandardsManager(false);
-            loadStandards(); // Reload standards after changes
+            loadStandards();
           }}
         />
       )}

@@ -32,11 +32,40 @@ export default function PlanningModeDashboard() {
     loadPlanningData();
   }, []);
 
+  
+  const [user, setUser] = useState<any>(null);
+  
   const loadPlanningData = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.push('/login'); return; }
 
+      if (!user) {
+        // 1. Dev Bypass for localhost
+        if (window.location.hostname === 'localhost') {
+          console.warn("🛠️ Dev Bypass: Staying on page");
+          setUser({ id: 'dev-user', email: 'dev@example.com' });
+          
+          // Provide mock data so cards and titles appear during testing
+          setCurrentPeriod({ 
+            id: 'mock-id',
+            period_name: 'Summer Prep 2026', 
+            goals: 'Get organized for the fall!' 
+          });
+          setTasks([
+            { id: '1', task_label: 'Review Curriculum', task_category: 'curriculum', is_completed: false },
+            { id: '2', task_label: 'Set Grading Scale', task_category: 'assessment', is_completed: false }
+          ]);
+          
+          setLoading(false);
+          return;
+        }
+        
+        // 2. Redirect if not on localhost
+        router.push('/'); 
+        return;
+      }
+
+      // Standard Data Fetching
       const { data: periodData } = await supabase
         .from('planning_periods')
         .select('*')
@@ -80,10 +109,29 @@ export default function PlanningModeDashboard() {
   };
 
   const handleSaveGoals = async () => {
-    const { error } = await supabase.from('planning_periods').update({ goals: goalsText }).eq('id', currentPeriod.id);
+    // 1. DEV BYPASS: If we are testing with a mock ID, just update the UI
+    if (currentPeriod?.id === 'mock-id' || currentPeriod?.id === '00000000-0000-0000-0000-000000000000') {
+      console.warn("🛠️ Dev Bypass: Saving goals locally for testing");
+      setIsEditingGoals(false);
+      setCurrentPeriod({ ...currentPeriod, goals: goalsText });
+      setLastSynced(new Date().toLocaleTimeString());
+      return;
+    }
+
+    // 2. REAL DATABASE LOGIC
+    const { error } = await supabase
+      .from('planning_periods')
+      .update({ goals: goalsText })
+      .eq('id', currentPeriod.id);
+
     if (!error) {
       setIsEditingGoals(false);
+      // Ensure the local state is updated so the new text shows up immediately
+      setCurrentPeriod({ ...currentPeriod, goals: goalsText });
       setLastSynced(new Date().toLocaleTimeString());
+    } else {
+      console.error("Error saving goals:", error.message);
+      // Optional: alert the user or show a toast
     }
   };
 
@@ -122,19 +170,19 @@ export default function PlanningModeDashboard() {
   if (loading) return <div className="min-h-screen bg-black flex items-center justify-center text-white">Loading...</div>;
 
   return (
-    <div className="max-w-7xl mx-auto p-6 bg-black min-h-screen text-white">
+    <div className="max-w-7xl mx-auto p-6 bg-gray-50 min-h-screen text-gray-900">
       {/* Mini Header */}
       <div className="flex justify-between items-center mb-4">
         <button onClick={() => router.push('/admin')} className="text-gray-400 text-xs font-bold uppercase tracking-widest hover:text-white transition-all">
           〈 Back to Admin
         </button>
-        <div className="text-[10px] text-gray-500 uppercase tracking-widest bg-white/5 px-3 py-1 rounded-full border border-white/10">
+        <div className="text-[10px] text-gray-600 uppercase tracking-widest bg-gray-200/50 px-3 py-1 rounded-full border border-gray-300">
           Cloud Sync: {lastSynced}
         </div>
       </div>
 
       {/* Hero Banner - Original Height Restored */}
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-8 mb-6 shadow-lg border border-white/10">
+      <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-8 mb-6 shadow-lg border border-white/10 text-white">
         <div className="flex justify-between items-start mb-6">
           <div className="flex-1">
             {isEditingTitle ? (
@@ -142,18 +190,18 @@ export default function PlanningModeDashboard() {
                 value={tempTitle}
                 onChange={(e) => setTempTitle(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleUpdateTitle()}
-                className="bg-white/10 border border-white/20 text-4xl font-bold rounded px-2 outline-none w-full max-w-lg"
+                className="bg-white/10 border border-white/20 text-4xl font-bold rounded px-2 outline-none w-full max-w-lg text-white"
                 autoFocus
                 onBlur={handleUpdateTitle}
               />
             ) : (
-              <h1 onClick={() => setIsEditingTitle(true)} className="text-4xl font-bold mb-2 cursor-pointer hover:opacity-80 flex items-center gap-3">
-                {currentPeriod?.period_name} <span className="text-lg opacity-40">✎</span>
+              <h1 onClick={() => setIsEditingTitle(true)} className="text-4xl font-bold mb-2 cursor-pointer hover:opacity-80 flex items-center gap-3 text-white">
+                {currentPeriod?.period_name} <span className="text-lg opacity-60">✎</span>
               </h1>
             )}
             <p className="text-white/90 text-sm">Summer is prime planning season! Get organized now so you can start strong in the fall.</p>
           </div>
-          <div className="text-right text-sm">
+          <div className="text-right text-sm text-white">
             <div className="font-bold text-lg">29 days remaining</div>
             <div className="opacity-80 tracking-tighter uppercase text-[10px]">1/9/2026 - 2/15/2026</div>
           </div>
@@ -161,9 +209,9 @@ export default function PlanningModeDashboard() {
         <div className="w-full bg-white/20 rounded-full h-2.5 mb-4 overflow-hidden">
           <div className="bg-white h-full transition-all duration-700" style={{ width: `${progressPercent}%` }} />
         </div>
-        <div className="flex justify-between text-[10px] font-black uppercase tracking-widest">
+        <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-white">
           <span>{completedTasks} / {totalTasks} tasks complete ({progressPercent}%)</span>
-          <span className="flex items-center gap-1.5">⏱ ~4 hours remaining</span>
+          <span className="flex items-center gap-1.5 text-white/90">⏱ ~4 hours remaining</span>
         </div>
       </div>
 
