@@ -136,7 +136,15 @@ function DashboardContent() {
 
   // 1. DATA LOADING FUNCTIONS
   const loadKids = async () => {
-    const { data } = await supabase.from('kids').select('*').order('created_at', { ascending: false })
+    const { data, error } = await supabase
+      .from('kids')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      if (error) {
+        console.error('Error loading kids:', error.message)
+        return // Stop the function here if there's an error
+      }
     if (data) {
       setKids(data)
       if (data.length > 0 && !selectedKid) setSelectedKid(data[0].id)
@@ -144,7 +152,17 @@ function DashboardContent() {
   }
 
   const loadAllLessons = async () => {
-    const { data } = await supabase.from('lessons').select('*').order('lesson_date', { ascending: false })
+    const loadAllLessons = async () => {
+      const { data, error } = await supabase
+        .from('lessons')
+        .select('*')
+        .eq('user_id', user.id) // Ensure security here too!
+        .order('lesson_date', { ascending: false })
+    
+      if (error) {
+        console.error('Error loading lessons:', error.message)
+        return
+      }
     if (data) {
       setAllLessons(data)
       const grouped: { [kidId: string]: any[] } = {}
@@ -281,6 +299,7 @@ function DashboardContent() {
     setAddingLesson(true)
     const durationInMinutes = convertDurationToMinutes(lessonDurationValue, lessonDurationUnit);
     const { error } = await supabase.from('lessons').insert([{
+      user_id: user.id,
       kid_id: selectedKid,
       subject: lessonSubject,
       title: lessonTitle,
@@ -555,7 +574,7 @@ function DashboardContent() {
       confirmMessage = `This lesson has ${lesson.duration_minutes} minutes (${hours} hours) of tracked time.\n\nDeleting this lesson will remove these hours from your total.\n\nAre you sure you want to delete it?`
     }
     if (confirm(confirmMessage)) {
-      await supabase.from('lessons').delete().eq('id', id)
+      await supabase.from('lessons').delete().eq('id', id).eq('user_id', user.id)
       await loadAllLessons()
     }
   }
@@ -565,6 +584,7 @@ function DashboardContent() {
     const targetChild = kids.find(k => k.id === copyTargetChildId)
     if (!targetChild) return
     const { error } = await supabase.from('lessons').insert([{
+      user_id: user.id,
       kid_id: copyTargetChildId,
       subject: selectedLesson.subject,
       title: selectedLesson.title,
