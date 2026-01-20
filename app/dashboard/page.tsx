@@ -1009,7 +1009,8 @@ const getUser = async () => {
         if (data.id) {
           // UPDATE EXISTING KID
           const updateData: any = {
-            user_id: user.id,  
+            user_id: user.id,
+            organization_id: user.id,  // ← ADDED
             firstname: data.firstname,
             lastname: data.lastname,
             displayname: data.displayname || data.firstname,
@@ -1070,7 +1071,8 @@ const getUser = async () => {
         } else {
           // CREATE NEW KID
           const { data: newKid, error } = await supabase.from('kids').insert([{
-            user_id: user.id,  
+            user_id: user.id,
+            organization_id: user.id,  // ← ADDED
             firstname: data.firstname,
             lastname: data.lastname,
             displayname: data.displayname || data.firstname,
@@ -1122,7 +1124,7 @@ const getUser = async () => {
               proficiency: sp.proficiency,
               notes: sp.notes || ''
             }))
-            const { error: profError } = await supabase  // ← FIX: Capture the error
+            const { error: profError } = await supabase
               .from('subject_proficiency')
               .insert(proficienciesToInsert)
             
@@ -1146,7 +1148,7 @@ const getUser = async () => {
         console.error('❌ Unexpected error saving kid profile:', err)
         alert('An unexpected error occurred. Please try again.')
       }
-    }} 
+    }}
     onCancel={() => { 
       setShowProfileForm(false); 
       setEditingKid(null) 
