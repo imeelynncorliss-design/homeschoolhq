@@ -6,18 +6,19 @@ import { supabase } from '@/lib/supabase'
 interface AttendanceReminderProps {
   onTakeAttendance: () => void
   kids: any[]
+  organizationId: string
 }
 
-export default function AttendanceReminder({ onTakeAttendance, kids }: AttendanceReminderProps) {
+export default function AttendanceReminder({ onTakeAttendance, kids, organizationId }: AttendanceReminderProps) {
   const [showReminder, setShowReminder] = useState(false)
   const [isChecking, setIsChecking] = useState(true)
 
   useEffect(() => {
     checkIfShouldShowReminder()
-  }, [kids])
+  }, [kids, organizationId])
 
   const checkIfShouldShowReminder = async () => {
-    if (kids.length === 0) {
+    if (kids.length === 0 || !organizationId) {
       setIsChecking(false)
       return
     }
@@ -40,12 +41,12 @@ export default function AttendanceReminder({ onTakeAttendance, kids }: Attendanc
       return
     }
 
-    // Check if attendance has been marked today for any kid
+    // Check if attendance has been marked today for this organization
     const { data: attendanceRecords } = await supabase
-      .from('attendance')
+      .from('daily_attendance')
       .select('*')
-      .gte('date', today)
-      .lte('date', today)
+      .eq('organization_id', organizationId)
+      .eq('attendance_date', today)
 
     const hasMarkedAttendance = attendanceRecords && attendanceRecords.length > 0
 

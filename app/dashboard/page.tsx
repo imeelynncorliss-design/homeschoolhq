@@ -603,7 +603,11 @@ const getUser = async () => {
   }
 
   if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>
-
+  
+  if (!user) {
+    router.push('/')
+    return <div className="min-h-screen flex items-center justify-center">Redirecting...</div>
+  }
   return (
     <div className="min-h-screen bg-gray-50 p-8">
   
