@@ -1,4 +1,4 @@
-// SubjectPacingManager.tsx - Component for managing subject-level proficiency
+// SubjectPacingManager.tsx
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -6,238 +6,257 @@ import { useState, useEffect } from 'react'
 interface SubjectProficiency {
   id?: string
   subject: string
-  proficiency: 'emerging' | 'proficient' | 'deep_dive'
+  proficiency: 'needs_time' | 'standard' | 'mastery'
   notes: string
 }
 
 interface SubjectPacingManagerProps {
   kidId?: string
-  initialSubjects?: SubjectProficiency[]
+  initialSubjects: SubjectProficiency[]
   onChange: (subjects: SubjectProficiency[]) => void
 }
 
-const COMMON_SUBJECTS = [
-  'Reading',
-  'Math',
-  'Science',
-  'Writing',
-  'Social Studies',
-  'Spelling',
-  'Grammar',
-  'History',
-  'Geography',
-  'Art',
-  'Music',
-  'Physical Education'
-]
+const CORE_SUBJECTS = ['Reading/Writing', 'Math', 'Science', 'History']
 
-const PROFICIENCY_CONFIG = {
-  emerging: {
-    label: 'Emerging',
-    color: 'text-red-600',
-    bgColor: 'bg-red-50',
-    borderColor: 'border-red-200',
-    description: 'Needs support and foundational work'
-  },
-  proficient: {
-    label: 'Proficient',
-    color: 'text-green-600',
-    bgColor: 'bg-green-50',
-    borderColor: 'border-green-200',
-    description: 'On track, standard pace'
-  },
-  deep_dive: {
-    label: 'Deep Dive',
-    color: 'text-orange-600',
-    bgColor: 'bg-orange-50',
-    borderColor: 'border-orange-200',
-    description: 'Needs time/repetition for mastery'
-  }
-}
-
-export default function SubjectPacingManager({ kidId, initialSubjects = [], onChange }: SubjectPacingManagerProps) {
-  const [subjects, setSubjects] = useState<SubjectProficiency[]>(initialSubjects)
+export default function SubjectPacingManager({ 
+  kidId, 
+  initialSubjects, 
+  onChange 
+}: SubjectPacingManagerProps) {
+  const [subjects, setSubjects] = useState<SubjectProficiency[]>([])
+  const [isInitialized, setIsInitialized] = useState(false)
+  const [newSubjectName, setNewSubjectName] = useState('')
   const [showAddSubject, setShowAddSubject] = useState(false)
-  const [newSubject, setNewSubject] = useState('')
-  const [customSubject, setCustomSubject] = useState('')
 
+  // Initialize subjects once
   useEffect(() => {
-    onChange(subjects)
-  }, [subjects])
-
-  const addSubject = () => {
-    const subjectName = newSubject === 'custom' ? customSubject : newSubject
+    if (isInitialized) return
     
-    if (!subjectName || subjects.some(s => s.subject === subjectName)) {
-      return
+    const existingSubjectNames = initialSubjects.map(s => s.subject)
+    const missingCoreSubjects = CORE_SUBJECTS
+      .filter(core => !existingSubjectNames.includes(core))
+      .map(subject => ({
+        subject,
+        proficiency: 'standard' as const,
+        notes: ''
+      }))
+    
+    const allSubjects = [...initialSubjects, ...missingCoreSubjects]
+      .sort((a, b) => {
+        const aIsCore = CORE_SUBJECTS.includes(a.subject)
+        const bIsCore = CORE_SUBJECTS.includes(b.subject)
+        
+        if (aIsCore && !bIsCore) return -1
+        if (!aIsCore && bIsCore) return 1
+        
+        if (aIsCore && bIsCore) {
+          return CORE_SUBJECTS.indexOf(a.subject) - CORE_SUBJECTS.indexOf(b.subject)
+        }
+        
+        return a.subject.localeCompare(b.subject)
+      })
+    
+    setSubjects(allSubjects)
+    setIsInitialized(true)
+  }, [initialSubjects, isInitialized])
+
+  // Notify parent of changes (but not during initialization)
+  useEffect(() => {
+    if (isInitialized && subjects.length > 0) {
+      onChange(subjects)
     }
+  }, [subjects, isInitialized])
 
-    setSubjects([...subjects, {
-      subject: subjectName,
-      proficiency: 'proficient',
+  const updateSubject = (index: number, field: keyof SubjectProficiency, value: any) => {
+    setSubjects(prev => {
+      const updated = [...prev]
+      updated[index] = { ...updated[index], [field]: value }
+      return updated
+    })
+  }
+
+  const addCustomSubject = () => {
+    if (!newSubjectName.trim()) return
+    
+    const newSubject: SubjectProficiency = {
+      subject: newSubjectName.trim(),
+      proficiency: 'standard',
       notes: ''
-    }])
-
-    setNewSubject('')
-    setCustomSubject('')
+    }
+    
+    setSubjects(prev => [...prev, newSubject])
+    setNewSubjectName('')
     setShowAddSubject(false)
   }
 
-  const updateSubject = (index: number, field: keyof SubjectProficiency, value: string) => {
-    const updated = [...subjects]
-    updated[index] = { ...updated[index], [field]: value as any }
-    setSubjects(updated)
-  }
-
   const removeSubject = (index: number) => {
-    setSubjects(subjects.filter((_, i) => i !== index))
+    const subject = subjects[index]
+    if (CORE_SUBJECTS.includes(subject.subject)) {
+      alert('Cannot remove core subjects. You can set them to "Standard" if not currently focusing on them.')
+      return
+    }
+    
+    setSubjects(prev => prev.filter((_, i) => i !== index))
   }
 
-  const availableSubjects = COMMON_SUBJECTS.filter(
-    s => !subjects.some(sub => sub.subject === s)
-  )
+  const getPaceColor = (pace: string) => {
+    switch (pace) {
+      case 'needs_time': return 'bg-orange-100 border-orange-300'
+      case 'standard': return 'bg-blue-100 border-blue-300'
+      case 'mastery': return 'bg-green-100 border-green-300'
+      default: return 'bg-gray-100 border-gray-300'
+    }
+  }
+
+  if (!isInitialized) {
+    return <div className="text-center py-8 text-gray-500">Loading subjects...</div>
+  }
 
   return (
     <div className="space-y-4">
-      {/* Info Banner */}
-      <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-        <p className="text-sm text-purple-900">
-          <span className="font-semibold">📊 Subject Pacing:</span> Track how your student learns in each subject. This helps AI generate appropriately-paced lessons.
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <p className="text-sm text-blue-900">
+          <span className="font-semibold">📚 Subject Pacing:</span> Track how each student progresses through different subjects. This helps personalize their learning path.
         </p>
       </div>
 
-      {/* Subjects List */}
-      {subjects.length === 0 ? (
-        <div className="text-center py-8 text-gray-500">
-          <svg className="w-16 h-16 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-          </svg>
-          <p className="font-medium mb-1">No subjects added yet</p>
-          <p className="text-sm">Add subjects to track learning pace and proficiency</p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {subjects.map((subject, index) => {
-            const config = PROFICIENCY_CONFIG[subject.proficiency]
-            
-            return (
-              <div key={index} className={`border-2 ${config.borderColor} rounded-lg p-4 ${config.bgColor}`}>
-                <div className="flex items-start justify-between gap-4 mb-3">
-                  <div className="flex-1">
-                    <h4 className="font-bold text-gray-900 text-lg mb-1">{subject.subject}</h4>
+      {/* Core Subjects */}
+      <div className="space-y-3">
+        {subjects.map((subject, index) => {
+          const isCore = CORE_SUBJECTS.includes(subject.subject)
+          
+          return (
+            <div 
+              key={`${subject.subject}-${index}`}
+              className={`border-2 rounded-lg p-4 ${getPaceColor(subject.proficiency)}`}
+            >
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3">
+                    {isCore ? (
+                      <div className="font-semibold text-gray-900 min-w-[140px]">
+                        {subject.subject}
+                      </div>
+                    ) : (
+                      <div className="font-semibold text-gray-900 min-w-[140px] flex items-center gap-2">
+                        <span>{subject.subject}</span>
+                        <span className="text-xs bg-purple-200 text-purple-800 px-2 py-0.5 rounded">
+                          Custom
+                        </span>
+                      </div>
+                    )}
+                    
                     <select
                       value={subject.proficiency}
                       onChange={(e) => updateSubject(index, 'proficiency', e.target.value)}
-                      className={`w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 font-medium ${config.color}`}
+                      className="px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 bg-white font-medium"
                     >
-                      <option value="emerging">Emerging - Needs support</option>
-                      <option value="proficient">Proficient - On track</option>
-                      <option value="deep_dive">Deep Dive - Needs time/mastery</option>
+                      <option value="needs_time">🐢 Needs Time</option>
+                      <option value="standard">📖 Standard</option>
+                      <option value="mastery">🚀 Mastery</option>
                     </select>
                   </div>
+                  
+                  {/* Optional Notes */}
+                  <div className="mt-2">
+                    <input
+                      type="text"
+                      value={subject.notes}
+                      onChange={(e) => updateSubject(index, 'notes', e.target.value)}
+                      placeholder="Optional notes (e.g., 'Working on multiplication', 'Loves reading fantasy')..."
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-200 text-gray-700 bg-white"
+                    />
+                  </div>
+                </div>
 
+                {!isCore && (
                   <button
                     type="button"
                     onClick={() => removeSubject(index)}
-                    className="text-red-600 hover:text-red-700 p-2 hover:bg-red-100 rounded-lg transition-colors"
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50 p-2 rounded-lg transition-colors"
                     title="Remove subject"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </button>
-                </div>
-
-                {/* Notes field - show for non-proficient subjects */}
-                {subject.proficiency !== 'proficient' && (
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-900 mb-2">
-                      Why the extra {subject.proficiency === 'emerging' ? 'support' : 'time'}?
-                    </label>
-                    <textarea
-                      value={subject.notes}
-                      onChange={(e) => updateSubject(index, 'notes', e.target.value)}
-                      className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900"
-                      rows={2}
-                      placeholder={
-                        subject.proficiency === 'emerging' 
-                          ? "e.g., Still learning letter sounds, needs phonics support"
-                          : "e.g., Needs time/repetition with 'regrouping' concepts"
-                      }
-                    />
-                  </div>
                 )}
-
-                {/* Show description for proficiency level */}
-                <p className="text-xs text-gray-600 mt-2 italic">
-                  {config.description}
-                </p>
               </div>
-            )
-          })}
-        </div>
-      )}
+            </div>
+          )
+        })}
+      </div>
 
-      {/* Add Subject Section */}
-      {showAddSubject ? (
-        <div className="border-2 border-blue-300 rounded-lg p-4 bg-blue-50">
-          <h4 className="font-semibold text-gray-900 mb-3">Add Subject</h4>
-          
-          <div className="space-y-3">
-            <select
-              value={newSubject}
-              onChange={(e) => setNewSubject(e.target.value)}
-              className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900"
-            >
-              <option value="">Select a subject...</option>
-              {availableSubjects.map(subject => (
-                <option key={subject} value={subject}>{subject}</option>
-              ))}
-              <option value="custom">+ Custom Subject</option>
-            </select>
-
-            {newSubject === 'custom' && (
+      {/* Add Custom Subject */}
+      <div className="pt-4 border-t-2 border-gray-200">
+        {!showAddSubject ? (
+          <button
+            type="button"
+            onClick={() => setShowAddSubject(true)}
+            className="w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 transition-colors font-medium"
+          >
+            + Add Custom Subject
+          </button>
+        ) : (
+          <div className="bg-white border-2 border-blue-300 rounded-lg p-4">
+            <label className="block text-sm font-semibold text-gray-900 mb-2">
+              Subject Name
+            </label>
+            <div className="flex gap-2">
               <input
                 type="text"
-                value={customSubject}
-                onChange={(e) => setCustomSubject(e.target.value)}
-                className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900"
-                placeholder="Enter custom subject name"
+                value={newSubjectName}
+                onChange={(e) => setNewSubjectName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    addCustomSubject()
+                  }
+                }}
+                placeholder="e.g., Art, Music, Foreign Language..."
+                className="flex-1 px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900"
+                autoFocus
               />
-            )}
-
-            <div className="flex gap-2">
               <button
                 type="button"
-                onClick={addSubject}
-                disabled={!newSubject || (newSubject === 'custom' && !customSubject)}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium"
+                onClick={addCustomSubject}
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
               >
-                Add Subject
+                Add
               </button>
               <button
                 type="button"
                 onClick={() => {
                   setShowAddSubject(false)
-                  setNewSubject('')
-                  setCustomSubject('')
+                  setNewSubjectName('')
                 }}
-                className="flex-1 px-4 py-2 border-2 border-gray-300 text-gray-900 rounded-lg hover:bg-gray-100 font-medium"
+                className="px-4 py-2 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100"
               >
                 Cancel
               </button>
             </div>
           </div>
+        )}
+      </div>
+
+      {/* Legend */}
+      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+        <p className="text-xs font-semibold text-gray-700 mb-2">Pacing Guide:</p>
+        <div className="grid grid-cols-3 gap-3 text-xs">
+          <div className="flex items-center gap-2">
+            <span>🐢</span>
+            <span className="text-gray-700"><strong>Needs Time:</strong> Requires more practice and repetition</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span>📖</span>
+            <span className="text-gray-700"><strong>Standard:</strong> Progressing at expected pace</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span>🚀</span>
+            <span className="text-gray-700"><strong>Mastery:</strong> Grasps concepts quickly, ready for more</span>
+          </div>
         </div>
-      ) : (
-        <button
-          type="button"
-          onClick={() => setShowAddSubject(true)}
-          className="w-full px-4 py-3 border-2 border-dashed border-gray-300 text-gray-600 rounded-lg hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 transition-colors font-medium"
-        >
-          + Add Subject
-        </button>
-      )}
+      </div>
     </div>
   )
 }

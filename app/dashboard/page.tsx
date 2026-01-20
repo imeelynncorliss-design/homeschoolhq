@@ -176,27 +176,21 @@ function DashboardContent() {
     }
   };
 
-  // 2. AUTH CHECK WITH LOCALHOST BYPASS
-  const checkUser = async () => {
-    const { data: { user } } = await supabase.auth.getUser()
-    
-    if (!user) {
-      if (window.location.hostname === 'localhost') {
-        console.warn("🛠️ Dashboard Dev Bypass");
-        setUser({ id: 'dev-user', email: 'dev@example.com' });
-        await loadKids(); 
-        setLoading(false); 
-        return; 
-      } else {
-        router.push('/');
-        return;
-      }
-    } else {
-      setUser(user);
-      await loadKids();
-    }
-    setLoading(false);
+// Simplified - AuthGuard already verified auth, just get the user
+const getUser = async () => {
+  const { data: { user } } = await supabase.auth.getUser()
+  
+  // If no real user, must be in dev mode (AuthGuard already let us through)
+  if (!user && typeof window !== 'undefined' && localStorage.getItem('dev_mode') === 'true') {
+    setUser({ 
+      id: 'd52497c0-42a9-49b7-ba3b-849bffa27fc4', // Your real org_id
+      email: 'dev@homeschoolhq.com' 
+    })
+  } else if (user) {
+    setUser(user)
   }
+  setLoading(false)
+}
 
   const checkUserTier = async () => {
     if (!user) return
@@ -204,12 +198,12 @@ function DashboardContent() {
   } 
 
   // 3. EFFECTS
-  useEffect(() => { checkUser() }, [])
+  useEffect(() => { getUser() }, [])
   useEffect(() => { if (kids.length > 0) loadAllLessons() }, [kids])
   useEffect(() => { if (user) checkUserTier() }, [user])
 
   useEffect(() => {
-    if (!user || user.id === 'dev-user') return; // Don't fetch settings for mock user
+    if (!user ) return; // Don't fetch settings for mock user
     
     let mounted = true
     const loadSettings = async () => {
@@ -220,7 +214,7 @@ function DashboardContent() {
           .eq('user_id', user.id)
           .maybeSingle()
         
-        if (settingsError && window.location.hostname !== 'localhost') {
+        if (settingsError) {
           console.error('Settings error:', settingsError.message)
           return
         }
@@ -612,14 +606,6 @@ function DashboardContent() {
 
   return (
     <div className="min-h-screen bg-gray-50 p-8">
-      {/* Dev Warning Banner */}
-      {user?.id === 'dev-user' && (
-        <div className="bg-yellow-100 border-l-4 border-yellow-500 p-4 mb-4">
-          <p className="text-yellow-700 font-bold">
-            ⚠️ DEV BYPASS ACTIVE: You are seeing mock data or RLS is disabled.
-          </p>
-        </div>
-      )}
   
       <div className="max-w-7xl mx-auto">
         {/* Header Section with Quick Tips Toggle */}
@@ -675,7 +661,7 @@ function DashboardContent() {
                   <p className="text-sm text-purple-800 leading-relaxed">
                     <strong>Auto-Schedule:</strong> Bulk assign dates to lessons<br/>
                     <strong>AI Generate:</strong> Create supplemental lessons instantly<br/>
-                    <strong>Import:</strong> Upload curriculum from PDFs/docs
+                    <strong>Import:</strong> Upload curriculum from PDFs
                   </p>
                 </div>
 

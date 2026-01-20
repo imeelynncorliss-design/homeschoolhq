@@ -8,7 +8,7 @@ import { supabase } from '@/lib/supabase'
 interface SubjectProficiency {
   id?: string
   subject: string
-  proficiency: 'emerging' | 'proficient' | 'deep_dive'
+  proficiency: 'needs_time' | 'standard' | 'mastery'  // Updated from 'emerging' | 'proficient' | 'mastery'
   notes: string
 }
 
