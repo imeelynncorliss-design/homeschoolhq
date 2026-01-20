@@ -152,7 +152,6 @@ function DashboardContent() {
   }
 
   const loadAllLessons = async () => {
-    const loadAllLessons = async () => {
       const { data, error } = await supabase
         .from('lessons')
         .select('*')
@@ -621,6 +620,7 @@ function DashboardContent() {
           </p>
       </div>
     )}
+  
       <div className="max-w-7xl mx-auto">
         {/* Header Section with Quick Tips Toggle */}
         <div className="bg-white rounded-lg shadow p-6 mb-6">
@@ -1180,5 +1180,5 @@ export default function DashboardPage() {
         <DashboardContent />
       </Suspense>
     </AuthGuard>
-  )
+  ):
 }
