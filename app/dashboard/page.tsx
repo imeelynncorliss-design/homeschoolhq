@@ -1002,92 +1002,157 @@ const getUser = async () => {
       
       {/* Modals */}
       {showProfileForm && (
-        <KidProfileForm 
-          kid={editingKid || undefined} 
-          onSave={async (data) => {
-            if (data.id) {
-              const updateData: any = {
-                firstname: data.firstname,
-                lastname: data.lastname,
-                displayname: data.displayname || data.firstname,
-                age: data.age,
-                grade: data.grade,
-                learning_style: data.learning_style,
-                pace_of_learning: data.pace_of_learning,
-                environmental_needs: data.environmental_needs,
-                current_hook: data.current_hook,
-                todays_vibe: data.todays_vibe,
-                current_focus: data.current_focus
-              }
-              if (data.photoFile) {
-                const fileExt = data.photoFile.name.split('.').pop()
-                const fileName = `${data.id}/${Date.now()}.${fileExt}`
-                const { error: uploadError } = await supabase.storage.from('child-photos').upload(fileName, data.photoFile)
-                if (!uploadError) {
-                  const { data: { publicUrl } } = supabase.storage.from('child-photos').getPublicUrl(fileName)
-                  updateData.photo_url = publicUrl
-                }
-              }
-              await supabase.from('kids').update(updateData).eq('id', data.id)
-              if (data.subject_proficiencies?.length > 0) {
-                await supabase.from('subject_proficiency').delete().eq('kid_id', data.id)
-                const proficienciesToInsert = data.subject_proficiencies.map((sp: any) => ({
-                  kid_id: data.id,
-                  subject: sp.subject,
-                  proficiency: sp.proficiency,
-                  notes: sp.notes || ''
-                }))
-                await supabase.from('subject_proficiency').insert(proficienciesToInsert)
-              }
+  <KidProfileForm 
+    kid={editingKid || undefined} 
+    onSave={async (data) => {
+      try {
+        if (data.id) {
+          // UPDATE EXISTING KID
+          const updateData: any = {
+            user_id: user.id,  
+            firstname: data.firstname,
+            lastname: data.lastname,
+            displayname: data.displayname || data.firstname,
+            age: data.age,
+            grade: data.grade,
+            learning_style: data.learning_style,
+            pace_of_learning: data.pace_of_learning,
+            environmental_needs: data.environmental_needs,
+            current_hook: data.current_hook,
+            todays_vibe: data.todays_vibe,
+            current_focus: data.current_focus
+          }
+          
+          if (data.photoFile) {
+            const fileExt = data.photoFile.name.split('.').pop()
+            const fileName = `${data.id}/${Date.now()}.${fileExt}`
+            const { error: uploadError } = await supabase.storage
+              .from('child-photos')
+              .upload(fileName, data.photoFile)
+            
+            if (!uploadError) {
+              const { data: { publicUrl } } = supabase.storage
+                .from('child-photos')
+                .getPublicUrl(fileName)
+              updateData.photo_url = publicUrl
             } else {
-              const { data: newKid, error } = await supabase.from('kids').insert([{
-                firstname: data.firstname,
-                lastname: data.lastname,
-                displayname: data.displayname || data.firstname,
-                age: data.age,
-                grade: data.grade,
-                learning_style: data.learning_style,
-                pace_of_learning: data.pace_of_learning,
-                environmental_needs: data.environmental_needs,
-                current_hook: data.current_hook,
-                todays_vibe: data.todays_vibe,
-                current_focus: data.current_focus
-              }]).select()
-              if (!error && newKid?.length > 0) {
-                const newKidId = newKid[0].id
-                if (data.photoFile) {
-                  const fileExt = data.photoFile.name.split('.').pop()
-                  const fileName = `${newKidId}/${Date.now()}.${fileExt}`
-                  const { error: uploadError } = await supabase.storage.from('child-photos').upload(fileName, data.photoFile)
-                  if (!uploadError) {
-                    const { data: { publicUrl } } = supabase.storage.from('child-photos').getPublicUrl(fileName)
-                    await supabase.from('kids').update({ photo_url: publicUrl }).eq('id', newKidId)
-                  }
-                }
-                if (data.subject_proficiencies?.length > 0) {
-                  const proficienciesToInsert = data.subject_proficiencies.map((sp: any) => ({
-                    kid_id: newKidId,
-                    subject: sp.subject,
-                    proficiency: sp.proficiency,
-                    notes: sp.notes || ''
-                  }))
-                  await supabase.from('subject_proficiency').insert(proficienciesToInsert)
-                }
-              }
+              console.error('Photo upload error:', uploadError)
             }
-            loadKids()
-            setShowProfileForm(false)
-            setEditingKid(null)
-            if (data.id) {
-              setSelectedKid(data.id)
+          }
+          
+          const { error: updateError } = await supabase
+            .from('kids')
+            .update(updateData)
+            .eq('id', data.id)
+          
+          if (updateError) {
+            console.error('Error updating kid:', updateError)
+            alert('Error updating child: ' + updateError.message)
+            return
+          }
+          
+          if (data.subject_proficiencies?.length > 0) {
+            await supabase.from('subject_proficiency').delete().eq('kid_id', data.id)
+            const proficienciesToInsert = data.subject_proficiencies.map((sp: any) => ({
+              kid_id: data.id,
+              subject: sp.subject,
+              proficiency: sp.proficiency,
+              notes: sp.notes || ''
+            }))
+            const { error: profError } = await supabase
+              .from('subject_proficiency')
+              .insert(proficienciesToInsert)
+            
+            if (profError) {
+              console.error('Error saving subject proficiencies:', profError)
             }
-          }} 
-          onCancel={() => { 
-            setShowProfileForm(false); 
-            setEditingKid(null) 
-          }} 
-        />
-      )}
+          }
+        } else {
+          // CREATE NEW KID
+          const { data: newKid, error } = await supabase.from('kids').insert([{
+            user_id: user.id,  
+            firstname: data.firstname,
+            lastname: data.lastname,
+            displayname: data.displayname || data.firstname,
+            age: data.age,
+            grade: data.grade,
+            learning_style: data.learning_style,
+            pace_of_learning: data.pace_of_learning,
+            environmental_needs: data.environmental_needs,
+            current_hook: data.current_hook,
+            todays_vibe: data.todays_vibe,
+            current_focus: data.current_focus
+          }]).select()
+          
+          if (error) {
+            console.error('Error creating kid:', error)
+            alert('Error creating child: ' + error.message)
+            return
+          }
+          
+          if (!newKid || newKid.length === 0) {
+            alert('Error: Child was not created. Please try again.')
+            return
+          }
+          
+          const newKidId = newKid[0].id
+          console.log('✅ New kid created with ID:', newKidId)
+          
+          if (data.photoFile) {
+            const fileExt = data.photoFile.name.split('.').pop()
+            const fileName = `${newKidId}/${Date.now()}.${fileExt}`
+            const { error: uploadError } = await supabase.storage
+              .from('child-photos')
+              .upload(fileName, data.photoFile)
+            
+            if (!uploadError) {
+              const { data: { publicUrl } } = supabase.storage
+                .from('child-photos')
+                .getPublicUrl(fileName)
+              await supabase.from('kids').update({ photo_url: publicUrl }).eq('id', newKidId)
+            } else {
+              console.error('Photo upload error:', uploadError)
+            }
+          }
+          
+          if (data.subject_proficiencies?.length > 0) {
+            const proficienciesToInsert = data.subject_proficiencies.map((sp: any) => ({
+              kid_id: newKidId,
+              subject: sp.subject,
+              proficiency: sp.proficiency,
+              notes: sp.notes || ''
+            }))
+            const { error: profError } = await supabase  // ← FIX: Capture the error
+              .from('subject_proficiency')
+              .insert(proficienciesToInsert)
+            
+            if (profError) {
+              console.error('Error saving subject proficiencies:', profError)
+            }
+          }
+        }
+        
+        // Reload kids list
+        console.log('🔄 Reloading kids list...')
+        await loadKids()
+        
+        setShowProfileForm(false)
+        setEditingKid(null)
+        
+        if (data.id) {
+          setSelectedKid(data.id)
+        }
+      } catch (err) {
+        console.error('❌ Unexpected error saving kid profile:', err)
+        alert('An unexpected error occurred. Please try again.')
+      }
+    }} 
+    onCancel={() => { 
+      setShowProfileForm(false); 
+      setEditingKid(null) 
+    }} 
+  />
+)}
 
       {showAutoSchedule && selectedKid && (
         <AutoScheduleModal
