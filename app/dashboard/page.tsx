@@ -730,6 +730,7 @@ const getUser = async () => {
             }, 500)
           }}
           kids={kids}
+          organizationId={user.id}
         />
 
         <div className="flex gap-8 mb-8">
