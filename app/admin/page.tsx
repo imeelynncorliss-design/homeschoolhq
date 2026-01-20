@@ -239,7 +239,7 @@ function AdminContent() {
               {activeTab === 'progress' && <ProgressDashboard userId={user.id} />}
               {activeTab === 'vacation' && <EnhancedVacationManager organizationId="d52497c0-42a9-49b7-ba3b-849bffa27fc4" />}
               {activeTab === 'bulk-schedule' && <BulkLessonScheduler userId={user.id} />}
-              {activeTab === 'attendance' && <AttendanceTracker kids={kids} />}
+              {activeTab === 'attendance' && <AttendanceTracker kids={kids} organizationId={user.id} />}
             </div>
           </div>
         )}

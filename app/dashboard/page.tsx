@@ -180,13 +180,14 @@ function DashboardContent() {
 const getUser = async () => {
   const { data: { user } } = await supabase.auth.getUser()
   
-  // If no real user, must be in dev mode (AuthGuard already let us through)
-  if (!user && typeof window !== 'undefined' && localStorage.getItem('dev_mode') === 'true') {
-    setUser({ 
-      id: 'd52497c0-42a9-49b7-ba3b-849bffa27fc4', // Your real org_id
+  // If AuthGuard let us through but there's no real user, we must be in dev mode
+  if (!user) {
+    const devUser = { 
+      id: 'd52497c0-42a9-49b7-ba3b-849bffa27fc4',
       email: 'dev@homeschoolhq.com' 
-    })
-  } else if (user) {
+    }
+    setUser(devUser)
+  } else {
     setUser(user)
   }
   setLoading(false)
@@ -203,6 +204,9 @@ const getUser = async () => {
   useEffect(() => { if (user) checkUserTier() }, [user])
 
   useEffect(() => {
+    if (user) {
+      loadKids()
+    }
     if (!user ) return; // Don't fetch settings for mock user
     
     let mounted = true
