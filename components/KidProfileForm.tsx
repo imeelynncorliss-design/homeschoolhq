@@ -355,10 +355,10 @@ export default function KidProfileForm({ kid, onSave, onCancel }: KidProfileForm
                     className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900"
                   >
                     <option value="">Select pace...</option>
-                    <option value="accelerated">Accelerated (moves quickly, grasps concepts fast)</option>
+                    <option value="foundational">Foundational(master basics before advancing)</option>
                     <option value="standard">Standard (steady, consistent progress)</option>
-                    <option value="deep_dive">Deep Dive (needs time/repetition, prefers mastery)</option>
-                    <option value="variable">Variable (depends on subject/interest)</option>
+                    <option value="adaptive">Adaptive (pace adjusts by subject or interest)</option>
+                    <option value="accelerated">Accelerated (moves quickly, grasps concepts fast)</option>
                   </select>
                 </div>
 
