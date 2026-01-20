@@ -136,6 +136,7 @@ function DashboardContent() {
 
   // 1. DATA LOADING FUNCTIONS
   const loadKids = async () => {
+    if (!user) return;
     const { data, error } = await supabase
       .from('kids')
       .select('*')
