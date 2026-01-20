@@ -152,6 +152,8 @@ function DashboardContent() {
   }
 
   const loadAllLessons = async () => {
+    // Ensure we check if user exists first
+    if (!user) return;
       const { data, error } = await supabase
         .from('lessons')
         .select('*')
@@ -171,7 +173,7 @@ function DashboardContent() {
       })
       setLessonsByKid(grouped)
     }
-  }
+  };
 
   // 2. AUTH CHECK WITH LOCALHOST BYPASS
   const checkUser = async () => {
@@ -1180,5 +1182,5 @@ export default function DashboardPage() {
         <DashboardContent />
       </Suspense>
     </AuthGuard>
-  ):
+  )
 }
