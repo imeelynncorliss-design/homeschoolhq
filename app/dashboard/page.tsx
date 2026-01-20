@@ -243,9 +243,6 @@ function DashboardContent() {
     return () => { mounted = false }
   }, [user])
 
-  // Rest of your functions (addLesson, deleteKid, etc.) would follow here...
-  // For brevity, I'll stop here to ensure the core logic is clear and correct.
-
   useEffect(() => {
     const loadLessonAssessmentScore = async () => {
       if (!selectedLesson) {
@@ -621,8 +618,8 @@ function DashboardContent() {
           <p className="text-yellow-700 font-bold">
             ⚠️ DEV BYPASS ACTIVE: You are seeing mock data or RLS is disabled.
           </p>
-      </div>
-    )}
+        </div>
+      )}
   
       <div className="max-w-7xl mx-auto">
         {/* Header Section with Quick Tips Toggle */}
@@ -646,7 +643,7 @@ function DashboardContent() {
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
               >
-                {showHelp ? '✕ Hide Tips' : '💡 Quick Tips'}
+                {showHelp ? '✕ Hide Tips' : '💡 How To'}
               </button>
               <button onClick={() => router.push('/admin')} className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium">⚙️ Admin</button>
               <button onClick={() => router.push('/social')} className="px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 font-medium">🤝 Social Hub</button>
@@ -657,7 +654,7 @@ function DashboardContent() {
           {/* Help Panel - Collapsible */}
           {showHelp && (
             <div className="mt-4 pt-4 border-t border-gray-100 animate-in fade-in slide-in-from-top-4 duration-300">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border border-blue-200">
                   <h3 className="font-bold text-blue-900 mb-2 flex items-center gap-2">
                     <span className="text-xl">🎯</span>
@@ -677,7 +674,7 @@ function DashboardContent() {
                   </h3>
                   <p className="text-sm text-purple-800 leading-relaxed">
                     <strong>Auto-Schedule:</strong> Bulk assign dates to lessons<br/>
-                    <strong>AI Generate:</strong> Create custom lessons instantly<br/>
+                    <strong>AI Generate:</strong> Create supplemental lessons instantly<br/>
                     <strong>Import:</strong> Upload curriculum from PDFs/docs
                   </p>
                 </div>
@@ -693,6 +690,36 @@ function DashboardContent() {
                     <strong>Calendar:</strong> Month view with all children<br/>
                     <strong>Lessons:</strong> Detailed list by child
                   </p>
+                </div>
+
+                <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg p-4 border border-orange-200">
+                  <h3 className="font-bold text-orange-900 mb-2 flex items-center gap-2">
+                    <span className="text-xl">❓</span>
+                    Frequently Asked
+                  </h3>
+                  <div className="space-y-2">
+                    {[
+                      { q: "How do I get started?", a: "Click the '+ Add a Child' button in the left sidebar to create your first profile." },
+                      { q: "What's the best way to organize?", a: "Start with one subject and use 'Auto-Schedule' to map out your week or month." },
+                      { q: "Can I track multiple children?", a: "Yes, you can add all your children and switch between them using the sidebar." },
+                      { q: "How do AI features work?", a: "The Lesson Generator automatically creates supplemental lessons based on your topic." }
+                    ].map((faq, i) => (
+                      <div key={i} className="border-b border-orange-200 pb-2 last:border-0">
+                        <button 
+                          onClick={() => setExpandedFaq(expandedFaq === faq.q ? null : faq.q)}
+                          className="flex justify-between items-center w-full text-left text-xs font-medium text-orange-900 hover:text-orange-700 transition-colors"
+                        >
+                          <span>{faq.q}</span>
+                          <span className="text-orange-400 font-bold">{expandedFaq === faq.q ? '−' : '+'}</span>
+                        </button>
+                        {expandedFaq === faq.q && (
+                          <p className="mt-1 text-xs text-orange-800 bg-orange-50 p-2 rounded leading-relaxed">
+                            {faq.a}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
@@ -711,7 +738,7 @@ function DashboardContent() {
           kids={kids}
         />
 
-        <div className="flex gap-8">
+        <div className="flex gap-8 mb-8">
           {/* Children Sidebar */}
           <div className={`${sidebarCollapsed ? 'w-16' : 'w-[350px]'} flex-shrink-0 transition-all duration-300`}>
             {sidebarCollapsed ? (
@@ -842,53 +869,6 @@ function DashboardContent() {
                     </div>
                   )}
                   <button onClick={() => { setEditingKid(null); setShowProfileForm(true) }} className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 font-medium">+ Add a Child</button>
-                </div>
-
-                {/* Pro Tips Sidebar */}
-                <div className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-lg p-6 border border-yellow-200 shadow-sm">
-                  <h3 className="text-sm font-black text-yellow-800 mb-3 uppercase tracking-wide flex items-center gap-2">
-                    <span className="text-lg">💡</span>
-                    Pro Tip
-                  </h3>
-                  <p className="text-sm text-yellow-900 leading-relaxed font-medium">
-                    {kids.length === 0 
-                      ? "Start by adding your first child! Once you have children set up, you can import curriculum or create lessons."
-                      : allLessons.length === 0
-                      ? "Import your curriculum with the 📥 Import button, or use ✨ Generate Lessons to create AI-powered lessons instantly!"
-                      : "Use the Calendar view to see all your children's lessons at once, or switch to Today view to focus on what's due now."}
-                  </p>
-                </div>
-
-                {/* FAQ Sidebar */}
-                <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
-                  <h3 className="text-sm font-black text-gray-700 mb-4 uppercase tracking-wide">
-                    Frequently Asked
-                  </h3>
-                  <div className="space-y-3">
-                    {[
-                      { q: "How do I get started?", a: "Add a child first, then import your curriculum or create lessons manually. Use the calendar to schedule dates." },
-                      { q: "What's the best way to organize?", a: "Import your curriculum first, then use Auto-Schedule to assign dates in bulk. This saves hours of manual work!" },
-                      { q: "Can I track multiple children?", a: "Yes! Premium accounts support unlimited children. The color-coded system helps you track each child easily." },
-                      { q: "How do AI features work?", a: "Generate Lessons uses AI to create personalized lessons based on your child's learning style, grade level, and interests." }
-                    ].map((faq, i) => (
-                      <div key={i} className="border-b border-gray-100 last:border-0 pb-3 last:pb-0">
-                        <button
-                          onClick={() => setExpandedFaq(expandedFaq === `faq-${i}` ? null : `faq-${i}`)}
-                          className="w-full text-left"
-                        >
-                          <p className="text-xs font-bold text-gray-900 hover:text-blue-600 transition-colors flex items-center justify-between">
-                            {faq.q}
-                            <span className="text-gray-400">{expandedFaq === `faq-${i}` ? '−' : '+'}</span>
-                          </p>
-                        </button>
-                        {expandedFaq === `faq-${i}` && (
-                          <p className="text-xs text-gray-600 mt-2 leading-relaxed animate-in fade-in slide-in-from-top-2 duration-200">
-                            {faq.a}
-                          </p>
-                        )}
-                      </div>
-                    ))}
-                  </div>
                 </div>
               </div>
             )}
@@ -1030,6 +1010,8 @@ function DashboardContent() {
             )}
           </div>
         </div>
+
+
       </div>
       
       {/* Modals */}
