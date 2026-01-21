@@ -91,16 +91,7 @@ export default function LessonCalendar({ kids, lessonsByKid, onLessonClick, onSt
     const hasNotes = datesWithNotes.has(dateStr)
     
     return (
-      <div 
-        className="rbc-day-bg relative group"
-        onClick={(e) => {
-          // Only open day view if clicking on the background, not on events or buttons
-          if (e.target === e.currentTarget) {
-            setSelectedDate(value)
-            setShowDayView(true)
-          }
-        }}
-      >
+      <div className="rbc-day-bg relative group">
         {children}
         {/* Note icon - always visible, highlighted if has notes */}
         <button
@@ -125,9 +116,6 @@ export default function LessonCalendar({ kids, lessonsByKid, onLessonClick, onSt
             <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
           </svg>
         </button>
-        
-        {/* Clickable overlay hint */}
-        <div className="print-hide absolute inset-0 bg-blue-50 opacity-0 group-hover:opacity-10 transition-opacity pointer-events-none" />
       </div>
     )
   }

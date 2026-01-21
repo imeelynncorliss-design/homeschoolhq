@@ -83,6 +83,7 @@ function DashboardContent() {
   const [showProfileForm, setShowProfileForm] = useState(false)
   const [editingKid, setEditingKid] = useState<any | null>(null)
   const [showLessonForm, setShowLessonForm] = useState(false)
+  const [showLessonEditModal, setShowLessonEditModal] = useState(false)
   const [lessonSubject, setLessonSubject] = useState('')
   const [lessonTitle, setLessonTitle] = useState('')
   const [lessonDescription, setLessonDescription] = useState('')
@@ -964,7 +965,7 @@ const getUser = async () => {
                 ) : viewMode === 'week' ? (
                   <ThisWeekDashboard kids={kids} lessonsByKid={lessonsByKid} onStatusChange={handleStatusChange} onLessonClick={(lesson, child) => { setSelectedLesson(lesson); setSelectedLessonChild(child) }} />
                 ) : viewMode === 'calendar' ? (
-                  <LessonCalendar kids={kids} lessonsByKid={lessonsByKid} onLessonClick={(lesson, child) => {setSelectedLesson(lesson); setSelectedLessonChild(child); startEditLesson(lesson); }} onStatusChange={handleStatusChange}/>
+                  <LessonCalendar kids={kids} lessonsByKid={lessonsByKid} onLessonClick={(lesson, child) => {setSelectedLesson(lesson); setSelectedLessonChild(child); startEditLesson(lesson);setShowLessonEditModal(true); }} onStatusChange={handleStatusChange}/>
                 ) : (
                   <AllChildrenList 
                     kids={kids} 
@@ -1207,7 +1208,196 @@ const getUser = async () => {
           }}
         />
       )}
+      {/* Lesson Edit Modal */}
+        {showLessonEditModal && selectedLesson && editingLessonId && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900">Edit Lesson</h3>
+                  {selectedLessonChild && (
+                    <p className="text-sm text-gray-600 mt-1">
+                      {selectedLessonChild.displayname} • {selectedLesson.subject}
+                    </p>
+                  )}
+                </div>
+                <button
+                  onClick={() => {
+                    cancelEditLesson();
+                    setShowLessonEditModal(false);
+                  }}
+                  className="text-gray-400 hover:text-gray-600 text-2xl leading-none"
+                >
+                  ×
+                </button>
+              </div>
 
+              <div className="p-6 space-y-4">
+                {/* Subject */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Subject *
+                  </label>
+                  <input
+                    type="text"
+                    value={editLessonSubject}
+                    onChange={(e) => setEditLessonSubject(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="e.g., Math, Science, History"
+                  />
+                </div>
+
+                {/* Title */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Title *
+                  </label>
+                  <input
+                    type="text"
+                    value={editLessonTitle}
+                    onChange={(e) => setEditLessonTitle(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Lesson title"
+                  />
+                </div>
+
+                {/* Description */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Description
+                  </label>
+                  <textarea
+                    value={editLessonDescription}
+                    onChange={(e) => setEditLessonDescription(e.target.value)}
+                    rows={4}
+                    className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Lesson details, activities, objectives..."
+                  />
+                </div>
+
+                {/* Date */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Lesson Date
+                  </label>
+                  <input
+                    type="date"
+                    value={editLessonDate}
+                    onChange={(e) => setEditLessonDate(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+
+                {/* Duration */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Duration
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="number"
+                      min="1"
+                      value={editLessonDurationValue}
+                      onChange={(e) => setEditLessonDurationValue(parseInt(e.target.value) || 1)}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                    <select
+                      value={editLessonDurationUnit}
+                      onChange={(e) => setEditLessonDurationUnit(e.target.value as DurationUnit)}
+                      className="px-3 py-2 border border-gray-300 rounded text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      {DURATION_UNITS.map(unit => (
+                        <option key={unit} value={unit}>{unit}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Status */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Status
+                  </label>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleStatusChange(selectedLesson.id, 'not_started')}
+                      className={`flex-1 px-3 py-2 rounded font-medium transition-colors ${
+                        selectedLesson.status === 'not_started'
+                          ? 'bg-gray-600 text-white'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      Not Started
+                    </button>
+                    <button
+                      onClick={() => handleStatusChange(selectedLesson.id, 'in_progress')}
+                      className={`flex-1 px-3 py-2 rounded font-medium transition-colors ${
+                        selectedLesson.status === 'in_progress'
+                          ? 'bg-yellow-600 text-white'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      In Progress
+                    </button>
+                    <button
+                      onClick={() => handleStatusChange(selectedLesson.id, 'completed')}
+                      className={`flex-1 px-3 py-2 rounded font-medium transition-colors ${
+                        selectedLesson.status === 'completed'
+                          ? 'bg-green-600 text-white'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      Completed
+                    </button>
+                  </div>
+                </div>
+
+                {/* Assessment Score (if exists) */}
+                {lessonAssessmentScore !== null && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <p className="text-sm font-medium text-blue-900">
+                      Assessment Score: {lessonAssessmentScore}%
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-6 py-4 flex gap-3">
+                <button
+                  onClick={() => {
+                    if (confirm('Delete this lesson?')) {
+                      deleteLesson(selectedLesson.id);
+                      setShowLessonEditModal(false);
+                    }
+                  }}
+                  className="px-4 py-2 text-red-600 hover:bg-red-50 rounded font-medium transition-colors"
+                >
+                  Delete Lesson
+                </button>
+                <div className="flex-1"></div>
+                <button
+                  onClick={() => {
+                    cancelEditLesson();
+                    setShowLessonEditModal(false);
+                  }}
+                  className="px-4 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-50 font-medium transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    await saveEditLesson(selectedLesson.id);
+                    setShowLessonEditModal(false);
+                  }}
+                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-medium transition-colors"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       <DevTierToggle /> 
       <HelpWidget />
     </div>
