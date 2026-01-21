@@ -24,6 +24,7 @@ import HelpWidget from '../../components/HelpWidget'
 import PastAssessmentsViewer from '@/components/PastAssessmentsViewer'
 import PlanningModeDashboard from '@/components/PlanningModeDashboard'
 import AttendanceReminder from '@/components/AttendanceReminder'
+import AttendanceTracker from '@/components/AttendanceTracker'
 import ParentProfileManager from '@/components/ParentProfileManager'
 import AuthGuard from '@/components/AuthGuard'
 

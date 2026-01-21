@@ -29,10 +29,10 @@ interface ManualAttendance {
   id: string
   organization_id: string
   attendance_date: string
-  kid_id: string | null
+  kid_id: string | null | undefined
   status: 'full_day' | 'half_day' | 'no_school'
   hours: number
-  notes: string | null
+  notes: string | null | undefined
   auto_generated: boolean
 }
 
