@@ -92,10 +92,13 @@ export default function LessonCalendar({ kids, lessonsByKid, onLessonClick, onSt
     
     return (
       <div 
-        className="rbc-day-bg relative group cursor-pointer"
-        onClick={() => {
-          setSelectedDate(value)
-          setShowDayView(true)
+        className="rbc-day-bg relative group"
+        onClick={(e) => {
+          // Only open day view if clicking on the background, not on events or buttons
+          if (e.target === e.currentTarget) {
+            setSelectedDate(value)
+            setShowDayView(true)
+          }
         }}
       >
         {children}

@@ -89,11 +89,16 @@ export default function AttendanceTracker({
   const [calendarYear, setCalendarYear] = useState(new Date().getFullYear())
   const [calendarMonth, setCalendarMonth] = useState(new Date().getMonth())
   const [dismissedSuggestions, setDismissedSuggestions] = useState<Set<string>>(new Set())
+  const [attendanceMarkedToday, setAttendanceMarkedToday] = useState(false)
 
   useEffect(() => {
     loadData()
     loadDismissedSuggestions()
   }, [])
+
+  useEffect(() => {
+    checkTodaysAttendance()
+  }, [manualAttendance]) 
 
   useEffect(() => {
     groupByMonth()
@@ -104,6 +109,12 @@ export default function AttendanceTracker({
     if (dismissed) {
       setDismissedSuggestions(new Set(JSON.parse(dismissed)))
     }
+  }
+
+  function checkTodaysAttendance() {
+    const today = new Date().toISOString().split('T')[0]
+    const todayAttendance = manualAttendance.some(a => a.attendance_date === today)
+    setAttendanceMarkedToday(todayAttendance)
   }
 
   function saveDismissedSuggestions(dismissed: Set<string>) {
@@ -388,6 +399,7 @@ export default function AttendanceTracker({
 
       await loadData()
       setShowMarkModal(false)
+      checkTodaysAttendance()
     } catch (error) {
       console.error('Error marking attendance:', error)
       alert('Failed to save attendance. Please try again.')
@@ -476,6 +488,14 @@ export default function AttendanceTracker({
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Attendance Tracking</h2>
           <p className="text-gray-600">Track school days and instructional hours</p>
         </div>
+        {attendanceMarkedToday ? (
+        <div className="flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 rounded-lg border border-green-200">
+          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+          </svg>
+          <span className="font-medium">Today's attendance recorded</span>
+        </div>
+      ) : (
         <button
           onClick={() => {
             setMarkingDate(new Date().toISOString().split('T')[0])
@@ -485,6 +505,7 @@ export default function AttendanceTracker({
         >
           ✓ Mark Today
         </button>
+      )}
       </div>
 
       {/* Stats Cards */}
