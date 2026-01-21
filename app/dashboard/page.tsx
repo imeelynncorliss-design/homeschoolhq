@@ -964,7 +964,7 @@ const getUser = async () => {
                 ) : viewMode === 'week' ? (
                   <ThisWeekDashboard kids={kids} lessonsByKid={lessonsByKid} onStatusChange={handleStatusChange} onLessonClick={(lesson, child) => { setSelectedLesson(lesson); setSelectedLessonChild(child) }} />
                 ) : viewMode === 'calendar' ? (
-                  <LessonCalendar kids={kids} lessonsByKid={lessonsByKid} onLessonClick={(lesson, child) => {setSelectedLesson(lesson); setSelectedLessonChild(child) }} onStatusChange={handleStatusChange}/>
+                  <LessonCalendar kids={kids} lessonsByKid={lessonsByKid} onLessonClick={(lesson, child) => {setSelectedLesson(lesson); setSelectedLessonChild(child); startEditLesson(lesson); }} onStatusChange={handleStatusChange}/>
                 ) : (
                   <AllChildrenList 
                     kids={kids} 
