@@ -11,7 +11,7 @@ interface CalendarDay {
   manualAttendance?: {
     status: 'full_day' | 'half_day' | 'no_school'
     hours: number
-    notes?: string
+    notes?: string | null
   }
   isSchoolDay: boolean
   totalHours: number
