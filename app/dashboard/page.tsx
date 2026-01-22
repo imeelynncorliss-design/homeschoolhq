@@ -1444,7 +1444,7 @@ const getUser = async () => {
 
             <div className="p-6 space-y-4">
               <p className="text-gray-900">
-                You're changing the lesson date from <strong>{new Date(cascadeData.originalDate).toLocaleDateString()}</strong> to <strong>{new Date(cascadeData.newDate).toLocaleDateString()}</strong>.
+              You're changing the lesson date from <strong>{new Date(cascadeData.originalDate + 'T00:00:00').toLocaleDateString()}</strong> to <strong>{new Date(cascadeData.newDate + 'T00:00:00').toLocaleDateString()}</strong>.
               </p>
 
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -1478,19 +1478,32 @@ const getUser = async () => {
             </div>
 
             <div className="bg-gray-50 border-t border-gray-200 px-6 py-4 flex gap-3">
-              <button
-                onClick={() => handleCascadeUpdate(false)}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-100 font-medium transition-colors"
-              >
-                This Lesson Only
-              </button>
-              <button
-                onClick={() => handleCascadeUpdate(true)}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-medium transition-colors"
-              >
-                Update All ({cascadeData.affectedCount})
-              </button>
-            </div>
+            <button
+              onClick={() => {
+                setShowCascadeModal(false);
+                setCascadeData(null);
+                setCascadeDays(1);
+                // Reload to make sure UI is in sync
+                loadAllLessons();
+              }}
+              className="px-4 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-100 font-medium transition-colors"
+            >
+              Cancel
+            </button>
+            <div className="flex-1"></div>
+            <button
+              onClick={() => handleCascadeUpdate(false)}
+              className="px-4 py-2 border border-blue-300 bg-blue-50 rounded text-blue-700 hover:bg-blue-100 font-medium transition-colors"
+            >
+              This Lesson Only
+            </button>
+            <button
+              onClick={() => handleCascadeUpdate(true)}
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-medium transition-colors"
+            >
+              Update All ({cascadeData.affectedCount})
+            </button>
+          </div>
           </div>
         </div>
       )}
