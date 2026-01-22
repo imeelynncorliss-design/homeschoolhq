@@ -345,6 +345,15 @@ const getUser = async () => {
   const cancelEditLesson = () => setEditingLessonId(null)
 
   const saveEditLesson = async (id: string) => {
+    console.log('🔵 saveEditLesson called with ID:', id);
+    console.log('🔵 Current edit states:', {
+      title: editLessonTitle,
+      subject: editLessonSubject,
+      date: editLessonDate,
+      durationValue: editLessonDurationValue,
+      durationUnit: editLessonDurationUnit
+    });
+    
     const durationInMinutes = convertDurationToMinutes(editLessonDurationValue, editLessonDurationUnit)
     
     const updates = {
@@ -355,6 +364,8 @@ const getUser = async () => {
       duration_minutes: durationInMinutes
     }
     
+    console.log('🔵 Updates object:', updates);
+    
     if (editLessonDate && vacationPeriods.length > 0) {
       const vacation = vacationPeriods.find(v => 
         editLessonDate >= v.start_date && editLessonDate <= v.end_date
@@ -362,6 +373,7 @@ const getUser = async () => {
       
       if (vacation) {
         if (!confirm(`⚠️ ${editLessonDate} falls during ${vacation.name}.\n\nSave lesson anyway?`)) {
+          console.log('❌ User cancelled due to vacation warning');
           return
         }
       }
@@ -375,12 +387,15 @@ const getUser = async () => {
       
       if (holiday) {
         if (!confirm(`⚠️ ${editLessonDate} is ${holiday.name}.\n\nSave lesson anyway?`)) {
+          console.log('❌ User cancelled due to holiday warning');
           return
         }
       }
     }
     
     const currentLesson = allLessons.find(l => l.id === id)
+    console.log('🔵 Current lesson from DB:', currentLesson);
+    
     if (currentLesson && 
         currentLesson.lesson_date && 
         editLessonDate && 
@@ -393,11 +408,14 @@ const getUser = async () => {
         lesson.lesson_date > currentLesson.lesson_date
       )
       
+      console.log('🔵 Found subsequent lessons:', subsequentLessons.length);
+      
       if (subsequentLessons.length > 0) {
         const oldDate = new Date(currentLesson.lesson_date)
         const newDateObj = new Date(editLessonDate)
         const suggestedShift = Math.round((newDateObj.getTime() - oldDate.getTime()) / (1000 * 60 * 60 * 24))
         
+        console.log('🔵 Setting cascade modal data');
         setCascadeData({
           lessonId: id,
           originalDate: currentLesson.lesson_date,
@@ -411,6 +429,7 @@ const getUser = async () => {
       }
     }
     
+    console.log('🟢 Calling performLessonUpdate');
     await performLessonUpdate(id, updates)
   }
 
@@ -1387,8 +1406,21 @@ const getUser = async () => {
                 </button>
                 <button
                   onClick={async () => {
-                    await saveEditLesson(selectedLesson.id);
+                    console.log('🔵 Before save - editLessonDate:', editLessonDate);
+                    console.log('🔵 Saving lesson ID:', selectedLesson.id);
+                    
+                    // Close modal first to allow cascade modal to appear
                     setShowLessonEditModal(false);
+                    
+                    // Wait for save to complete
+                    await saveEditLesson(selectedLesson.id);
+                    
+                    console.log('🟢 Save completed, reloading lessons...');
+                    
+                    // Force reload from database
+                    await loadAllLessons();
+                    
+                    console.log('✅ Lessons reloaded');
                   }}
                   className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-medium transition-colors"
                 >
@@ -1398,6 +1430,70 @@ const getUser = async () => {
             </div>
           </div>
         )}
+
+      {/* Cascade Update Modal */}
+      {showCascadeModal && cascadeData && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="bg-gradient-to-r from-yellow-400 to-orange-500 px-6 py-4 rounded-t-lg">
+              <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                <span>⚠️</span>
+                Date Change Detected
+              </h3>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <p className="text-gray-900">
+                You're changing the lesson date from <strong>{new Date(cascadeData.originalDate).toLocaleDateString()}</strong> to <strong>{new Date(cascadeData.newDate).toLocaleDateString()}</strong>.
+              </p>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-sm font-semibold text-blue-900 mb-2">
+                  📅 This affects {cascadeData.affectedCount} subsequent lesson{cascadeData.affectedCount !== 1 ? 's' : ''}
+                </p>
+                <p className="text-sm text-blue-800">
+                  Would you like to shift all subsequent lessons by the same amount?
+                </p>
+              </div>
+
+              <div className="bg-gray-50 rounded-lg p-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Shift subsequent lessons by:
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    value={cascadeDays}
+                    onChange={(e) => setCascadeDays(parseInt(e.target.value) || 0)}
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded text-gray-900"
+                  />
+                  <span className="text-sm text-gray-600">day{Math.abs(cascadeDays) !== 1 ? 's' : ''}</span>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  {cascadeDays > 0 ? `Push ${cascadeDays} day${cascadeDays !== 1 ? 's' : ''} later` : 
+                  cascadeDays < 0 ? `Pull ${Math.abs(cascadeDays)} day${Math.abs(cascadeDays) !== 1 ? 's' : ''} earlier` : 
+                  'No change'}
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-gray-50 border-t border-gray-200 px-6 py-4 flex gap-3">
+              <button
+                onClick={() => handleCascadeUpdate(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-100 font-medium transition-colors"
+              >
+                This Lesson Only
+              </button>
+              <button
+                onClick={() => handleCascadeUpdate(true)}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-medium transition-colors"
+              >
+                Update All ({cascadeData.affectedCount})
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <DevTierToggle /> 
       <HelpWidget />
     </div>
