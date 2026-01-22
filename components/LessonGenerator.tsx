@@ -23,6 +23,7 @@ type Material = {
 type LessonVariation = {
   title: string;
   approach: string;
+  description?: string;  
   materials: string[];
   activities: Array<{
     name: string;
@@ -31,6 +32,7 @@ type LessonVariation = {
   }>;
   assessment: string;
   extensions: string[];
+  learningObjectives?: string[];
 };
 
 type LessonGeneratorProps = {
