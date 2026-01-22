@@ -16,7 +16,7 @@ export async function POST(request: Request) {
     );
     
     const formData = await request.json();
-    const { childId, subject, gradeLevel, duration, topic, focusAreas, learningStyle, additionalNotes } = formData;
+    const { childId, subject, gradeLevel, duration, topic, focusAreas, learningStyle, additionalNotes, materials } = formData;
 
     // Fetch kid profile for personalization
     const { data: kid, error: kidError } = await supabase
@@ -29,7 +29,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Student profile not found' }, { status: 404 });
     }
 
-    // Build personalized prompt
+    // Build personalized prompt with CRITICAL materials requirement
     const prompt = `You are an expert homeschool curriculum designer creating personalized lesson plans.
 
 **STUDENT PROFILE:**
@@ -49,20 +49,38 @@ Duration: ${duration} minutes
 ${focusAreas ? `Focus Areas: ${focusAreas}` : ''}
 ${additionalNotes ? `Additional Notes: ${additionalNotes}` : ''}
 
+${materials ? `
+**🚨 CRITICAL MATERIALS REQUIREMENT 🚨**
+The parent has selected these SPECIFIC physical materials that MUST be used in the lesson:
+${materials}
+
+**MANDATORY INSTRUCTIONS FOR MATERIALS:**
+1. You MUST design activities around THESE EXACT MATERIALS listed above
+2. Each lesson variation MUST use at least 2-3 items from the materials list
+3. Do NOT suggest alternative materials the parent doesn't have
+4. Do NOT create lessons that would work "better" with different materials
+5. The materials listed in your response MUST come from the list above
+6. You may include common household items (water, paper, tape) as supplements, but the PRIMARY materials must be from the parent's list
+7. Get creative with how to use these specific materials for hands-on learning
+
+**VIOLATION OF THIS REQUIREMENT MAKES THE LESSON UNUSABLE - the parent specifically selected these materials and expects them to be used.**
+` : ''}
+
 **TASK:**
 Create 3 different lesson plan variations for this student. Each variation should have a different approach or emphasis while covering the same core content.
 
 For EACH variation, include:
 1. A creative, engaging title
-2. Brief description (2-3 sentences)
+2. Brief description (2-3 sentences) - mention which materials will be used
 3. Detailed lesson overview
-4. Activities (3-5 specific activities with timing)
-5. Materials needed
+4. Activities (3-5 specific hands-on activities with timing that use the selected materials)
+5. Materials needed - LIST THE PARENT'S MATERIALS FIRST, then any common household supplements
 6. Learning objectives
 7. Assessment ideas
 
 **PERSONALIZATION:**
 - Adapt content to ${kid.displayname}'s learning style (${learningStyle || kid.learning_style})
+- Design hands-on, tactile activities using the materials provided
 - Consider their current interest: ${kid.current_hook || 'general topics'}
 - Match their energy level: ${kid.todays_vibe || 'balanced'}
 - Align with their current focus: ${kid.current_focus || 'broad learning goals'}
@@ -72,16 +90,16 @@ Return ONLY valid JSON with this exact structure:
   "variations": [
     {
       "title": "Engaging Lesson Title",
-      "description": "Brief 2-3 sentence overview of this approach",
+      "description": "Brief 2-3 sentence overview mentioning which selected materials will be used",
       "overview": "Detailed explanation of the lesson (2-3 paragraphs)",
       "activities": [
         {
           "name": "Activity name",
           "duration": "15 minutes",
-          "description": "What the student will do"
+          "description": "What the student will do with the specific materials"
         }
       ],
-      "materials": ["item 1", "item 2", "item 3"],
+      "materials": ["parent's material 1", "parent's material 2", "water", "paper towels"],
       "learningObjectives": ["objective 1", "objective 2", "objective 3"],
       "assessmentIdeas": ["assessment idea 1", "assessment idea 2"]
     }
@@ -91,6 +109,7 @@ Return ONLY valid JSON with this exact structure:
 CRITICAL: Return ONLY the JSON object. No markdown formatting, no backticks, no explanatory text before or after.`;
 
     console.log('Generating lessons for:', kid.displayname);
+    console.log('Using materials:', materials);
 
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',

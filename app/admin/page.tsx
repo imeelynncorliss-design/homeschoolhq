@@ -198,7 +198,7 @@ function AdminContent() {
             </div>
             <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm text-center">
               <h3 className="font-bold text-gray-900 mb-2">⌨️ Keyboard</h3>
-              <p className="text-[11px] text-gray-500 uppercase font-black tracking-widest">[1-8] Open • [ESC] Close</p>
+              <p className="text-[11px] text-gray-500 text-gray-900 uppercase font-black tracking-widest">[1-8] Open • [ESC] Close</p>
             </div>
           </div>
         )}
@@ -265,7 +265,7 @@ function ToolCard({ tab, isLocked, isActive, index, isAltPressed, recentlyUsed, 
     >
       <div className="flex justify-between mb-4">
         <div className="text-4xl">{tab.icon}</div>
-        <span className="text-[10px] font-black px-2 py-1 rounded-lg bg-white/50">{index}</span>
+        <span className="text-[10px] font-black text-gray-900 px-2 py-1 rounded-lg bg-white/50">{index}</span>
       </div>
       <h3 className="font-black text-gray-900 mb-1">{tab.label}</h3>
       <p className="text-[11px] text-gray-500 mb-4 line-clamp-2">{tab.description}</p>

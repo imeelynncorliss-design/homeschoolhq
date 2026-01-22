@@ -240,18 +240,36 @@ export default function MaterialsPage() {
           </div>
         </div>
 
-        {/* RESOURCE LIST - HIGH CONTRAST */}
+        {/* RESOURCE LIST - HIGH CONTRAST WITH DESCRIPTIONS */}
         <div className="space-y-8 pb-20">
           {(['textbook', 'subscription', 'physical', 'digital'] as MaterialType[]).map(type => {
             const typeMaterials = materials.filter(m => m.material_type === type);
             if (typeMaterials.length === 0) return null;
             const icons = { textbook: '📚', subscription: '🔑', physical: '🧰', digital: '💻' };
+            const descriptions = {
+              textbook: 'Curriculum textbooks and workbooks',
+              subscription: 'Online programs and subscriptions',
+              physical: '🎯 These materials are used as input for AI-generated lessons',
+              digital: 'Digital resources and downloads'
+            };
             return (
               <div key={type} className="bg-white rounded-2xl shadow-md border border-slate-200 overflow-hidden">
                 <div className="bg-slate-100 px-8 py-4 border-b border-slate-200">
-                  <h2 className="text-sm font-black text-slate-700 uppercase tracking-widest flex items-center gap-2">
-                    {icons[type]} {type}s
-                  </h2>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-sm font-black text-slate-700 uppercase tracking-widest flex items-center gap-2">
+                        {icons[type]} {type}s
+                      </h2>
+                      <p className="text-xs font-semibold text-slate-600 mt-1">
+                        {descriptions[type]}
+                      </p>
+                    </div>
+                    {type === 'physical' && (
+                      <span className="text-xs font-bold text-indigo-700 bg-indigo-50 px-3 py-1.5 rounded-full border border-indigo-200">
+                        Used in Lesson Generator
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div className="divide-y divide-slate-100">
                   {typeMaterials.map(m => (
@@ -262,6 +280,12 @@ export default function MaterialsPage() {
                           <span>{m.subject || 'General'}</span>
                           <span className="text-slate-300">•</span>
                           <span>{m.grade_level || 'All Grades'}</span>
+                          {m.quantity && m.quantity > 1 && (
+                            <>
+                              <span className="text-slate-300">•</span>
+                              <span>Qty: {m.quantity}</span>
+                            </>
+                          )}
                           {m.url && (
                             <>
                               <span className="text-slate-300">•</span>
@@ -291,7 +315,7 @@ export default function MaterialsPage() {
         </div>
       </div>
 
-      {/* FORM MODAL - HIGH CONTRAST INPUTS */}
+      {/* FORM MODAL - TYPE LOCKED FOR PHYSICAL MATERIALS */}
       {showAddForm && (
         <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-3xl p-10 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-200">
@@ -308,14 +332,33 @@ export default function MaterialsPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-black text-slate-900 mb-2 uppercase tracking-wide">Type</label>
-                  <select value={formType} onChange={e => setFormType(e.target.value as any)} className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-xl text-slate-900 font-bold">
-                    <option value="textbook">Textbook</option>
-                    <option value="subscription">Subscription</option>
-                    <option value="physical">Physical Material</option>
-                    <option value="digital">Digital Resource</option>
-                  </select>
+                  {editingMaterial && editingMaterial.material_type === 'physical' ? (
+                    <>
+                      <div className="w-full p-4 bg-gray-100 border-2 border-gray-300 rounded-xl text-slate-900 font-bold flex items-center justify-between">
+                        <span>🧰 Physical Material</span>
+                        <span className="text-xs bg-gray-200 px-2 py-1 rounded">Cannot change type</span>
+                      </div>
+                      <p className="text-xs text-slate-600 mt-1">Physical materials are used in Lesson Generator and cannot be changed to other types.</p>
+                    </>
+                  ) : (
+                    <select value={formType} onChange={e => setFormType(e.target.value as any)} className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-xl text-slate-900 font-bold">
+                      <option value="textbook">📚 Textbook</option>
+                      <option value="subscription">🔑 Subscription</option>
+                      <option value="physical">🧰 Physical Material (for AI lessons)</option>
+                      <option value="digital">💻 Digital Resource</option>
+                    </select>
+                  )}
                 </div>
               </div>
+
+              {formType === 'physical' && (
+                <div className="bg-green-50 p-4 rounded-xl border-2 border-green-200">
+                  <p className="text-sm font-bold text-green-900 flex items-center gap-2">
+                    <span className="text-lg">✨</span>
+                    This physical material will be available in the Lesson Generator for creating AI-powered lessons.
+                  </p>
+                </div>
+              )}
 
               {(formType === 'digital' || formType === 'subscription') && (
                 <div className="bg-purple-50 p-6 rounded-2xl border-2 border-purple-200 space-y-4 shadow-inner">
@@ -332,11 +375,18 @@ export default function MaterialsPage() {
                 </div>
               )}
 
+              {formType === 'physical' && (
+                <div>
+                  <label className="block text-sm font-black text-slate-900 mb-2 uppercase tracking-wide">Quantity</label>
+                  <input type="number" min="1" value={formQuantity} onChange={e => setFormQuantity(parseInt(e.target.value) || 1)} className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-xl text-slate-900 font-bold" />
+                </div>
+              )}
+
               <div className="flex gap-4 pt-6">
                 <button type="submit" className="flex-1 bg-indigo-700 text-white font-black py-5 rounded-2xl hover:bg-indigo-800 transition-all shadow-xl shadow-indigo-200">
                   {editingMaterial ? 'Update' : 'Save'} Resource
                 </button>
-                <button type="button" onClick={() => setShowAddForm(false)} className="flex-1 bg-slate-100 text-slate-900 font-black py-5 rounded-2xl hover:bg-slate-200 transition-all">
+                <button type="button" onClick={() => { setShowAddForm(false); resetForm(); }} className="flex-1 bg-slate-100 text-slate-900 font-black py-5 rounded-2xl hover:bg-slate-200 transition-all">
                   Cancel
                 </button>
               </div>

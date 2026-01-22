@@ -644,20 +644,21 @@ const getUser = async () => {
               </div>
             </div>
             <div className="flex gap-2">
-              <button 
-                onClick={() => setShowHelp(!showHelp)}
-                className={`px-4 py-2 rounded-lg font-medium text-sm transition-all ${
-                  showHelp 
-                    ? 'bg-blue-50 border-2 border-blue-200 text-blue-700' 
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                {showHelp ? '✕ Hide Tips' : '💡 How To'}
-              </button>
-              <button onClick={() => router.push('/admin')} className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium">⚙️ Admin</button>
-              <button onClick={() => router.push('/social')} className="px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 font-medium">🤝 Social Hub</button>
-              <button onClick={handleLogout} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium">Logout</button>
-            </div>
+            <button 
+              onClick={() => setShowHelp(!showHelp)}
+              className={`px-4 py-2 rounded-lg font-medium text-sm transition-all ${
+                showHelp 
+                  ? 'bg-blue-50 border-2 border-blue-200 text-blue-700' 
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              {showHelp ? '✕ Hide Tips' : '💡 How To'}
+            </button>
+            <button onClick={() => router.push('/materials')} className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium">📦 Materials</button>
+            <button onClick={() => router.push('/admin')} className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium">⚙️ Admin</button>
+            <button onClick={() => router.push('/social')} className="px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 font-medium">🤝 Social Hub</button>
+            <button onClick={handleLogout} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium">Logout</button>
+          </div>
           </div>
 
           {/* Help Panel - Collapsible */}
@@ -994,6 +995,7 @@ const getUser = async () => {
                       setSelectedLesson(lesson); 
                       setSelectedLessonChild(kids.find(k => k.id === lesson.kid_id) || null); 
                       startEditLesson(lesson) 
+                      setShowLessonEditModal(true);
                     }} 
                     onDeleteLesson={deleteLesson} 
                     onCycleStatus={cycleLessonStatus}
