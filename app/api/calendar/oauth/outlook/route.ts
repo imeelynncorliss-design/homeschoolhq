@@ -131,8 +131,19 @@ export async function GET(request: NextRequest) {
     ).toISOString();
 
     // Find primary calendar
-    const primaryCalendar = calendars.calendars.find((c) => c.isPrimary) ||
-      calendars.calendars[0];
+      const primaryCalendar = calendars?.calendars?.find((c: any) => c.isPrimary) ||
+      calendars?.calendars?.[0] ||
+      null;
+
+      if (!primaryCalendar) {
+      console.error('No calendars found for Outlook account');
+      return NextResponse.redirect(
+        new URL(
+          '/calendar/connect?error=no_calendars_found',
+          request.url
+        )
+      );
+      }
 
     // Upsert calendar connection
     const { data: connection, error: dbError } = await supabase
