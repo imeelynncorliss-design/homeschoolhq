@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, Suspense } from 'react'
-import { supabase } from '@/lib/supabase'
+import { supabase } from '@/src/lib/supabase'
 import { useRouter } from 'next/navigation'
 import CoopManager from '@/components/CoopManager'
 import SocialCalendar from '@/components/SocialCalendar'
@@ -24,7 +24,7 @@ function SocialHub() {
     if (!user) {
       // 1. Check for localhost bypass
       if (window.location.hostname === 'localhost') {
-        setUser({ id: 'dev-user', email: 'dev@example.com' })
+        setUser({ id: '00000000-0000-0000-0000-000000000001', email: 'dev@example.com' })
         // 2. Set the tier so you aren't locked out of the UI locally
         setUserTier(getTierForTesting())
       } else {

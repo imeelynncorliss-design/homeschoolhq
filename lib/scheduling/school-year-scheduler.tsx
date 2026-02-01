@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/src/lib/supabase';
 
 export interface SchoolYearConfig {
   school_year_start: string;

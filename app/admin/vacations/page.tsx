@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js'
-import { VacationPeriod, VacationType } from '@/types/school-year';
+import { VacationPeriod, VacationType } from '@/src/types/school-year';
 import { Calendar, Trash2, Plus, Edit2 } from 'lucide-react';
 import EnhancedVacationManager from '@/components/admin/EnhancedVacationManager'
 

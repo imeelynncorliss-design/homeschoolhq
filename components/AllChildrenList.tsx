@@ -197,7 +197,7 @@ export default function AllChildrenList({
     if (selectedLessons.size === 0) return
     
     if (confirm(`Schedule ${selectedLessons.size} lesson(s) for ${formatLocalDate(bulkDate)}?`)) {
-      const { supabase } = await import('@/lib/supabase')
+      const { supabase } = await import('@/src/lib/supabase')
       
       for (const lessonId of selectedLessons) {
         await supabase
@@ -226,7 +226,7 @@ export default function AllChildrenList({
     if (selectedLessons.size === 0) return
     
     if (confirm(`Are you sure you want to delete ${selectedLessons.size} lesson(s)? This cannot be undone.`)) {
-      const { supabase } = await import('@/lib/supabase')
+      const { supabase } = await import('@/src/lib/supabase')
       
       const { error } = await supabase
         .from('lessons')
@@ -259,7 +259,7 @@ export default function AllChildrenList({
     if (!targetChild) return
     
     if (confirm(`Copy ${selectedLessons.size} lesson(s) to ${targetChild.displayname}?`)) {
-      const { supabase } = await import('@/lib/supabase')
+      const { supabase } = await import('@/src/lib/supabase')
       
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {

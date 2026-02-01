@@ -6,7 +6,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import type { Standard } from '@/types/standards'
+import type { Standard } from '@/src/types/standards'
 import { createClient } from '@supabase/supabase-js'
 
 interface StandardsPickerProps {

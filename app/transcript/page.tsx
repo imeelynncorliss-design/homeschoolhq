@@ -37,7 +37,7 @@ function TranscriptContent() {
       .select('*')
       .order('created_at', { ascending: false })
 
-    if (userId !== 'dev-user') {
+    if (userId !== '00000000-0000-0000-0000-000000000001') {
       query.eq('user_id', userId)
     }
 
@@ -56,7 +56,7 @@ function TranscriptContent() {
     
     if (!user) {
       if (window.location.hostname === 'localhost') {
-        const mockUser = { id: 'dev-user', email: 'dev@example.com' };
+        const mockUser = { id: '00000000-0000-0000-0000-000000000001', email: 'dev@example.com' };
         setUser(mockUser);
         await loadKids(mockUser.id);
         setLoading(false);

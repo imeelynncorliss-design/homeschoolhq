@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/src/lib/supabase';
 import { DEFAULT_HOLIDAYS_2025_2026, Holiday, isValidSchoolDay } from '../app/utils/holidayUtils';
 
 interface AutoScheduleModalProps {

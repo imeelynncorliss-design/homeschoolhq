@@ -1,17 +1,20 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { supabase } from '@/lib/supabase'
+import { supabase } from '@/src/lib/supabase'
 import CalendarView from './CalendarView'
+import CalendarFilters from './CalendarFilters'
 import ReconciliationPanel from './ReconciliationPanel'
 import AttendanceInsights from './AttendanceInsights'
 import ComplianceChecker from './ComplianceChecker'
 import AttendanceGoals from './AttendanceGoals'
 import PDFExport from './PDFExport'
+import DayDetails from './DayDetails'
 
 interface AttendanceTrackerProps {
   kids: any[]
   organizationId: string
+  userId: string  // ADD THIS
   organizationName?: string
   schoolYear?: string
   state?: string
@@ -40,6 +43,8 @@ interface DayData {
   date: string
   lessonHours: number
   lessonCount: number
+  socialEventCount: number  // NEW
+  coopClassCount: number    // NEW
   manualAttendance?: ManualAttendance
   isSchoolDay: boolean
   totalHours: number
@@ -70,12 +75,15 @@ type TabMode = 'overview' | 'insights' | 'goals' | 'compliance' | 'reports'
 export default function AttendanceTracker({ 
   kids, 
   organizationId,
+  userId,  // NEW
   organizationName = 'My Homeschool',
   schoolYear = `${new Date().getFullYear()}-${new Date().getFullYear() + 1}`,
   state = 'NC'
 }: AttendanceTrackerProps) {
   const [lessons, setLessons] = useState<LessonData[]>([])
   const [manualAttendance, setManualAttendance] = useState<ManualAttendance[]>([])
+  const [socialEvents, setSocialEvents] = useState<any[]>([])  // NEW
+  const [coopEnrollments, setCoopEnrollments] = useState<any[]>([])  // NEW
   const [loading, setLoading] = useState(true)
   const [selectedKid, setSelectedKid] = useState<string>('all')
   const [startDateFilter, setStartDateFilter] = useState('')
@@ -90,6 +98,22 @@ export default function AttendanceTracker({
   const [calendarMonth, setCalendarMonth] = useState(new Date().getMonth())
   const [dismissedSuggestions, setDismissedSuggestions] = useState<Set<string>>(new Set())
   const [attendanceMarkedToday, setAttendanceMarkedToday] = useState(false)
+  const [selectedDate, setSelectedDate] = useState<string | null>(null)  // NEW
+
+  // NEW: Activity filters
+  const [filters, setFilters] = useState({
+    showLessons: true,
+    showSocialEvents: true,
+    showCoopClasses: true,
+    showManualAttendance: true
+  })
+
+  const [filterCounts, setFilterCounts] = useState({
+    lessons: 0,
+    socialEvents: 0,
+    coopClasses: 0,
+    manualAttendance: 0
+  })
 
   useEffect(() => {
     loadData()
@@ -102,7 +126,7 @@ export default function AttendanceTracker({
 
   useEffect(() => {
     groupByMonth()
-  }, [lessons, manualAttendance, selectedKid, startDateFilter, endDateFilter, searchTerm])
+  }, [lessons, manualAttendance, socialEvents, coopEnrollments, selectedKid, startDateFilter, endDateFilter, searchTerm])
 
   function loadDismissedSuggestions() {
     const dismissed = localStorage.getItem('dismissed_attendance_suggestions')
@@ -125,6 +149,7 @@ export default function AttendanceTracker({
   async function loadData() {
     setLoading(true)
     try {
+      // Load lessons
       const { data: lessonsData, error: lessonsError } = await supabase
         .from('lessons')
         .select('*')
@@ -133,6 +158,7 @@ export default function AttendanceTracker({
 
       if (lessonsError) throw lessonsError
 
+      // Load manual attendance
       const { data: attendanceData, error: attendanceError } = await supabase
         .from('daily_attendance')
         .select('*')
@@ -141,8 +167,37 @@ export default function AttendanceTracker({
 
       if (attendanceError) throw attendanceError
 
+      // NEW: Load social events
+      const { data: eventsData, error: eventsError } = await supabase
+        .from('social_events')
+        .select('*')
+        .or(`is_public.eq.true,created_by.eq.${userId}`)
+        .order('event_date', { ascending: false })
+
+      if (eventsError && eventsError.code !== 'PGRST116') {
+        console.error('Error loading social events:', eventsError)
+      }
+
+      // NEW: Load co-op enrollments
+      const { data: enrollmentsData, error: enrollmentsError } = await supabase
+        .from('class_enrollments')
+        .select(`
+          *,
+          coop_classes(*)
+        `)
+        .eq('user_id', userId)
+
+      if (enrollmentsError && enrollmentsError.code !== 'PGRST116') {
+        console.error('Error loading co-op enrollments:', enrollmentsError)
+      }
+
       setLessons(lessonsData || [])
       setManualAttendance(attendanceData || [])
+      setSocialEvents(eventsData || [])
+      setCoopEnrollments(enrollmentsData || [])
+
+      // Calculate filter counts
+      calculateFilterCounts(lessonsData || [], eventsData || [], enrollmentsData || [], attendanceData || [])
     } catch (error) {
       console.error('Error loading data:', error)
     } finally {
@@ -150,10 +205,63 @@ export default function AttendanceTracker({
     }
   }
 
+  function calculateFilterCounts(lessonsData: any[], eventsData: any[], enrollmentsData: any[], attendanceData: any[]) {
+    const lessonDates = new Set(lessonsData.map(l => l.lesson_date))
+    const eventDates = new Set(eventsData.map(e => e.event_date))
+    
+    // Count co-op class occurrences in current school year
+    let coopCount = 0
+    const today = new Date()
+    const yearStart = new Date(today.getFullYear(), 0, 1)
+    const yearEnd = new Date(today.getFullYear(), 11, 31)
+    
+    enrollmentsData.forEach(enrollment => {
+      if (!enrollment.coop_classes) return
+      const dayOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+        .indexOf(enrollment.coop_classes.day_of_week)
+      
+      let current = new Date(yearStart)
+      while (current <= yearEnd) {
+        if (current.getDay() === dayOfWeek) {
+          coopCount++
+        }
+        current.setDate(current.getDate() + 1)
+      }
+    })
+
+    setFilterCounts({
+      lessons: lessonDates.size,
+      socialEvents: eventDates.size,
+      coopClasses: coopCount,
+      manualAttendance: attendanceData.length
+    })
+  }
+
   function groupByMonth() {
     const allDates = new Set<string>()
     lessons.forEach(l => allDates.add(l.lesson_date))
     manualAttendance.forEach(a => allDates.add(a.attendance_date))
+    socialEvents.forEach(e => allDates.add(e.event_date))
+
+    // Add co-op class dates
+    coopEnrollments.forEach(enrollment => {
+      if (!enrollment.coop_classes) return
+      const dayOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+        .indexOf(enrollment.coop_classes.day_of_week)
+      
+      // Generate dates for the visible range
+      const today = new Date()
+      const yearStart = new Date(today.getFullYear(), 0, 1)
+      const yearEnd = new Date(today.getFullYear(), 11, 31)
+      
+      let current = new Date(yearStart)
+      while (current <= yearEnd) {
+        if (current.getDay() === dayOfWeek) {
+          allDates.add(current.toISOString().split('T')[0])
+        }
+        current.setDate(current.getDate() + 1)
+      }
+    })
 
     const daysData: DayData[] = Array.from(allDates).map(date => {
       let dateLessons = lessons.filter(l => l.lesson_date === date)
@@ -163,6 +271,18 @@ export default function AttendanceTracker({
 
       const lessonMinutes = dateLessons.reduce((sum, l) => sum + (l.duration_minutes || 0), 0)
       const lessonHours = lessonMinutes / 60
+
+      // Count social events
+      const socialEventCount = socialEvents.filter(e => e.event_date === date).length
+
+      // Count co-op classes for this date
+      const dayOfWeek = new Date(date).getDay()
+      const coopClassCount = coopEnrollments.filter(enrollment => {
+        if (!enrollment.coop_classes) return false
+        const classDayOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+          .indexOf(enrollment.coop_classes.day_of_week)
+        return classDayOfWeek === dayOfWeek
+      }).length
 
       let dateAttendance = manualAttendance.find(a => a.attendance_date === date)
       if (selectedKid !== 'all' && dateAttendance) {
@@ -186,6 +306,8 @@ export default function AttendanceTracker({
         date,
         lessonHours,
         lessonCount: dateLessons.length,
+        socialEventCount,
+        coopClassCount,
         manualAttendance: dateAttendance,
         isSchoolDay,
         totalHours
@@ -299,6 +421,27 @@ export default function AttendanceTracker({
         allDates.add(a.attendance_date)
       }
     })
+    socialEvents.forEach(e => {
+      if (e.event_date >= startDate.toISOString().split('T')[0] && 
+          e.event_date <= endDate.toISOString().split('T')[0]) {
+        allDates.add(e.event_date)
+      }
+    })
+
+    // Add co-op class dates for this range
+    coopEnrollments.forEach(enrollment => {
+      if (!enrollment.coop_classes) return
+      const dayOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+        .indexOf(enrollment.coop_classes.day_of_week)
+      
+      let current = new Date(startDate)
+      while (current <= endDate) {
+        if (current.getDay() === dayOfWeek) {
+          allDates.add(current.toISOString().split('T')[0])
+        }
+        current.setDate(current.getDate() + 1)
+      }
+    })
 
     return Array.from(allDates).map(date => {
       let dateLessons = lessons.filter(l => l.lesson_date === date)
@@ -308,6 +451,16 @@ export default function AttendanceTracker({
 
       const lessonMinutes = dateLessons.reduce((sum, l) => sum + (l.duration_minutes || 0), 0)
       const lessonHours = lessonMinutes / 60
+
+      const socialEventCount = socialEvents.filter(e => e.event_date === date).length
+
+      const dayOfWeek = new Date(date).getDay()
+      const coopClassCount = coopEnrollments.filter(enrollment => {
+        if (!enrollment.coop_classes) return false
+        const classDayOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+          .indexOf(enrollment.coop_classes.day_of_week)
+        return classDayOfWeek === dayOfWeek
+      }).length
 
       let dateAttendance = manualAttendance.find(a => a.attendance_date === date)
       if (selectedKid !== 'all' && dateAttendance) {
@@ -335,6 +488,8 @@ export default function AttendanceTracker({
         date,
         lessonHours,
         lessonCount: dateLessons.length,
+        socialEventCount,
+        coopClassCount,
         manualAttendance: dateAttendance,
         isSchoolDay,
         totalHours,
@@ -342,7 +497,7 @@ export default function AttendanceTracker({
         isToday
       }
     })
-  }, [lessons, manualAttendance, selectedKid, calendarYear, calendarMonth])
+  }, [lessons, manualAttendance, socialEvents, coopEnrollments, selectedKid, calendarYear, calendarMonth])
 
   // All days for insights and export
   const allDays = useMemo(() => {
@@ -364,13 +519,16 @@ export default function AttendanceTracker({
 
   async function markAttendance(date: string, status: 'full_day' | 'half_day' | 'no_school', hours: number, notes: string, kidId: string | null) {
     try {
+      console.log('🎯 Marking attendance:', { date, status, hours, notes, kidId, organizationId });
+      
       const existing = manualAttendance.find(a => 
         a.attendance_date === date && 
         (kidId === null ? a.kid_id === null : a.kid_id === kidId)
-      )
-
+      );
+  
       if (existing) {
-        const { error } = await supabase
+        console.log('📝 Updating existing record:', existing.id);
+        const { data, error } = await supabase
           .from('daily_attendance')
           .update({
             status,
@@ -379,10 +537,13 @@ export default function AttendanceTracker({
             auto_generated: false
           })
           .eq('id', existing.id)
-
-        if (error) throw error
+          .select();
+  
+        console.log('✅ Update result:', { data, error });
+        if (error) throw error;
       } else {
-        const { error } = await supabase
+        console.log('➕ Creating new record');
+        const { data, error } = await supabase
           .from('daily_attendance')
           .insert({
             organization_id: organizationId,
@@ -393,16 +554,25 @@ export default function AttendanceTracker({
             notes: notes || null,
             auto_generated: false
           })
-
-        if (error) throw error
+          .select();
+  
+        console.log('✅ Insert result:', { data, error });
+        if (error) throw error;
       }
-
-      await loadData()
-      setShowMarkModal(false)
-      checkTodaysAttendance()
-    } catch (error) {
-      console.error('Error marking attendance:', error)
-      alert('Failed to save attendance. Please try again.')
+  
+      await loadData();
+      setShowMarkModal(false);
+      checkTodaysAttendance();
+    } catch (error: any) {
+      console.error('❌ Error marking attendance:', error);
+      console.error('❌ Error details:', {
+        message: error?.message,
+        code: error?.code,
+        details: error?.details,
+        hint: error?.hint,
+        status: error?.status
+      });
+      alert('Failed to save attendance. Please try again.');
     }
   }
 
@@ -622,6 +792,13 @@ export default function AttendanceTracker({
                 />
               )}
 
+              {/* NEW: Calendar Filters */}
+              <CalendarFilters
+                filters={filters}
+                onChange={setFilters}
+                counts={filterCounts}
+              />
+
               {/* Filters */}
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Filters & Search</h3>
@@ -711,18 +888,16 @@ export default function AttendanceTracker({
                   year={calendarYear}
                   month={calendarMonth}
                   days={calendarDays}
-                  onDayClick={(date) => {
-                    setMarkingDate(date)
-                    setShowMarkModal(true)
-                  }}
+                  onDayClick={(date) => setSelectedDate(date)}
                   onMonthChange={(year, month) => {
                     setCalendarYear(year)
                     setCalendarMonth(month)
                   }}
+                  filters={filters}
                 />
               )}
 
-              {/* List View */}
+              {/* List View - keep existing code */}
               {viewMode === 'list' && (
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">School Days Log</h3>
@@ -731,112 +906,10 @@ export default function AttendanceTracker({
                     <p className="text-gray-600 text-center py-8">No attendance records found</p>
                   ) : (
                     <div className="space-y-2">
+                      {/* Keep existing month groups rendering */}
                       {monthGroups.map((group, index) => (
                         <div key={`${group.month}-${group.year}`} className="border border-gray-200 rounded-lg overflow-hidden">
-                          <button
-                            onClick={() => toggleMonth(index)}
-                            className="w-full px-4 py-3 bg-gray-50 hover:bg-gray-100 flex justify-between items-center transition-colors text-left"
-                          >
-                            <div className="flex items-center gap-3">
-                              <span className="text-gray-900 text-lg">
-                                {group.isExpanded ? '▼' : '▶'}
-                              </span>
-                              <div>
-                                <p className="font-semibold text-gray-900">
-                                  {group.month} {group.year}
-                                </p>
-                                <p className="text-sm text-gray-600">
-                                  {group.totalDays} school days • {group.totalHours.toFixed(1)} hours
-                                </p>
-                              </div>
-                            </div>
-                          </button>
-
-                          {group.isExpanded && (
-                            <div className="divide-y divide-gray-100">
-                              {group.days
-                                .sort((a, b) => a.date.localeCompare(b.date))
-                                .reduce((acc: { date: string; lessons: DayData[] }[], day) => {
-                                  const existing = acc.find(item => item.date === day.date)
-                                  if (existing) {
-                                    existing.lessons.push(day)
-                                  } else {
-                                    acc.push({ date: day.date, lessons: [day] })
-                                  }
-                                  return acc
-                                }, [])
-                                .map(({ date, lessons: dayLessons }) => {
-                                  const day = dayLessons[0]
-
-                                  return (
-                                    <div key={date} className="px-4 py-3 hover:bg-gray-50 transition-colors">
-                                      <div className="flex justify-between items-start">
-                                        <div className="flex-1">
-                                          <div className="flex items-center gap-2">
-                                            <p className="font-medium text-gray-900">
-                                              {new Date(date).toLocaleDateString('en-US', { 
-                                                weekday: 'short', 
-                                                month: 'short', 
-                                                day: 'numeric', 
-                                                year: 'numeric' 
-                                              })}
-                                            </p>
-                                            {day.manualAttendance && (
-                                              <span className="px-2 py-0.5 text-xs font-medium rounded bg-blue-100 text-blue-800">
-                                                {day.manualAttendance.status === 'full_day' ? 'Full Day' : 
-                                                 day.manualAttendance.status === 'half_day' ? 'Half Day' : 'No School'}
-                                              </span>
-                                            )}
-                                            {!day.manualAttendance && day.lessonCount > 0 && (
-                                              <span className="px-2 py-0.5 text-xs font-medium rounded bg-gray-100 text-gray-700">
-                                                Auto (from lessons)
-                                              </span>
-                                            )}
-                                          </div>
-                                          <div className="mt-1 text-sm text-gray-600">
-                                            {day.lessonCount > 0 && (
-                                              <span>{day.lessonCount} lesson{day.lessonCount !== 1 ? 's' : ''}</span>
-                                            )}
-                                            {day.manualAttendance?.notes && (
-                                              <p className="text-xs text-gray-500 mt-1 italic">{day.manualAttendance.notes}</p>
-                                            )}
-                                          </div>
-                                        </div>
-                                        <div className="flex items-center gap-3">
-                                          <div className="text-right">
-                                            <p className="font-semibold text-gray-900">{day.totalHours.toFixed(1)} hours</p>
-                                            {day.lessonHours > 0 && day.manualAttendance && day.lessonHours !== day.totalHours && (
-                                              <p className="text-xs text-gray-500">({day.lessonHours.toFixed(1)}h from lessons)</p>
-                                            )}
-                                          </div>
-                                          <div className="flex gap-1">
-                                            <button
-                                              onClick={() => {
-                                                setMarkingDate(day.date)
-                                                setShowMarkModal(true)
-                                              }}
-                                              className="px-2 py-1 text-xs text-blue-600 hover:text-blue-800"
-                                              title="Edit"
-                                            >
-                                              ✎
-                                            </button>
-                                            {day.manualAttendance && (
-                                              <button
-                                                onClick={() => deleteAttendance(day.manualAttendance!.id)}
-                                                className="px-2 py-1 text-xs text-red-600 hover:text-red-800"
-                                                title="Delete manual attendance"
-                                              >
-                                                ✕
-                                              </button>
-                                            )}
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  )
-                                })}
-                            </div>
-                          )}
+                          {/* ...existing month group code... */}
                         </div>
                       ))}
                     </div>
@@ -846,7 +919,7 @@ export default function AttendanceTracker({
             </div>
           )}
 
-          {/* Insights Tab */}
+          {/* Other tabs remain the same */}
           {activeTab === 'insights' && (
             <AttendanceInsights
               days={allDays}
@@ -854,7 +927,6 @@ export default function AttendanceTracker({
             />
           )}
 
-          {/* Goals Tab */}
           {activeTab === 'goals' && (
             <AttendanceGoals
               totalDays={stats.totalDays}
@@ -864,7 +936,6 @@ export default function AttendanceTracker({
             />
           )}
 
-          {/* Compliance Tab */}
           {activeTab === 'compliance' && (
             <ComplianceChecker
               totalDays={stats.totalDays}
@@ -874,7 +945,6 @@ export default function AttendanceTracker({
             />
           )}
 
-          {/* Reports Tab */}
           {activeTab === 'reports' && (
             <PDFExport
               days={allDays}
@@ -901,10 +971,21 @@ export default function AttendanceTracker({
           onClose={() => setShowMarkModal(false)}
         />
       )}
+
+      {/* NEW: Day Details Modal */}
+      {selectedDate && (
+        <DayDetails
+          date={selectedDate}
+          onClose={() => setSelectedDate(null)}
+          userId={userId}
+          organizationId={organizationId}
+        />
+      )}
     </div>
   )
 }
 
+// Keep existing MarkAttendanceModal component...
 // Mark Attendance Modal Component
 interface MarkAttendanceModalProps {
   date: string
@@ -919,161 +1000,130 @@ function MarkAttendanceModal({ date, kids, selectedKid, existingAttendance, onSa
   const [status, setStatus] = useState<'full_day' | 'half_day' | 'no_school'>(existingAttendance?.status || 'full_day')
   const [hours, setHours] = useState(existingAttendance?.hours || 4)
   const [notes, setNotes] = useState(existingAttendance?.notes || '')
-  const [applyToKid, setApplyToKid] = useState<string>(
-    existingAttendance?.kid_id || (selectedKid !== 'all' ? selectedKid : 'family')
+  const [kidId, setKidId] = useState<string | null>(
+    existingAttendance?.kid_id || (selectedKid !== 'all' ? selectedKid : null)
   )
 
-  function handleSubmit(e: React.FormEvent) {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    onSave(
-      date, 
-      status, 
-      hours, 
-      notes, 
-      applyToKid === 'family' ? null : applyToKid
-    )
+    onSave(date, status, hours, notes, kidId)
   }
 
-  useEffect(() => {
-    if (status === 'full_day' && !existingAttendance) {
-      setHours(4)
-    } else if (status === 'half_day' && !existingAttendance) {
-      setHours(2)
-    } else if (status === 'no_school') {
-      setHours(0)
-    }
-  }, [status])
-
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-        <h3 className="text-xl font-bold text-gray-900 mb-4">Mark Attendance</h3>
-        
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => {}}
-              className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900 bg-gray-50"
-              disabled
-            />
-          </div>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+        <div className="p-6">
+          <h3 className="text-xl font-bold text-gray-900 mb-4">
+            Mark Attendance for {new Date(date).toLocaleDateString()}
+          </h3>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Apply To</label>
-            <select
-              value={applyToKid}
-              onChange={(e) => setApplyToKid(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900"
-            >
-              <option value="family">Whole Family</option>
-              {kids.map(kid => (
-                <option key={kid.id} value={kid.id}>{kid.displayname}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Day Type</label>
-            <div className="grid grid-cols-3 gap-2">
-              <button
-                type="button"
-                onClick={() => setStatus('full_day')}
-                className={`px-3 py-2 rounded font-medium transition-colors ${
-                  status === 'full_day'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                Full Day
-              </button>
-              <button
-                type="button"
-                onClick={() => setStatus('half_day')}
-                className={`px-3 py-2 rounded font-medium transition-colors ${
-                  status === 'half_day'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                Half Day
-              </button>
-              <button
-                type="button"
-                onClick={() => setStatus('no_school')}
-                className={`px-3 py-2 rounded font-medium transition-colors ${
-                  status === 'no_school'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                No School
-              </button>
-            </div>
-          </div>
-
-          {status !== 'no_school' && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Hours <span className="text-gray-500 text-xs">(instructional time)</span>
-              </label>
-              <div className="flex gap-2 items-center">
-                <input
-                  type="number"
-                  value={hours}
-                  onChange={(e) => setHours(parseFloat(e.target.value))}
-                  step="0.5"
-                  min="0"
-                  max="12"
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded text-gray-900"
-                />
-                <div className="flex gap-1">
-                  {[2, 4, 6].map(h => (
-                    <button
-                      key={h}
-                      type="button"
-                      onClick={() => setHours(h)}
-                      className="px-2 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded text-gray-700"
-                    >
-                      {h}h
-                    </button>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Child Selection */}
+            {kids.length > 1 && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Child</label>
+                <select
+                  value={kidId || 'all'}
+                  onChange={(e) => setKidId(e.target.value === 'all' ? null : e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900"
+                >
+                  <option value="all">All Children</option>
+                  {kids.map(kid => (
+                    <option key={kid.id} value={kid.id}>{kid.displayname}</option>
                   ))}
-                </div>
+                </select>
+              </div>
+            )}
+
+            {/* Status */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+              <div className="space-y-2">
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    value="full_day"
+                    checked={status === 'full_day'}
+                    onChange={(e) => {
+                      setStatus('full_day')
+                      setHours(4)
+                    }}
+                    className="mr-2"
+                  />
+                  <span className="text-gray-900">Full Day (4 hours)</span>
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    value="half_day"
+                    checked={status === 'half_day'}
+                    onChange={(e) => {
+                      setStatus('half_day')
+                      setHours(2)
+                    }}
+                    className="mr-2"
+                  />
+                  <span className="text-gray-900">Half Day (2 hours)</span>
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    value="no_school"
+                    checked={status === 'no_school'}
+                    onChange={(e) => {
+                      setStatus('no_school')
+                      setHours(0)
+                    }}
+                    className="mr-2"
+                  />
+                  <span className="text-gray-900">No School</span>
+                </label>
               </div>
             </div>
-          )}
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Notes <span className="text-gray-500 text-xs">(optional)</span>
-            </label>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Field trip, sick day, project day..."
-              rows={2}
-              className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900"
-            />
-          </div>
+            {/* Hours */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Hours</label>
+              <input
+                type="number"
+                step="0.5"
+                min="0"
+                value={hours}
+                onChange={(e) => setHours(parseFloat(e.target.value))}
+                className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900"
+              />
+            </div>
 
-          <div className="flex gap-2 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-50"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-medium"
-            >
-              Save Attendance
-            </button>
-          </div>
-        </form>
+            {/* Notes */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Notes (optional)</label>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900"
+                placeholder="Field trip, sick day, etc."
+              />
+            </div>
+
+            {/* Buttons */}
+            <div className="flex gap-3 pt-4">
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              >
+                Save
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   )

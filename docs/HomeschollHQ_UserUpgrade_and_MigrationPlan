@@ -1,0 +1,969 @@
+# HomeschoolHQ User Upgrade & Migration Plan
+**Customer Journey Through Pricing Tiers**
+
+## Executive Summary
+
+This document defines the upgrade paths, feature unlock sequences, and onboarding flows for users transitioning between HomeschoolHQ pricing tiers. This is the live product customer experience, not a data migration plan.
+
+**Key Principles:**
+- Make upgrades feel rewarding, not restrictive
+- Show value before asking for payment
+- Minimize friction in upgrade flow
+- Celebrate tier transitions
+- Grandfather early adopters
+
+---
+
+## Upgrade Flow Overview
+
+```
+FREE (1 student)
+    ↓ [Add 2nd child OR want AI features]
+ESSENTIAL ($60/yr)
+    ↓ [Need compliance tracking OR work calendar]
+PRO ($99/yr)
+    ↓ [Want voice logs OR multi-parent access]
+PREMIUM ($149/yr)
+```
+
+---
+
+## TIER 1: FREE → ESSENTIAL Upgrade
+
+### Trigger Points (When to Prompt)
+
+**Hard Limit Reached:**
+1. **Adding 2nd Child**
+   - User clicks "+ Add a Child" when already at 1-child limit
+   - Modal appears: "Unlock Unlimited Children with Essential"
+   
+**Feature Discovery:**
+2. **Clicks "✨ Generate Lessons" (locked)**
+   - Modal: "AI Lesson Generation requires Essential"
+   - Show example generated lesson
+   - "Try it free for 14 days"
+
+3. **Clicks "📥 Import" (locked)**
+   - Modal: "Curriculum Import requires Essential"
+   - Show demo of PDF → lessons
+   - CTA: "Upgrade to Essential"
+
+4. **Clicks "Generate Assessment" (locked)**
+   - Modal: "AI Assessments require Essential"
+   - Show sample assessment
+   - CTA: "Start 14-day trial"
+
+**Soft Prompts:**
+5. **After 10 lessons created**
+   - Banner: "You're getting the hang of this! Essential unlocks AI lesson generation to save even more time."
+   
+6. **After 30 days on Free**
+   - Email: "Ready to unlock the full HomeschoolHQ experience?"
+
+---
+
+### Upgrade Modal Design
+
+**Title:** "Unlock Essential Features"
+
+**Visual:**
+- Split screen: Free (greyed out) vs Essential (colorful)
+- Checkmark list of what unlocks
+
+**Copy:**
+```
+You're ready for more! 🎉
+
+With Essential, you'll unlock:
+✅ Unlimited children
+✅ AI-powered lesson generation
+✅ Personalized assessments (auto-graded!)
+✅ PDF curriculum import
+✅ Advanced calendar views
+✅ 50GB file storage
+
+Try Essential free for 14 days — no credit card required!
+
+[Start 14-Day Trial] [Learn More]
+```
+
+---
+
+### Checkout Flow
+
+**Step 1: Trial or Purchase**
+- "Start 14-day free trial" (primary CTA)
+- "Purchase now and save 17%" (annual option)
+- "Or pay monthly" (monthly option)
+
+**Step 2: Email Only (for trial)**
+- Email input
+- Password (if not already set)
+- "Start Trial" button
+- Small print: "No credit card needed. You can add billing later."
+
+**Step 3: Trial Confirmation**
+- Success modal: "Welcome to Essential! 🎉"
+- "Your trial ends on [date]"
+- "Let's get started" → Auto-opens LessonGenerator
+
+---
+
+### Post-Upgrade Onboarding
+
+**Immediate Actions (Right After Upgrade):**
+
+1. **Feature Tour Modal**
+   ```
+   Welcome to Essential! Here's what's new:
+   
+   1. ✨ AI Lesson Generator
+      Click the purple button to create lessons instantly
+      
+   2. 📥 Curriculum Import
+      Upload your curriculum PDFs and we'll create lessons for you
+      
+   3. 🎯 AI Assessments
+      Generate personalized assessments for any lesson
+      
+   [Take the Tour] [Skip - I'll Explore]
+   ```
+
+2. **Dashboard Banner (First 7 Days)**
+   - "New to Essential? Try the AI Lesson Generator → [Click Here]"
+   - Dismissible after interaction
+
+3. **Email Sequence**
+   - **Day 1:** "Welcome to Essential! Here's how to get started"
+   - **Day 3:** "Pro tip: Import your curriculum to save hours"
+   - **Day 7:** "Your trial ends in 7 days - here's what you've accomplished"
+   - **Day 13:** "Tomorrow is your last day of trial - upgrade to keep your data"
+
+---
+
+### Trial Expiration Flow
+
+**7 Days Before Expiration:**
+- Dashboard banner: "Your trial ends in 7 days"
+- Email: "Don't lose your progress - upgrade now"
+
+**3 Days Before:**
+- More prominent banner with countdown
+- Email: "3 days left in your trial"
+
+**1 Day Before:**
+- Full-screen modal (dismissible): "Your trial ends tomorrow"
+- Email: "Last chance to keep your Essential features"
+
+**Day of Expiration:**
+- Modal on login: "Your trial has ended"
+- Options:
+  - "Upgrade to Essential" (primary)
+  - "Continue with Free" (secondary)
+  - Features locked message: "You can still access your data, but AI features are now locked."
+
+**After Expiration:**
+- Dashboard shows locked features with "🔒" icons
+- Data preserved for 30 days
+- Email: "We saved your data - upgrade anytime to restore access"
+
+---
+
+### Payment Collection
+
+**Stripe Checkout Session:**
+- Pre-filled email
+- Annual: $60/year (save 17%)
+- Monthly: $6/month
+- "Start Essential Plan" button
+
+**Success Confirmation:**
+- Redirect to dashboard
+- Success modal: "You're all set! 🎉"
+- Features immediately unlocked
+- Email receipt + welcome
+
+---
+
+## TIER 2: ESSENTIAL → PRO Upgrade
+
+### Trigger Points (When to Prompt)
+
+**Feature Discovery:**
+1. **Searching for "compliance" or "state requirements"**
+   - Search results page shows: "Get compliance tracking with Pro"
+   
+2. **Manually logging >50 hours of attendance**
+   - Banner: "Track compliance automatically with Pro"
+   
+3. **Creating >100 lessons**
+   - Modal: "Working parents love Pro's work calendar integration"
+
+4. **After 60 days on Essential**
+   - Email: "Are you balancing work and homeschool? Pro can help."
+
+**Hard Discovery:**
+5. **Clicks "Work Calendar" in settings (locked)**
+   - Modal: "Work Calendar Integration requires Pro"
+   - Show demo of calendar overlay
+   
+6. **Clicks "Compliance Dashboard" (locked)**
+   - Modal: "State Compliance Tracking requires Pro"
+   - Show screenshot of health score
+
+---
+
+### Upgrade Modal Design
+
+**Title:** "Upgrade to Pro for Working Parents"
+
+**Visual:**
+- Before/After comparison
+- "Manual tracking" vs "Automated compliance"
+
+**Copy:**
+```
+You're crushing it! 💪
+
+Pro adds features built for working parents:
+
+✅ State compliance dashboard
+   → Know you're meeting requirements at a glance
+
+✅ Work calendar integration
+   → See meetings + lessons in one view
+
+✅ AI standard mapping
+   → Automatic tagging to state standards
+
+✅ Audit-ready reports
+   → One-click PDF for district submission
+
+✅ 250GB storage (5x more!)
+
+Only $39 more per year ($99/year total)
+
+[Upgrade to Pro] [Learn More]
+```
+
+---
+
+### Checkout Flow
+
+**Step 1: Plan Selection**
+- Current: "Essential ($60/year)"
+- Upgrade to: "Pro ($99/year)"
+- Difference: "+$39/year for compliance + calendar"
+- Prorated credit shown if mid-cycle
+
+**Step 2: Billing**
+- Stripe checkout
+- Shows proration: "You'll pay $X today, then $99/year on [renewal date]"
+
+**Step 3: Success**
+- Modal: "Welcome to Pro! 🚀"
+- Auto-redirects to Compliance Wizard
+
+---
+
+### Post-Upgrade Onboarding
+
+**Immediate: Compliance Setup Wizard**
+
+```
+Step 1: Select Your State
+"Which state do you homeschool in?"
+[Dropdown: 50 states]
+
+Step 2: Legal Disclaimer
+"⚠️ Important: State Requirements Disclaimer
+
+HomeschoolHQ provides suggested requirements based on 2026 public 
+records. These are NOT legal advice. 
+
+You are responsible for:
+• Verifying requirements with your district
+• Confirming annual hour requirements
+• Understanding your state's specific laws
+
+By proceeding, you confirm you will verify these requirements 
+independently.
+
+[☑️ I understand] [Cancel]"
+
+Step 3: Confirm Requirements
+"Based on our research, [STATE] requires:
+• [X] hours per year of instruction
+• [List of mandatory subjects]
+
+Is this correct for your district?
+
+[✅ Confirm] [❌ Let me customize]"
+
+Step 4: Set Your Goals
+"Great! We'll track your progress toward [X] hours.
+
+Your compliance health score will update as you log lessons.
+
+[View My Dashboard]"
+```
+
+**Feature Tour:**
+```
+Pro Features Unlocked! Here's what's new:
+
+1. 📊 Compliance Dashboard
+   See your progress toward state requirements
+   
+2. 📅 Work Calendar
+   Connect Google/Outlook to see meetings + lessons
+   
+3. 🎯 AI Standard Mapping
+   Lessons auto-tagged to state standards
+   
+4. 📄 Audit Reports
+   Generate PDFs ready for district submission
+
+[Start Tour] [Skip]
+```
+
+---
+
+### Work Calendar Connection Flow
+
+**Trigger:** User clicks "Connect Work Calendar"
+
+**Step 1: Choose Provider**
+```
+Connect Your Work Calendar
+
+Which calendar do you use?
+
+[Google Calendar]
+[Outlook/Microsoft 365]
+[I'll do this later]
+```
+
+**Step 2: OAuth Permissions**
+```
+HomeschoolHQ needs permission to:
+• Read your calendar events (read-only)
+• See event titles, dates, and times
+• We will NEVER modify your calendar
+
+This helps us show conflicts between meetings and lessons.
+
+[Allow Access] [Cancel]
+```
+
+**Step 3: Success**
+```
+Calendar Connected! ✅
+
+Your work events are now visible on your HomeschoolHQ calendar.
+
+Want to set buffer times?
+(e.g., "Don't schedule lessons 15 min before/after meetings")
+
+[Set Buffers] [Skip for now]
+```
+
+---
+
+### Email Sequence (First 30 Days)
+
+- **Day 1:** "Welcome to Pro! Complete your compliance setup"
+- **Day 3:** "Pro tip: Connect your work calendar"
+- **Day 7:** "Your first compliance report is ready!"
+- **Day 14:** "See how AI standard mapping saves time"
+- **Day 30:** "You're a Pro! Here's your compliance score"
+
+---
+
+## TIER 3: PRO → PREMIUM Upgrade
+
+### Trigger Points (When to Prompt)
+
+**Feature Discovery:**
+1. **Uploading >20 photos of student work**
+   - Banner: "Premium includes OCR to auto-catalog photos"
+
+2. **Has 2+ adults in household (detected from profile)**
+   - Email: "Share HomeschoolHQ with your co-parent with Premium"
+
+3. **After 90 days on Pro**
+   - Modal: "Power users love Premium's advanced features"
+
+**Hard Discovery:**
+4. **Clicks "Voice Log" button (locked)**
+   - Modal: "Voice-to-Log requires Premium"
+   - Show demo of voice logging while driving
+
+5. **Tries to invite co-parent (locked)**
+   - Modal: "Multi-parent access requires Premium"
+
+---
+
+### Upgrade Modal Design
+
+**Title:** "Upgrade to Premium for Power Users"
+
+**Copy:**
+```
+You're a HomeschoolHQ pro! 🏆
+
+Premium adds features for power users:
+
+✅ Voice-to-log transcription
+   → Log lessons while driving/commuting
+
+✅ Photo-to-portfolio OCR
+   → Snap photos of work, auto-catalog them
+
+✅ Slack/Teams integration
+   → "In a lesson - back at 11 AM" auto-status
+
+✅ Multi-parent collaboration
+   → Share calendar with spouse/co-parent
+
+✅ Priority support
+   → 24-hour response guarantee
+
+✅ Unlimited storage
+   → Never worry about space
+
+Only $50 more per year ($149/year total)
+
+[Upgrade to Premium] [Learn More]
+```
+
+---
+
+### Post-Upgrade Onboarding
+
+**Feature Tour:**
+```
+Premium Unlocked! 🎉
+
+New capabilities:
+
+1. 🎤 Voice Logging
+   Record audio notes → auto-transcribed to lessons
+   
+2. 📸 Photo Portfolio
+   Snap photos → OCR extracts dates/details
+   
+3. 💬 Slack/Teams Status
+   Auto-updates your work status during lessons
+   
+4. 👥 Invite Co-Parent
+   Share your HomeschoolHQ with spouse/partner
+   
+5. 💬 Priority Support
+   Direct line to Imee (24-hour response)
+
+[Explore Features] [Done]
+```
+
+---
+
+## Downgrade Scenarios
+
+### User-Initiated Downgrade
+
+**From Pro → Essential:**
+```
+Downgrade to Essential?
+
+You'll lose access to:
+❌ Compliance dashboard
+❌ Work calendar integration
+❌ AI standard mapping
+❌ Audit reports
+❌ 250GB storage (data over 50GB will be archived)
+
+Your data will be saved for 90 days if you change your mind.
+
+Are you sure?
+
+[Keep Pro] [Downgrade]
+```
+
+**From Essential → Free:**
+```
+Downgrade to Free?
+
+You'll lose access to:
+❌ AI lesson generation
+❌ Curriculum import
+❌ Assessments
+❌ All children except 1
+❌ 50GB storage (data will be archived)
+
+You can still view your data, but editing is limited.
+
+[Keep Essential] [Downgrade]
+```
+
+---
+
+### Failed Payment Handling
+
+**Day 1 (Payment Failed):**
+- Email: "Payment issue with your subscription"
+- Dashboard banner: "Update payment method"
+- Grace period: 7 days of continued access
+
+**Day 3:**
+- More urgent email
+- Modal on login: "Update payment to keep access"
+
+**Day 7 (End of Grace):**
+- Features locked
+- Email: "Your account has been downgraded to [previous tier]"
+- Data preserved for 30 days
+- Easy reactivation link
+
+---
+
+## Grandfathering & Early Adopter Strategy
+
+### Founding Member Pricing (First 100 Users)
+
+**Offer:**
+```
+Founding Member Special! 🎉
+
+Lock in lifetime pricing:
+• Pro: $79/year (normally $99)
+• Premium: $119/year (normally $149)
+
+Your price NEVER increases as long as you stay subscribed.
+
+[Claim Founding Member Pricing]
+```
+
+**Badge:**
+- Profile shows "Founding Member ⭐" badge
+- Access to exclusive Slack channel
+- Vote on new features
+
+---
+
+### Launch Promotion (First 1,000 Users)
+
+**Offer:**
+- 20% off first year
+- Price lock guarantee (same as Founding Members)
+- "Early Adopter" badge
+
+---
+
+### Referral Program (All Tiers)
+
+**Give $10, Get $10:**
+```
+Love HomeschoolHQ? Share it!
+
+Give friends $10 off their first year
+You get $10 credit per successful referral
+Max: $30/year in credits
+
+[Get Your Referral Link]
+```
+
+**Implementation:**
+- Unique referral URL per user
+- Track via URL parameter
+- Credits applied to next renewal
+- Both parties must be paid subscribers
+
+---
+
+## Feature Unlock Sequences
+
+### FREE → ESSENTIAL: First 24 Hours
+
+**Hour 0 (Immediately):**
+- ✅ All premium features unlocked
+- ✅ "Essential Trial" badge on dashboard
+- ✅ Welcome modal with feature tour
+
+**Hour 1:**
+- Email: "Welcome to Essential! Quick start guide"
+- Suggested action: "Generate your first AI lesson"
+
+**Hour 24:**
+- Email: "Day 1 complete! Here's what's possible with Essential"
+- Show stats: "Average Essential user creates X lessons/week"
+
+---
+
+### ESSENTIAL → PRO: First 7 Days
+
+**Day 0 (Immediately):**
+- ✅ Compliance Wizard auto-opens
+- ✅ State selection required before continuing
+- ✅ Compliance dashboard added to main nav
+
+**Day 1:**
+- Email: "Complete your compliance setup"
+- Nudge to connect work calendar
+
+**Day 3:**
+- Dashboard nudge: "Generate your first audit report"
+- Email: "Pro tip: AI standard mapping"
+
+**Day 7:**
+- Email: "Your first week on Pro - here's your compliance score"
+- Show progress: "You're X% toward annual requirements"
+
+---
+
+### PRO → PREMIUM: First 30 Days
+
+**Day 0 (Immediately):**
+- ✅ All Premium features unlocked
+- ✅ Voice log button appears
+- ✅ "Invite Co-Parent" option enabled
+
+**Day 1:**
+- Email: "Welcome to Premium! Try voice logging"
+- Video tutorial on voice-to-log
+
+**Day 7:**
+- Email: "Pro tip: Photo portfolio saves hours"
+- Screenshot tutorial
+
+**Day 14:**
+- Email: "Invite your co-parent to collaborate"
+
+**Day 30:**
+- Email: "You're a Premium power user! Here's what you've accomplished"
+- Usage stats + encouragement
+
+---
+
+## In-App Upgrade Prompts
+
+### Locked Feature Buttons
+
+**Visual Design:**
+```
+[✨ Generate Lessons 🔒]
+    ↓ (on click)
+Modal:
+"AI Lesson Generation requires Essential
+
+Generate lessons in seconds with AI.
+Try it free for 14 days!
+
+[Start Trial] [Learn More]"
+```
+
+**Placement:**
+- Lock icon on button
+- Tooltip on hover: "Essential feature"
+- Click opens upgrade modal (not grayed out)
+
+---
+
+### Banners (Non-Intrusive)
+
+**Free User Banner (After 10 lessons):**
+```
+[Dismissible banner at top of dashboard]
+
+🎉 You're getting the hang of this!
+
+Essential unlocks:
+• AI lesson generation
+• Curriculum import  
+• Unlimited children
+
+[Start 14-Day Trial] [Maybe Later ✕]
+```
+
+**Essential User Banner (After 60 days):**
+```
+[Dismissible banner]
+
+📊 Working parent? Pro can help!
+
+Track compliance automatically + sync work calendar.
+
+[Learn About Pro] [Dismiss ✕]
+```
+
+---
+
+### Sidebar Upsell (Subtle)
+
+**Free Tier Sidebar:**
+```
+Your Plan: Free
+• 1 child
+• Manual lessons only
+
+[Upgrade to Essential]
+   ↓ unlocks ↓
+• Unlimited children
+• AI features
+• Assessments
+```
+
+---
+
+## Email Marketing Sequences
+
+### New User Welcome (All Tiers)
+
+**Day 0:** Welcome + quick start
+**Day 3:** Feature highlight
+**Day 7:** Success story / case study
+**Day 14:** Upgrade prompt (if Free/Essential)
+**Day 30:** Check-in + offer help
+
+---
+
+### Trial Conversion (Essential Trial)
+
+**Day 1:** "Welcome to your trial"
+**Day 3:** "Pro tip: [Feature highlight]"
+**Day 7:** "You're halfway through - here's what you've done"
+**Day 10:** "4 days left - don't lose your progress"
+**Day 13:** "Last chance to keep Essential features"
+**Day 14:** Trial expires (final reminder)
+**Day 15:** "Your trial ended - we saved your data"
+
+---
+
+### Upgrade Nurture (Free/Essential Users)
+
+**Month 1:** Weekly tips
+**Month 2:** Case study (how upgraded user saves time)
+**Month 3:** Limited-time offer (20% off upgrade)
+**Month 6:** "You've been with us 6 months - here's what you could unlock"
+
+---
+
+## Churn Prevention
+
+### At-Risk User Detection
+
+**Signals:**
+1. No login for 14 days
+2. No lessons created in 30 days
+3. Failed payment attempt
+4. Clicked "Cancel subscription"
+
+**Action:**
+- Email: "We miss you! What can we improve?"
+- Offer 1-month free extension
+- Survey: "What would make HomeschoolHQ better?"
+
+---
+
+### Win-Back Campaign (Cancelled Users)
+
+**Day 30 After Cancellation:**
+- Email: "We saved your data - come back anytime"
+- Offer: "50% off for 3 months"
+
+**Day 90:**
+- Email: "Final reminder - your data will be deleted in 30 days"
+- Last chance offer
+
+**Day 120:**
+- Data archived/deleted (with advance notice)
+
+---
+
+## Success Metrics by Upgrade Path
+
+### FREE → ESSENTIAL
+- **Target Conversion:** 25% within 30 days
+- **Trial → Paid:** 40% conversion rate
+- **Time to First Value:** <24 hours (first AI lesson generated)
+
+### ESSENTIAL → PRO
+- **Target Conversion:** 15% within 90 days
+- **Time to Compliance Setup:** <1 hour
+- **Calendar Connection Rate:** 60% within 7 days
+
+### PRO → PREMIUM
+- **Target Conversion:** 5% within 180 days
+- **Voice Log Adoption:** 70% use within 30 days
+- **Multi-Parent Invite:** 40% invite co-parent within 60 days
+
+---
+
+## Technical Implementation Checklist
+
+### Subscription Management
+- [ ] Stripe integration complete
+- [ ] Webhook handlers for:
+  - [ ] `customer.subscription.created`
+  - [ ] `customer.subscription.updated`
+  - [ ] `customer.subscription.deleted`
+  - [ ] `invoice.payment_failed`
+  - [ ] `invoice.payment_succeeded`
+- [ ] Prorated upgrades/downgrades
+- [ ] Grace period logic (7 days)
+- [ ] Data archival automation (30/90 days)
+
+### Feature Gating
+- [ ] Middleware checks user tier on every request
+- [ ] UI shows locked features with 🔒 icon
+- [ ] Click locked feature → upgrade modal
+- [ ] Server-side enforcement (no bypassing)
+
+### Trial Management
+- [ ] Trial countdown visible in UI
+- [ ] Email reminders at 7, 3, 1 days
+- [ ] Auto-downgrade on expiration
+- [ ] Data preservation logic
+
+### Onboarding Flows
+- [ ] Compliance Wizard (Pro tier)
+- [ ] Work Calendar OAuth (Pro tier)
+- [ ] Feature tour modals (all tiers)
+- [ ] Email sequences configured
+
+### Analytics Tracking
+- [ ] Track upgrade button clicks
+- [ ] Track modal views
+- [ ] Track conversion rates
+- [ ] Track feature adoption post-upgrade
+- [ ] Track churn reasons
+
+---
+
+## Customer Support Playbook
+
+### Common Questions
+
+**Q: "What happens to my data if I downgrade?"**
+A: Your data is preserved for 90 days. You can view it but not edit. Upgrade anytime to restore full access.
+
+**Q: "Can I switch between monthly and annual?"**
+A: Yes! Annual saves 17%. We'll prorate your current subscription.
+
+**Q: "What if I need to cancel mid-year?"**
+A: Cancel anytime. We'll prorate and refund unused months for annual plans.
+
+**Q: "Do you offer refunds?"**
+A: 30-day money-back guarantee, no questions asked.
+
+**Q: "What's the difference between Essential and Pro?"**
+A: Essential = AI features. Pro = Compliance tracking + work calendar. See [pricing page] for full comparison.
+
+---
+
+## A/B Testing Plan
+
+### Test 1: Upgrade Modal Copy
+- **Variant A:** Feature-focused ("Unlock AI Lesson Generation")
+- **Variant B:** Benefit-focused ("Save 5 hours per week")
+- **Metric:** Click-through rate
+
+### Test 2: Trial Length
+- **Variant A:** 14-day trial
+- **Variant B:** 30-day trial
+- **Metric:** Trial-to-paid conversion
+
+### Test 3: Upgrade Prompt Timing
+- **Variant A:** After 10 lessons (early)
+- **Variant B:** After 30 days (late)
+- **Metric:** Conversion rate
+
+### Test 4: Pricing Display
+- **Variant A:** Monthly price prominent ($6/mo)
+- **Variant B:** Annual price prominent ($60/yr)
+- **Metric:** Annual vs monthly subscriptions
+
+---
+
+## Legal & Compliance
+
+### Terms of Service Updates
+- [ ] Define tier features clearly
+- [ ] State data retention policies
+- [ ] Outline refund policy
+- [ ] Specify automatic renewal terms
+
+### Privacy Policy
+- [ ] Explain work calendar permissions (read-only)
+- [ ] Data storage locations
+- [ ] Third-party integrations (Stripe, Google, Microsoft)
+
+### State Compliance Disclaimer
+```
+HomeschoolHQ provides estimated state requirements based on publicly 
+available information as of 2026. These are suggestions, not legal advice.
+
+You are solely responsible for:
+• Verifying requirements with your local school district
+• Meeting all state and local homeschool laws
+• Maintaining accurate records for audits
+
+HomeschoolHQ and its creators are not liable for errors in state 
+requirement data or compliance tracking.
+
+Consult a homeschool legal advisor for your specific situation.
+```
+
+---
+
+## Appendix: Upgrade Flow Diagrams
+
+### Visual: Free → Essential Journey
+```
+User clicks locked feature
+    ↓
+Upgrade modal appears
+    ↓
+"Start 14-day trial" (no CC)
+    ↓
+Email confirmation
+    ↓
+Feature tour
+    ↓
+7 days later: "Trial halfway done" email
+    ↓
+Day 13: "Trial ends tomorrow" email
+    ↓
+Day 14: Enter payment → Subscribe
+    OR
+    Downgrade to Free (data preserved)
+```
+
+### Visual: Essential → Pro Journey
+```
+User hits 50 attendance hours
+    ↓
+Banner: "Track compliance automatically"
+    ↓
+Click "Learn More"
+    ↓
+Pro comparison page
+    ↓
+"Upgrade for $39/year more"
+    ↓
+Stripe checkout (prorated)
+    ↓
+Compliance Wizard auto-opens
+    ↓
+State selection + disclaimer
+    ↓
+Dashboard now shows compliance score
+    ↓
+Email: "Connect work calendar"
+```
+
+---
+
+*Document Version: 1.0*  
+*Last Updated: January 31, 2026*  
+*Owner: Imee (Senior PM, Medallia)*  
+*Next Review: After first 100 signups*

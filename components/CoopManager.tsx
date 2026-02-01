@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { supabase } from '@/lib/supabase'
+import { supabase } from '@/src/lib/supabase'
 import moment from 'moment'
 
 interface CoopManagerProps {
@@ -183,6 +183,8 @@ export default function CoopManager({ userId }: CoopManagerProps) {
   }
 
   const enrollInClass = async (classId: string) => {
+    const cls = classes.find(c => c.id === classId)
+    if (!cls) return
     const { data: existing } = await supabase
       .from('class_enrollments')
       .select('*')
@@ -194,7 +196,8 @@ export default function CoopManager({ userId }: CoopManagerProps) {
       alert('You are already enrolled in this class')
       return
     }
-
+    
+    // Enroll in class
     const { error } = await supabase
       .from('class_enrollments')
       .insert([{

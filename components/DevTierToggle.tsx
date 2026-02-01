@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react'
 import { getTierForTesting, setTierForTesting, clearTierTesting, TierType } from '@/lib/tierTesting'
-import { supabase } from '@/lib/supabase'
+import { supabase } from '@/src/lib/supabase'
 
 export default function DevTierToggle() {
   const [showMenu, setShowMenu] = useState(false)

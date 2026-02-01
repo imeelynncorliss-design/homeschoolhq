@@ -1,0 +1,648 @@
+# HomeschoolHQ Feature Mapping to Pricing Tiers
+**Current State Analysis & Development Roadmap**
+
+## Executive Summary
+
+This document maps HomeschoolHQ's existing features to the pricing tier structure (Free, Essential, Pro, Premium) and identifies what needs to be built for Spring 2026 launch.
+
+**Current Status:**
+- ✅ **Essential Tier:** 85% complete (core features built)
+- ⚠️ **Pro Tier:** 30% complete (compliance features needed)
+- ❌ **Premium Tier:** 10% complete (Phase 2 - Fall 2026)
+
+---
+
+## Feature Inventory by Tier
+
+### FREE TIER (Lead Generation)
+**Target:** Single-child families, trial users, market testing
+
+#### ✅ Currently Built & Working
+1. **Student Management**
+   - Add 1 child profile
+   - Photo upload for child
+   - Basic profile fields (name, age, grade)
+   - Delete child profile
+   
+2. **Manual Lesson Planning**
+   - Create lessons manually
+   - Edit lesson details (title, subject, description, date)
+   - Delete lessons
+   - Set lesson duration (minutes/days/weeks)
+   
+3. **Basic Calendar View**
+   - Calendar mode (month view)
+   - List mode (all lessons by child)
+   - Lesson status tracking (not started, in progress, completed)
+   - Click to edit lessons
+   
+4. **Basic Features**
+   - Logout functionality
+   - Parent profile (name only)
+   - Simple dashboard navigation
+
+#### ❌ Missing/Needs Restriction for Free Tier
+1. **Feature Gating Logic**
+   - Enforce 1-child limit (currently allows unlimited)
+   - Block AI features for Free users
+   - Block curriculum import
+   - Block assessments
+   - Show "Upgrade to Premium" prompts
+   
+2. **14-Day Trial of Pro Features**
+   - Trial countdown timer
+   - Temporary unlock of all features
+   - Auto-revert to Free after 14 days
+   - Trial expiration notification
+
+#### 📊 Completion Status: 70%
+**Remaining Work:**
+- Feature gating middleware
+- Trial management system
+- Upgrade prompts/CTAs
+
+---
+
+### ESSENTIAL TIER ($60/year)
+**Target:** Traditional homeschool families, multi-child users
+
+#### ✅ Currently Built & Working
+1. **Unlimited Students**
+   - Add/edit/delete unlimited children
+   - Color-coded child cards
+   - Photo uploads per child
+   - Learning style tracking
+   - Subject proficiency tracking
+   
+2. **AI-Powered Lesson Generation** ✨
+   - LessonGenerator component (uses Anthropic API)
+   - Topic-based lesson creation
+   - Automatic lesson formatting
+   - Saves directly to database
+   
+3. **Assessment System**
+   - PersonalizedAssessmentCreator (AI-generated assessments)
+   - AssessmentTaking component
+   - Auto-grading functionality
+   - Assessment history tracking
+   - Past assessments viewer
+   - Assessment scores linked to lessons
+   
+4. **Curriculum Import**
+   - CurriculumImporter component
+   - PDF upload and parsing
+   - Bulk lesson creation
+   - Child assignment
+   
+5. **Advanced Calendar & Planning**
+   - Today view dashboard
+   - This Week view dashboard
+   - Full calendar month view
+   - All children list view
+   - Auto-schedule modal (bulk date assignment)
+   - Vacation period management
+   - Holiday awareness (warns on scheduling)
+   - Cascade date updates (shift multiple lessons)
+   
+6. **Progress Tracking**
+   - Status cycling (not started → in progress → completed)
+   - Completion timestamps
+   - Duration tracking in minutes
+   - Visual progress indicators
+   
+7. **Transcript Generation**
+   - (Mentioned in codebase, needs verification of completeness)
+   
+8. **Standards Alignment (Manual)**
+   - Subject proficiency by child
+   - Notes per subject
+   - Manual proficiency levels
+
+#### ⚠️ Partially Built / Needs Polish
+1. **Attendance Tracking**
+   - AttendanceTracker component exists
+   - AttendanceReminder component exists
+   - Manual daily attendance logging
+   - **Missing:** Attendance reports, hour calculations for compliance
+   
+2. **Materials Management**
+   - Route exists: `/materials`
+   - **Unknown status:** Need to verify if component is built
+
+#### ❌ Missing for Essential Tier
+1. **Storage System (50GB)**
+   - File upload interface
+   - Storage quota tracking
+   - File management UI
+   - Document vault
+   
+2. **Analytics/Reports**
+   - Progress reports by child
+   - Subject time tracking reports
+   - Completion rate analytics
+   - Weekly/monthly summaries
+
+#### 📊 Completion Status: 85%
+**Remaining Work:**
+- Storage system implementation
+- Analytics dashboard
+- Polish attendance features
+- Verify materials management status
+
+---
+
+### PRO TIER ($99/year) ⭐ DIFFERENTIATOR
+**Target:** Working parents in high-regulation states
+
+#### ✅ Currently Built & Working
+1. **Everything in Essential** (see above)
+
+2. **Work Calendar Integration (Partial)**
+   - Route exists: `/calendar/connect`
+   - **Unknown status:** OAuth flow, calendar sync implementation
+   
+3. **Social Hub Integration**
+   - Social events tracking
+   - Co-op class enrollments
+   - Calendar filters (show/hide event types)
+   - Manual attendance for external events
+   - Route: `/social` (Social Hub page)
+
+#### ⚠️ In Progress / Needs Completion
+1. **Compliance Features (CRITICAL for Pro)**
+   - ComplianceWizard component mentioned in imports
+   - **Missing:**
+     - State requirement database (state_templates table schema provided)
+     - User compliance settings (user_compliance_settings table)
+     - Compliance health score/dashboard
+     - Audit-ready PDF exports
+     - Hours tracking by state requirements
+
+2. **Work Calendar Overlay**
+   - Route created, OAuth setup unknown
+   - **Missing:**
+     - Google Calendar API integration
+     - Outlook Calendar API integration
+     - Visual overlay on lesson calendar
+     - Conflict detection (meeting vs lesson)
+     - Buffer time settings
+
+#### ❌ Missing for Pro Tier (CRITICAL for Launch)
+1. **State Compliance Dashboard** 🚨 PRIORITY 1
+   - State selection modal (one-time setup)
+   - Legal disclaimer before setting requirements
+   - Compliance health score widget
+   - Hours progress bar by subject
+   - State requirement templates (pre-populated)
+   - User confirms their state's requirements
+   - Audit log view
+   
+2. **AI-Powered Standard Mapping** 🚨 PRIORITY 2
+   - Automatic tagging of lessons to state standards
+   - Standards database by state
+   - AI categorization of lesson → standard
+   - Bulk standard assignment
+   - user_standards vs standards table architecture
+   
+3. **Audit-Ready Reporting** 🚨 PRIORITY 3
+   - One-click PDF generation
+   - State-specific formatting
+   - Hours summary by subject
+   - Attendance records
+   - Assessment scores included
+   - Digital signature field
+   
+4. **Smart Rescheduling** 🚨 PRIORITY 4
+   - Detect work calendar conflicts
+   - Suggest alternative lesson times
+   - Automatic gap-filling
+   - Respect vacation periods and holidays
+   - Batch reschedule capabilities
+
+5. **Storage Upgrade (250GB)**
+   - Increased quota from Essential
+   - Visual quota indicators
+
+#### 📊 Completion Status: 30%
+**Remaining Work:**
+- **CRITICAL PATH:** Compliance dashboard (database + UI)
+- State compliance database setup
+- Work calendar OAuth completion
+- AI standard mapping system
+- Audit PDF generator
+- Smart rescheduling algorithm
+
+---
+
+### PREMIUM TIER ($149/year) - Phase 2
+**Target:** Power users, co-op managers, multi-parent households
+
+#### ✅ Currently Built & Working
+1. **Everything in Pro** (see above)
+
+#### ❌ Missing for Premium Tier (Phase 2 - Fall 2026)
+1. **Voice-to-Log Transcription**
+   - Audio recording interface
+   - Speech-to-text API integration (Whisper?)
+   - Auto-categorization to lessons
+   - Timestamp tracking
+   - Edit transcript functionality
+   
+2. **Photo-to-Portfolio OCR**
+   - Photo upload interface (child photos exist, but not lesson photos)
+   - OCR processing (Google Vision API or similar)
+   - Automatic date extraction
+   - Tag to student record
+   - Gallery view of work
+   - Portfolio generation
+   
+3. **Slack/Teams Integration**
+   - OAuth setup for Slack
+   - OAuth setup for Microsoft Teams
+   - Status sync ("In a lesson - back at 11 AM")
+   - Webhook configuration
+   - Custom status messages
+   
+4. **Multi-Parent Collaboration**
+   - Invite secondary parent
+   - Shared calendar access
+   - Permission levels (view/edit)
+   - Activity log (who did what)
+   - Real-time sync
+   
+5. **Priority Support**
+   - Support ticket system
+   - 24-hour response SLA
+   - Direct messaging to Imee
+   - Video call scheduling
+   
+6. **Unlimited Storage**
+   - Remove quota limits
+   - Cloud backup settings
+   - File versioning
+
+#### 📊 Completion Status: 10%
+**Remaining Work:**
+- All Premium features (Phase 2 scope)
+
+---
+
+## Database Schema Status
+
+### ✅ Tables Currently Implemented
+- `kids` - Child profiles
+- `lessons` - Lesson records with duration tracking
+- `assessments` - Assessment metadata
+- `assessment_results` - Student assessment submissions
+- `subject_proficiency` - Child subject tracking
+- `vacation_periods` - School year vacation tracking
+- `school_year_settings` - Organization school year config
+- `social_events` - Community events
+- `class_enrollments` - Co-op class enrollment
+- `daily_attendance` - Manual attendance logging
+- `community_profiles` - Parent profiles
+
+### ⚠️ Tables Mentioned/Partially Implemented
+- `materials` - Materials management (route exists, table status unknown)
+- `course_grades` - Transcript generation (mentioned, needs verification)
+- `standards` - 167 state standard templates (mentioned in memory)
+- `user_standards` - Organization-specific standards (mentioned in memory)
+- `assessment_standards` - Standards junction table (mentioned in memory)
+
+### ❌ Tables Needed for Pro Tier
+- `state_templates` - State requirement templates (schema provided in pivot docs)
+- `user_compliance_settings` - User-confirmed compliance settings (schema provided)
+- `work_calendar_events` - Imported calendar events from Google/Outlook
+- `compliance_audit_log` - Track compliance calculations over time
+
+### ❌ Tables Needed for Premium Tier
+- `voice_logs` - Voice-to-log transcriptions
+- `portfolio_items` - OCR'd student work photos
+- `shared_access` - Multi-parent permissions
+- `support_tickets` - Priority support tracking
+
+---
+
+## Component Inventory
+
+### ✅ Built & Functional Components
+1. **Core UI**
+   - `KidCard` - Child profile cards
+   - `KidProfileForm` - Add/edit child modal
+   - `AllChildrenList` - Detailed lesson list view
+   - `TodaysDashboard` - Today's lessons view
+   - `ThisWeekDashboard` - Weekly view
+   - `LessonCalendar` - Month calendar view
+   - `CalendarFilters` - Toggle event types
+   - `ParentProfileManager` - Parent name editor
+   - `HelpWidget` - Quick tips panel
+   - `DevTierToggle` - Testing tier switcher
+
+2. **Lesson Management**
+   - `LessonGenerator` - AI lesson creation
+   - `CurriculumImporter` - PDF import
+   - `AutoScheduleModal` - Bulk date assignment
+   - Inline lesson editing (in dashboard)
+   - Cascade date updates
+
+3. **Assessment System**
+   - `PersonalizedAssessmentCreator` - AI assessment builder
+   - `AssessmentTaking` - Student assessment interface
+   - `PastAssessmentsViewer` - Assessment history
+
+4. **Attendance & Compliance**
+   - `AttendanceTracker` - Manual attendance logging
+   - `AttendanceReminder` - Missing attendance alerts
+   - `ComplianceWizard` - (Imported but implementation unknown)
+
+5. **Auth & Navigation**
+   - `AuthGuard` - Auth wrapper
+   - Dashboard routing
+   - Settings dropdown menu
+
+### ⚠️ Components Referenced but Unknown Status
+- Materials management UI
+- Transcript generator UI
+- Work calendar connect UI
+
+### ❌ Missing Components for Pro Tier
+1. **Compliance Dashboard** 🚨
+   - State selection wizard
+   - Compliance health score widget
+   - Hours tracking by subject/state
+   - Audit report generator
+   - Legal disclaimer modal
+
+2. **Work Calendar Integration**
+   - OAuth connection flow
+   - Calendar event overlay
+   - Conflict detection alerts
+   - Smart reschedule suggestions
+
+3. **Standards Management**
+   - Standards browser/selector
+   - AI standard mapping interface
+   - Bulk assignment tools
+   - Standards progress tracker
+
+### ❌ Missing Components for Premium Tier
+- Voice log recorder
+- Photo upload & OCR interface
+- Portfolio gallery
+- Slack/Teams connection UI
+- Multi-parent invite system
+- Support ticket interface
+
+---
+
+## Feature Gating Implementation
+
+### Current Tier Detection
+```typescript
+// EXISTS: getTierForTesting() function
+// LOCATION: /lib/tierTesting.ts
+// STATUS: Dev-only testing, not production-ready
+```
+
+### Needed: Production Tier System
+1. **User Subscription Table**
+   ```sql
+   CREATE TABLE user_subscriptions (
+     id uuid PRIMARY KEY,
+     user_id uuid REFERENCES auth.users(id),
+     tier text CHECK (tier IN ('FREE', 'ESSENTIAL', 'PRO', 'PREMIUM')),
+     stripe_subscription_id text,
+     status text CHECK (status IN ('active', 'past_due', 'canceled', 'trialing')),
+     trial_ends_at timestamp,
+     current_period_end timestamp,
+     created_at timestamp DEFAULT now()
+   );
+   ```
+
+2. **Middleware for Feature Gating**
+   - Check user tier before allowing feature access
+   - Return 403 for unauthorized features
+   - Show upgrade prompts in UI
+
+3. **Stripe Integration**
+   - Webhook handler for subscription events
+   - Checkout session creation
+   - Customer portal for subscription management
+   - Billing history
+
+---
+
+## Development Priority Order (Phase 1 - Spring 2026)
+
+### 🚨 CRITICAL PATH (Launch Blockers)
+**Must have for Pro tier differentiation:**
+
+1. **Compliance Dashboard - Week 1-2**
+   - State selection flow
+   - Legal disclaimer & user confirmation
+   - Database: `state_templates` + `user_compliance_settings`
+   - UI: Compliance health score widget
+   - Hours calculation by subject
+   - Add to dashboard main view
+
+2. **Audit Reporting - Week 3**
+   - PDF generation library setup
+   - State-specific templates
+   - One-click export button
+   - Include: hours, attendance, assessments
+
+3. **Subscription System - Week 4**
+   - Stripe integration
+   - User tier management
+   - Feature gating middleware
+   - Upgrade prompts & CTAs
+
+4. **Work Calendar OAuth - Week 5-6**
+   - Google Calendar API setup
+   - Outlook Calendar API setup
+   - OAuth flow UI
+   - Test with real accounts
+
+### ⚠️ HIGH PRIORITY (Enhance Core Product)
+
+5. **Storage System - Week 7**
+   - File upload component
+   - Quota tracking
+   - 50GB (Essential) vs 250GB (Pro) enforcement
+
+6. **Standards Database - Week 8**
+   - Populate 167 state templates
+   - Build standards browser UI
+   - Manual assignment interface
+
+7. **Polish Existing Features - Week 9-10**
+   - Materials management completion
+   - Transcript verification
+   - Attendance reporting
+   - Analytics dashboard (basic)
+
+### 📋 MEDIUM PRIORITY (Nice to Have for Launch)
+
+8. **AI Standard Mapping - Week 11-12**
+   - Claude integration for auto-tagging
+   - Bulk assignment
+   - Confidence scoring
+
+9. **Work Calendar Overlay - Week 13**
+   - Visual calendar merge
+   - Conflict detection
+   - Smart reschedule suggestions
+
+10. **Marketing Pages - Week 14-15**
+    - Pricing page with tier comparison
+    - Feature showcase
+    - Testimonials/case studies
+    - FAQ section
+
+### ✅ COMPLETED / LOW PRIORITY
+- Core lesson management ✅
+- AI lesson generation ✅
+- Assessment system ✅
+- Social hub features ✅
+- Basic attendance ✅
+
+---
+
+## Gaps Analysis
+
+### FREE Tier Gaps
+- ❌ Enforce 1-child limit
+- ❌ Block premium features
+- ❌ Trial countdown system
+- ❌ Upgrade CTAs
+
+### ESSENTIAL Tier Gaps
+- ❌ 50GB storage system
+- ❌ Analytics dashboard
+- ⚠️ Polish attendance reporting
+
+### PRO Tier Gaps (CRITICAL)
+- ❌ State compliance database
+- ❌ Compliance health dashboard
+- ❌ Audit PDF generation
+- ❌ AI standard mapping
+- ⚠️ Work calendar OAuth
+- ❌ Work calendar overlay
+- ❌ Smart rescheduling
+- ❌ 250GB storage enforcement
+
+### PREMIUM Tier Gaps (Phase 2)
+- ❌ Everything (planned for Fall 2026)
+
+---
+
+## Testing Requirements
+
+### Unit Tests Needed
+- Tier detection logic
+- Feature gating middleware
+- Compliance calculations
+- Hours tracking accuracy
+
+### Integration Tests Needed
+- Stripe webhook handling
+- OAuth flows (Google, Outlook)
+- PDF generation
+- AI standard mapping
+
+### User Acceptance Testing
+- Trial expiration flow
+- Upgrade from Free → Essential
+- Upgrade from Essential → Pro
+- Downgrade scenarios
+- Compliance report accuracy
+
+---
+
+## Risk Assessment
+
+### HIGH RISK ⚠️
+1. **Compliance Accuracy**
+   - State requirements change annually
+   - Legal liability if hours calculated wrong
+   - Mitigation: User confirms requirements, legal disclaimer
+
+2. **Work Calendar OAuth**
+   - Complex integration, multiple providers
+   - User privacy concerns
+   - Mitigation: Clear permissions, read-only access
+
+3. **Stripe Integration**
+   - Payment processing critical path
+   - Webhook reliability
+   - Mitigation: Robust error handling, email fallbacks
+
+### MEDIUM RISK ⚠️
+1. **AI Standard Mapping**
+   - AI accuracy not 100%
+   - Users may distrust auto-tagging
+   - Mitigation: Manual override always available
+
+2. **Feature Gating**
+   - Bugs could give free users paid features
+   - Mitigation: Server-side enforcement, audit logs
+
+### LOW RISK ✅
+1. **Storage Quotas**
+   - Well-understood technology
+   - Easy to enforce
+
+2. **PDF Generation**
+   - Mature libraries available
+   - Straightforward implementation
+
+---
+
+## Success Metrics by Tier
+
+### FREE Tier
+- **Target:** 400 users (40% of 1,000 total)
+- **Conversion Goal:** 25% upgrade to Essential within 30 days
+- **Key Metric:** Time to first lesson created
+
+### ESSENTIAL Tier
+- **Target:** 350 users (35% of 1,000 total)
+- **Retention Goal:** 80% annual renewal
+- **Key Metric:** Lessons created per week
+
+### PRO Tier
+- **Target:** 200 users (20% of 1,000 total)
+- **Revenue Goal:** 40% of total revenue
+- **Key Metric:** Compliance reports generated per month
+
+### PREMIUM Tier
+- **Target:** 50 users (5% of 1,000 total)
+- **Revenue Goal:** 15% of total revenue
+- **Key Metric:** Advanced features usage (voice logs, multi-parent)
+
+---
+
+## Appendix: Current Feature Usage (Estimated)
+
+Based on dashboard code analysis:
+
+| Feature | Component | Lines of Code | Complexity |
+|---------|-----------|---------------|------------|
+| Lesson Management | Inline | ~400 | Medium |
+| AI Generation | LessonGenerator | ~200 | Medium |
+| Assessments | Multiple | ~500 | High |
+| Calendar Views | Multiple | ~600 | High |
+| Auto-Schedule | AutoScheduleModal | ~300 | Medium |
+| Curriculum Import | CurriculumImporter | ~250 | Medium |
+| Attendance | Multiple | ~150 | Low |
+| Social Hub | Route | Unknown | Unknown |
+| Materials | Route | Unknown | Unknown |
+
+**Total Estimated Codebase:** ~2,500 lines (dashboard only)
+
+---
+
+*Document Version: 1.0*  
+*Last Updated: January 31, 2026*  
+*Owner: Imee (Senior PM, Medallia)*  
+*Next Review: After Pro Tier Launch (Spring 2026)*

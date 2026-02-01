@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef, Suspense } from 'react'
-import { supabase } from '@/lib/supabase'
+import { supabase } from '@/src/lib/supabase'
 import { useRouter } from 'next/navigation'
 import SchoolYearConfig from '@/components/SchoolYearConfig'
 import ProgressDashboard from '@/components/ProgressDashboard'
@@ -57,7 +57,7 @@ function AdminContent() {
     
     if (!user) {
       if (window.location.hostname === 'localhost') {
-        setUser({ id: 'dev-user', email: 'dev@example.com', role: 'admin' }) // ✅ Admin Bypass
+        setUser({ id: '00000000-0000-0000-0000-000000000001', email: 'dev@example.com', role: 'admin' }) // ✅ Admin Bypass
         setUserTier(getTierForTesting()) 
       } else {
         router.push('/')
@@ -239,7 +239,7 @@ function AdminContent() {
               {activeTab === 'progress' && <ProgressDashboard userId={user.id} />}
               {activeTab === 'vacation' && <EnhancedVacationManager organizationId="d52497c0-42a9-49b7-ba3b-849bffa27fc4" />}
               {activeTab === 'bulk-schedule' && <BulkLessonScheduler userId={user.id} />}
-              {activeTab === 'attendance' && <AttendanceTracker kids={kids} organizationId={user.id} />}
+              {activeTab === 'attendance' && <AttendanceTracker kids={kids} organizationId={user.id} userId={user.id} />}
             </div>
           </div>
         )}

@@ -4,7 +4,7 @@
 // ============================================================================
 
 'use client';
-import type { ProficiencyLevel } from '@/types/standards';
+import type { ProficiencyLevel } from '@/src/types/standards';
 import { useState } from 'react';
 import { StandardsPicker } from '@/components/StandardsPicker';
 

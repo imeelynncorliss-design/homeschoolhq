@@ -19,7 +19,12 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"]
+      "@/components/*": ["./components/*"],
+      "@/lib/*": ["./lib/*"],
+      "@/types/*": ["./src/types/*"],
+      "@/utils/*": ["./utils/*"],
+      "@/src/*": ["./src/*"],
+      "@/app/*": ["./app/*"]
     }
   },
   "include": [
@@ -28,7 +33,9 @@
     "**/*.tsx",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
-    "**/*.mts"
-, "components/VacationPlanner.tsx.old", "app/admin/assessments/page.tsx.backup"  ],
+    "**/*.mts",
+    "components/VacationPlanner.tsx.old",
+    "app/admin/assessments/page.tsx.backup"
+  ],
   "exclude": ["node_modules"]
 }

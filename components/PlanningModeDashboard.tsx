@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/src/lib/supabase';
 import { useRouter } from 'next/navigation';
 
 interface PlanningTask {
@@ -43,7 +43,7 @@ export default function PlanningModeDashboard() {
         // 1. Dev Bypass for localhost
         if (window.location.hostname === 'localhost') {
           console.warn("🛠️ Dev Bypass: Staying on page");
-          setUser({ id: 'dev-user', email: 'dev@example.com' });
+          setUser({ id: '00000000-0000-0000-0000-000000000001', email: 'dev@example.com' });
           
           // Provide mock data so cards and titles appear during testing
           setCurrentPeriod({ 

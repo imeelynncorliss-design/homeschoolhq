@@ -12,7 +12,7 @@ import {
   getStandardsGaps,
   getStandardsByProficiency,
 } from '@/lib/utils-standards';
-import type { ProficiencyLevel } from '@/types/standards';
+import type { ProficiencyLevel } from '@/src/types/standards';
 
 // GET - Get proficiency data for a student
 export async function GET(

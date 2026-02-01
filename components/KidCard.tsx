@@ -41,7 +41,7 @@ export default function KidCard({ kid, isSelected, onSelect, onEdit, onDelete }:
   }, [])
 
   const updateVibe = async () => {
-    const { supabase } = await import('@/lib/supabase')
+    const { supabase } = await import('@/src/lib/supabase')
     await supabase
       .from('kids')
       .update({ todays_vibe: vibeValue })

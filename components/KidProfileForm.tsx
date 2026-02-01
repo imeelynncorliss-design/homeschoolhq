@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react'
 import SubjectPacingManager from './SubjectPacingManager'
-import { supabase } from '@/lib/supabase'
+import { supabase } from '@/src/lib/supabase'
 
 interface SubjectProficiency {
   id?: string

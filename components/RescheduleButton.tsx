@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
+import { supabase } from '@/src/lib/supabase'
 import { isValidHomeschoolDay, isWithinSchoolYear } from '@/utils/schoolYearUtils'
 import { DEFAULT_HOLIDAYS_2025_2026, Holiday } from '@/app/utils/holidayUtils'
 import { Calendar, AlertTriangle } from 'lucide-react'

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, Suspense } from 'react'
-import { supabase } from '@/lib/supabase'
+import { supabase } from '@/src/lib/supabase'
 import { useRouter, useSearchParams } from 'next/navigation'
 import LessonGenerator from '@/components/LessonGenerator'
 import CurriculumImporter from '@/components/CurriculumImporter'
@@ -12,6 +12,7 @@ import TodaysDashboard from '@/components/TodaysDashboard'
 import ThisWeekDashboard from '@/components/ThisWeekDashboard'
 import KidCard from '@/components/KidCard'
 import KidProfileForm from '@/components/KidProfileForm'
+import CalendarFilters from '@/components/CalendarFilters'
 import { getTierForTesting } from '@/lib/tierTesting'
 import DevTierToggle from '@/components/DevTierToggle'
 import { formatLessonDescription } from '@/lib/formatLessonDescription'
@@ -27,6 +28,9 @@ import AttendanceReminder from '@/components/AttendanceReminder'
 import AttendanceTracker from '@/components/AttendanceTracker'
 import ParentProfileManager from '@/components/ParentProfileManager'
 import AuthGuard from '@/components/AuthGuard'
+import ComplianceWizard from '@/components/ComplianceWizard';
+
+
 
 const DURATION_UNITS = ['minutes', 'days', 'weeks'] as const;
 type DurationUnit = typeof DURATION_UNITS[number];
@@ -40,6 +44,7 @@ const CHILD_COLORS = [
   { border: 'border-orange-400', bg: 'bg-orange-50', dot: 'bg-orange-500' },
   { border: 'border-teal-400', bg: 'bg-teal-50', dot: 'bg-teal-500' },
 ];
+
 
 const convertMinutesToDuration = (minutes: number | null): { value: number; unit: DurationUnit } => {
   if (!minutes) return { value: 30, unit: 'minutes' };
@@ -120,10 +125,23 @@ function DashboardContent() {
   const [cascadeDays, setCascadeDays] = useState<number>(1)
   const [parentName, setParentName] = useState('')
   
-  const [showHelp, setShowHelp] = useState(false)
+  const [showHelp, setShowHelp] = useState(false);
+  const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [expandedFaq, setExpandedFaq] = useState<string | null>(null)
+
+  // NEW: Social integration state
+  const [socialEvents, setSocialEvents] = useState<any[]>([])
+  const [coopEnrollments, setCoopEnrollments] = useState<any[]>([])
+  const [manualAttendance, setManualAttendance] = useState<any[]>([])
+  const [calendarFilters, setCalendarFilters] = useState({
+    showLessons: true,
+    showSocialEvents: true,
+    showCoopClasses: true,
+    showManualAttendance: true
+  })
   
   const router = useRouter()
+  
   // This helper function provides the colors for the kid cards on line 731
   const getChildColor = (index: number) => {
     const colors = [
@@ -154,28 +172,60 @@ function DashboardContent() {
     }
   }
 
+  // UPDATED: Load all activities including social events
   const loadAllLessons = async () => {
-    // Ensure we check if user exists first
     if (!user) return;
-      const { data, error } = await supabase
-        .from('lessons')
-        .select('*')
-        .eq('user_id', user.id) // Ensure security here too!
-        .order('lesson_date', { ascending: false })
     
-      if (error) {
-        console.error('Error loading lessons:', error.message)
-        return
-      }
-    if (data) {
-      setAllLessons(data)
+    // Load lessons
+    const { data: lessonsData, error: lessonsError } = await supabase
+      .from('lessons')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('lesson_date', { ascending: false })
+  
+    if (lessonsError) {
+      console.error('Error loading lessons:', lessonsError.message)
+      return
+    }
+    
+    if (lessonsData) {
+      setAllLessons(lessonsData)
       const grouped: { [kidId: string]: any[] } = {}
-      data.forEach(lesson => {
+      lessonsData.forEach(lesson => {
         if (!grouped[lesson.kid_id]) grouped[lesson.kid_id] = []
         grouped[lesson.kid_id].push(lesson)
       })
       setLessonsByKid(grouped)
     }
+
+    // Load social events
+    const { data: eventsData } = await supabase
+      .from('social_events')
+      .select('*')
+      .or(`is_public.eq.true,created_by.eq.${user.id}`)
+      .order('event_date', { ascending: false })
+
+    if (eventsData) setSocialEvents(eventsData)
+
+    // Load co-op enrollments
+    const { data: enrollmentsData } = await supabase
+      .from('class_enrollments')
+      .select(`
+        *,
+        coop_classes(*)
+      `)
+      .eq('user_id', user.id)
+
+    if (enrollmentsData) setCoopEnrollments(enrollmentsData)
+
+    // Load manual attendance
+    const { data: attendanceData } = await supabase
+      .from('daily_attendance')
+      .select('*')
+      .eq('organization_id', user.id)
+      .order('attendance_date', { ascending: false })
+
+    if (attendanceData) setManualAttendance(attendanceData)
   };
 
 // Simplified - AuthGuard already verified auth, just get the user
@@ -628,6 +678,7 @@ const getUser = async () => {
   }
 
   if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>
+  
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-7xl mx-auto">
@@ -652,14 +703,69 @@ const getUser = async () => {
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
-              {showHelp ? '✕ Hide Tips' : '💡 How To'}
-            </button>
-            <button onClick={() => router.push('/materials')} className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium">📦 Materials</button>
-            <button onClick={() => router.push('/admin')} className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium">⚙️ Admin</button>
-            <button onClick={() => router.push('/social')} className="px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 font-medium">🤝 Social Hub</button>
-            <button onClick={handleLogout} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium">Logout</button>
-          </div>
-          </div>
+             {showHelp ? '✕ Hide Tips' : '💡 How To'}
+        </button>
+
+        <button 
+          onClick={() => router.push('/social')}
+          className="px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 font-medium"
+        >
+          🤝 Social Hub
+        </button>
+
+        {/* Settings Dropdown */}
+        <div className="relative">
+          <button
+            onClick={() => setShowSettingsMenu(!showSettingsMenu)}
+            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium flex items-center gap-2"
+          >
+            ⚙️ Settings
+            <span className={`transition-transform ${showSettingsMenu ? 'rotate-180' : ''}`}>▼</span>
+          </button>
+          
+          {showSettingsMenu && (
+            <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+              <button
+                onClick={() => {
+                  router.push('/materials');
+                  setShowSettingsMenu(false);
+                }}
+                className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 text-gray-700 w-full text-left"
+              >
+                📦 Materials
+              </button>
+              
+              <button
+                onClick={() => {
+                  router.push('/calendar/connect');
+                  setShowSettingsMenu(false);
+                }}
+                className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 text-gray-700 w-full text-left"
+              >
+                📅 Work Calendar
+              </button>
+              
+              <button
+                onClick={() => {
+                  router.push('/admin');
+                  setShowSettingsMenu(false);
+                }}
+                className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 text-gray-700 w-full text-left"
+              >
+                ⚙️ Admin
+              </button>
+            </div>
+          )}
+        </div>
+
+        <button 
+          onClick={handleLogout}
+          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium"
+        >
+          Logout
+        </button>
+        </div>
+        </div>
 
           {/* Help Panel - Collapsible */}
           {showHelp && (
@@ -985,7 +1091,39 @@ const getUser = async () => {
                 ) : viewMode === 'week' ? (
                   <ThisWeekDashboard kids={kids} lessonsByKid={lessonsByKid} onStatusChange={handleStatusChange} onLessonClick={(lesson, child) => { setSelectedLesson(lesson); setSelectedLessonChild(child) }} />
                 ) : viewMode === 'calendar' ? (
-                  <LessonCalendar kids={kids} lessonsByKid={lessonsByKid} onLessonClick={(lesson, child) => {setSelectedLesson(lesson); setSelectedLessonChild(child); startEditLesson(lesson);setShowLessonEditModal(true); }} onStatusChange={handleStatusChange}/>
+                  <>
+                    {/* NEW: Calendar Filters */}
+                    <div className="mb-6">
+                      <CalendarFilters
+                        filters={calendarFilters}
+                        onChange={setCalendarFilters}
+                        counts={{
+                          lessons: allLessons.filter(l => l.lesson_date).length,
+                          socialEvents: socialEvents.length,
+                          coopClasses: coopEnrollments.length,
+                          manualAttendance: manualAttendance.length
+                        }}
+                      />
+                    </div>
+
+                    {/* Calendar with all activity types */}
+                    <LessonCalendar 
+                      kids={kids} 
+                      lessonsByKid={lessonsByKid}
+                      socialEvents={socialEvents}
+                      coopEnrollments={coopEnrollments}
+                      manualAttendance={manualAttendance}
+                      filters={calendarFilters}
+                      onLessonClick={(lesson, child) => {
+                        setSelectedLesson(lesson); 
+                        setSelectedLessonChild(child); 
+                        startEditLesson(lesson);
+                        setShowLessonEditModal(true); 
+                      }} 
+                      onStatusChange={handleStatusChange}
+                      userId={user.id}
+                    />
+                  </>
                 ) : (
                   <AllChildrenList 
                     kids={kids} 
@@ -1036,7 +1174,7 @@ const getUser = async () => {
           // UPDATE EXISTING KID
           const updateData: any = {
             user_id: user.id,
-            organization_id: user.id,  // ← ADDED
+            organization_id: user.id,
             firstname: data.firstname,
             lastname: data.lastname,
             displayname: data.displayname || data.firstname,
@@ -1098,7 +1236,7 @@ const getUser = async () => {
           // CREATE NEW KID
           const { data: newKid, error } = await supabase.from('kids').insert([{
             user_id: user.id,
-            organization_id: user.id,  // ← ADDED
+            organization_id: user.id,
             firstname: data.firstname,
             lastname: data.lastname,
             displayname: data.displayname || data.firstname,

@@ -3,7 +3,7 @@
 // Database query helpers for standards system
 // ============================================================================
 
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/src/lib/supabase';
 import type {
   Standard,
   StandardsFilterParams,
@@ -15,7 +15,7 @@ import type {
   StandardsGapAnalysis,
   StudentStandardsCoverage,
   GeneratedActivity,
-} from '@/types/standards';
+} from '@/src/types/standards';
 
 // ============================================================================
 // SUPABASE CLIENT

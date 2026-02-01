@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js'
-import { SchoolYearConfig, SchoolYearTemplate, SCHOOL_YEAR_TEMPLATES, DayOfWeek, SchoolYearType } from '@/types/school-year';
+import { SchoolYearConfig, SchoolYearTemplate, SCHOOL_YEAR_TEMPLATES, DayOfWeek, SchoolYearType } from '@/src/types/school-year';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;

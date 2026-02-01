@@ -23,6 +23,8 @@ const DURATION_UNITS = ['minutes', 'days', 'weeks'] as const;
 type DurationUnit = typeof DURATION_UNITS[number];
 
 export default function CurriculumImporter({ childId, childName, onClose, onImportComplete }: Props) {
+  // ✅ ADD THIS AT THE TOP - Single declaration for the whole component
+  const testOrgId = 'd52497c0-42a9-49b7-ba3b-849bffa27fc4';
   const [file, setFile] = useState<File | null>(null);
   const [extractedLessons, setExtractedLessons] = useState<Lesson[]>([]);
   const [selectedLessons, setSelectedLessons] = useState<Set<number>>(new Set());
@@ -56,60 +58,50 @@ export default function CurriculumImporter({ childId, childName, onClose, onImpo
   } | null>(null);
   const [organizationId, setOrganizationId] = useState<string>('');
 
-  // ✅ Load existing subjects when component mounts
-  useEffect(() => {
-    const loadSubjects = async () => {
-      const { supabase } = await import('@/lib/supabase');
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      
-      const { data } = await supabase
-        .from('lessons')
-        .select('subject')
-        .eq('user_id', user.id);
-      
-      if (data) {
-        const uniqueSubjects = [...new Set(data.map(d => d.subject))].filter(Boolean);
-        setExistingSubjects(uniqueSubjects);
-      }
-    };
-    loadSubjects();
-  }, []);
+// ✅ Load existing subjects (using hardcoded test org)
+useEffect(() => {
+  const loadSubjects = async () => {
+    const { supabase } = await import('@/src/lib/supabase');
+    
+    const { data } = await supabase
+      .from('lessons')
+      .select('subject')
+      .eq('organization_id', testOrgId);
+    
+    if (data) {
+      const uniqueSubjects = [...new Set(data.map(d => d.subject))].filter(Boolean);
+      setExistingSubjects(uniqueSubjects);
+    }
+  };
+  loadSubjects();
+}, []);
 
-  // ✅ NEW: Load planning period
-  useEffect(() => {
-    const loadPlanningPeriod = async () => {
-      const { supabase } = await import('@/lib/supabase');
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      
-      // Get organization
-      const { data: org } = await supabase
-        .from('organizations')
-        .select('id')
-        .limit(1)
-        .single();
-      
-      if (org) {
-        setOrganizationId(org.id);
-        
-        // Check for active planning period
-        const { data: period } = await supabase
-          .from('planning_periods')
-          .select('*')
-          .eq('organization_id', org.id)
-          .eq('is_active', true)
-          .lte('start_date', new Date().toISOString().split('T')[0])
-          .gte('end_date', new Date().toISOString().split('T')[0])
-          .maybeSingle();
-        
-        if (period) {
-          setActivePlanningPeriod(period);
-        }
-      }
-    };
-    loadPlanningPeriod();
-  }, []);
+// ✅ Load planning period (using hardcoded test org)
+useEffect(() => {
+  const loadPlanningPeriod = async () => {
+    const { supabase } = await import('@/src/lib/supabase');
+    
+    console.log('⚠️ Using test organization:', testOrgId);
+    setOrganizationId(testOrgId);
+    
+    // Check for active planning period
+    const { data: period } = await supabase
+      .from('planning_periods')
+      .select('*')
+      .eq('organization_id', testOrgId)
+      .eq('is_active', true)
+      .lte('start_date', new Date().toISOString().split('T')[0])
+      .gte('end_date', new Date().toISOString().split('T')[0])
+      .maybeSingle();
+    
+    if (period) {
+      console.log('📅 Active planning period:', period.period_name);
+      setActivePlanningPeriod(period);
+    }
+  };
+  
+  loadPlanningPeriod();
+}, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -211,27 +203,35 @@ export default function CurriculumImporter({ childId, childName, onClose, onImpo
   };
 
   const importLessons = async () => {
+    console.log('🚀 Import button clicked');
+  console.log('📊 Current state:', { 
+    organizationId, 
+    selectedCount: selectedLessons.size,
+    hasFile: !!file 
+  });
     setLoading(true);
 
     if (!organizationId) {
+      console.error('❌ Organization ID is missing!');
       alert('Organization not loaded. Please refresh and try again.');
       setLoading(false);
       return;
     }
     
+    console.log('✅ Organization ID present, proceeding with import...');
+    
     const lessonsToImport = extractedLessons.filter((_, i) => selectedLessons.has(i));
     
     try {
       // Fetch existing lessons for this child using Supabase
-      const { supabase } = await import('@/lib/supabase');
+      const { supabase } = await import('@/src/lib/supabase');
       
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
+      const userId = user?.id || '00000000-0000-0000-0000-000000000001'; // ✅ CORRECT
       if (!user) {
-        alert('You must be logged in to import lessons');
-        setLoading(false);
-        return;
-      }
+        console.log('⚠️ No authenticated user - using test user ID');
+}
       
       const { data: existingLessons } = await supabase
         .from('lessons')
@@ -291,7 +291,7 @@ export default function CurriculumImporter({ childId, childName, onClose, onImpo
           
           lessonsToInsert.push({
             kid_id: childId,
-            user_id: user.id,
+            user_id: userId,  // ✅ Use the userId variable instead change back to user.id
             organization_id: organizationId,  
             subject: lesson.subject,
             title: lesson.title,
@@ -305,56 +305,73 @@ export default function CurriculumImporter({ childId, childName, onClose, onImpo
         }
       }
       
-      // Bulk insert all lessons at once
-      if (lessonsToInsert.length > 0) {
-        const { error } = await supabase
-          .from('lessons')
-          .insert(lessonsToInsert);
-        
-        if (error) {
-          console.error('Import error:', error);
-          alert(`Failed to import lessons: ${error.message}`);
-          setLoading(false);
-          return;
+    // Bulk insert all lessons at once
+if (lessonsToInsert.length > 0) {
+  console.log('📝 About to insert lessons:', {
+    count: lessonsToInsert.length,
+    sample: lessonsToInsert[0],
+    organizationId,
+    userId
+  });
+  
+  const { error } = await supabase
+    .from('lessons')
+    .insert(lessonsToInsert);
+  
+  console.log('✅ Insert result:', { error });
+  
+  if (error) {
+    console.error('❌ Database insert error:', error);
+    alert(`Failed to import lessons: ${error.message}`);
+    return; // Exit early - the finally block will still run
+  }
+  
+  // ✅ Track curriculum import for planning auto-completion
+  if (activePlanningPeriod && organizationId) {
+    await supabase
+      .from('curriculum_imports')
+      .insert({
+        organization_id: organizationId,
+        planning_period_id: activePlanningPeriod.id,
+        import_source: file?.type.includes('pdf') ? 'pdf' : 'image',
+        lessons_created: lessonsToInsert.length,
+        file_url: file?.name,
+        metadata: {
+          subject: lessonsToInsert[0]?.subject,
+          total_lessons: lessonsToInsert.length,
+          start_date: startDate || null,
         }
-        
-        // ✅ NEW: Track curriculum import for planning auto-completion
-        if (activePlanningPeriod && organizationId) {
-          await supabase
-            .from('curriculum_imports')
-            .insert({
-              organization_id: organizationId,
-              planning_period_id: activePlanningPeriod.id,
-              import_source: file?.type.includes('pdf') ? 'pdf' : 'image',
-              lessons_created: lessonsToInsert.length,
-              file_url: file?.name,
-              metadata: {
-                subject: lessonsToInsert[0]?.subject,
-                total_lessons: lessonsToInsert.length,
-                start_date: startDate || null,
-              }
-            });
-          
-          // Trigger auto-completion check
-          const result = await triggerAutoComplete(
-            'curriculum_import',
-            organizationId,
-            activePlanningPeriod.id
-          );
-          
-          // Log results (optional - you can show this to user later)
-          if (result.completed_tasks.length > 0) {
-            console.log('✨ Auto-completed planning tasks:', result.completed_tasks);
-          }
-        }
-      }
+      });
+    
+    // Trigger auto-completion check
+    const result = await triggerAutoComplete(
+      'curriculum_import',
+      organizationId,
+      activePlanningPeriod.id
+    );
+    
+    if (result.completed_tasks.length > 0) {
+      console.log('✨ Auto-completed planning tasks:', result.completed_tasks);
+    }
+  }
+} // ✅ IMPORTANT: Closing brace for "if (lessonsToInsert.length > 0)"
+
+    // Store results for success message
+    setImportResults({ imported: lessonsToInsert.length, skipped: duplicateCount });
+    setStep('success');
+
+    } catch (error: any) {
+      console.error('❌ Import error:', error);
+      console.error('❌ Error details:', {
+        message: error?.message,
+        code: error?.code,
+        details: error?.details,
+        hint: error?.hint,
+        full: JSON.stringify(error, null, 2)
+      });
       
-      // Store results for success message
-      setImportResults({ imported: lessonsToInsert.length, skipped: duplicateCount });
-      setStep('success');
-    } catch (error) {
-      console.error('Import error:', error);
-      alert('Failed to import lessons');
+      const errorMessage = error?.message || error?.code || 'Unknown error';
+      alert(`Failed to import lessons: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
