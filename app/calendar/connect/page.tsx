@@ -1,6 +1,7 @@
 // app/calendar/connect/page.tsx
 'use client'
 
+import { Suspense } from 'react'
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -21,10 +22,8 @@ import {
 } from 'lucide-react';
 import type { CalendarConnection } from '@/src/types/calendar';
 
-export const dynamic = 'force-dynamic'
-export const revalidate = 0
-
-export default function CalendarConnectPage() {
+// Renamed from CalendarConnectPage to CalendarConnectContent
+function CalendarConnectContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [connections, setConnections] = useState<CalendarConnection[]>([]);
@@ -32,11 +31,11 @@ export default function CalendarConnectPage() {
   const [syncing, setSyncing] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  // NEW: Individual sync feedback per connection
-const [syncFeedback, setSyncFeedback] = useState<Record<string, {
-  type: 'success' | 'error' | null;
-  message: string;
-}>>({});
+  const [syncFeedback, setSyncFeedback] = useState<Record<string, {
+    type: 'success' | 'error' | null;
+    message: string;
+  }>>({});
+
   // Handle OAuth callback messages
   useEffect(() => {
     const oauthError = searchParams.get('error');
@@ -46,7 +45,6 @@ const [syncFeedback, setSyncFeedback] = useState<Record<string, {
       setError(`Connection failed: ${oauthError}`);
     } else if (oauthSuccess) {
       setSuccess('Calendar connected successfully!');
-      // Refresh connections
       loadConnections();
     }
   }, [searchParams]);
@@ -177,7 +175,6 @@ const [syncFeedback, setSyncFeedback] = useState<Record<string, {
   };
 
   const getCurrentOrgId = () => {
-    // Replace with actual org ID from context/state
     return 'd52497c0-42a9-49b7-ba3b-849bffa27fc4';
   };
 
@@ -217,7 +214,6 @@ const [syncFeedback, setSyncFeedback] = useState<Record<string, {
           </p>
         </div>
         
-        {/* Back to Dashboard Button */}
         <button
           onClick={() => router.push('/dashboard')}
           className="px-6 py-3 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition-colors flex items-center gap-2 font-medium"
@@ -241,7 +237,7 @@ const [syncFeedback, setSyncFeedback] = useState<Record<string, {
         </Alert>
       )}
 
-      {/* Success Guide - Shows after connection */}
+      {/* Success Guide */}
       {success && connections.length > 0 && (
         <Card className="border-green-200 bg-green-50">
           <CardHeader>
@@ -250,7 +246,7 @@ const [syncFeedback, setSyncFeedback] = useState<Record<string, {
               🎉 Calendar Connected Successfully!
             </CardTitle>
             <CardDescription className="text-green-700">
-              Your work calendar is now connected. Here's what happens next:
+              Your work calendar is now connected. Here&apos;s what happens next:
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -261,7 +257,7 @@ const [syncFeedback, setSyncFeedback] = useState<Record<string, {
               <div>
                 <h3 className="font-medium text-green-900">Automatic Sync</h3>
                 <p className="text-sm text-green-700">
-                  Your work calendar syncs every 15 minutes. You can also click "Sync Now" below anytime.
+                  Your work calendar syncs every 15 minutes. You can also click &quot;Sync Now&quot; below anytime.
                 </p>
               </div>
             </div>
@@ -285,7 +281,7 @@ const [syncFeedback, setSyncFeedback] = useState<Record<string, {
               <div>
                 <h3 className="font-medium text-green-900">Check for Conflicts</h3>
                 <p className="text-sm text-green-700">
-                  We'll automatically detect when work meetings conflict with lessons and help you resolve them.
+                  We&apos;ll automatically detect when work meetings conflict with lessons and help you resolve them.
                 </p>
               </div>
             </div>
@@ -403,7 +399,6 @@ const [syncFeedback, setSyncFeedback] = useState<Record<string, {
             </div>
           </div>
 
-          {/* NEW: Prominent Sync Section for Pending Connections */}
           {connection.last_sync_status === 'pending' && (
             <div className="ml-4 p-4 bg-yellow-50 border-l-4 border-yellow-400 rounded-r-lg">
               <div className="flex items-start gap-3">
@@ -439,7 +434,6 @@ const [syncFeedback, setSyncFeedback] = useState<Record<string, {
             </div>
           )}
 
-          {/* NEW: Inline Sync Feedback */}
           {syncFeedback[connection.id]?.type && (
             <div
               className={`ml-4 flex items-start gap-2 p-3 rounded-lg border ${
@@ -472,83 +466,79 @@ const [syncFeedback, setSyncFeedback] = useState<Record<string, {
 </CardContent>
 </Card>
 
-    {/* What You'll See Section - NEW */}
-{connections.length > 0 && (
-  <Card>
-    <CardHeader>
-      <CardTitle className="flex items-center gap-2">
-        <span className="text-2xl">👀</span>
-        What You'll See
-      </CardTitle>
-      <CardDescription>
-        Here's what happens after connecting your work calendar
-      </CardDescription>
-    </CardHeader>
-    <CardContent className="space-y-4">
-      {/* Automatic Sync */}
-      <div className="flex gap-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-        <div className="text-3xl">🔄</div>
-        <div className="flex-1">
-          <h3 className="font-semibold text-blue-900 mb-1">Automatic Sync (Every 15 Minutes)</h3>
-          <p className="text-sm text-blue-800">
-            Your work events sync automatically in the background. You don't need to do anything!
-          </p>
-        </div>
-      </div>
+      {/* What You'll See Section */}
+      {connections.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <span className="text-2xl">👀</span>
+              What You&apos;ll See
+            </CardTitle>
+            <CardDescription>
+              Here&apos;s what happens after connecting your work calendar
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex gap-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="text-3xl">🔄</div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-blue-900 mb-1">Automatic Sync (Every 15 Minutes)</h3>
+                <p className="text-sm text-blue-800">
+                  Your work events sync automatically in the background. You don&apos;t need to do anything!
+                </p>
+              </div>
+            </div>
 
-      {/* Conflict Warnings */}
-      <div className="flex gap-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-        <div className="text-3xl">⚠️</div>
-        <div className="flex-1">
-          <h3 className="font-semibold text-yellow-900 mb-1">Conflict Warnings</h3>
-          <p className="text-sm text-yellow-800 mb-2">
-            When you schedule a lesson that conflicts with a work meeting, you'll see a warning like:
-          </p>
-          <div className="bg-white p-3 rounded border border-yellow-300 text-sm">
-            <span className="font-semibold text-red-600">⚠️ Conflict:</span> This lesson overlaps with "Team Meeting" (2:00 PM - 3:00 PM)
-          </div>
-        </div>
-      </div>
+            <div className="flex gap-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+              <div className="text-3xl">⚠️</div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-yellow-900 mb-1">Conflict Warnings</h3>
+                <p className="text-sm text-yellow-800 mb-2">
+                  When you schedule a lesson that conflicts with a work meeting, you&apos;ll see a warning like:
+                </p>
+                <div className="bg-white p-3 rounded border border-yellow-300 text-sm">
+                  <span className="font-semibold text-red-600">⚠️ Conflict:</span> This lesson overlaps with &quot;Team Meeting&quot; (2:00 PM - 3:00 PM)
+                </div>
+              </div>
+            </div>
 
-      {/* Auto-Block Feature */}
-      <div className="flex gap-4 p-4 bg-purple-50 rounded-lg border border-purple-200">
-        <div className="text-3xl">🚫</div>
-        <div className="flex-1">
-          <h3 className="font-semibold text-purple-900 mb-1">Auto-Block Work Time (Optional)</h3>
-          <p className="text-sm text-purple-800 mb-2">
-            Enable in calendar settings to automatically block work meeting times in your homeschool calendar
-          </p>
-          <div className="bg-white p-3 rounded border border-purple-300 text-sm">
-            Calendar will show: <span className="font-semibold">🚫 Team Meeting (Work)</span> - preventing lesson scheduling during that time
-          </div>
-        </div>
-      </div>
+            <div className="flex gap-4 p-4 bg-purple-50 rounded-lg border border-purple-200">
+              <div className="text-3xl">🚫</div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-purple-900 mb-1">Auto-Block Work Time (Optional)</h3>
+                <p className="text-sm text-purple-800 mb-2">
+                  Enable in calendar settings to automatically block work meeting times in your homeschool calendar
+                </p>
+                <div className="bg-white p-3 rounded border border-purple-300 text-sm">
+                  Calendar will show: <span className="font-semibold">🚫 Team Meeting (Work)</span> - preventing lesson scheduling during that time
+                </div>
+              </div>
+            </div>
 
-      {/* What You WON'T See */}
-      <div className="flex gap-4 p-4 bg-gray-50 rounded-lg border border-gray-300">
-        <div className="text-3xl">ℹ️</div>
-        <div className="flex-1">
-          <h3 className="font-semibold text-gray-900 mb-1">What You WON'T See</h3>
-          <ul className="text-sm text-gray-700 space-y-1 list-disc list-inside">
-            <li>Work events won't appear as regular lessons in your schedule</li>
-            <li>Your work calendar won't be changed or modified in any way</li>
-            <li>HomeschoolHQ lessons won't be added to your work calendar</li>
-          </ul>
-        </div>
-      </div>
+            <div className="flex gap-4 p-4 bg-gray-50 rounded-lg border border-gray-300">
+              <div className="text-3xl">ℹ️</div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-gray-900 mb-1">What You WON&apos;T See</h3>
+                <ul className="text-sm text-gray-700 space-y-1 list-disc list-inside">
+                  <li>Work events won&apos;t appear as regular lessons in your schedule</li>
+                  <li>Your work calendar won&apos;t be changed or modified in any way</li>
+                  <li>HomeschoolHQ lessons won&apos;t be added to your work calendar</li>
+                </ul>
+              </div>
+            </div>
 
-      {/* View Conflicts Link */}
-      <div className="pt-2 border-t">
-        <Link 
-          href="/calendar/conflicts"
-          className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium"
-        >
-          View All Conflicts →
-        </Link>
-      </div>
-    </CardContent>
-  </Card>
-)}
+            <div className="pt-2 border-t">
+              <Link 
+                href="/calendar/conflicts"
+                className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium"
+              >
+                View All Conflicts →
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Feature Info */}
       <Card>
         <CardHeader>
@@ -594,4 +584,13 @@ const [syncFeedback, setSyncFeedback] = useState<Record<string, {
       </Card>
     </div>
   );
+}
+
+// NEW: Wrapper component that exports and wraps in Suspense
+export default function CalendarConnectPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><Loader2 className="w-8 h-8 animate-spin" /></div>}>
+      <CalendarConnectContent />
+    </Suspense>
+  )
 }
