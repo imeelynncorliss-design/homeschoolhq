@@ -5,6 +5,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/src/lib/supabase/server';
 import { getCalendarSyncService } from '@/src/lib/calendar/calendar-sync-service';
 
+interface SyncResult {
+  eventsAdded?: number;
+  eventsUpdated?: number;
+  eventsDeleted?: number;
+  success?: boolean;
+  error?: string;
+}
+
 // DON'T initialize at module load - causes crash if Outlook creds missing
 // const syncService = getCalendarSyncService(); // ❌ BAD
 
@@ -86,7 +94,8 @@ export async function POST(request: NextRequest) {
     // Sync the specific connection
     try {
       console.log('📞 Calling syncService.syncConnection()...');
-      const result = await syncService.syncConnection(connectionId);
+      const result: SyncResult = await syncService.syncConnection(connectionId);
+     
       
       console.log('✅ Sync completed:', result);
       
