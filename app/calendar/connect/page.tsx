@@ -1,5 +1,5 @@
 // app/calendar/connect/page.tsx
-'use client';
+'use client'
 
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -20,6 +20,9 @@ import {
   XCircle  
 } from 'lucide-react';
 import type { CalendarConnection } from '@/src/types/calendar';
+
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 export default function CalendarConnectPage() {
   const router = useRouter();
