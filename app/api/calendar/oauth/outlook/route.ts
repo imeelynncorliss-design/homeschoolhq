@@ -5,13 +5,32 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/src/lib/supabase/server';
 import { getOutlookCalendarService } from '@/src/lib/calendar/outlook-calendar-service';
 
-const outlookService = getOutlookCalendarService();
+// Conditionally initialize Outlook service only if credentials exist
+let outlookService: any = null;
+
+try {
+  if (process.env.MICROSOFT_CLIENT_ID && process.env.MICROSOFT_CLIENT_SECRET) {
+    outlookService = getOutlookCalendarService();
+    console.log('✅ Outlook OAuth service initialized');
+  } else {
+    console.warn('⚠️ Microsoft OAuth credentials not configured - Outlook integration disabled');
+  }
+} catch (error) {
+  console.warn('⚠️ Failed to initialize Outlook OAuth:', error);
+}
 
 /**
  * POST /api/calendar/oauth/outlook
  * Initiate Outlook OAuth flow
  */
 export async function POST(request: NextRequest) {
+  if (!outlookService) {
+    return NextResponse.json(
+      { error: 'Outlook integration not configured' },
+      { status: 503 }
+    );
+  }
+
   try {
     const supabase = await createClient();
 
@@ -49,6 +68,13 @@ export async function POST(request: NextRequest) {
  * Handle Outlook OAuth callback
  */
 export async function GET(request: NextRequest) {
+  if (!outlookService) {
+    return NextResponse.json(
+      { error: 'Outlook integration not configured' },
+      { status: 503 }
+    );
+  }
+
   try {
     const searchParams = request.nextUrl.searchParams;
     const code = searchParams.get('code');
