@@ -12,9 +12,11 @@ import AttendanceGoals from './AttendanceGoals'
 import PDFExport from './PDFExport'
 import DayDetails from './DayDetails'
 
+
 interface AttendanceTrackerProps {
-  kids: any[]
+  kids: any[] // or define a proper Kid type
   organizationId: string
+  userId: string
 }
 
 interface LessonData {
@@ -69,7 +71,7 @@ interface SuggestedDay {
 type ViewMode = 'list' | 'calendar'
 type TabMode = 'overview' | 'insights' | 'goals' | 'compliance' | 'reports'
 
-export default function AttendanceTracker(){ 
+export default function AttendanceTracker({ kids, organizationId, userId }: AttendanceTrackerProps) {
   const supabase = useMemo(() => createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -85,9 +87,6 @@ export default function AttendanceTracker(){
     })
   }, [])
 
-  const [organizationId, setOrganizationId] = useState<string | null>(null);
-  const [kids, setKids] = useState<any[]>([])
-  const [userId, setUserId] = useState<string | null>(null)
   const [lessons, setLessons] = useState<LessonData[]>([])
   const [manualAttendance, setManualAttendance] = useState<ManualAttendance[]>([])
   const [socialEvents, setSocialEvents] = useState<any[]>([])  // NEW
@@ -126,7 +125,9 @@ export default function AttendanceTracker(){
     manualAttendance: 0
   })
 
-  // Fetch user, organization ID, and kids on mount
+  // DELETE OR COMMENT OUT THIS ENTIRE useEffect:
+/*
+
   useEffect(() => {
     const fetchOrgAndKids = async () => {
       try {
@@ -176,6 +177,7 @@ export default function AttendanceTracker(){
 
   fetchOrgAndKids()
 }, [])
+*/
 
 useEffect(() => {
   loadDismissedSuggestions()
