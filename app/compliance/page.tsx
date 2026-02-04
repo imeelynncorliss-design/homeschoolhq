@@ -60,12 +60,33 @@ export default function CompliancePage() {
   const handleExportReport = async () => {
     setIsExporting(true)
     try {
+      const currentSettings = settings
+      
+      if (!currentSettings) {``
+        alert('❌ Compliance settings not found')
+        setIsExporting(false)
+        return
+      }
+  
+      // Validate required fields exist
+      if (!currentSettings.school_year_start_date || !currentSettings.school_year_end_date) {
+        alert('❌ School year dates are required for generating reports')
+        setIsExporting(false)
+        return
+      }
+  
       const { data: { user } } = await supabase.auth.getUser()
       const parentName = user?.user_metadata?.full_name || 'Parent'
       
+      // Now TypeScript knows these are strings (not null/undefined)
       await generateComplianceReport({
         complianceData,
-        settings,
+        settings: {
+          ...currentSettings,
+          state_code: currentSettings.state_code ?? undefined,
+          school_year_start_date: currentSettings.school_year_start_date,
+          school_year_end_date: currentSettings.school_year_end_date,
+        },
         familyHealthScore,
         organizationName: 'HomeschoolHQ Family',
         parentName

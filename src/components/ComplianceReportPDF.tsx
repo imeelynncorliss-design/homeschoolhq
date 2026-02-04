@@ -324,40 +324,46 @@ export const ComplianceReportPDF: React.FC<ComplianceReportPDFProps> = ({
           <Text style={styles.subtitle}>Generated: {generatedDate}</Text>
         </View>
 
-        {/* Family Overview */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Family Compliance Health</Text>
-          <View style={[
-            styles.familyHealthCard,
-            familyHealthStatus.color === 'green' && styles.familyHealthCardGreen,
-            familyHealthStatus.color === 'yellow' && styles.familyHealthCardYellow
-          ]}>
-            <Text style={[
-              styles.familyHealthScore,
-              familyHealthStatus.color === 'green' && styles.familyHealthScoreGreen,
-              familyHealthStatus.color === 'yellow' && styles.familyHealthScoreYellow
-            ]}>
-              {familyHealthScore}%
-            </Text>
-            <Text style={[
-              styles.healthStatus,
-              familyHealthStatus.color === 'green' && styles.healthStatusGreen,
-              familyHealthStatus.color === 'yellow' && styles.healthStatusYellow
-            ]}>
-              {familyHealthStatus.text}
-            </Text>
-            <Text style={styles.studentsOnTrack}>
-              {complianceData.filter(d => d.onTrack).length} of {complianceData.length} students on track
-            </Text>
-            {familyHealthScore < 60 && (
-              <View style={styles.warningBox}>
-                <Text style={styles.warningText}>
-                  ⚠ Action Required: One or more students are behind pace
-                </Text>
-              </View>
-            )}
+       {/* Family Overview */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Family Compliance Health</Text>
+            <View style={
+              familyHealthStatus.color === 'green' 
+                ? [styles.familyHealthCard, styles.familyHealthCardGreen]
+                : familyHealthStatus.color === 'yellow'
+                ? [styles.familyHealthCard, styles.familyHealthCardYellow]
+                : styles.familyHealthCard
+            }>
+              <Text style={
+                familyHealthStatus.color === 'green'
+                  ? [styles.familyHealthScore, styles.familyHealthScoreGreen]
+                  : familyHealthStatus.color === 'yellow'
+                  ? [styles.familyHealthScore, styles.familyHealthScoreYellow]
+                  : styles.familyHealthScore
+              }>
+                {familyHealthScore}%
+              </Text>
+              <Text style={
+                familyHealthStatus.color === 'green'
+                  ? [styles.healthStatus, styles.healthStatusGreen]
+                  : familyHealthStatus.color === 'yellow'
+                  ? [styles.healthStatus, styles.healthStatusYellow]
+                  : styles.healthStatus
+              }>
+                {familyHealthStatus.text}
+              </Text>
+              <Text style={styles.studentsOnTrack}>
+                {complianceData.filter(d => d.onTrack).length} of {complianceData.length} students on track
+              </Text>
+              {familyHealthScore < 60 && (
+                <View style={styles.warningBox}>
+                  <Text style={styles.warningText}>
+                    ⚠ Action Required: One or more students are behind pace
+                  </Text>
+                </View>
+              )}
+            </View>
           </View>
-        </View>
 
         {/* Individual Student Reports */}
         <View style={styles.section}>
@@ -377,11 +383,13 @@ export const ComplianceReportPDF: React.FC<ComplianceReportPDFProps> = ({
                       <Text style={styles.studentGrade}>Grade {data.kid.grade}</Text>
                     )}
                   </View>
-                  <Text style={[
-                    styles.studentHealthScore,
-                    studentHealthStatus.color === 'green' && styles.studentHealthScoreGreen,
-                    studentHealthStatus.color === 'yellow' && styles.studentHealthScoreYellow
-                  ]}>
+                  <Text style={
+                    studentHealthStatus.color === 'green'
+                      ? [styles.studentHealthScore, styles.studentHealthScoreGreen]
+                      : studentHealthStatus.color === 'yellow'
+                      ? [styles.studentHealthScore, styles.studentHealthScoreYellow]
+                      : styles.studentHealthScore
+                  }>
                     {data.healthScore}%
                   </Text>
                 </View>
@@ -398,15 +406,13 @@ export const ComplianceReportPDF: React.FC<ComplianceReportPDFProps> = ({
                       <Text style={styles.metricProgress}>
                         {data.daysRemaining} days remaining
                       </Text>
-                      <View style={styles.progressBar}>
-                        <View style={[
-                          styles.progressFill,
-                          daysProgress >= 80 && styles.progressFillGreen,
-                          daysProgress >= 60 && daysProgress < 80 && styles.progressFillYellow,
-                          daysProgress < 60 && styles.progressFillRed,
-                          { width: `${daysProgress}%` }
-                        ]} />
-                      </View>
+                      <View style={
+                      daysProgress >= 80
+                        ? [styles.progressFill, styles.progressFillGreen, { width: `${daysProgress}%` }]
+                        : daysProgress >= 60
+                        ? [styles.progressFill, styles.progressFillYellow, { width: `${daysProgress}%` }]
+                        : [styles.progressFill, styles.progressFillRed, { width: `${daysProgress}%` }]
+                    } />
                     </View>
                   )}
 
@@ -421,31 +427,25 @@ export const ComplianceReportPDF: React.FC<ComplianceReportPDFProps> = ({
                         {data.hoursRemaining} hours remaining
                       </Text>
                       <View style={styles.progressBar}>
-                        <View style={[
-                          styles.progressFill,
-                          hoursProgress >= 80 && styles.progressFillGreen,
-                          hoursProgress >= 60 && hoursProgress < 80 && styles.progressFillYellow,
-                          hoursProgress < 60 && styles.progressFillRed,
-                          { width: `${hoursProgress}%` }
-                        ]} />
+                      <View style={
+                        hoursProgress >= 80
+                          ? [styles.progressFill, styles.progressFillGreen, { width: `${hoursProgress}%` }]
+                          : hoursProgress >= 60
+                          ? [styles.progressFill, styles.progressFillYellow, { width: `${hoursProgress}%` }]
+                          : [styles.progressFill, styles.progressFillRed, { width: `${hoursProgress}%` }]
+                      } />
                       </View>
                     </View>
                   )}
                 </View>
 
                 {/* Status Badge */}
-                <View style={[
-                  styles.statusBadge,
-                  data.onTrack ? styles.statusBadgeGreen : styles.statusBadgeRed
-                ]}>
-                  <Text style={[
-                    styles.statusText,
-                    data.onTrack ? styles.statusTextGreen : styles.statusTextRed
-                  ]}>
+                <View style={data.onTrack ? [styles.statusBadge, styles.statusBadgeGreen] : [styles.statusBadge, styles.statusBadgeRed]}>
+                  <Text style={data.onTrack ? [styles.statusText, styles.statusTextGreen] : [styles.statusText, styles.statusTextRed]}>
                     {data.onTrack ? '✓ ON TRACK' : '⚠ BEHIND PACE'}
                   </Text>
                 </View>
-              </View>
+             </View>
             )
           })}
         </View>

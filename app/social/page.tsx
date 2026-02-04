@@ -76,8 +76,7 @@ function SocialHub() {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>
   }
 
-  const hasFamilyTier = userTier === 'FAMILY'
-
+  const hasFamilyTier = userTier === 'PREMIUM'  // Premium includes Social Hub
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-7xl mx-auto">
@@ -98,12 +97,13 @@ function SocialHub() {
 
           {/* Subscription Badge */}
           <div className="flex items-center gap-3">
-            <span className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider ${
-              userTier === 'FAMILY' ? 'bg-purple-100 text-purple-800' :
-              userTier === 'PREMIUM' ? 'bg-blue-100 text-blue-800' :
-              'bg-gray-100 text-gray-800'
-            }`}>
-              {userTier} Plan
+          <span className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider ${
+            userTier === 'PREMIUM' ? 'bg-purple-100 text-purple-800' :
+            userTier === 'PRO' ? 'bg-blue-100 text-blue-800' :
+            userTier === 'ESSENTIAL' ? 'bg-green-100 text-green-800' :
+            'bg-gray-100 text-gray-800'
+          }`}>
+                        {userTier} Plan
             </span>
             {!hasFamilyTier && (
               <button 
