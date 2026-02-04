@@ -3,6 +3,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/src/lib/supabase/server';
+import { getOrganizationId } from '@/src/lib/auth-helpers'
 
 /**
  * GET /api/calendar/connections
@@ -12,44 +13,21 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient();
     
-    // Auth bypass for testing - controlled by environment variable
-    const BYPASS_AUTH = process.env.BYPASS_AUTH_FOR_TESTING === 'true';
-    let organizationId: string;
+    // Get authenticated user and their organization
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
     
-    if (BYPASS_AUTH) {
-      // TESTING: Use query param or default test org
-      organizationId = request.nextUrl.searchParams.get('organizationId') || 
-                      process.env.TEST_ORG_ID || 
-                      'd52497c0-42a9-49b7-ba3b-849bffa27fc4';
-      console.log('⚠️ BYPASS_AUTH enabled - using test organization');
-    } else {
-      // PRODUCTION: Get from authenticated user
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      
-      if (authError || !user) {
-        return NextResponse.json(
-          { error: 'Unauthorized - Please log in' },
-          { status: 401 }
-        );
-      }
-      
-      // Get user's organization
-      const { data: profile, error: profileError } = await supabase
-        .from('user_profiles')
-        .select('organization_id')
-        .eq('user_id', user.id)
-        .single();
-      
-      if (profileError || !profile?.organization_id) {
-        return NextResponse.json(
-          { error: 'Organization not found' },
-          { status: 404 }
-        );
-      }
-      
-      organizationId = profile.organization_id;
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: 'Unauthorized - Please log in' },
+        { status: 401 }
+      );
     }
 
+    const organizationId = await getOrganizationId()
+    if (!organizationId) {
+      return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
+    }
+      
     // Fetch calendar connections
     const { data: connections, error } = await supabase
       .from('calendar_connections')
@@ -98,26 +76,17 @@ export async function PATCH(request: NextRequest) {
   try {
     const supabase = await createClient();
     
-    // Auth bypass for testing - controlled by environment variable
-    const BYPASS_AUTH = process.env.BYPASS_AUTH_FOR_TESTING === 'true';
-    let userId: string;
+    // Get authenticated user
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
     
-    if (BYPASS_AUTH) {
-      // TESTING: Use test user
-      userId = process.env.TEST_USER_ID || '00000000-0000-0000-0000-000000000001';
-      console.log('⚠️ BYPASS_AUTH enabled - using test user');
-    } else {
-      // PRODUCTION: Real authentication
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      
-      if (authError || !user) {
-        return NextResponse.json(
-          { error: 'Unauthorized' },
-          { status: 401 }
-        );
-      }
-      userId = user.id;
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
     }
+
+    const userId = user.id;
 
     const body = await request.json();
     const {
@@ -149,8 +118,8 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    // Verify ownership (skip in test mode)
-    if (!BYPASS_AUTH && connection.user_id !== userId) {
+    // Verify ownership
+    if (connection.user_id !== userId) {
       return NextResponse.json(
         { error: 'Access denied - not the owner of this connection' },
         { status: 403 }

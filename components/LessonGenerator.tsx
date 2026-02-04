@@ -14,7 +14,7 @@ type Child = {
 type Material = {
   id: string;
   name: string;
-  material_type: string; // Changed from 'type' to 'material_type'
+  material_type: string;
   quantity?: number;
   notes?: string;
   url?: string;
@@ -56,10 +56,16 @@ export default function LessonGenerator({ kids, userId, onClose }: LessonGenerat
   const [materialSearchQuery, setMaterialSearchQuery] = useState('');
   const [expandedTypes, setExpandedTypes] = useState<Set<string>>(new Set(['textbook', 'subscription', 'physical', 'digital']));
   const [editingLearningStyle, setEditingLearningStyle] = useState(false);
+  const [organizationId, setOrganizationId] = useState<string | null>(null);
+  
+  // School day validation state
+  const [showNonSchoolDayWarning, setShowNonSchoolDayWarning] = useState(false);
+  const [isSchoolDay, setIsSchoolDay] = useState(true);
+  const [checkingSchoolDay, setCheckingSchoolDay] = useState(false);
   
   // Quick add material form
   const [newMaterialName, setNewMaterialName] = useState('');
-  const [newMaterialType, setNewMaterialType] = useState('physical'); // Default to physical for lesson generation
+  const [newMaterialType, setNewMaterialType] = useState('physical');
   const [newMaterialQuantity, setNewMaterialQuantity] = useState(1);
   const [newMaterialNotes, setNewMaterialNotes] = useState('');
   const [newMaterialUrl, setNewMaterialUrl] = useState('');
@@ -79,20 +85,120 @@ export default function LessonGenerator({ kids, userId, onClose }: LessonGenerat
     surpriseMe: false
   });
 
-  // Fetch materials when component mounts
+    /// Fetch organization_id when component mounts
+    useEffect(() => {
+      const fetchOrganizationId = async () => {
+        console.log('🔍 Fetching org_id for userId:', userId);
+        
+        if (!userId) {
+          console.log('❌ No userId');
+          return;
+        }
+
+        try {
+          // Get organization_id from any kid that belongs to this user
+          console.log('👶 Checking kids table...');
+          const { data: kid, error } = await supabase
+            .from('kids')
+            .select('organization_id')
+            .eq('user_id', userId)
+            .limit(1)
+            .maybeSingle();
+
+          if (error) {
+            console.error('Error fetching kid:', error);
+          }
+
+          if (kid?.organization_id) {
+            console.log('✅ Found org_id from kids table:', kid.organization_id);
+            setOrganizationId(kid.organization_id);
+          } else {
+            console.log('❌ No kids found for this user');
+          }
+        } catch (error) {
+          console.error('💥 Error:', error);
+        }
+      };
+
+      fetchOrganizationId();
+    }, [userId]);
+
+  // Check if selected date is a school day
   useEffect(() => {
-    fetchMaterials();
-  }, [userId]);
+    if (formData.startDate && formData.childId) {
+      checkIfSchoolDay(formData.startDate, formData.childId);
+    }
+  }, [formData.startDate, formData.childId]);
+
+  const checkIfSchoolDay = async (dateString: string, kidId: string) => {
+    setCheckingSchoolDay(true);
+    try {
+      const selectedDate = new Date(dateString + 'T12:00:00');
+      const dayOfWeek = selectedDate.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+          
+        // Get the school year settings
+          const { data: settings, error: settingsError } = await supabase
+            .from('school_year_settings')
+            .select('*')
+            .eq('user_id', userId)
+            .maybeSingle();
+      
+          if (settingsError) {
+            console.error('Error checking school settings:', settingsError);
+            setIsSchoolDay(true);
+            return;
+          }
+      
+          if (!settings) {
+            console.log('No school year settings found, allowing all days');
+            setIsSchoolDay(true);
+            return;
+          }
+      
+          // Check if this day is in the homeschool_days array
+          const isSchoolDayOfWeek = settings.homeschool_days?.includes(dayOfWeek) || false;
+          console.log(`Is ${dayOfWeek} a school day?`, isSchoolDayOfWeek, 'homeschool_days:', settings.homeschool_days);
+      
+          // Check if date falls during a vacation period
+          const orgId = settings.organization_id || userId;
+          const { data: vacations } = await supabase
+            .from('vacation_periods')
+            .select('*')
+            .eq('organization_id', orgId);
+      
+          const isDuringVacation = vacations?.some(v => 
+            dateString >= v.start_date && dateString <= v.end_date
+          );
+      
+          console.log('During vacation?', isDuringVacation, 'vacations:', vacations);
+      
+          // It's a school day if: (1) the day of week is a school day AND (2) not during vacation
+          const finalIsSchoolDay = isSchoolDayOfWeek && !isDuringVacation;
+          setIsSchoolDay(finalIsSchoolDay);
+          
+          console.log('Final result: isSchoolDay =', finalIsSchoolDay);
+        } catch (error) {
+          console.error('Error in checkIfSchoolDay:', error);
+          setIsSchoolDay(true);
+        } finally {
+          setCheckingSchoolDay(false);
+        }
+      };
 
   const fetchMaterials = async () => {
+    if (!organizationId) {
+      console.log('No organization_id available, skipping material fetch');
+      return;
+    }
+  
     setLoadingMaterials(true);
     try {
       const { data, error } = await supabase
         .from('materials')
         .select('*')
-        .eq('organization_id', userId)
+        .eq('organization_id', organizationId)
         .order('name');
-
+  
       if (error) {
         console.error('Error fetching materials:', error);
       } else if (data) {
@@ -118,9 +224,9 @@ export default function LessonGenerator({ kids, userId, onClose }: LessonGenerat
         childId,
         childName: child.displayname,
         gradeLevel: child.grade || '',
-        learningStyle: child.learning_style || '' // Pull from profile
+        learningStyle: child.learning_style || ''
       });
-      setEditingLearningStyle(false); // Reset editing state when child changes
+      setEditingLearningStyle(false);
     }
   };
 
@@ -133,7 +239,6 @@ export default function LessonGenerator({ kids, userId, onClose }: LessonGenerat
     }
     setSelectedMaterialIds(newSelection);
     
-    // Update the materials string for API
     const selectedMaterials = availableMaterials
       .filter(m => newSelection.has(m.id))
       .map(m => m.name);
@@ -165,7 +270,6 @@ export default function LessonGenerator({ kids, userId, onClose }: LessonGenerat
   };
 
   const getGroupedMaterials = () => {
-    // Filter to only physical materials for lesson generation
     const physicalOnly = availableMaterials.filter(m => m.material_type === 'physical');
     
     const filtered = physicalOnly.filter(m => 
@@ -199,38 +303,39 @@ export default function LessonGenerator({ kids, userId, onClose }: LessonGenerat
       alert('Please enter a material name');
       return;
     }
-
+  
+    if (!organizationId) {
+      alert('Organization ID not found. Please try refreshing the page.');
+      return;
+    }
+  
     setAddingMaterial(true);
     try {
       const { data, error } = await supabase
         .from('materials')
         .insert([{
-          organization_id: userId,
+          organization_id: organizationId,
           name: newMaterialName.trim(),
-          material_type: newMaterialType, // Changed from 'type' to 'material_type'
+          material_type: newMaterialType,
           quantity: newMaterialQuantity,
           notes: newMaterialNotes.trim() || null,
           url: newMaterialUrl.trim() || null
         }])
         .select()
         .single();
-
+  
       if (error) {
         console.error('Error adding material:', error);
         alert('Failed to add material: ' + error.message);
       } else if (data) {
-        // Add to local list
         setAvailableMaterials(prev => [...prev, data]);
-        // Auto-select the new material
         setSelectedMaterialIds(prev => new Set([...prev, data.id]));
-        // Update form data
         const updatedMaterials = [...availableMaterials, data]
           .filter(m => selectedMaterialIds.has(m.id) || m.id === data.id)
           .map(m => m.name)
           .join(', ');
         setFormData(prev => ({ ...prev, materials: updatedMaterials }));
         
-        // Reset form
         setNewMaterialName('');
         setNewMaterialType('physical');
         setNewMaterialQuantity(1);
@@ -248,11 +353,24 @@ export default function LessonGenerator({ kids, userId, onClose }: LessonGenerat
     }
   };
 
+  const handleContinueClick = () => {
+    // Check if the selected date is not a school day
+    if (!isSchoolDay && !checkingSchoolDay) {
+      setShowNonSchoolDayWarning(true);
+    } else {
+      setStep(2);
+    }
+  };
+
+  const proceedAnyw = () => {
+    setShowNonSchoolDayWarning(false);
+    setStep(2);
+  };
+
   const generateLessons = async () => {
     setLoading(true);
     setStep(2);
     try {
-      // Only use selected physical materials
       const selectedPhysicalMaterials = availableMaterials
         .filter(m => selectedMaterialIds.has(m.id) && m.material_type === 'physical')
         .map(m => m.name)
@@ -288,42 +406,56 @@ export default function LessonGenerator({ kids, userId, onClose }: LessonGenerat
       alert('Please select a child first');
       return;
     }
-
+  
     try {
       const { data: kid, error: kidError } = await supabase
         .from('kids')
         .select('organization_id, displayname')
         .eq('id', formData.childId)
         .single();
-
+  
       if (kidError) {
         console.error('Error fetching kid:', kidError);
       }
-
+  
       const organizationId = kid?.organization_id || 'd52497c0-42a9-49b7-ba3b-849bffa27fc4';
-
+  
       const { data: savedLesson, error } = await supabase
         .from('lessons')
         .insert([{
           kid_id: formData.childId,
+          user_id: userId,  
           subject: formData.subject,
           title: variation.title,
           description: JSON.stringify(variation),
-          lesson_date: null,
+          lesson_date: formData.startDate,
           duration_minutes: Number(formData.duration) || 30,
           status: 'not_started',
           organization_id: organizationId 
-        }]);
-
+        }])
+        .select()
+        .single();
+  
       if (error) {
         console.error('Save failed:', error);
         alert(`❌ Failed to save lesson: ${error.message}`);
       } else {
         const childName = kid?.displayname || 'your student';
-        alert(`✅ Lesson saved successfully!\n\n"${variation.title}" has been added to ${childName}'s lessons.\n\nClick OK to return to your dashboard where you can view and schedule this lesson.`);
+        
+        // FIX: Add T12:00:00 to prevent timezone shift
+        const formattedDate = new Date(formData.startDate + 'T12:00:00').toLocaleDateString('en-US', { 
+          weekday: 'long', 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric' 
+        });
+        
+        alert(`✅ Lesson scheduled successfully!\n\n"${variation.title}" has been scheduled for ${childName} on ${formattedDate}.`);
         onClose();
+        
+        // FIX: Force full page reload to show new lessons
         setTimeout(() => {
-          window.location.reload();
+          window.location.href = '/dashboard';
         }, 300);
       }
     } catch (error: any) {
@@ -444,22 +576,64 @@ export default function LessonGenerator({ kids, userId, onClose }: LessonGenerat
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">Start Date</label>
+              <label className="block text-sm font-medium text-gray-900 mb-2">Schedule For</label>
               <input
                 type="date"
                 value={formData.startDate}
                 onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
                 className="w-full border rounded-lg px-3 py-2 text-gray-900"
               />
+              {!isSchoolDay && !checkingSchoolDay && formData.childId && (
+                <div className="mt-2 bg-yellow-50 border border-yellow-300 rounded-lg p-3">
+                  <p className="text-sm text-yellow-800">
+                    ⚠️ {new Date(formData.startDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })} is not a scheduled school day
+                  </p>
+                </div>
+              )}
             </div>
 
             <button
-              onClick={() => setStep(2)}
+              onClick={handleContinueClick}
               disabled={!formData.childId || !formData.subject}
               className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed"
             >
               Continue
             </button>
+          </div>
+        )}
+
+        {/* Non-School Day Warning Modal */}
+        {showNonSchoolDayWarning && (
+          <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[60] p-4">
+            <div className="bg-white rounded-lg max-w-md w-full shadow-2xl">
+              <div className="bg-yellow-500 px-6 py-4 rounded-t-lg">
+                <h3 className="text-xl font-bold text-white">⚠️ Non-School Day Selected</h3>
+              </div>
+
+              <div className="p-6 space-y-4">
+              <p className="text-gray-900">
+                You've selected <strong>{new Date(formData.startDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</strong>, which is not a scheduled school day.
+              </p>
+              <p className="text-gray-600 text-sm">
+                This date is either not in your school week schedule or falls during a vacation period.
+              </p>
+              </div>
+
+              <div className="bg-gray-50 border-t border-gray-200 px-6 py-4 flex gap-3 rounded-b-lg">
+                <button
+                  onClick={() => setShowNonSchoolDayWarning(false)}
+                  className="flex-1 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 font-medium py-2"
+                >
+                  Change Date
+                </button>
+                <button
+                  onClick={proceedAnyw}
+                  className="flex-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium py-2"
+                >
+                  Continue Anyway
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
@@ -532,14 +706,12 @@ export default function LessonGenerator({ kids, userId, onClose }: LessonGenerat
                       )}
                     </div>
 
-                    {/* Info box explaining material purpose */}
                     <div className="mb-3 bg-blue-50 border border-blue-200 rounded-lg p-3">
                       <p className="text-xs text-blue-900">
                         <strong>🧩 Select physical materials</strong> you have on hand. AI will create hands-on lessons using these specific items.
                       </p>
                     </div>
 
-                    {/* Materials Display - Physical Only */}
                     {loadingMaterials ? (
                       <div className="border border-gray-200 rounded-lg p-4 text-center">
                         <p className="text-sm text-gray-600">Loading your materials...</p>
@@ -557,7 +729,6 @@ export default function LessonGenerator({ kids, userId, onClose }: LessonGenerat
                       </div>
                     ) : (
                       <div className="border border-gray-200 rounded-lg bg-gray-50">
-                        {/* Search Bar */}
                         {availableMaterials.filter(m => m.material_type === 'physical').length > 5 && (
                           <div className="p-3 border-b border-gray-200 bg-white">
                             <input
@@ -570,7 +741,6 @@ export default function LessonGenerator({ kids, userId, onClose }: LessonGenerat
                           </div>
                         )}
 
-                        {/* Physical Materials Grid */}
                         <div className="p-3 grid grid-cols-2 gap-2 max-h-64 overflow-y-auto">
                           {availableMaterials
                             .filter(m => m.material_type === 'physical')
@@ -605,7 +775,6 @@ export default function LessonGenerator({ kids, userId, onClose }: LessonGenerat
                             ))}
                         </div>
                         
-                        {/* Add Material Button */}
                         <div className="p-3 border-t border-gray-200 bg-white text-center">
                           <button
                             type="button"
@@ -618,7 +787,6 @@ export default function LessonGenerator({ kids, userId, onClose }: LessonGenerat
                       </div>
                     )}
 
-                    {/* Count selected physical materials only */}
                     {(() => {
                       const selectedPhysicalCount = availableMaterials
                         .filter(m => m.material_type === 'physical' && selectedMaterialIds.has(m.id))
@@ -684,7 +852,6 @@ export default function LessonGenerator({ kids, userId, onClose }: LessonGenerat
                               type="button"
                               onClick={() => {
                                 setEditingLearningStyle(false);
-                                // Reset to original from child profile if available
                                 const child = kids.find(k => k.id === formData.childId);
                                 if (child?.learning_style) {
                                   setFormData(prev => ({ ...prev, learningStyle: child.learning_style || '' }));
@@ -775,15 +942,12 @@ export default function LessonGenerator({ kids, userId, onClose }: LessonGenerat
             <div className="grid md:grid-cols-3 gap-4">
               {variations.map((variation, index) => (
                 <div key={index} className="border-2 rounded-lg overflow-hidden hover:border-blue-500 transition-colors bg-white shadow-sm">
-                  {/* Header */}
                   <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 border-b">
                     <h3 className="font-bold text-lg text-gray-900 mb-1">{variation.title}</h3>
                     <p className="text-sm text-gray-600">{variation.description || variation.approach}</p>
                   </div>
 
-                  {/* Content */}
                   <div className="p-4 space-y-4 max-h-96 overflow-y-auto">
-                    {/* Materials */}
                     <div>
                       <h4 className="font-semibold text-sm text-gray-900 mb-2">📦 Materials:</h4>
                       <ul className="text-sm text-gray-600 space-y-1">
@@ -796,7 +960,6 @@ export default function LessonGenerator({ kids, userId, onClose }: LessonGenerat
                       </ul>
                     </div>
 
-                    {/* Activities */}
                     <div>
                       <h4 className="font-semibold text-sm text-gray-900 mb-2">🎯 Activities ({variation.activities.length}):</h4>
                       <div className="space-y-2">
@@ -814,7 +977,6 @@ export default function LessonGenerator({ kids, userId, onClose }: LessonGenerat
                       </div>
                     </div>
 
-                    {/* Learning Objectives */}
                     {variation.learningObjectives && variation.learningObjectives.length > 0 && (
                       <div>
                         <h4 className="font-semibold text-sm text-gray-900 mb-2">🎓 Learning Objectives:</h4>
@@ -830,14 +992,13 @@ export default function LessonGenerator({ kids, userId, onClose }: LessonGenerat
                     )}
                   </div>
 
-                  {/* Footer - Choose Button */}
                   <div className="p-4 bg-gray-50 border-t">
                     <button
                       onClick={() => saveLesson(variation)}
                       disabled={loading}
                       className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 disabled:bg-blue-400 font-semibold transition-colors"
                     >
-                      {loading ? 'Saving...' : 'Choose This Lesson'}
+                      {loading ? 'Saving...' : 'Schedule This Lesson'}
                     </button>
                   </div>
                 </div>

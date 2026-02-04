@@ -1,106 +1,121 @@
-// components/DevTierToggle.tsx
 'use client'
 
 import { useState, useEffect } from 'react'
-import { getTierForTesting, setTierForTesting, clearTierTesting, TierType } from '@/lib/tierTesting'
-import { supabase } from '@/src/lib/supabase'
+import { getTierForTesting, setTierForTesting, type UserTier, TIER_INFO } from '@/lib/tierTesting'
 
 export default function DevTierToggle() {
-  const [showMenu, setShowMenu] = useState(false)
-  const [currentTier, setCurrentTier] = useState<TierType>('FREE')
-  const [userEmail, setUserEmail] = useState<string>('') 
+  const [currentTier, setCurrentTier] = useState<UserTier>('FREE')
+  const [isOpen, setIsOpen] = useState(false)
 
   useEffect(() => {
     setCurrentTier(getTierForTesting())
-    loadUser() 
   }, [])
 
-  const loadUser = async () => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (user?.email) {
-      setUserEmail(user.email)
-    }
+  const tiers: UserTier[] = ['FREE', 'ESSENTIAL', 'PRO', 'PREMIUM']
+  
+  const tierColors: Record<UserTier, string> = {
+    FREE: 'bg-gray-500',
+    ESSENTIAL: 'bg-blue-500',
+    PRO: 'bg-purple-500',
+    PREMIUM: 'bg-gradient-to-r from-purple-500 to-pink-500'
   }
 
-  const allowedEmails = [
-    'imeelynn.corliss@gmail.com',  // REPLACE WITH YOUR ACTUAL EMAIL
-    // Add more emails if needed
-  ]
-
-  if (!allowedEmails.includes(userEmail)) {
-    return null  // Hide toggle for everyone else
+  const tierEmojis: Record<UserTier, string> = {
+    FREE: '🆓',
+    ESSENTIAL: '📚',
+    PRO: '⚡',
+    PREMIUM: '👑'
   }
 
   return (
     <div className="fixed bottom-4 right-4 z-50">
-      {!showMenu ? (
-        <button
-          onClick={() => setShowMenu(true)}
-          className="bg-yellow-500 text-white px-4 py-2 rounded-full shadow-lg hover:bg-yellow-600 font-semibold"
-          title="Developer Tier Testing"
-        >
-          🔧 DEV
-        </button>
-      ) : (
-        <div className="bg-white rounded-lg shadow-2xl p-4 border-2 border-yellow-500 min-w-[200px]">
-          <div className="flex justify-between items-center mb-3">
-            <h3 className="font-bold text-gray-900">🔧 Tier Testing</h3>
-            <button
-              onClick={() => setShowMenu(false)}
-              className="text-gray-500 hover:text-gray-700"
-            >
-              ✕
-            </button>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className={`px-4 py-2 ${tierColors[currentTier]} text-white rounded-lg shadow-lg font-bold text-sm flex items-center gap-2 transition-transform hover:scale-105`}
+      >
+        <span>{tierEmojis[currentTier]}</span>
+        <span>DEV: {currentTier}</span>
+      </button>
+      
+      {isOpen && (
+        <div className="absolute bottom-14 right-0 bg-white rounded-xl shadow-2xl border-2 border-gray-200 overflow-hidden min-w-[280px]">
+          {/* Header */}
+          <div className="bg-gradient-to-r from-gray-800 to-gray-900 px-4 py-3">
+            <p className="text-xs text-gray-300 font-bold uppercase tracking-wider">
+              🔧 Development Mode
+            </p>
+            <p className="text-white font-black text-sm mt-1">
+              Tier Switcher
+            </p>
           </div>
-          
-          <div className="text-xs text-gray-600 mb-2">
-            Current: <span className="font-bold text-gray-900">{currentTier}</span>
+
+          {/* Tier Options */}
+          <div className="p-3 space-y-2">
+            {tiers.map(tier => {
+              const info = TIER_INFO[tier]
+              const isActive = currentTier === tier
+              
+              return (
+                <button
+                  key={tier}
+                  onClick={() => {
+                    setTierForTesting(tier)
+                    setCurrentTier(tier)
+                    setIsOpen(false)
+                  }}
+                  className={`w-full text-left px-4 py-3 rounded-lg transition-all ${
+                    isActive
+                      ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md transform scale-105'
+                      : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">{tierEmojis[tier]}</span>
+                      <span className="font-black text-sm">{info.name}</span>
+                      {isActive && (
+                        <span className="text-xs">✓</span>
+                      )}
+                    </div>
+                    <span className={`text-xs font-bold ${isActive ? 'text-white' : 'text-gray-500'}`}>
+                      {info.priceYearly}
+                    </span>
+                  </div>
+                  
+                  {tier === 'PRO' && (
+                    <div className="text-[10px] font-medium opacity-90">
+                      🎯 Default for testing compliance
+                    </div>
+                  )}
+                  
+                  {tier === 'ESSENTIAL' && (
+                    <div className="text-[10px] font-medium opacity-90">
+                      ✓ Compliance tracking enabled
+                    </div>
+                  )}
+                  
+                  {tier === 'FREE' && (
+                    <div className="text-[10px] font-medium opacity-90">
+                      ⚠️ Basic compliance only
+                    </div>
+                  )}
+                  
+                  {tier === 'PREMIUM' && (
+                    <div className="text-[10px] font-medium opacity-90">
+                      👑 Full access to everything
+                    </div>
+                  )}
+                </button>
+              )
+            })}
           </div>
-          
-          <div className="space-y-2">
-            <button
-              onClick={() => setTierForTesting('FREE')}
-              className={`w-full px-3 py-2 rounded text-left text-sm ${
-                currentTier === 'FREE'
-                  ? 'bg-gray-800 text-white'
-                  : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
-              }`}
-            >
-              🔓 FREE
-              <div className="text-xs opacity-75">1 child, manual only</div>
-            </button>
-            
-            <button
-              onClick={() => setTierForTesting('PREMIUM')}
-              className={`w-full px-3 py-2 rounded text-left text-sm ${
-                currentTier === 'PREMIUM'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-blue-100 text-blue-900 hover:bg-blue-200'
-              }`}
-            >
-              ⭐ PREMIUM
-              <div className="text-xs opacity-75">AI, unlimited kids, admin</div>
-            </button>
-            
-            <button
-              onClick={() => setTierForTesting('FAMILY')}
-              className={`w-full px-3 py-2 rounded text-left text-sm ${
-                currentTier === 'FAMILY'
-                  ? 'bg-purple-600 text-white'
-                  : 'bg-purple-100 text-purple-900 hover:bg-purple-200'
-              }`}
-            >
-              👨‍👩‍👧 FAMILY
-              <div className="text-xs opacity-75">Premium + social features</div>
-            </button>
+
+          {/* Footer */}
+          <div className="bg-gray-50 px-4 py-2 border-t border-gray-200">
+            <p className="text-[10px] text-gray-500 italic">
+              ⚠️ Changes take effect after page reload
+            </p>
           </div>
-          
-          <button
-            onClick={clearTierTesting}
-            className="w-full mt-3 px-3 py-2 bg-red-100 text-red-700 rounded text-sm hover:bg-red-200"
-          >
-            Clear & Reset
-          </button>
         </div>
       )}
     </div>

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
+import { createBrowserClient } from '@supabase/ssr'
 import { supabase } from '@/src/lib/supabase'
 import CalendarView from './CalendarView'
 import CalendarFilters from './CalendarFilters'
@@ -14,10 +15,6 @@ import DayDetails from './DayDetails'
 interface AttendanceTrackerProps {
   kids: any[]
   organizationId: string
-  userId: string  // ADD THIS
-  organizationName?: string
-  schoolYear?: string
-  state?: string
 }
 
 interface LessonData {
@@ -43,8 +40,8 @@ interface DayData {
   date: string
   lessonHours: number
   lessonCount: number
-  socialEventCount: number  // NEW
-  coopClassCount: number    // NEW
+  socialEventCount: number
+  coopClassCount: number
   manualAttendance?: ManualAttendance
   isSchoolDay: boolean
   totalHours: number
@@ -72,14 +69,25 @@ interface SuggestedDay {
 type ViewMode = 'list' | 'calendar'
 type TabMode = 'overview' | 'insights' | 'goals' | 'compliance' | 'reports'
 
-export default function AttendanceTracker({ 
-  kids, 
-  organizationId,
-  userId,  // NEW
-  organizationName = 'My Homeschool',
-  schoolYear = `${new Date().getFullYear()}-${new Date().getFullYear() + 1}`,
-  state = 'NC'
-}: AttendanceTrackerProps) {
+export default function AttendanceTracker(){ 
+  const supabase = useMemo(() => createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  ), [])
+
+  // TEMPORARY: Show user ID in console
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) {
+        console.log('🆔 YOUR USER ID:', data.user.id)
+        console.log('📧 YOUR EMAIL:', data.user.email)
+      }
+    })
+  }, [])
+
+  const [organizationId, setOrganizationId] = useState<string | null>(null);
+  const [kids, setKids] = useState<any[]>([])
+  const [userId, setUserId] = useState<string | null>(null)
   const [lessons, setLessons] = useState<LessonData[]>([])
   const [manualAttendance, setManualAttendance] = useState<ManualAttendance[]>([])
   const [socialEvents, setSocialEvents] = useState<any[]>([])  // NEW
@@ -98,7 +106,10 @@ export default function AttendanceTracker({
   const [calendarMonth, setCalendarMonth] = useState(new Date().getMonth())
   const [dismissedSuggestions, setDismissedSuggestions] = useState<Set<string>>(new Set())
   const [attendanceMarkedToday, setAttendanceMarkedToday] = useState(false)
-  const [selectedDate, setSelectedDate] = useState<string | null>(null)  // NEW
+  const [selectedDate, setSelectedDate] = useState<string | null>(null)  
+  const [state, setState] = useState<string>('NC')
+  const [organizationName, setOrganizationName] = useState<string>('My Homeschool')
+  const [schoolYear, setSchoolYear] = useState<string>('2025-2026')
 
   // NEW: Activity filters
   const [filters, setFilters] = useState({
@@ -115,10 +126,67 @@ export default function AttendanceTracker({
     manualAttendance: 0
   })
 
+  // Fetch user, organization ID, and kids on mount
   useEffect(() => {
+    const fetchOrgAndKids = async () => {
+      try {
+        console.log('🔍 Using hardcoded IDs for testing...')
+        
+        // TEMPORARY HARDCODED VALUES
+        setUserId('4320b7ea-260e-4f87-85bb-d304051eccd0')
+        setOrganizationId('d52497c0-42a9-49b7-ba3b-849bffa27fc4')
+        
+        console.log('✅ Set userId:', '4320b7ea-260e-4f87-85bb-d304051eccd0')
+        console.log('✅ Set organizationId:', 'd52497c0-42a9-49b7-ba3b-849bffa27fc4')
+        
+        // HARDCODE KIDS (replace with your actual kids' names and IDs)
+      const hardcodedKids = [
+        { 
+          id: '8cef62d2-0b1c-4594-97e5-0b7a244abede',  // You can use any ID for now
+          first_name: 'Runa',  // Replace with actual first name
+          last_name: 'LastName',  // Replace with actual last name
+          displayname: 'Runa-Buna',
+          organization_id: 'd52497c0-42a9-49b7-ba3b-849bffa27fc4'
+        },
+        {
+        id: 'b0be811c-31af-410f-987c-6725cf55545e',  // You can use any ID for now
+          first_name: 'Mary',  // Replace with actual first name
+          last_name: 'LastName',  // Replace with actual last name
+          displayname: 'Mary',
+          organization_id: 'd52497c0-42a9-49b7-ba3b-849bffa27fc4'
+        },
+        {
+          id: 'e421957f-bfb8-4a3d-9cef-b460a1cf6510',  // You can use any ID for now
+            first_name: 'Emma',  // Replace with actual first name
+            last_name: 'Bean',  // Replace with actual last name
+            displayname: 'Beanie',
+            organization_id: 'd52497c0-42a9-49b7-ba3b-849bffa27fc4'
+          },
+      ]
+      
+      setKids(hardcodedKids)
+      console.log('✅ Set hardcoded kids:', hardcodedKids.length)
+      
+      setLoading(false)
+    } catch (err) {
+      console.error('❌ Error:', err)
+      setLoading(false)
+    }
+  }
+
+  fetchOrgAndKids()
+}, [])
+
+useEffect(() => {
+  loadDismissedSuggestions()
+}, [])
+
+// Wait for organizationId and userId before loading data
+useEffect(() => {
+  if (organizationId && userId) {
     loadData()
-    loadDismissedSuggestions()
-  }, [])
+  }
+}, [organizationId, userId])
 
   useEffect(() => {
     checkTodaysAttendance()
@@ -908,10 +976,78 @@ export default function AttendanceTracker({
                     <div className="space-y-2">
                       {/* Keep existing month groups rendering */}
                       {monthGroups.map((group, index) => (
-                        <div key={`${group.month}-${group.year}`} className="border border-gray-200 rounded-lg overflow-hidden">
-                          {/* ...existing month group code... */}
-                        </div>
-                      ))}
+                      <div key={`${group.month}-${group.year}`} className="border border-gray-200 rounded-lg overflow-hidden">
+                        {/* Month Header */}
+                        <button
+                          onClick={() => toggleMonth(index)}
+                          className="w-full px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors flex items-center justify-between"
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="text-lg">
+                              {group.isExpanded ? '▼' : '▶'}
+                            </span>
+                            <div>
+                              <h4 className="font-semibold text-gray-900">
+                                {group.month} {group.year}
+                              </h4>
+                              <p className="text-sm text-gray-600">
+                                {group.totalDays} days • {group.totalHours.toFixed(1)} hours
+                              </p>
+                            </div>
+                          </div>
+                        </button>
+
+                        {/* Month Days */}
+                        {group.isExpanded && (
+                          <div className="divide-y divide-gray-100">
+                            {group.days.map(day => (
+                              <div key={day.date} className="p-4 hover:bg-gray-50">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-3">
+                                      <span className="text-sm font-medium text-gray-900">
+                                        {new Date(day.date).toLocaleDateString('en-US', { 
+                                          weekday: 'short',
+                                          month: 'short',
+                                          day: 'numeric'
+                                        })}
+                                      </span>
+                                      
+                                      {day.isSchoolDay && (
+                                        <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded">
+                                          School Day
+                                        </span>
+                                      )}
+                                    </div>
+                                    
+                                    <div className="mt-1 text-sm text-gray-600">
+                                      {day.lessonCount > 0 && (
+                                        <span className="mr-3">📚 {day.lessonCount} lessons</span>
+                                      )}
+                                      {day.totalHours > 0 && (
+                                        <span>{day.totalHours.toFixed(1)} hours</span>
+                                      )}
+                                      {day.manualAttendance?.notes && (
+                                        <span className="ml-3 italic">"{day.manualAttendance.notes}"</span>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {day.manualAttendance && (
+                                    <button
+                                      onClick={() => deleteAttendance(day.manualAttendance!.id)}
+                                      className="ml-4 px-3 py-1 text-red-600 hover:bg-red-50 rounded text-sm"
+                                    >
+                                      Delete
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
                     </div>
                   )}
                 </div>
@@ -927,16 +1063,16 @@ export default function AttendanceTracker({
             />
           )}
 
-          {activeTab === 'goals' && (
-            <AttendanceGoals
-              totalDays={stats.totalDays}
-              totalHours={stats.totalHoursNumber}
-              organizationId={organizationId}
-              onGoalsUpdate={loadData}
-            />
-          )}
+            {activeTab === 'goals' && organizationId && (
+              <AttendanceGoals
+                totalDays={stats.totalDays}
+                totalHours={stats.totalHoursNumber}
+                organizationId={organizationId}
+                onGoalsUpdate={loadData}
+              />
+            )}
 
-          {activeTab === 'compliance' && (
+          {activeTab === 'compliance' && organizationId && (
             <ComplianceChecker
               totalDays={stats.totalDays}
               totalHours={stats.totalHoursNumber}
@@ -945,7 +1081,7 @@ export default function AttendanceTracker({
             />
           )}
 
-          {activeTab === 'reports' && (
+          {activeTab === 'reports'&& organizationId && (
             <PDFExport
               days={allDays}
               totalDays={stats.totalDays}
@@ -972,20 +1108,18 @@ export default function AttendanceTracker({
         />
       )}
 
-      {/* NEW: Day Details Modal */}
-      {selectedDate && (
-        <DayDetails
-          date={selectedDate}
-          onClose={() => setSelectedDate(null)}
-          userId={userId}
-          organizationId={organizationId}
-        />
-      )}
+     {/* Day Details Modal */}
+{selectedDate && organizationId && userId && (
+  <DayDetails
+    date={selectedDate}
+    onClose={() => setSelectedDate(null)}
+    userId={userId}
+    organizationId={organizationId}
+  />
+)}
     </div>
   )
 }
-
-// Keep existing MarkAttendanceModal component...
 // Mark Attendance Modal Component
 interface MarkAttendanceModalProps {
   date: string

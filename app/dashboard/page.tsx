@@ -13,7 +13,6 @@ import ThisWeekDashboard from '@/components/ThisWeekDashboard'
 import KidCard from '@/components/KidCard'
 import KidProfileForm from '@/components/KidProfileForm'
 import CalendarFilters from '@/components/CalendarFilters'
-import { getTierForTesting } from '@/lib/tierTesting'
 import DevTierToggle from '@/components/DevTierToggle'
 import { formatLessonDescription } from '@/lib/formatLessonDescription'
 import { ReactNode } from 'react'
@@ -29,6 +28,8 @@ import AttendanceTracker from '@/components/AttendanceTracker'
 import ParentProfileManager from '@/components/ParentProfileManager'
 import AuthGuard from '@/components/AuthGuard'
 import ComplianceWizard from '@/components/ComplianceWizard';
+import { type UserTier, hasFeature as checkFeature, getTierForTesting, getChildLimit, getUpgradeMessage } from '@/lib/tierTesting'
+import UserMenu from '@/src/components/UserMenu'
 
 
 
@@ -73,7 +74,7 @@ function DashboardContent() {
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [kids, setKids] = useState<any[]>([])
-  const [userTier, setUserTier] = useState<'FREE' | 'PREMIUM' | 'FAMILY'>('FREE')
+  const [userTier, setUserTier] = useState<UserTier>('FREE')
   const [allLessons, setAllLessons] = useState<any[]>([])
   const [lessonsByKid, setLessonsByKid] = useState<{ [kidId: string]: any[] }>({})
   const [selectedKid, setSelectedKid] = useState<string | null>(null)
@@ -323,16 +324,9 @@ const getUser = async () => {
     loadLessonAssessmentScore();
   }, [selectedLesson]);
   
-  const hasFeature = (feature: string) => {
-    const features = {
-      FREE: ['manual_lessons', 'basic_calendar'],
-      PREMIUM: ['manual_lessons', 'basic_calendar', 'ai_generation', 'curriculum_import', 'unlimited_kids', 'advanced_dashboards'],
-      FAMILY: ['manual_lessons', 'basic_calendar', 'ai_generation', 'curriculum_import', 'unlimited_kids', 'advanced_dashboards', 'social_hub']
-    }
-    return features[userTier].includes(feature)
-  }
+  const hasFeature = (feature: string) => checkFeature(userTier, feature)
   
-  const canAddChild = () => userTier !== 'FREE' || kids.length < 1
+  const canAddChild = () => kids.length < getChildLimit(userTier)
   
   const deleteKid = async (id: string, kidDisplayName: string) => {
     if (confirm(`Delete ${kidDisplayName}? This will also delete all their lessons.`)) {
@@ -346,9 +340,14 @@ const getUser = async () => {
     e.preventDefault()
     if (!selectedKid) return
     setAddingLesson(true)
+
+    // Define orgId inside the function so the code below can see it
+    const orgId = schoolYearSettings?.organization_id || user.id;
+
     const durationInMinutes = convertDurationToMinutes(lessonDurationValue, lessonDurationUnit);
     const { error } = await supabase.from('lessons').insert([{
       user_id: user.id,
+      organization_id: orgId,
       kid_id: selectedKid,
       subject: lessonSubject,
       title: lessonTitle,
@@ -382,7 +381,7 @@ const getUser = async () => {
     setEditLessonDurationValue(duration.value);
     setEditLessonDurationUnit(duration.unit);
     if (lesson.lesson_date && lesson.duration_minutes) {
-      const start = new Date(lesson.lesson_date)
+      const start = new Date(lesson.lesson_date + 'T12:00:00')
       const durationDays = Math.ceil(lesson.duration_minutes / 360)
       const end = new Date(start)
       end.setDate(start.getDate() + durationDays)
@@ -558,6 +557,11 @@ const getUser = async () => {
       })
       return updated
     })
+
+    // ADD THIS: Update the modal's displayed lesson
+  if (selectedLesson?.id === lessonId) {
+    setSelectedLesson({ ...selectedLesson, ...updates })
+  }
     
     const { error } = await supabase.from('lessons').update(updates).eq('id', lessonId)
     if (error) {
@@ -649,10 +653,15 @@ const getUser = async () => {
 
   const copyLessonToChild = async () => {
     if (!copyTargetChildId || !selectedLesson) return
+
+    // Define orgId inside the function so the code below can see it
+    const orgId = schoolYearSettings?.organization_id || user.id;
+    
     const targetChild = kids.find(k => k.id === copyTargetChildId)
     if (!targetChild) return
     const { error } = await supabase.from('lessons').insert([{
       user_id: user.id,
+      organization_id: orgId,
       kid_id: copyTargetChildId,
       subject: selectedLesson.subject,
       title: selectedLesson.title,
@@ -687,6 +696,7 @@ const getUser = async () => {
           <div className="flex justify-between items-center mb-4">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">HomeschoolHQ Dashboard</h1>
+              <UserMenu />
               <div className="mt-1">
                 <ParentProfileManager 
                   userId={user.id} 
@@ -712,6 +722,15 @@ const getUser = async () => {
         >
           🤝 Social Hub
         </button>
+
+        {hasFeature('compliance_tracking') && (
+            <button 
+              onClick={() => router.push('/compliance')}
+              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium"
+            >
+              ⚖️ Compliance
+            </button>
+          )}
 
         {/* Settings Dropdown */}
         <div className="relative">
@@ -745,6 +764,18 @@ const getUser = async () => {
                 📅 Work Calendar
               </button>
               
+              {hasFeature('compliance_tracking') && (
+                <button
+                  onClick={() => {
+                    router.push('/settings/compliance');
+                    setShowSettingsMenu(false);
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 text-gray-700 w-full text-left"
+                >
+                  ⚖️ Compliance Settings
+                </button>
+              )}
+
               <button
                 onClick={() => {
                   router.push('/admin');
@@ -1019,7 +1050,10 @@ const getUser = async () => {
                           </button>
                         ) : (
                           <button 
-                            onClick={() => { alert('Curriculum Import requires PREMIUM! Upgrade to unlock.'); router.push('/pricing') }} 
+                          onClick={() => { 
+                            alert(getUpgradeMessage('curriculum_import')); 
+                            router.push('/pricing') 
+                          }}
                             className="px-4 py-2.5 text-sm bg-gray-300 text-gray-600 rounded-lg cursor-not-allowed relative"
                           >
                             📥 Import 🔒
@@ -1040,7 +1074,10 @@ const getUser = async () => {
                           </button>
                         ) : (
                           <button 
-                            onClick={() => { alert('AI Lesson Generation requires PREMIUM! Upgrade to unlock.'); router.push('/pricing') }} 
+                          onClick={() => { 
+                            alert(getUpgradeMessage('ai_generation')); 
+                            router.push('/pricing') 
+                          }}
                             className="px-4 py-2.5 text-sm bg-gray-300 text-gray-600 rounded-lg cursor-not-allowed relative"
                           >
                             ✨ Generate Lessons 🔒

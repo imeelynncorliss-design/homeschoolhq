@@ -1,0 +1,28 @@
+/**
+ * Compliance Hooks - Week 1 Database Integration
+ * 
+ * These hooks provide React interfaces to the compliance tracking system
+ * built in Week 1 (database tables + SQL functions).
+ * 
+ * @module hooks/compliance
+ */
+
+export { 
+  useComplianceSettings,
+  type ComplianceSettings,
+  type UseComplianceSettingsReturn
+} from './useComplianceSettings'
+
+export { 
+  useComplianceHours,
+  type ComplianceHours,
+  type UseComplianceHoursParams,
+  type UseComplianceHoursReturn
+} from './useComplianceHours'
+
+export { 
+  useComplianceHealthScore,
+  type HealthScore,
+  type UseComplianceHealthScoreParams,
+  type UseComplianceHealthScoreReturn
+} from './useComplianceHealthScore'

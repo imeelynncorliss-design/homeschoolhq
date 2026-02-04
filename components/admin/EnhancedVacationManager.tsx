@@ -8,6 +8,7 @@ import { Calendar, Trash2, Plus, Edit2 } from 'lucide-react';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
+
 interface VacationPeriod {
   id: string;
   organization_id: string;
@@ -34,6 +35,7 @@ export default function EnhancedVacationManager({ organizationId }: EnhancedVaca
   // Form state
   const [name, setName] = useState('');
   const [startDate, setStartDate] = useState('');
+  const [refreshingHolidays, setRefreshingHolidays] = useState(false);
   const [endDate, setEndDate] = useState('');
   const [vacationType, setVacationType] = useState<'holiday' | 'break' | 'vacation' | 'other'>('vacation');
   const [notes, setNotes] = useState('');
@@ -166,6 +168,49 @@ export default function EnhancedVacationManager({ organizationId }: EnhancedVaca
     return diffDays;
   };
 
+  const refreshHolidays = async () => {
+    setRefreshingHolidays(true);
+    
+    try {
+      const currentYear = new Date().getFullYear();
+      const response = await fetch('/api/fetch-holidays', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          organizationId: organizationId,
+          startYear: currentYear
+        })
+      });
+  
+      if (!response.ok) throw new Error('Failed to fetch holidays');
+      
+      const { holidays, count } = await response.json();
+      
+      await supabase
+        .from('vacation_periods')
+        .delete()
+        .eq('organization_id', organizationId)
+        .eq('vacation_type', 'holiday')
+        .gte('start_date', `${currentYear}-01-01`)
+        .lte('start_date', `${currentYear + 1}-12-31`);
+      
+      const { error } = await supabase
+        .from('vacation_periods')
+        .insert(holidays);
+          
+      if (error) throw error;
+      
+      alert(`✅ ${count} US federal holidays added for ${currentYear}-${currentYear + 1}!`);
+      loadVacations();
+      
+    } catch (error) {
+      console.error('Error refreshing holidays:', error);
+      alert('❌ Failed to refresh holidays. Please try again.');
+    } finally {
+      setRefreshingHolidays(false);
+    }
+  };
+
   const getVacationTypeColor = (type?: string) => {
     switch (type) {
       case 'holiday': return 'bg-red-100 text-red-800';
@@ -208,13 +253,32 @@ export default function EnhancedVacationManager({ organizationId }: EnhancedVaca
             Plan your breaks and see how they impact your schedule
           </p>
         </div>
-        <button
-          onClick={() => setShowAddForm(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-        >
-          <Plus size={20} />
-          Add Vacation Period
-        </button>
+        <div className="flex gap-3">
+      <button
+        onClick={refreshHolidays}
+        disabled={refreshingHolidays}
+        className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+      >
+        {refreshingHolidays ? (
+          <>
+            <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+            Updating...
+          </>
+        ) : (
+          <>
+            <Calendar size={20} />
+            Refresh US Holidays
+          </>
+        )}
+      </button>
+      <button
+        onClick={() => setShowAddForm(true)}
+        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+      >
+        <Plus size={20} />
+        Add Vacation Period
+      </button>
+</div>
       </div>
 
       {/* Impact Summary - From your old component */}

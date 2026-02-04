@@ -59,15 +59,28 @@ export default function MaterialsPage() {
   const loadData = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user && window.location.hostname === 'localhost') {
-        setOrganizationId('00000000-0000-0000-0000-000000000000');
-        setLoading(false);
-        return;
-      }
       if (!user) { router.push('/'); return; }
+  
+      // 1. Try to get it from school settings
       const { data: settings } = await supabase.from('school_year_settings').select('organization_id').eq('user_id', user.id).maybeSingle();
-      setOrganizationId(settings?.organization_id || user.id);
-    } catch (error) { console.error('Error loading data:', error); }
+      
+      if (settings?.organization_id) {
+        setOrganizationId(settings.organization_id);
+      } else {
+        // 2. FALLBACK: Look for the organization in your profiles/members table
+        const { data: profile } = await supabase
+          .from('profiles') // or 'members', 'users', etc.
+          .select('organization_id')
+          .eq('id', user.id)
+          .single();
+        
+        setOrganizationId(profile?.organization_id || null);
+      }
+      
+      setLoading(false);
+    } catch (error) { 
+      console.error('Error loading data:', error); 
+    }
   };
 
   const loadMaterials = async () => {

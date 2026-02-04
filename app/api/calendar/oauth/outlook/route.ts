@@ -4,6 +4,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/src/lib/supabase/server';
 import { getOutlookCalendarService } from '@/src/lib/calendar/outlook-calendar-service';
+import { getOrganizationId } from '@/src/lib/auth-helpers'
+
 
 // Conditionally initialize Outlook service only if credentials exist
 let outlookService: any = null;
@@ -125,17 +127,35 @@ export async function GET(request: NextRequest) {
     // Store connection in database
     const supabase = await createClient();
 
+    // Get organization from authenticated user
+    const { data: userProfile } = await supabase
+      .from('user_profiles')
+      .select('organization_id')
+      .eq('id', userId)
+      .single();
+    
+    if (!userProfile?.organization_id) {
+      return NextResponse.redirect(
+        new URL(
+          '/calendar/connect?error=user_organization_not_found',
+          request.url
+        )
+      );
+    }
+
+    const organizationId = userProfile.organization_id;
+
     // Calculate token expiration
     const expiresAt = new Date(
       Date.now() + tokens.expires_in * 1000
     ).toISOString();
 
     // Find primary calendar
-      const primaryCalendar = calendars?.calendars?.find((c: any) => c.isPrimary) ||
+    const primaryCalendar = calendars?.calendars?.find((c: any) => c.isPrimary) ||
       calendars?.calendars?.[0] ||
       null;
 
-      if (!primaryCalendar) {
+    if (!primaryCalendar) {
       console.error('No calendars found for Outlook account');
       return NextResponse.redirect(
         new URL(
@@ -143,14 +163,14 @@ export async function GET(request: NextRequest) {
           request.url
         )
       );
-      }
+    }
 
     // Upsert calendar connection
     const { data: connection, error: dbError } = await supabase
       .from('calendar_connections')
       .upsert(
         {
-          organization_id: process.env.NEXT_PUBLIC_DEFAULT_ORG_ID || 'd52497c0-42a9-49b7-ba3b-849bffa27fc4',
+          organization_id: organizationId,  // ✅ Now using real org ID
           user_id: userId,
           provider: 'outlook',
           access_token: tokens.access_token,

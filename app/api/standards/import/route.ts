@@ -3,6 +3,7 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
+import { getOrganizationId } from '@/src/lib/auth-helpers'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -15,8 +16,6 @@ const anthropic = new Anthropic({
 
 export async function POST(request: Request) {
   const cookieStore = await cookies();
-  const host = request.headers.get('host');
-  const isLocalhost = host?.includes('localhost') || host?.includes('127.0.0.1');
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -33,27 +32,15 @@ export async function POST(request: Request) {
   try {
     // --- 1. AUTHENTICATION & MULTI-TENANCY ---
     const { data: { session } } = await supabase.auth.getSession();
-    const user = session?.user;
-
-    if (!session && !isLocalhost) {
+    
+    if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    let organizationId = isLocalhost && !user 
-      ? 'd52497c0-42a9-49b7-ba3b-849bffa27fc4' 
-      : null;
-
-    if (user && !organizationId) {
-      const { data: kids } = await supabaseAdmin
-        .from('kids')
-        .select('organization_id')
-        .eq('user_id', user.id)
-        .limit(1);
-      organizationId = kids?.[0]?.organization_id;
-    }
-
+    const organizationId = await getOrganizationId();
+    
     if (!organizationId) {
-      return NextResponse.json({ error: 'No Organization Found' }, { status: 400 });
+      return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
     }
 
     // --- 2. AI EXTRACTION (Haiku) ---
@@ -125,7 +112,7 @@ export async function POST(request: Request) {
       source: sourceName,
       source_url: docUrl,
       effective_year: parsedData.effective_year || new Date().getFullYear().toString(),
-      organization_id: organizationId,
+      organization_id: organizationId,  // ✅ Using authenticated org ID
       is_active: true,
       is_verified: false, // Core strategy: user imports are unverified
       created_at: new Date().toISOString()
@@ -156,18 +143,47 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  const cookieStore = await cookies();
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) { return cookieStore.get(name)?.value },
+        set(name: string, value: string, options: CookieOptions) {},
+        remove(name: string, options: CookieOptions) {},
+      },
+    }
+  );
+
   try {
-    const { organizationId } = await request.json();
-    if (!organizationId) throw new Error("Org ID required");
+    // Authenticate user
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Get organization from authenticated user
+    const organizationId = await getOrganizationId();
+    
+    if (!organizationId) {
+      return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
+    }
 
     const { error } = await supabaseAdmin
       .from('standards')
       .delete()
-      .eq('organization_id', organizationId);
+      .eq('organization_id', organizationId);  // ✅ Using authenticated org ID
 
     if (error) throw error;
+    
     return NextResponse.json({ success: true });
   } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json({ 
+      success: false, 
+      error: error.message 
+    }, { status: 500 });
   }
 }

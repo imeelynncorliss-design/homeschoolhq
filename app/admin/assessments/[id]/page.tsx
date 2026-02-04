@@ -3,6 +3,8 @@ import Link from 'next/link'
 import { createClient } from '@supabase/supabase-js'
 import { notFound } from 'next/navigation'
 import AssessmentDetailClient from './AssessmentDetailClient'
+import { getOrganizationId } from '@/src/lib/auth-helpers'
+import { redirect } from 'next/navigation'
 
 export const dynamic = 'force-dynamic'
 
@@ -51,7 +53,11 @@ type StudentProgress = {
 
 async function getAssessment(id: string): Promise<Assessment | null> {
   const supabase = createClient(supabaseUrl, supabaseKey)
-  const organizationId = 'd52497c0-42a9-49b7-ba3b-849bffa27fc4'
+  const organizationId = await getOrganizationId()
+
+  if (!organizationId) {
+    redirect('/login')
+  }
 
   const { data: assessment, error } = await supabase
     .from('assessments')
@@ -86,7 +92,11 @@ async function getStandards(assessmentId: string): Promise<Standard[]> {
 
 async function getStudentProgress(assessmentId: string): Promise<StudentProgress[]> {
   const supabase = createClient(supabaseUrl, supabaseKey)
-  const organizationId = 'd52497c0-42a9-49b7-ba3b-849bffa27fc4'
+  const organizationId = await getOrganizationId()
+
+  if (!organizationId) {
+    redirect('/login')
+  }
 
   // Get the assessment to find the lesson_id
   const { data: assessment } = await supabase

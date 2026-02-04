@@ -197,8 +197,8 @@ function AdminContent() {
               <p className="text-blue-100 text-[11px]">Top row: New Pages. Bottom row: Workspaces.</p>
             </div>
             <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm text-center">
-              <h3 className="font-bold text-gray-900 mb-2">⌨️ Keyboard</h3>
-              <p className="text-[11px] text-gray-500 text-gray-900 uppercase font-black tracking-widest">[1-8] Open • [ESC] Close</p>
+              <h3 className="font-bold text-gray-900 mb-2">⌨️ Keyboard Shortcuts</h3>
+              <p className="text-[11px] text-gray-500 text-gray-900 uppercase font-black tracking-widest">[1-8] Open </p>
             </div>
           </div>
         )}

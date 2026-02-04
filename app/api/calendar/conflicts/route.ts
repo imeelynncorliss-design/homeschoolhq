@@ -3,6 +3,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/src/lib/supabase/server';
+import { getOrganizationId } from '@/src/lib/auth-helpers'
+
 
 /**
  * GET /api/calendar/conflicts
@@ -12,42 +14,19 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient();
     
-    // Auth bypass for testing - controlled by environment variable
-    const BYPASS_AUTH = process.env.BYPASS_AUTH_FOR_TESTING === 'true';
-    let organizationId: string;
+    // Get authenticated user and their organization
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
     
-    if (BYPASS_AUTH) {
-      // TESTING: Use query param or default test org
-      organizationId = request.nextUrl.searchParams.get('organizationId') || 
-                      process.env.TEST_ORG_ID || 
-                      'd52497c0-42a9-49b7-ba3b-849bffa27fc4';
-      console.log('⚠️ BYPASS_AUTH enabled - using test organization');
-    } else {
-      // PRODUCTION: Get from authenticated user
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      
-      if (authError || !user) {
-        return NextResponse.json(
-          { error: 'Unauthorized' },
-          { status: 401 }
-        );
-      }
-      
-      // Get user's organization
-      const { data: profile, error: profileError } = await supabase
-        .from('user_profiles')
-        .select('organization_id')
-        .eq('user_id', user.id)
-        .single();
-      
-      if (profileError || !profile?.organization_id) {
-        return NextResponse.json(
-          { error: 'Organization not found' },
-          { status: 404 }
-        );
-      }
-      
-      organizationId = profile.organization_id;
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const organizationId = await getOrganizationId()
+    if (!organizationId) {
+      return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
     }
 
     const searchParams = request.nextUrl.searchParams;
@@ -93,43 +72,24 @@ export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
     
-    // Auth bypass for testing - controlled by environment variable
-    const BYPASS_AUTH = process.env.BYPASS_AUTH_FOR_TESTING === 'true';
-    let userId: string;
-    let organizationId: string;
+    // Get authenticated user and their organization
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
     
-    if (BYPASS_AUTH) {
-      // TESTING: Use test user and org
-      userId = process.env.TEST_USER_ID || '00000000-0000-0000-0000-000000000001';
-      organizationId = process.env.TEST_ORG_ID || 'd52497c0-42a9-49b7-ba3b-849bffa27fc4';
-      console.log('⚠️ BYPASS_AUTH enabled - using test user');
-    } else {
-      // PRODUCTION: Real authentication
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      
-      if (authError || !user) {
-        return NextResponse.json(
-          { error: 'Unauthorized' },
-          { status: 401 }
-        );
-      }
-      userId = user.id;
-      
-      // Get user's organization
-      const { data: profile, error: profileError } = await supabase
-        .from('user_profiles')
-        .select('organization_id')
-        .eq('user_id', user.id)
-        .single();
-      
-      if (profileError || !profile?.organization_id) {
-        return NextResponse.json(
-          { error: 'Organization not found' },
-          { status: 404 }
-        );
-      }
-      
-      organizationId = profile.organization_id;
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const userId = user.id;
+    const organizationId = await getOrganizationId();
+    
+    if (!organizationId) {
+      return NextResponse.json(
+        { error: 'Organization not found' },
+        { status: 404 }
+      );
     }
 
     const body = await request.json();
@@ -170,20 +130,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify user owns the calendar connection (skip in test mode)
-    if (!BYPASS_AUTH) {
-      const { data: connection, error: connError } = await supabase
-        .from('calendar_connections')
-        .select('user_id')
-        .eq('id', workEvent.calendar_connection_id)
-        .single();
+    // Verify user owns the calendar connection
+    const { data: connection, error: connError } = await supabase
+      .from('calendar_connections')
+      .select('user_id')
+      .eq('id', workEvent.calendar_connection_id)
+      .single();
 
-      if (connError || !connection || connection.user_id !== userId) {
-        return NextResponse.json(
-          { error: 'Access denied - you do not own this calendar connection' },
-          { status: 403 }
-        );
-      }
+    if (connError || !connection || connection.user_id !== userId) {
+      return NextResponse.json(
+        { error: 'Access denied - you do not own this calendar connection' },
+        { status: 403 }
+      );
     }
 
     // Create resolution record

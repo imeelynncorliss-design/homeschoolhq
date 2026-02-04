@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/src/lib/supabase/server';
 import { getCalendarSyncService } from '@/src/lib/calendar/calendar-sync-service';
+import { getOrganizationId } from '@/src/lib/auth-helpers'
 
 interface SyncResult {
   eventsAdded?: number;
@@ -40,50 +41,37 @@ export async function POST(request: NextRequest) {
 
     console.log('🔄 Manual sync triggered for connection:', connectionId);
     
-    // Auth bypass for testing - controlled by environment variable
-    const BYPASS_AUTH = process.env.BYPASS_AUTH_FOR_TESTING === 'true';
+    // Verify user is authenticated and get their organization
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
     
-    if (!BYPASS_AUTH) {
-      // PRODUCTION: Verify user owns this connection
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      
-      if (authError || !user) {
-        return NextResponse.json(
-          { success: false, message: 'Unauthorized' },
-          { status: 401 }
-        );
-      }
-      
-      // Get user's organization
-      const { data: profile, error: profileError } = await supabase
-        .from('user_profiles')
-        .select('organization_id')
-        .eq('user_id', user.id)
-        .single();
-      
-      if (profileError || !profile?.organization_id) {
-        return NextResponse.json(
-          { success: false, message: 'Organization not found' },
-          { status: 404 }
-        );
-      }
-      
-      // Verify connection belongs to user's organization
-      const { data: connection, error: connError } = await supabase
-        .from('calendar_connections')
-        .select('id, organization_id')
-        .eq('id', connectionId)
-        .eq('organization_id', profile.organization_id)
-        .single();
-      
-      if (connError || !connection) {
-        return NextResponse.json(
-          { success: false, message: 'Connection not found or access denied' },
-          { status: 404 }
-        );
-      }
-    } else {
-      console.log('⚠️ BYPASS_AUTH enabled for testing');
+    if (authError || !user) {
+      return NextResponse.json(
+        { success: false, message: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+    
+    const organizationId = await getOrganizationId()
+    if (!organizationId) {
+      return NextResponse.json({ 
+        success: false, 
+        message: 'Organization not found' 
+      }, { status: 404 })
+    }
+
+    // Verify connection belongs to user's organization
+    const { data: connection, error: connError } = await supabase
+      .from('calendar_connections')
+      .select('id, organization_id')
+      .eq('id', connectionId)
+      .eq('organization_id', organizationId)
+      .single();
+    
+    if (connError || !connection) {
+      return NextResponse.json(
+        { success: false, message: 'Connection not found or access denied' },
+        { status: 404 }
+      );
     }
 
     // ✅ LAZY INITIALIZATION - Only create sync service when actually needed
@@ -161,42 +149,19 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient();
     
-    // Auth bypass for testing - controlled by environment variable
-    const BYPASS_AUTH = process.env.BYPASS_AUTH_FOR_TESTING === 'true';
-    let organizationId: string;
+    // Get authenticated user and their organization
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
     
-    if (BYPASS_AUTH) {
-      // TESTING: Use query param or default test org
-      organizationId = request.nextUrl.searchParams.get('organizationId') || 
-                      process.env.TEST_ORG_ID || 
-                      'd52497c0-42a9-49b7-ba3b-849bffa27fc4';
-      console.log('⚠️ BYPASS_AUTH enabled - using test organization');
-    } else {
-      // PRODUCTION: Get from authenticated user
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      
-      if (authError || !user) {
-        return NextResponse.json(
-          { error: 'Unauthorized' },
-          { status: 401 }
-        );
-      }
-      
-      // Get user's organization
-      const { data: profile, error: profileError } = await supabase
-        .from('user_profiles')
-        .select('organization_id')
-        .eq('user_id', user.id)
-        .single();
-      
-      if (profileError || !profile?.organization_id) {
-        return NextResponse.json(
-          { error: 'Organization not found' },
-          { status: 404 }
-        );
-      }
-      
-      organizationId = profile.organization_id;
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const organizationId = await getOrganizationId()
+    if (!organizationId) {
+      return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
     }
 
     // Get recent sync logs

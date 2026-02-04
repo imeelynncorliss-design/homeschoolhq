@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/src/lib/supabase/server';
 import { getGoogleCalendarService } from '@/src/lib/calendar/google-calendar-service';
+import { getOrganizationId } from '@/src/lib/auth-helpers'
 
 const googleService = getGoogleCalendarService();
 
@@ -13,23 +14,23 @@ const googleService = getGoogleCalendarService();
  */
 export async function GET(request: NextRequest) {
   try {
-    // Auth bypass for testing - controlled by environment variable
-    const BYPASS_AUTH = process.env.BYPASS_AUTH_FOR_TESTING === 'true';
-    let userId = '00000000-0000-0000-0000-000000000001'; // Test user ID
-
-    if (!BYPASS_AUTH) {
-      // PRODUCTION: Real authentication
-      const supabase = await createClient();
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      
-      if (authError || !user) {
-        return NextResponse.json(
-          { error: 'Unauthorized - Please log in' },
-          { status: 401 }
-        );
-      }
-      userId = user.id;
+    // Get authenticated user and their organization
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: 'Unauthorized - Please log in' },
+        { status: 401 }
+      );
     }
+
+    const organizationId = await getOrganizationId()
+    if (!organizationId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const userId = user.id;
 
     // Generate OAuth URL
     const { url, state, codeVerifier } = googleService.generateAuthUrl(userId);
@@ -95,26 +96,24 @@ export async function POST(request: NextRequest) {
     const calendars = await googleService.listCalendars(tokens.access_token);
     const primaryCalendar = calendars.calendars.find(cal => cal.isPrimary);
 
-    // Auth bypass for testing
-    const BYPASS_AUTH = process.env.BYPASS_AUTH_FOR_TESTING === 'true';
-    let organizationId = process.env.TEST_ORG_ID || 'd52497c0-42a9-49b7-ba3b-849bffa27fc4';
-
-    if (!BYPASS_AUTH) {
-      // PRODUCTION: Get organization from authenticated user
-      const supabase = await createClient();
-      const { data: userProfile } = await supabase
-        .from('user_profiles')
-        .select('organization_id')
-        .eq('user_id', userId)
-        .single();
-      
-      if (userProfile?.organization_id) {
-        organizationId = userProfile.organization_id;
-      }
+    // Get organization from authenticated user
+    const supabase = await createClient();
+    const { data: userProfile } = await supabase
+      .from('user_profiles')  
+      .select('organization_id')
+      .eq('id', userId)
+      .single();
+    
+    if (!userProfile?.organization_id) {
+      return NextResponse.json(
+        { error: 'User organization not found' },
+        { status: 400 }
+      );
     }
 
+    const organizationId = userProfile.organization_id;
+
     // Save connection to database
-    const supabase = await createClient();
     const expiresAt = new Date(Date.now() + tokens.expires_in * 1000).toISOString();
 
     const { data: connection, error: dbError } = await supabase
