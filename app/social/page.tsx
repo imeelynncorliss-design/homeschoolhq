@@ -11,12 +11,14 @@ import { getTierForTesting } from '@/lib/tierTesting'
 import DevTierToggle from '@/components/DevTierToggle'
 import AuthGuard from '@/components/AuthGuard'
 
+type UserTier = 'FREE' | 'ESSENTIAL' | 'PRO' | 'PREMIUM'
+
 function SocialHub() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('social-calendar')
-  const [userTier, setUserTier] = useState<'FREE' | 'PREMIUM' | 'FAMILY'>('FREE')
+  const [userTier, setUserTier] = useState<UserTier>('FREE')
   
   const checkUser = async () => {
     const { data: { user } } = await supabase.auth.getUser()

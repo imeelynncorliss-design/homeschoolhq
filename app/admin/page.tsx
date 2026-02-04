@@ -12,6 +12,7 @@ import { getTierForTesting } from '@/lib/tierTesting'
 import DevTierToggle from '@/components/DevTierToggle'
 import AuthGuard from '@/components/AuthGuard'
 
+type UserTier = 'FREE' | 'ESSENTIAL' | 'PRO' | 'PREMIUM'
 // 1. GLOBAL CONSTANTS
 const FEATURES: any = {
   FREE: ['school_year_config', 'assessments'],
@@ -36,7 +37,7 @@ function AdminContent() {
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<string | null>(null)
-  const [userTier, setUserTier] = useState<'FREE' | 'PREMIUM' | 'FAMILY'>('FREE')
+  const [userTier, setUserTier] = useState<UserTier>('FREE')
   const [kids, setKids] = useState<any[]>([])
   
   // UX States
