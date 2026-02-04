@@ -276,6 +276,13 @@ function ToolCard({ tab, isLocked, isActive, index, isAltPressed, recentlyUsed, 
     </button>
   )
 }
+<a 
+  href="/admin/users"
+  className="block p-6 bg-white rounded-xl shadow hover:shadow-lg transition-shadow"
+>
+  <h3 className="text-lg font-bold text-gray-900 mb-2">👥 User Management</h3>
+  <p className="text-sm text-gray-600">Manage beta tester subscription tiers</p>
+</a>
 
 export default function AdminPage() {
   return (
