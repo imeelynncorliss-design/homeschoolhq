@@ -58,11 +58,6 @@ export default function LessonGenerator({ kids, userId, onClose }: LessonGenerat
   const [editingLearningStyle, setEditingLearningStyle] = useState(false);
   const [organizationId, setOrganizationId] = useState<string | null>(null);
   
-  // School day validation state
-  const [showNonSchoolDayWarning, setShowNonSchoolDayWarning] = useState(false);
-  const [isSchoolDay, setIsSchoolDay] = useState(true);
-  const [checkingSchoolDay, setCheckingSchoolDay] = useState(false);
-  
   // Quick add material form
   const [newMaterialName, setNewMaterialName] = useState('');
   const [newMaterialType, setNewMaterialType] = useState('physical');
@@ -123,67 +118,7 @@ export default function LessonGenerator({ kids, userId, onClose }: LessonGenerat
       fetchOrganizationId();
     }, [userId]);
 
-  // Check if selected date is a school day
-  useEffect(() => {
-    if (formData.startDate && formData.childId) {
-      checkIfSchoolDay(formData.startDate, formData.childId);
-    }
-  }, [formData.startDate, formData.childId]);
-
-  const checkIfSchoolDay = async (dateString: string, kidId: string) => {
-    setCheckingSchoolDay(true);
-    try {
-      const selectedDate = new Date(dateString + 'T12:00:00');
-      const dayOfWeek = selectedDate.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
-          
-        // Get the school year settings
-          const { data: settings, error: settingsError } = await supabase
-            .from('school_year_settings')
-            .select('*')
-            .eq('user_id', userId)
-            .maybeSingle();
-      
-          if (settingsError) {
-            console.error('Error checking school settings:', settingsError);
-            setIsSchoolDay(true);
-            return;
-          }
-      
-          if (!settings) {
-            console.log('No school year settings found, allowing all days');
-            setIsSchoolDay(true);
-            return;
-          }
-      
-          // Check if this day is in the homeschool_days array
-          const isSchoolDayOfWeek = settings.homeschool_days?.includes(dayOfWeek) || false;
-          console.log(`Is ${dayOfWeek} a school day?`, isSchoolDayOfWeek, 'homeschool_days:', settings.homeschool_days);
-      
-          // Check if date falls during a vacation period
-          const orgId = settings.organization_id || userId;
-          const { data: vacations } = await supabase
-            .from('vacation_periods')
-            .select('*')
-            .eq('organization_id', orgId);
-      
-          const isDuringVacation = vacations?.some(v => 
-            dateString >= v.start_date && dateString <= v.end_date
-          );
-      
-          console.log('During vacation?', isDuringVacation, 'vacations:', vacations);
-      
-          // It's a school day if: (1) the day of week is a school day AND (2) not during vacation
-          const finalIsSchoolDay = isSchoolDayOfWeek && !isDuringVacation;
-          setIsSchoolDay(finalIsSchoolDay);
-          
-          console.log('Final result: isSchoolDay =', finalIsSchoolDay);
-        } catch (error) {
-          console.error('Error in checkIfSchoolDay:', error);
-          setIsSchoolDay(true);
-        } finally {
-          setCheckingSchoolDay(false);
-        }
-      };
+        
 
   const fetchMaterials = async () => {
     if (!organizationId) {
@@ -354,18 +289,9 @@ export default function LessonGenerator({ kids, userId, onClose }: LessonGenerat
   };
 
   const handleContinueClick = () => {
-    // Check if the selected date is not a school day
-    if (!isSchoolDay && !checkingSchoolDay) {
-      setShowNonSchoolDayWarning(true);
-    } else {
-      setStep(2);
-    }
-  };
-
-  const proceedAnyw = () => {
-    setShowNonSchoolDayWarning(false);
     setStep(2);
   };
+
 
   const generateLessons = async () => {
     setLoading(true);
@@ -413,7 +339,7 @@ export default function LessonGenerator({ kids, userId, onClose }: LessonGenerat
         .select('organization_id, displayname')
         .eq('id', formData.childId)
         .single();
-  
+   
       if (kidError) {
         console.error('Error fetching kid:', kidError);
       }
@@ -583,13 +509,6 @@ export default function LessonGenerator({ kids, userId, onClose }: LessonGenerat
                 onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
                 className="w-full border rounded-lg px-3 py-2 text-gray-900"
               />
-              {!isSchoolDay && !checkingSchoolDay && formData.childId && (
-                <div className="mt-2 bg-yellow-50 border border-yellow-300 rounded-lg p-3">
-                  <p className="text-sm text-yellow-800">
-                    ⚠️ {new Date(formData.startDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })} is not a scheduled school day
-                  </p>
-                </div>
-              )}
             </div>
 
             <button
@@ -602,40 +521,7 @@ export default function LessonGenerator({ kids, userId, onClose }: LessonGenerat
           </div>
         )}
 
-        {/* Non-School Day Warning Modal */}
-        {showNonSchoolDayWarning && (
-          <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[60] p-4">
-            <div className="bg-white rounded-lg max-w-md w-full shadow-2xl">
-              <div className="bg-yellow-500 px-6 py-4 rounded-t-lg">
-                <h3 className="text-xl font-bold text-white">⚠️ Non-School Day Selected</h3>
-              </div>
-
-              <div className="p-6 space-y-4">
-              <p className="text-gray-900">
-                You've selected <strong>{new Date(formData.startDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</strong>, which is not a scheduled school day.
-              </p>
-              <p className="text-gray-600 text-sm">
-                This date is either not in your school week schedule or falls during a vacation period.
-              </p>
-              </div>
-
-              <div className="bg-gray-50 border-t border-gray-200 px-6 py-4 flex gap-3 rounded-b-lg">
-                <button
-                  onClick={() => setShowNonSchoolDayWarning(false)}
-                  className="flex-1 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 font-medium py-2"
-                >
-                  Change Date
-                </button>
-                <button
-                  onClick={proceedAnyw}
-                  className="flex-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium py-2"
-                >
-                  Continue Anyway
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+              
 
         {/* Step 2: Details (Optional) */}
         {step === 2 && !loading && (

@@ -268,7 +268,7 @@ const getUser = async () => {
         const { data: settings, error: settingsError } = await supabase
           .from('school_year_settings')
           .select('*')
-          .eq('user_id', user.id)
+          .eq('organization_id', user.id)  // ← NEW: query by organization_id
           .maybeSingle()
         
         if (settingsError) {

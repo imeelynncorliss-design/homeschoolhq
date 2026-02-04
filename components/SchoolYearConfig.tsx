@@ -13,7 +13,6 @@ export default function SchoolYearConfig({ userId }: SchoolYearConfigProps) {
   const [config, setConfig] = useState({
     school_year_start: '',
     school_year_end: '',
-    school_type: 'traditional', // traditional, year-round, hybrid
     annual_goal_type: 'hours', // hours or lessons
     annual_goal_value: 180, // default 180 days/hours
     weekly_goal_hours: 25
@@ -123,78 +122,6 @@ export default function SchoolYearConfig({ userId }: SchoolYearConfigProps) {
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900"
             />
           </div>
-        </div>
-      </div>
-
-      {/* ✅ NEW SECTION: Homeschool Days */}
-      <div className="bg-orange-50 rounded-lg p-6 border border-orange-200">
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">📆 Homeschool Days</h3>
-        <p className="text-sm text-gray-600 mb-4">
-          Select which days you typically homeschool. This helps with auto-scheduling lessons.
-        </p>
-        <div className="flex flex-wrap gap-3">
-          {allDays.map(day => (
-            <button
-              key={day}
-              onClick={() => toggleDay(day)}
-              type="button"
-              className={`px-6 py-3 rounded-lg font-semibold transition-all ${
-                homeschoolDays.includes(day)
-                  ? 'bg-orange-600 text-white shadow-md transform scale-105'
-                  : 'bg-white text-gray-700 border-2 border-gray-300 hover:border-orange-400'
-              }`}
-            >
-              {day}
-            </button>
-          ))}
-        </div>
-        <p className="text-xs text-gray-500 mt-3">
-          Selected: {homeschoolDays.length === 0 ? 'None' : homeschoolDays.join(', ')}
-        </p>
-      </div>
-
-      {/* School Type */}
-      <div className="bg-purple-50 rounded-lg p-6 border border-purple-200">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">🏫 School Schedule Type</h3>
-        <div className="grid md:grid-cols-3 gap-4">
-          <button
-            onClick={() => setConfig({ ...config, school_type: 'traditional' })}
-            className={`p-4 rounded-lg border-2 transition-all ${
-              config.school_type === 'traditional'
-                ? 'border-purple-600 bg-purple-100'
-                : 'border-gray-300 bg-white hover:border-purple-400'
-            }`}
-          >
-            <div className="text-4xl mb-2">📚</div>
-            <div className="font-semibold text-gray-900">Traditional</div>
-            <div className="text-xs text-gray-600 mt-1">Sep-May with summer break</div>
-          </button>
-
-          <button
-            onClick={() => setConfig({ ...config, school_type: 'year-round' })}
-            className={`p-4 rounded-lg border-2 transition-all ${
-              config.school_type === 'year-round'
-                ? 'border-purple-600 bg-purple-100'
-                : 'border-gray-300 bg-white hover:border-purple-400'
-            }`}
-          >
-            <div className="text-4xl mb-2">🔄</div>
-            <div className="font-semibold text-gray-900">Year-Round</div>
-            <div className="text-xs text-gray-600 mt-1">Continuous learning all year</div>
-          </button>
-
-          <button
-            onClick={() => setConfig({ ...config, school_type: 'hybrid' })}
-            className={`p-4 rounded-lg border-2 transition-all ${
-              config.school_type === 'hybrid'
-                ? 'border-purple-600 bg-purple-100'
-                : 'border-gray-300 bg-white hover:border-purple-400'
-            }`}
-          >
-            <div className="text-4xl mb-2">🔀</div>
-            <div className="font-semibold text-gray-900">Hybrid</div>
-            <div className="text-xs text-gray-600 mt-1">Mix of scheduled & flexible</div>
-          </button>
         </div>
       </div>
 
