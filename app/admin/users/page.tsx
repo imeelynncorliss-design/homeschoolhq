@@ -102,7 +102,7 @@ export default function UserManagementPage() {
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-xs font-bold text-gray-900 uppercase tracking-wider">
                   Email
                 </th>
                 <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
@@ -126,7 +126,7 @@ export default function UserManagementPage() {
               ) : (
                 users.map(user => (
                   <tr key={user.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 text-sm text-gray-900">
+                    <td className="px-6 py-4 text-sm font-medium text-gray-900">
                       {user.email}
                       {ADMIN_EMAILS.includes(user.email) && (
                         <span className="ml-2 px-2 py-1 bg-red-100 text-red-800 text-xs font-bold rounded">
@@ -136,22 +136,22 @@ export default function UserManagementPage() {
                     </td>
                     <td className="px-6 py-4">
                       <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                        user.subscription_tier === 'PREMIUM' ? 'bg-purple-100 text-purple-800' :
-                        user.subscription_tier === 'PRO' ? 'bg-blue-100 text-blue-800' :
-                        user.subscription_tier === 'ESSENTIAL' ? 'bg-green-100 text-green-800' :
-                        'bg-gray-100 text-gray-800'
+                        user.subscription_tier === 'PREMIUM' ? 'bg-purple-100 text-purple-900' :
+                        user.subscription_tier === 'PRO' ? 'bg-blue-100 text-blue-900' :
+                        user.subscription_tier === 'ESSENTIAL' ? 'bg-green-100 text-green-900' :
+                        'bg-gray-200 text-gray-900'
                       }`}>
                         {user.subscription_tier || 'FREE'}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">
+                    <td className="px-6 py-4 text-sm font-medium text-gray-900">
                       {new Date(user.created_at).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4">
                       <select
                         value={user.subscription_tier || 'FREE'}
                         onChange={(e) => updateTier(user.id, e.target.value as UserTier)}
-                        className="px-3 py-2 border-2 border-gray-200 rounded-lg text-sm font-medium focus:border-indigo-600 focus:outline-none"
+                        className="px-3 py-2 border-2 border-gray-300 rounded-lg text-sm font-bold text-gray-900 bg-white focus:border-indigo-600 focus:outline-none cursor-pointer"
                       >
                         <option value="FREE">Free</option>
                         <option value="ESSENTIAL">Essential ($60/yr)</option>
