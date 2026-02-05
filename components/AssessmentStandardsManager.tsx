@@ -51,48 +51,63 @@ export default function AssessmentStandardsManager({
 
   const loadData = async () => {
     setLoading(true);
-
-    // Load current standards aligned to this assessment
-    const { data: currentData } = await supabase
-      .from('assessment_standards')
-      .select(`
-        id,
-        user_standard_id,
-        alignment_strength,
-        notes,
-        user_standards!inner(
-          id,
-          code,
-          description,
-          subject,
-          grade_level
-        )
-      `)
-      .eq('assessment_id', assessmentId);
-
-    // Load available standards for this organization
-    const { data: availableData } = await supabase
-      .from('user_standards')
-      .select('*')
-      .eq('organization_id', organizationId)
-      .order('code');
-
-    if (currentData) {
-      setCurrentStandards(currentData.map(item => ({
-        id: item.id,
-        user_standard_id: item.user_standard_id,
-        alignment_strength: item.alignment_strength,
-        notes: item.notes,
-        standard: Array.isArray(item.user_standards) 
-          ? item.user_standards[0] 
-          : item.user_standards
-      })));
+  
+    try {
+      // Step 1: Load alignment records for this assessment
+      const { data: alignments, error: alignError } = await supabase
+        .from('assessment_standards')
+        .select('id, user_standard_id, alignment_strength, notes')
+        .eq('assessment_id', assessmentId);
+  
+      if (alignError) {
+        console.error('Error loading alignments:', alignError);
+      }
+  
+      // Step 2: If we have alignments, load the full standard details
+      if (alignments && alignments.length > 0) {
+        const standardIds = alignments.map(a => a.user_standard_id);
+        
+        const { data: standards, error: stdError } = await supabase
+          .from('user_standards')
+          .select('*')
+          .in('id', standardIds);
+  
+        if (stdError) {
+          console.error('Error loading standard details:', stdError);
+        }
+  
+        // Create a map for easy lookup
+        const standardsMap = new Map(standards?.map(s => [s.id, s]) || []);
+        
+        // Combine alignment data with standard details
+        setCurrentStandards(alignments.map(a => ({
+          id: a.id,
+          user_standard_id: a.user_standard_id,
+          alignment_strength: a.alignment_strength,
+          notes: a.notes,
+          standard: standardsMap.get(a.user_standard_id)
+        })));
+      } else {
+        setCurrentStandards([]);
+      }
+  
+      // Step 3: Load all available standards for this org
+      const { data: available, error: availError } = await supabase
+        .from('user_standards')
+        .select('*')
+        .eq('organization_id', organizationId)
+        .order('standard_code');
+  
+      if (availError) {
+        console.error('Error loading available standards:', availError);
+      } else {
+        setAvailableStandards(available || []);
+      }
+  
+    } catch (err) {
+      console.error('Unexpected error:', err);
     }
-
-    if (availableData) {
-      setAvailableStandards(availableData);
-    }
-
+  
     setLoading(false);
   };
 
@@ -105,13 +120,13 @@ export default function AssessmentStandardsManager({
         assessment_id: assessmentId,
         user_standard_id: standardId,
         alignment_strength: strength,
-        organization_id: organizationId
       });
 
     if (error) {
       console.error('Error adding standard:', error);
       alert('Failed to add standard');
     } else {
+      //Success 
       await loadData();
       onUpdate?.();
     }

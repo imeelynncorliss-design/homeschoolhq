@@ -2,16 +2,17 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { createClient } from '@supabase/supabase-js'
+import { createBrowserClient } from '@supabase/ssr'
 import AssessmentStandardsManager from '@/components/AssessmentStandardsManager'
 import StandardsImporter from '@/components/StandardsImporter'
 import StandardsManager from '@/components/StandardsManager'
+import AssessmentsHelpModal from '@/components/AssessmentsHelpModal'
+import { HelpCircle, Lightbulb } from 'lucide-react'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
-// Unified Supabase client instance for this file
-const supabase = createClient(supabaseUrl, supabaseKey)
+const supabase = createBrowserClient(supabaseUrl, supabaseKey)
 
 type AssessmentWithDetails = {
   id: string
@@ -53,8 +54,8 @@ export default function AssessmentsPage() {
   const [managingStandards, setManagingStandards] = useState<AssessmentWithDetails | null>(null)
   const [showImporter, setShowImporter] = useState(false)
   const [showStandardsManager, setShowStandardsManager] = useState(false)
-  
-  const organizationId = 'd52497c0-42a9-49b7-ba3b-849bffa27fc4'
+  const [showHelp, setShowHelp] = useState(false)
+  const [organizationId, setOrganizationId] = useState<string | null>(null)
   
   const [standards, setStandards] = useState<Standard[]>([])
   const [standardsLoading, setStandardsLoading] = useState(false)
@@ -64,35 +65,75 @@ export default function AssessmentsPage() {
     search: ''
   })
 
-  // --- 1. Effect Hooks ---
+  // Fetch organization ID
   useEffect(() => {
-    loadAssessments()
+    const fetchOrgId = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const { data: kids } = await supabase
+        .from('kids')
+        .select('organization_id')
+        .eq('user_id', user.id)
+        .limit(1)
+
+      if (kids && kids.length > 0) {
+        setOrganizationId(kids[0].organization_id)
+      }
+    }
+
+    fetchOrgId()
   }, [])
 
   useEffect(() => {
-    if (currentView === 'standards') {
+    if (organizationId) {
+      loadAssessments()
+    }
+  }, [organizationId])
+
+  useEffect(() => {
+    if (currentView === 'standards' && organizationId) {
       loadStandards()
     }
-  }, [currentView, filters]) // removed organizationID
+  }, [currentView, filters, organizationId])
 
-  // --- 2. Load Assessments ---
   const loadAssessments = async () => {
+    if (!organizationId) return
+    
     setLoading(true)
     try {
-      const { data: assessmentsData, error } = await supabase
+      const { data: assessmentsData, error: assessmentsError } = await supabase
         .from('assessments')
-        .select(`*, lessons!inner(title, subject), kids!inner(displayname)`)
+        .select(`
+          *,
+          lessons!inner(id, title, subject),
+          kids!inner(id, displayname)
+        `)
         .eq('organization_id', organizationId)
         .order('created_at', { ascending: false })
 
-      if (error || !assessmentsData) throw error
+      if (assessmentsError) throw assessmentsError
+      if (!assessmentsData) {
+        setAssessments([])
+        return
+      }
 
       const assessmentIds = assessmentsData.map(a => a.id)
-      const { data: results } = await supabase.from('assessment_results').select('*').in('assessment_id', assessmentIds)
-      const { data: standardsCounts } = await supabase.from('assessment_standards').select('assessment_id').in('assessment_id', assessmentIds)
+      
+      const { data: results } = await supabase
+        .from('assessment_results')
+        .select('*')
+        .in('assessment_id', assessmentIds)
+      
+      const { data: standardsCounts } = await supabase
+        .from('assessment_standards')
+        .select('assessment_id')
+        .in('assessment_id', assessmentIds)
 
       const standardsMap = new Map<string, number>()
-      standardsCounts?.forEach(s => standardsMap.set(s.assessment_id, (standardsMap.get(s.assessment_id) || 0) + 1))
+      standardsCounts?.forEach(s => {
+        standardsMap.set(s.assessment_id, (standardsMap.get(s.assessment_id) || 0) + 1)
+      })
 
       const combined = assessmentsData.map(assessment => {
         const lessonData = Array.isArray(assessment.lessons) ? assessment.lessons[0] : assessment.lessons
@@ -128,17 +169,16 @@ export default function AssessmentsPage() {
     }
   }
 
-  // --- 3. Unified Load Standards ---
   const loadStandards = async () => {
+    if (!organizationId) return
+    
     setStandardsLoading(true)
     try {
-      // Logic for filtering
       let query = supabase
         .from('standards')
         .select('*')
         .or(`organization_id.is.null,organization_id.eq.${organizationId}`)
 
-      // Apply Filter Logic
       if (filters.subject) query = query.ilike('subject', `%${filters.subject}%`)
       if (filters.grade_level) query = query.eq('grade_level', filters.grade_level)
       if (filters.search) {
@@ -173,8 +213,19 @@ export default function AssessmentsPage() {
           <Link href="/admin" className="text-white/80 hover:text-white flex items-center gap-2 mb-6 font-medium">
             ← Back to Admin
           </Link>
-          <h1 className="text-4xl font-black mb-2">Assessments & Standards</h1>
-          <p className="text-white/70">Manage student quizzes and curriculum alignment</p>
+          <div className="flex justify-between items-start">
+            <div>
+              <h1 className="text-4xl font-black mb-2">Assessments & Standards</h1>
+              <p className="text-white/70">Manage student quizzes and curriculum alignment</p>
+            </div>
+            <button
+              onClick={() => setShowHelp(true)}
+              className="flex items-center gap-2 px-6 py-3 bg-white/20 hover:bg-white/30 rounded-2xl font-bold transition-all backdrop-blur-sm"
+            >
+              <HelpCircle className="w-5 h-5" />
+              Help & Guide
+            </button>
+          </div>
         </div>
       </div>
 
@@ -202,10 +253,43 @@ export default function AssessmentsPage() {
           </button>
         </div>
 
+        {/* Quick Tips */}
+        {currentView === 'results' && (
+          <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-2xl p-6 mb-6 border-2 border-purple-200">
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-xl bg-purple-600 flex items-center justify-center flex-shrink-0">
+                <Lightbulb className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h3 className="font-black text-purple-900 mb-1">Track Learning Progress</h3>
+                <p className="text-purple-700 text-sm">
+                  Click <strong>+ Add Standards</strong> on any assessment to link it to specific learning goals. This helps you see exactly which skills your child has mastered!
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {currentView === 'standards' && (
+          <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-2xl p-6 mb-6 border-2 border-blue-200">
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center flex-shrink-0">
+                <Lightbulb className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h3 className="font-black text-blue-900 mb-1">Your Standards Library</h3>
+                <p className="text-blue-700 text-sm">
+                  You have <strong>{standards.length} standards</strong> in your library! Use filters to find specific subjects or grades. Click <strong>+ Import Standards</strong> to add more using AI extraction from PDFs or websites.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {currentView === 'results' && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-4">
-              {loading ? (
+              {loading || !organizationId ? (
                 <div className="bg-white rounded-3xl p-12 text-center">
                   <div className="animate-spin h-8 w-8 border-4 border-purple-600 border-t-transparent rounded-full mx-auto mb-4"></div>
                   <div className="text-slate-400 font-bold">Loading assessments...</div>
@@ -351,7 +435,7 @@ export default function AssessmentsPage() {
         )}
       </div>
 
-      {managingStandards && (
+      {managingStandards && organizationId && (
         <AssessmentStandardsManager
           assessmentId={managingStandards.id}
           assessmentTitle={managingStandards.lesson_title}
@@ -370,7 +454,7 @@ export default function AssessmentsPage() {
         />
       )}
 
-      {showStandardsManager && (
+      {showStandardsManager && organizationId && (
         <StandardsManager
           organizationId={organizationId}
           onClose={() => {
@@ -378,6 +462,10 @@ export default function AssessmentsPage() {
             loadStandards();
           }}
         />
+      )}
+
+      {showHelp && (
+        <AssessmentsHelpModal onClose={() => setShowHelp(false)} />
       )}
     </div>
   )

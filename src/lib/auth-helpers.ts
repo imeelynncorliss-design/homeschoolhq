@@ -9,11 +9,18 @@ export async function getOrganizationId(): Promise<string | null> {
   }
 
   const supabase = await createClient()
-  const { data: profile } = await supabase
-    .from('user_profiles')
+  
+  // Get organization from kids table (not user_profiles)
+  const { data: kids, error } = await supabase
+    .from('kids')
     .select('organization_id')
-    .eq('id', user.id)
-    .single()
+    .eq('user_id', user.id)
+    .limit(1)
 
-  return profile?.organization_id || null
+  if (error || !kids || kids.length === 0) {
+    console.error('getOrganizationId error:', error)
+    return null
+  }
+
+  return kids[0].organization_id
 }

@@ -30,7 +30,6 @@ export async function POST(request: Request) {
   );
 
   try {
-    // --- 1. AUTHENTICATION & MULTI-TENANCY ---
     const { data: { session } } = await supabase.auth.getSession();
     
     if (!session) {
@@ -43,7 +42,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
     }
 
-    // --- 2. AI EXTRACTION (Haiku) ---
     const { type, file, url } = await request.json();
     let rawClaudeText = "";
     const modelName = "claude-3-haiku-20240307";
@@ -84,10 +82,8 @@ export async function POST(request: Request) {
       rawClaudeText = (msg.content[0] as any).text;
     }
 
-    // --- 3. DEFENSIVE PARSING (Fix for "Invalid Format") ---
     let parsedData;
     try {
-      // Regex strips out any preamble text Haiku might add
       const jsonMatch = rawClaudeText.match(/\{[\s\S]*\}/);
       if (!jsonMatch) throw new Error("No JSON found in response");
       parsedData = JSON.parse(jsonMatch[0]);
@@ -100,26 +96,22 @@ export async function POST(request: Request) {
     const sourceName = parsedData.source_name || (type === 'url' ? 'Web Import' : 'User Upload');
     const docUrl = type === 'url' ? url : null;
 
-    // --- 4. ROBUST MAPPING & DATABASE SAVE ---
     const standardsToSave = extractedStandards.map((s: any) => ({
-      grade_level: String(s.grade_level || 'N/A'),
-      subject: s.subject || 'N/A',
-      standard_code: s.standard_code || 'N/A',
+      organization_id: organizationId,
+      code: s.standard_code || 'N/A',
       description: s.description || '',
-      domain: s.domain || '',
+      subject: s.subject || 'N/A',
+      grade_level: String(s.grade_level || 'N/A'),
+      domain: s.domain || null,
       state_code: s.state_code || 'CUSTOM',
-      // Liability Shield Fields:
       source: sourceName,
       source_url: docUrl,
-      effective_year: parsedData.effective_year || new Date().getFullYear().toString(),
-      organization_id: organizationId,  // ✅ Using authenticated org ID
-      is_active: true,
-      is_verified: false, // Core strategy: user imports are unverified
+      is_custom: true,
       created_at: new Date().toISOString()
     }));
 
     const { data: savedData, error: saveError } = await supabaseAdmin
-      .from('standards')
+      .from('user_standards')
       .insert(standardsToSave)
       .select();
 
@@ -158,14 +150,12 @@ export async function DELETE(request: Request) {
   );
 
   try {
-    // Authenticate user
     const { data: { session } } = await supabase.auth.getSession();
     
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get organization from authenticated user
     const organizationId = await getOrganizationId();
     
     if (!organizationId) {
@@ -173,9 +163,10 @@ export async function DELETE(request: Request) {
     }
 
     const { error } = await supabaseAdmin
-      .from('standards')
+      .from('user_standards')
       .delete()
-      .eq('organization_id', organizationId);  // ✅ Using authenticated org ID
+      .eq('organization_id', organizationId)
+      .eq('is_custom', true);
 
     if (error) throw error;
     
