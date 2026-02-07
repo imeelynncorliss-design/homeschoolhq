@@ -141,9 +141,11 @@ export async function POST(request: NextRequest) {
       grade_level: template.grade_level,
       subject: template.subject,
       standard_code: template.standard_code,
+      code: template.code || null,  // ✅ ADD THIS
       description: template.description,
       domain: template.domain || null,
       source: template.source_name || 'template_import',
+      template_id: template.id,  // ✅ ADD THIS to track source
       imported_date: new Date().toISOString(),
       customized: false,
       active: true

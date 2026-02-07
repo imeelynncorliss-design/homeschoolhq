@@ -6,13 +6,9 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/src/lib/supabase';
 
-interface Standard {
-  id: string;
-  code: string;
-  description: string;
-  subject: string;
-  grade_level: number;
-}
+import { Database } from '@/types/database';
+
+type Standard = Database['public']['Tables']['user_standards']['Row'];
 
 interface AssessmentStandard {
   id: string;
@@ -187,8 +183,11 @@ export default function AssessmentStandardsManager({
     // Filter by search term
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
-      if (!std.code.toLowerCase().includes(term) && 
-          !std.description.toLowerCase().includes(term)) {
+      if (
+        !(std.standard_code?.toLowerCase().includes(term)) &&
+        !(std.code?.toLowerCase().includes(term)) &&
+        !(std.description?.toLowerCase().includes(term))
+      ) {
         return false;
       }
     }
@@ -199,7 +198,7 @@ export default function AssessmentStandardsManager({
     }
 
     // Filter by grade
-    if (selectedGrade !== 'all' && std.grade_level.toString() !== selectedGrade) {
+    if (selectedGrade !== 'all' && std.grade_level !== selectedGrade) {
       return false;
     }
 
@@ -208,7 +207,16 @@ export default function AssessmentStandardsManager({
 
   // Get unique subjects and grades for filters
   const subjects = Array.from(new Set(availableStandards.map(s => s.subject))).sort();
-  const grades = Array.from(new Set(availableStandards.map(s => s.grade_level))).sort((a, b) => a - b);
+  // Sort grades properly as strings
+  
+  const grades = Array.from(
+    new Set(availableStandards.map(s => s.grade_level).filter(Boolean))
+  ).sort((a, b) => {
+    // Handle special cases like "K" and ranges like "11-12"
+    if (a === 'K') return -1;
+    if (b === 'K') return 1;
+    return a.localeCompare(b, undefined, { numeric: true });
+  });
 
   const getStrengthColor = (strength: string) => {
     switch (strength) {

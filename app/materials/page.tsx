@@ -45,6 +45,7 @@ export default function MaterialsPage() {
   const [formLoginInfo, setFormLoginInfo] = useState('');
   const [formLicenseExpires, setFormLicenseExpires] = useState('');
   const [formNotes, setFormNotes] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -59,27 +60,63 @@ export default function MaterialsPage() {
   const loadData = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.push('/'); return; }
-  
-      // 1. Try to get it from school settings
-      const { data: settings } = await supabase.from('school_year_settings').select('organization_id').eq('user_id', user.id).maybeSingle();
-      
-      if (settings?.organization_id) {
-        setOrganizationId(settings.organization_id);
-      } else {
-        // 2. FALLBACK: Look for the organization in your profiles/members table
-        const { data: profile } = await supabase
-          .from('profiles') // or 'members', 'users', etc.
-          .select('organization_id')
-          .eq('id', user.id)
-          .single();
-        
-        setOrganizationId(profile?.organization_id || null);
+      if (!user) { 
+        router.push('/'); 
+        return; 
       }
-      
+  
+      console.log('🔍 Looking for organization_id for user:', user.id);
+  
+      // 1. PRIMARY: Try user_profiles first (most direct)
+      const { data: profile, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('organization_id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+  
+      if (profileError) {
+        console.error('⚠️ Error fetching user_profiles:', profileError.message);
+      }
+  
+      if (profile?.organization_id) {
+        console.log('✅ Found organization_id from user_profiles:', profile.organization_id);
+        setOrganizationId(profile.organization_id);
+        setLoading(false);
+        return;
+      }
+  
+      // 2. FALLBACK: Try kids table (in case profile isn't populated yet)
+      console.log('📋 Trying fallback: checking kids table...');
+      const { data: kid, error: kidError } = await supabase
+        .from('kids')
+        .select('organization_id')
+        .eq('user_id', user.id)
+        .limit(1)
+        .maybeSingle();
+  
+      if (kidError) {
+        console.error('⚠️ Error fetching kids:', kidError.message);
+      }
+  
+      if (kid?.organization_id) {
+        console.log('✅ Found organization_id from kids table:', kid.organization_id);
+        setOrganizationId(kid.organization_id);
+        
+        // BONUS: Backfill user_profiles so next time it's faster
+        console.log('💾 Backfilling user_profiles with organization_id...');
+        await supabase
+          .from('user_profiles')
+          .update({ organization_id: kid.organization_id })
+          .eq('user_id', user.id);
+      } else {
+        console.error('❌ NO ORGANIZATION_ID FOUND in either user_profiles or kids');
+        setOrganizationId(null);
+      }
+  
       setLoading(false);
     } catch (error) { 
-      console.error('Error loading data:', error); 
+      console.error('💥 Critical error loading data:', error); 
+      setLoading(false);
     }
   };
 
@@ -101,27 +138,52 @@ export default function MaterialsPage() {
       return;
     }
 
-    if (!organizationId) return;
+    if (!organizationId) {
+      console.warn('⚠️ Cannot load materials without organization_id');
+      return;
+    }
+
     setLoading(true);
     try {
-      let query = supabase.from('materials').select('*').eq('organization_id', organizationId).order('created_at', { ascending: false });
+      let query = supabase
+        .from('materials')
+        .select('*')
+        .eq('organization_id', organizationId)
+        .order('created_at', { ascending: false });
+
       if (filterType !== 'all') query = query.eq('material_type', filterType);
       if (filterSubject !== 'all') query = query.eq('subject', filterSubject);
       if (searchQuery) query = query.ilike('name', `%${searchQuery}%`);
+
       const { data, error } = await query;
       if (error) throw error;
       setMaterials(data || []);
-    } catch (error) { console.error('Error loading materials:', error); } finally { setLoading(false); }
+    } catch (error) { 
+      console.error('Error loading materials:', error); 
+    } finally { 
+      setLoading(false); 
+    }
   };
 
   const resetForm = () => {
-    setFormType('textbook'); setFormName(''); setFormSubject(''); setFormGrade('');
-    setFormPublisher(''); setFormQuantity(1); setFormCondition(''); setFormUrl('');
-    setFormLoginInfo(''); setFormLicenseExpires(''); setFormNotes('');
+    setFormType('textbook'); 
+    setFormName(''); 
+    setFormSubject(''); 
+    setFormGrade('');
+    setFormPublisher(''); 
+    setFormQuantity(1); 
+    setFormCondition(''); 
+    setFormUrl('');
+    setFormLoginInfo(''); 
+    setFormLicenseExpires(''); 
+    setFormNotes('');
     setEditingMaterial(null);
   };
 
-  const openAddForm = () => { resetForm(); setShowAddForm(true); };
+  const openAddForm = () => { 
+    resetForm(); 
+    setShowAddForm(true); 
+  };
 
   const openEditForm = (material: Material) => {
     setEditingMaterial(material);
@@ -141,7 +203,14 @@ export default function MaterialsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!organizationId) return;
+    
+    if (!organizationId) {
+      alert('Error: No organization found. Please complete your account setup first.');
+      return;
+    }
+
+    setIsSaving(true);
+
     const materialData = {
       organization_id: organizationId,
       material_type: formType,
@@ -157,7 +226,10 @@ export default function MaterialsPage() {
       notes: formNotes || null,
     };
 
+    console.log('💾 Attempting to save material:', materialData);
+
     try {
+      // DEV MODE SESSION STORAGE
       if (organizationId === '00000000-0000-0000-0000-000000000000') {
         const existing = JSON.parse(sessionStorage.getItem('dev_materials') || '[]');
         const newItem = { 
@@ -165,34 +237,108 @@ export default function MaterialsPage() {
           id: editingMaterial ? editingMaterial.id : `dev-${Math.random().toString(36).substr(2, 9)}`, 
           created_at: editingMaterial ? editingMaterial.created_at : new Date().toISOString() 
         };
-        const updated = editingMaterial ? existing.map((m: any) => m.id === editingMaterial.id ? newItem : m) : [newItem, ...existing];
+        const updated = editingMaterial 
+          ? existing.map((m: any) => m.id === editingMaterial.id ? newItem : m) 
+          : [newItem, ...existing];
         sessionStorage.setItem('dev_materials', JSON.stringify(updated));
-        setShowAddForm(false); resetForm(); loadMaterials(); return;
+        console.log('✅ Material saved to session storage (dev mode)');
+        setShowAddForm(false); 
+        resetForm(); 
+        loadMaterials(); 
+        setIsSaving(false);
+        return;
       }
+
+      // PRODUCTION DATABASE SAVE
       if (editingMaterial) {
-        const { error } = await supabase.from('materials').update(materialData).eq('id', editingMaterial.id);
-        if (error) throw error;
+        console.log('📝 Updating existing material:', editingMaterial.id);
+        const { data, error } = await supabase
+          .from('materials')
+          .update(materialData)
+          .eq('id', editingMaterial.id)
+          .select();
+        
+        if (error) {
+          console.error('❌ Update failed:', error);
+          throw error;
+        }
+        console.log('✅ Material updated successfully:', data);
       } else {
-        const { error } = await supabase.from('materials').insert([materialData]);
-        if (error) throw error;
+        console.log('➕ Inserting new material');
+        const { data, error } = await supabase
+          .from('materials')
+          .insert([materialData])
+          .select();
+        
+        if (error) {
+          console.error('❌ Insert failed:', error);
+          throw error;
+        }
+        console.log('✅ Material created successfully:', data);
       }
-      setShowAddForm(false); resetForm(); loadMaterials();
-    } catch (error) { alert('Failed to save material.'); }
+
+      setShowAddForm(false); 
+      resetForm(); 
+      loadMaterials();
+      alert('✅ Material saved successfully!');
+    } catch (error: any) { 
+      console.error('💥 Save error details:', {
+        message: error.message,
+        hint: error.hint,
+        details: error.details,
+        code: error.code
+      });
+      alert(`Failed to save material: ${error.message || 'Unknown error'}\n\nCheck console for details.`); 
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const deleteMaterial = async (id: string) => {
-    if (!confirm('Are you sure?')) return;
+    if (!confirm('Are you sure you want to delete this material?')) return;
+    
     if (organizationId === '00000000-0000-0000-0000-000000000000') {
       const existing = JSON.parse(sessionStorage.getItem('dev_materials') || '[]');
       sessionStorage.setItem('dev_materials', JSON.stringify(existing.filter((m: any) => m.id !== id)));
-      loadMaterials(); return;
+      loadMaterials(); 
+      return;
     }
-    await supabase.from('materials').delete().eq('id', id); loadMaterials();
+
+    try {
+      const { error } = await supabase.from('materials').delete().eq('id', id);
+      if (error) throw error;
+      loadMaterials();
+      alert('✅ Material deleted successfully!');
+    } catch (error: any) {
+      console.error('Error deleting material:', error);
+      alert(`Failed to delete: ${error.message}`);
+    }
   };
 
   const subjects = Array.from(new Set(materials.map(m => m.subject).filter(Boolean))).sort() as string[];
 
   if (loading) return <div className="p-8 text-center font-bold text-slate-800">Loading resources...</div>;
+
+  if (!organizationId) {
+    return (
+      <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center p-8">
+        <div className="bg-white rounded-2xl shadow-lg p-12 max-w-2xl text-center border border-red-200">
+          <div className="text-6xl mb-6">⚠️</div>
+          <h1 className="text-3xl font-black text-slate-900 mb-4">Account Setup Required</h1>
+          <p className="text-slate-600 mb-8">
+            Before you can manage materials, you need to complete your account setup. 
+            This ensures your materials are properly organized and saved.
+          </p>
+          <button 
+            onClick={() => router.push('/dashboard')} 
+            className="bg-indigo-700 text-white px-8 py-4 rounded-xl font-black hover:bg-indigo-800 transition-all shadow-lg"
+          >
+            Go to Dashboard
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
@@ -262,7 +408,7 @@ export default function MaterialsPage() {
             const descriptions = {
               textbook: 'Curriculum textbooks and workbooks',
               subscription: 'Online programs and subscriptions',
-              physical: '🎯 These materials are used as input for AI-generated lessons',
+              physical: 'Hands-on materials used for AI-generated lessons',
               digital: 'Digital resources and downloads'
             };
             return (
@@ -325,6 +471,17 @@ export default function MaterialsPage() {
               </div>
             );
           })}
+
+          {materials.length === 0 && (
+            <div className="bg-white rounded-2xl shadow-md border border-slate-200 p-16 text-center">
+              <div className="text-6xl mb-4">📦</div>
+              <h3 className="text-2xl font-black text-slate-900 mb-2">No Materials Yet</h3>
+              <p className="text-slate-600 mb-6">Start building your resource library by adding your first material.</p>
+              <button onClick={openAddForm} className="bg-indigo-700 text-white px-8 py-3 rounded-xl font-black hover:bg-indigo-800 transition-all shadow-lg">
+                + Add Your First Material
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -337,11 +494,24 @@ export default function MaterialsPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="md:col-span-2">
                   <label className="block text-sm font-black text-slate-900 mb-2 uppercase tracking-wide">Resource Name *</label>
-                  <input type="text" value={formName} onChange={e => setFormName(e.target.value)} className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-xl outline-none focus:border-purple-600 text-slate-900 font-bold" placeholder="e.g. Saxon Math 5/4" required />
+                  <input 
+                    type="text" 
+                    value={formName} 
+                    onChange={e => setFormName(e.target.value)} 
+                    className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-xl outline-none focus:border-purple-600 text-slate-900 font-bold" 
+                    placeholder="e.g. Saxon Math 5/4" 
+                    required 
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-black text-slate-900 mb-2 uppercase tracking-wide">Subject</label>
-                  <input type="text" value={formSubject} onChange={e => setFormSubject(e.target.value)} className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-xl text-slate-900 font-bold" />
+                  <input 
+                    type="text" 
+                    value={formSubject} 
+                    onChange={e => setFormSubject(e.target.value)} 
+                    className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-xl text-slate-900 font-bold" 
+                    placeholder="e.g. Math, Science"
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-black text-slate-900 mb-2 uppercase tracking-wide">Type</label>
@@ -354,7 +524,11 @@ export default function MaterialsPage() {
                       <p className="text-xs text-slate-600 mt-1">Physical materials are used in Lesson Generator and cannot be changed to other types.</p>
                     </>
                   ) : (
-                    <select value={formType} onChange={e => setFormType(e.target.value as any)} className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-xl text-slate-900 font-bold">
+                    <select 
+                      value={formType} 
+                      onChange={e => setFormType(e.target.value as any)} 
+                      className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-xl text-slate-900 font-bold cursor-pointer"
+                    >
                       <option value="textbook">📚 Textbook</option>
                       <option value="subscription">🔑 Subscription</option>
                       <option value="physical">🧰 Physical Material (for AI lessons)</option>
@@ -377,12 +551,24 @@ export default function MaterialsPage() {
                 <div className="bg-purple-50 p-6 rounded-2xl border-2 border-purple-200 space-y-4 shadow-inner">
                   <div>
                     <label className="block text-sm font-black text-purple-900 mb-2 uppercase tracking-wide">Resource URL</label>
-                    <input type="url" value={formUrl} onChange={e => setFormUrl(e.target.value)} className="w-full p-4 bg-white border-2 border-purple-300 rounded-xl outline-none focus:border-purple-600 text-slate-900 font-bold" placeholder="https://..." />
+                    <input 
+                      type="url" 
+                      value={formUrl} 
+                      onChange={e => setFormUrl(e.target.value)} 
+                      className="w-full p-4 bg-white border-2 border-purple-300 rounded-xl outline-none focus:border-purple-600 text-slate-900 font-bold" 
+                      placeholder="https://..." 
+                    />
                   </div>
                   {formType === 'subscription' && (
                     <div>
                       <label className="block text-sm font-black text-purple-900 mb-2 uppercase tracking-wide">Access Credentials (Visible in List)</label>
-                      <input type="text" value={formLoginInfo} onChange={e => setFormLoginInfo(e.target.value)} className="w-full p-4 bg-white border-2 border-purple-300 rounded-xl outline-none focus:border-purple-600 text-slate-900 font-bold" placeholder="Username / Password notes" />
+                      <input 
+                        type="text" 
+                        value={formLoginInfo} 
+                        onChange={e => setFormLoginInfo(e.target.value)} 
+                        className="w-full p-4 bg-white border-2 border-purple-300 rounded-xl outline-none focus:border-purple-600 text-slate-900 font-bold" 
+                        placeholder="Username / Password notes" 
+                      />
                     </div>
                   )}
                 </div>
@@ -391,15 +577,37 @@ export default function MaterialsPage() {
               {formType === 'physical' && (
                 <div>
                   <label className="block text-sm font-black text-slate-900 mb-2 uppercase tracking-wide">Quantity</label>
-                  <input type="number" min="1" value={formQuantity} onChange={e => setFormQuantity(parseInt(e.target.value) || 1)} className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-xl text-slate-900 font-bold" />
+                  <input 
+                    type="number" 
+                    min="1" 
+                    value={formQuantity} 
+                    onChange={e => setFormQuantity(parseInt(e.target.value) || 1)} 
+                    className="w-full p-4 bg-slate-50 border-2 border-slate-200 rounded-xl text-slate-900 font-bold" 
+                  />
                 </div>
               )}
 
               <div className="flex gap-4 pt-6">
-                <button type="submit" className="flex-1 bg-indigo-700 text-white font-black py-5 rounded-2xl hover:bg-indigo-800 transition-all shadow-xl shadow-indigo-200">
-                  {editingMaterial ? 'Update' : 'Save'} Resource
+                <button 
+                  type="submit" 
+                  disabled={isSaving}
+                  className="flex-1 bg-indigo-700 text-white font-black py-5 rounded-2xl hover:bg-indigo-800 transition-all shadow-xl shadow-indigo-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {isSaving ? (
+                    <>
+                      <span className="animate-spin">⏳</span>
+                      Saving...
+                    </>
+                  ) : (
+                    <>{editingMaterial ? 'Update' : 'Save'} Resource</>
+                  )}
                 </button>
-                <button type="button" onClick={() => { setShowAddForm(false); resetForm(); }} className="flex-1 bg-slate-100 text-slate-900 font-black py-5 rounded-2xl hover:bg-slate-200 transition-all">
+                <button 
+                  type="button" 
+                  onClick={() => { setShowAddForm(false); resetForm(); }} 
+                  className="flex-1 bg-slate-100 text-slate-900 font-black py-5 rounded-2xl hover:bg-slate-200 transition-all"
+                  disabled={isSaving}
+                >
                   Cancel
                 </button>
               </div>

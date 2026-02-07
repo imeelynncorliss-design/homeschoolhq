@@ -40,19 +40,22 @@ export async function POST(request: Request) {
     }
 
     const standardsToInsert = standards.map((s: any) => ({
-      organization_id: organizationId,  // ✅ Use real org ID
-      state_code: s.state_code || 'XX',
+      organization_id: organizationId,
+      state_code: s.state_code || 'CUSTOM',
       grade_level: String(s.grade_level),
       subject: s.subject,
       standard_code: s.standard_code || `AI-${Date.now()}`,
       description: s.description,
       domain: s.domain || 'General',
-      active: true,
+      is_official: false,        // ✅ ADD - Not an official HHQ template
+      is_public: false,          // ✅ ADD - Private to this org by default
+      created_by: session.user.id, // ✅ ADD - Track who created it
+      is_active: true,
       customized: true
     }));
 
     const { data, error } = await supabase
-      .from('standards')
+      .from('standard_templates')
       .insert(standardsToInsert)
       .select();
 

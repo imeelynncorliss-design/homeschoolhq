@@ -329,9 +329,14 @@ export default function PlanningModeDashboard() {
                 <span className="text-xl">📊</span>
                 <span className="text-xs font-bold text-green-900 uppercase tracking-tighter">Set Up Assessments</span>
               </button>
+              {/* CHANGED: Link to Materials page instead of embedding functionality */}
               <button onClick={() => router.push('/materials')} className="w-full flex items-center gap-3 p-3 rounded-lg bg-orange-50 hover:bg-orange-100 border border-orange-100 text-left transition-all">
                 <span className="text-xl">📦</span>
-                <span className="text-xs font-bold text-orange-900 uppercase tracking-tighter">Materials List</span>
+                <div className="flex-1">
+                  <div className="text-xs font-bold text-orange-900 uppercase tracking-tighter">Review & Add Materials</div>
+                  <div className="text-[10px] text-orange-700 mt-0.5">Inventory your teaching resources</div>
+                </div>
+                <span className="text-orange-600 text-sm">→</span>
               </button>
             </div>
           </div>

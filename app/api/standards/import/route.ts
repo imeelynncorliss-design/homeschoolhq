@@ -53,9 +53,18 @@ export async function POST(request: Request) {
       "source_name": "string",
       "effective_year": "string",
       "data": [
-        { "grade_level": "...", "subject": "...", "standard_code": "...", "description": "...", "domain": "...", "state_code": "..." }
+        { 
+          "grade_level": "...", 
+          "subject": "...", 
+          "standard_code": "...",  // Short code like "MS-LS1-2"
+          "code": "...",            // Long formal code like "CCSS.ELA-LITERACY.RI.11-12.3" (if available)
+          "description": "...", 
+          "domain": "...", 
+          "state_code": "..." 
+        }
       ] 
     }
+    Note: The 'code' field is optional and should only be included if a longer formal identifier exists.
     IMPORTANT: Do not include any introductory text, markdown formatting, or explanations. Just the JSON object.`;
 
     if (type === 'url') {
@@ -98,7 +107,8 @@ export async function POST(request: Request) {
 
     const standardsToSave = extractedStandards.map((s: any) => ({
       organization_id: organizationId,
-      code: s.standard_code || 'N/A',
+      standard_code: s.standard_code || 'N/A',
+      code: s.code || null,  // ✅ ADD THIS
       description: s.description || '',
       subject: s.subject || 'N/A',
       grade_level: String(s.grade_level || 'N/A'),

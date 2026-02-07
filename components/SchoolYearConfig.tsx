@@ -10,35 +10,66 @@ interface SchoolYearConfigProps {
 export default function SchoolYearConfig({ userId }: SchoolYearConfigProps) {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [organizationId, setOrganizationId] = useState<string | null>(null)  // ✅ ADD THIS
   const [config, setConfig] = useState({
     school_year_start: '',
     school_year_end: '',
-    annual_goal_type: 'hours', // hours or lessons
-    annual_goal_value: 180, // default 180 days/hours
+    annual_goal_type: 'hours',
+    annual_goal_value: 180,
     weekly_goal_hours: 25
   })
   
-  // ✅ NEW: Add homeschool days state
   const [homeschoolDays, setHomeschoolDays] = useState<string[]>([
     'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'
   ])
 
   const allDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
 
+  // ✅ GET ORGANIZATION ID FIRST
   useEffect(() => {
-    loadConfig()
+    getOrganizationId()
   }, [userId])
 
+  // ✅ LOAD CONFIG WHEN ORG ID IS AVAILABLE
+  useEffect(() => {
+    if (organizationId) {
+      loadConfig()
+    }
+  }, [organizationId])
+
+  const getOrganizationId = async () => {
+    const { data: kids } = await supabase
+      .from('kids')
+      .select('organization_id')
+      .eq('user_id', userId)
+      .limit(1)
+
+    if (kids && kids.length > 0) {
+      setOrganizationId(kids[0].organization_id)
+    }
+  }
+
   const loadConfig = async () => {
+    if (!organizationId) return
+    
+    console.log('Loading config for org:', organizationId)  // ✅ ADD
+    
     const { data, error } = await supabase
       .from('school_year_settings')
       .select('*')
-      .eq('user_id', userId)
+      .eq('organization_id', organizationId)
       .single()
-
+  
+    console.log('Load result:', { data, error })  // ✅ ADD
+  
     if (data) {
-      setConfig(data)
-      // ✅ NEW: Load homeschool days
+      setConfig({
+        school_year_start: data.school_year_start || '',
+        school_year_end: data.school_year_end || '',
+        annual_goal_type: data.annual_goal_type || 'hours',
+        annual_goal_value: data.annual_goal_value || 180,
+        weekly_goal_hours: data.weekly_goal_hours || 25
+      })
       if (data.homeschool_days) {
         setHomeschoolDays(data.homeschool_days)
       }
@@ -46,7 +77,6 @@ export default function SchoolYearConfig({ userId }: SchoolYearConfigProps) {
     setLoading(false)
   }
 
-  // ✅ NEW: Toggle day function
   const toggleDay = (day: string) => {
     setHomeschoolDays(prev => 
       prev.includes(day) 
@@ -56,37 +86,52 @@ export default function SchoolYearConfig({ userId }: SchoolYearConfigProps) {
   }
 
   const saveConfig = async () => {
+    if (!organizationId) return
+    
     setSaving(true)
     
-    const { data: existing } = await supabase
+    console.log('Saving config for org:', organizationId)
+    
+    const { data: existing, error: existingError } = await supabase
       .from('school_year_settings')
       .select('id')
-      .eq('user_id', userId)
+      .eq('organization_id', organizationId)
       .single()
-
-    // ✅ UPDATED: Include homeschool_days in save
+  
+    console.log('Existing record:', existing, 'Error:', existingError)
+  
     const dataToSave = {
       ...config,
-      homeschool_days: homeschoolDays
+      homeschool_days: homeschoolDays,
+      organization_id: organizationId,
+      user_id: userId
     }
-
+  
+    console.log('Data to save:', dataToSave)
+  
+    let result
     if (existing) {
-      await supabase
+      result = await supabase
         .from('school_year_settings')
         .update(dataToSave)
-        .eq('user_id', userId)
+        .eq('organization_id', organizationId)
     } else {
-      await supabase
+      result = await supabase
         .from('school_year_settings')
-        .insert([{ ...dataToSave, user_id: userId }])
+        .insert([dataToSave])
     }
-
+  
+    console.log('Save result:', result)
+  
     setSaving(false)
-    alert('Settings saved successfully!')
-  }
-
-  if (loading) {
-    return <div className="text-center py-8">Loading configuration...</div>
+    
+    if (result.error) {
+      alert(`Error saving: ${result.error.message}`)
+    } else {
+      alert('Settings saved successfully!')
+      // Reload to confirm
+      loadConfig()
+    }
   }
 
   return (

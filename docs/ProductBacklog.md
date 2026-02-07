@@ -276,3 +276,39 @@ ADD COLUMN household_id UUID REFERENCES households(id);
 ---
 
 **Next Review:** End of Week 3 Sprint (Compliance Dashboard Launch)
+
+## Assessment & Standards Features
+
+### Archive Assessments (Priority: Medium)
+**Goal:** Allow parents to archive old assessments to reduce clutter without deleting data
+
+**Implementation:**
+- Add `archived` boolean column to `assessments` table (default: false)
+- Add "Archive" button on each assessment card
+- Add toggle at top: "☐ Show Archived Assessments"
+- Archived assessments don't count in Quick Overview stats
+- Can unarchive from archived view
+
+**User Story:** As a parent with 50+ assessments, I want to archive last year's assessments so I can focus on current work while keeping historical records.
+
+**Estimated Effort:** 3-4 hours
+- Database: 30 min
+- UI changes: 2 hours  
+- Testing: 1 hour
+
+---
+
+### Search Assessments by Lesson Name
+**Goal:** Quick text search across assessment titles
+**Priority:** Low
+**Effort:** 1 hour
+
+### Pagination for Assessments
+**Goal:** Show 20 assessments at a time with "Load More"
+**Priority:** Low (filters + grouping solve this)
+**Effort:** 2 hours
+
+### Export Assessment Report
+**Goal:** Generate PDF/CSV of assessment results for portfolios
+**Priority:** Medium
+**Effort:** 6-8 hours

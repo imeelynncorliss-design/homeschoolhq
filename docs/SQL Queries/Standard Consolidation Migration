@@ -1,0 +1,338 @@
+-- ============================================================================
+-- HOMESCHOOLHQ STANDARDS CONSOLIDATION MIGRATION
+-- ============================================================================
+-- Purpose: Merge 'standards' and 'standard_templates' into single template table
+-- Approach: Expand standard_templates, deduplicate, migrate unique records
+-- Safety: Wrapped in transaction - will rollback on any error
+-- ============================================================================
+
+BEGIN;
+
+-- ============================================================================
+-- STEP 1: CREATE BACKUP TABLES
+-- ============================================================================
+CREATE TABLE _backup_standards AS SELECT * FROM standards;
+CREATE TABLE _backup_standard_templates AS SELECT * FROM standard_templates;
+CREATE TABLE _backup_user_standards AS SELECT * FROM user_standards WHERE template_id IS NOT NULL;
+
+RAISE NOTICE 'Backup created: % standards, % standard_templates, % user_standards references', 
+  (SELECT COUNT(*) FROM _backup_standards),
+  (SELECT COUNT(*) FROM _backup_standard_templates),
+  (SELECT COUNT(*) FROM _backup_user_standards);
+
+-- ============================================================================
+-- STEP 2: ADD MISSING COLUMNS TO standard_templates
+-- ============================================================================
+ALTER TABLE standard_templates 
+  ADD COLUMN IF NOT EXISTS code TEXT,
+  ADD COLUMN IF NOT EXISTS full_statement TEXT,
+  ADD COLUMN IF NOT EXISTS framework TEXT,
+  ADD COLUMN IF NOT EXISTS effective_year INTEGER,
+  ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true,
+  ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT false,
+  ADD COLUMN IF NOT EXISTS is_official BOOLEAN DEFAULT false,
+  ADD COLUMN IF NOT EXISTS is_public BOOLEAN DEFAULT false,
+  ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES auth.users(id),
+  ADD COLUMN IF NOT EXISTS verified_date TIMESTAMP,
+  ADD COLUMN IF NOT EXISTS downloads_count INTEGER DEFAULT 0;
+
+RAISE NOTICE 'Added missing columns to standard_templates';
+
+-- ============================================================================
+-- STEP 3: MARK EXISTING standard_templates RECORDS
+-- ============================================================================
+-- These are user imports or early templates, mark appropriately
+UPDATE standard_templates
+SET 
+  is_official = false,
+  is_public = false,
+  created_by = user_id,  -- Preserve existing user ownership
+  is_active = true
+WHERE is_official IS NULL OR is_official = false;
+
+RAISE NOTICE 'Marked % existing records as non-official', 
+  (SELECT COUNT(*) FROM standard_templates WHERE is_official = false);
+
+-- ============================================================================
+-- STEP 4: IDENTIFY & MIGRATE UNIQUE RECORDS FROM standards
+-- ============================================================================
+-- Insert records from standards that don't exist in standard_templates
+-- Deduplication key: state_code + standard_code + grade_level
+
+WITH unique_standards AS (
+  SELECT s.*
+  FROM standards s
+  WHERE s.organization_id IS NULL  -- Only migrate official templates
+    AND NOT EXISTS (
+      SELECT 1 
+      FROM standard_templates st
+      WHERE st.state_code = s.state_code
+        AND st.standard_code = s.standard_code
+        AND st.grade_level = s.grade_level
+    )
+)
+INSERT INTO standard_templates (
+  id,
+  state_code,
+  grade_level,
+  subject,
+  standard_code,
+  description,
+  code,
+  domain,
+  full_statement,
+  framework,
+  parent_standard_id,
+  source_name,
+  source_url,
+  effective_year,
+  is_active,
+  is_verified,
+  is_official,
+  is_public,
+  created_by,
+  template_version,
+  template_name,
+  created_at,
+  updated_at
+)
+SELECT 
+  id,
+  state_code,
+  grade_level,
+  subject,
+  standard_code,
+  description,
+  code,
+  domain,
+  full_statement,
+  framework,
+  parent_standard_id,
+  source,  -- maps to source_name
+  source_url,
+  effective_year,
+  COALESCE(is_active, true),
+  COALESCE(is_verified, false),
+  true AS is_official,  -- Mark as official HHQ template
+  false AS is_public,   -- Official templates not "community shared"
+  NULL AS created_by,   -- Official templates have no owner
+  '1.0' AS template_version,
+  framework AS template_name,  -- Use framework as template name
+  created_at,
+  updated_at
+FROM unique_standards;
+
+RAISE NOTICE 'Migrated % unique records from standards table', 
+  (SELECT COUNT(*) FROM standards s 
+   WHERE s.organization_id IS NULL 
+     AND NOT EXISTS (
+       SELECT 1 FROM standard_templates st
+       WHERE st.state_code = s.state_code
+         AND st.standard_code = s.standard_code
+         AND st.grade_level = s.grade_level
+     ));
+
+-- ============================================================================
+-- STEP 5: UPDATE DUPLICATE RECORDS WITH RICHER DATA
+-- ============================================================================
+-- For records that exist in both tables, update standard_templates with 
+-- the richer data from standards (code, framework, full_statement)
+
+UPDATE standard_templates st
+SET 
+  code = COALESCE(st.code, s.code),
+  full_statement = COALESCE(st.full_statement, s.full_statement),
+  framework = COALESCE(st.framework, s.framework),
+  effective_year = COALESCE(st.effective_year, s.effective_year),
+  source_url = COALESCE(st.source_url, s.source_url),
+  updated_at = NOW()
+FROM standards s
+WHERE st.state_code = s.state_code
+  AND st.standard_code = s.standard_code
+  AND st.grade_level = s.grade_level
+  AND s.organization_id IS NULL
+  AND (
+    st.code IS NULL OR 
+    st.full_statement IS NULL OR 
+    st.framework IS NULL OR
+    st.effective_year IS NULL
+  );
+
+RAISE NOTICE 'Enriched % duplicate records with data from standards', 
+  (SELECT COUNT(DISTINCT st.id) 
+   FROM standard_templates st
+   JOIN standards s ON st.state_code = s.state_code 
+     AND st.standard_code = s.standard_code
+     AND st.grade_level = s.grade_level
+   WHERE s.organization_id IS NULL);
+
+-- ============================================================================
+-- STEP 6: CREATE INDEXES FOR PERFORMANCE
+-- ============================================================================
+CREATE INDEX IF NOT EXISTS idx_templates_state_subject_grade 
+ON standard_templates(state_code, subject, grade_level);
+
+CREATE INDEX IF NOT EXISTS idx_templates_standard_code 
+ON standard_templates(standard_code);
+
+CREATE INDEX IF NOT EXISTS idx_templates_official 
+ON standard_templates(is_official) WHERE is_official = true;
+
+CREATE INDEX IF NOT EXISTS idx_templates_public 
+ON standard_templates(is_public) WHERE is_public = true;
+
+CREATE INDEX IF NOT EXISTS idx_templates_creator 
+ON standard_templates(created_by) WHERE created_by IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_templates_parent 
+ON standard_templates(parent_standard_id) WHERE parent_standard_id IS NOT NULL;
+
+RAISE NOTICE 'Created performance indexes';
+
+-- ============================================================================
+-- STEP 7: CREATE VIEWS FOR CLEAN ACCESS
+-- ============================================================================
+
+-- Drop views if they exist
+DROP VIEW IF EXISTS official_templates CASCADE;
+DROP VIEW IF EXISTS community_templates CASCADE;
+DROP VIEW IF EXISTS available_templates CASCADE;
+
+-- Official HomeschoolHQ templates
+CREATE VIEW official_templates AS
+SELECT 
+  *,
+  'official' as template_type
+FROM standard_templates 
+WHERE is_official = true AND is_active = true;
+
+-- Community-shared templates
+CREATE VIEW community_templates AS
+SELECT 
+  t.*,
+  'community' as template_type
+FROM standard_templates t
+WHERE is_public = true 
+  AND is_official = false 
+  AND is_active = true;
+
+-- All browseable templates
+CREATE VIEW available_templates AS
+SELECT * FROM official_templates
+UNION ALL
+SELECT * FROM community_templates;
+
+RAISE NOTICE 'Created access views';
+
+-- ============================================================================
+-- STEP 8: ENABLE ROW LEVEL SECURITY
+-- ============================================================================
+ALTER TABLE standard_templates ENABLE ROW LEVEL SECURITY;
+
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Official templates are viewable by everyone" ON standard_templates;
+DROP POLICY IF EXISTS "Public templates are viewable by everyone" ON standard_templates;
+DROP POLICY IF EXISTS "Users can view their own private templates" ON standard_templates;
+DROP POLICY IF EXISTS "Users can create templates" ON standard_templates;
+DROP POLICY IF EXISTS "Users can update their own templates" ON standard_templates;
+DROP POLICY IF EXISTS "Users can delete their own templates" ON standard_templates;
+
+-- Everyone can read official templates
+CREATE POLICY "Official templates are viewable by everyone"
+ON standard_templates FOR SELECT
+USING (is_official = true);
+
+-- Everyone can read public community templates
+CREATE POLICY "Public templates are viewable by everyone"
+ON standard_templates FOR SELECT
+USING (is_public = true AND is_official = false);
+
+-- Users can read their own private templates
+CREATE POLICY "Users can view their own private templates"
+ON standard_templates FOR SELECT
+USING (created_by = auth.uid() AND is_public = false);
+
+-- Users can create their own templates
+CREATE POLICY "Users can create templates"
+ON standard_templates FOR INSERT
+WITH CHECK (created_by = auth.uid());
+
+-- Users can update their own templates
+CREATE POLICY "Users can update their own templates"
+ON standard_templates FOR UPDATE
+USING (created_by = auth.uid());
+
+-- Users can delete their own templates
+CREATE POLICY "Users can delete their own templates"
+ON standard_templates FOR DELETE
+USING (created_by = auth.uid());
+
+RAISE NOTICE 'Enabled RLS policies';
+
+-- ============================================================================
+-- STEP 9: VERIFY MIGRATION
+-- ============================================================================
+DO $$
+DECLARE
+  template_count INTEGER;
+  official_count INTEGER;
+  user_ref_count INTEGER;
+  backup_standards_count INTEGER;
+  backup_templates_count INTEGER;
+BEGIN
+  SELECT COUNT(*) INTO template_count FROM standard_templates;
+  SELECT COUNT(*) INTO official_count FROM standard_templates WHERE is_official = true;
+  SELECT COUNT(*) INTO user_ref_count FROM user_standards WHERE template_id IN (SELECT id FROM standard_templates);
+  SELECT COUNT(*) INTO backup_standards_count FROM _backup_standards;
+  SELECT COUNT(*) INTO backup_templates_count FROM _backup_standard_templates;
+  
+  RAISE NOTICE '========================================';
+  RAISE NOTICE 'MIGRATION VERIFICATION';
+  RAISE NOTICE '========================================';
+  RAISE NOTICE 'Total templates after migration: %', template_count;
+  RAISE NOTICE 'Official HHQ templates: %', official_count;
+  RAISE NOTICE 'User standards with valid template_id: %', user_ref_count;
+  RAISE NOTICE 'Original standards count: %', backup_standards_count;
+  RAISE NOTICE 'Original standard_templates count: %', backup_templates_count;
+  RAISE NOTICE '========================================';
+  
+  -- Sanity checks
+  IF template_count < backup_templates_count THEN
+    RAISE EXCEPTION 'Data loss detected! Template count decreased.';
+  END IF;
+  
+  IF user_ref_count < (SELECT COUNT(*) FROM _backup_user_standards) THEN
+    RAISE EXCEPTION 'Template references broken! Some user_standards lost their template_id.';
+  END IF;
+  
+  RAISE NOTICE 'All sanity checks passed ✓';
+END $$;
+
+-- ============================================================================
+-- STEP 10: DROP OLD standards TABLE
+-- ============================================================================
+-- Only drop if migration successful
+DROP TABLE IF EXISTS standards CASCADE;
+
+RAISE NOTICE 'Dropped old standards table';
+
+-- ============================================================================
+-- FINAL SUMMARY
+-- ============================================================================
+RAISE NOTICE '========================================';
+RAISE NOTICE 'MIGRATION COMPLETED SUCCESSFULLY!';
+RAISE NOTICE '========================================';
+RAISE NOTICE 'Backup tables preserved: _backup_standards, _backup_standard_templates';
+RAISE NOTICE 'You can drop backups after verifying data integrity';
+RAISE NOTICE 'Next steps:';
+RAISE NOTICE '1. Regenerate TypeScript types';
+RAISE NOTICE '2. Update API route to query standard_templates';
+RAISE NOTICE '3. Test template import flow';
+RAISE NOTICE '========================================';
+
+COMMIT;
+
+-- To manually verify after migration:
+-- SELECT is_official, is_public, COUNT(*) FROM standard_templates GROUP BY is_official, is_public;
+-- SELECT * FROM official_templates LIMIT 5;
+-- SELECT * FROM user_standards WHERE template_id IS NOT NULL LIMIT 5;

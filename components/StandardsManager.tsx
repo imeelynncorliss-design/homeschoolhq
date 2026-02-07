@@ -16,7 +16,7 @@ interface Standard {
   domain?: string;
   source?: string;
   source_url?: string;
-  is_verified: boolean;
+  is_official: boolean;  // ✅ Changed from is_verified
   organization_id: string | null;
   created_at: string;
 }
@@ -54,10 +54,10 @@ export default function StandardsManager({ organizationId, onClose }: StandardsM
     try {
       const supabase = createClient(supabaseUrl, supabaseKey);
       const { data, error: fetchError } = await supabase
-        .from('standards')
+        .from('standard_templates')  // ✅ Changed from 'standards'
         .select('*')
-        .or(`organization_id.is.null,organization_id.eq.${organizationId}`)
-        .order('is_verified', { ascending: false })
+        .or(`is_official.eq.true,organization_id.eq.${organizationId}`)  // ✅ Changed logic
+        .order('is_official', { ascending: false })  // ✅ Changed from is_verified
         .order('grade_level', { ascending: true });
 
       if (fetchError) throw fetchError;
@@ -109,8 +109,8 @@ export default function StandardsManager({ organizationId, onClose }: StandardsM
     if (!confirm('Are you sure you want to delete this standard?')) return;
     
     const standardToDelete = allStandards.find(s => s.id === standardId);
-    if (standardToDelete?.is_verified) {
-      alert("System-provided standards cannot be deleted.");
+    if (standardToDelete?.is_official) {  // ✅ Changed from is_verified
+      alert("Official HHQ standards cannot be deleted.");
       return;
     }
 
@@ -118,7 +118,7 @@ export default function StandardsManager({ organizationId, onClose }: StandardsM
     try {
       const supabase = createClient(supabaseUrl, supabaseKey);
       const { error: deleteError } = await supabase
-        .from('standards')
+        .from('standard_templates')  // ✅ Changed from 'standards'
         .delete()
         .eq('id', standardId)
         .eq('organization_id', organizationId);
@@ -151,11 +151,11 @@ export default function StandardsManager({ organizationId, onClose }: StandardsM
           <div className="grid grid-cols-2 gap-6">
             <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-4">
               <p className="text-[10px] text-indigo-600 font-black uppercase tracking-widest">Verified Core</p>
-              <p className="text-3xl font-black text-indigo-900">{allStandards.filter(s => s.is_verified).length}</p>
+             <p className="text-3xl font-black text-indigo-900">{allStandards.filter(s => s.is_official).length}</p>
             </div>
             <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4">
               <p className="text-[10px] text-amber-600 font-black uppercase tracking-widest">Your Imports</p>
-              <p className="text-3xl font-black text-amber-900">{allStandards.filter(s => !s.is_verified).length}</p>
+              <p className="text-3xl font-black text-amber-900">{allStandards.filter(s => !s.is_official).length}</p>
             </div>
           </div>
         </div>
@@ -193,10 +193,9 @@ export default function StandardsManager({ organizationId, onClose }: StandardsM
           ) : (
             <div className="space-y-4">
              {filteredStandards.map(standard => (
-              <div key={standard.id} className={`border-2 rounded-2xl p-6 transition-all flex gap-6 ${standard.is_verified ? 'border-slate-100' : 'border-amber-100 bg-amber-50/20'}`}>
-                
+              <div key={standard.id} className={`border-2 rounded-2xl p-6 transition-all flex gap-6 ${standard.is_official ? 'border-slate-100' : 'border-amber-100 bg-amber-50/20'}`}>                
                 <div className="flex-shrink-0">
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-lg border ${standard.is_verified ? 'bg-slate-900 border-slate-700' : 'bg-amber-600 border-amber-500'}`}>
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-lg border ${standard.is_official ? 'bg-slate-900 border-slate-700' : 'bg-amber-600 border-amber-500'}`}>
                     <span className="text-white font-black text-xl">
                       {standard.subject?.toLowerCase().includes('math') ? '🔢' : '📚'}
                     </span>
@@ -208,15 +207,15 @@ export default function StandardsManager({ organizationId, onClose }: StandardsM
                     <span className="px-2 py-1 rounded-lg bg-slate-100 text-slate-700 text-[10px] font-black uppercase tracking-wider border border-slate-200">
                       {standard.standard_code}
                     </span>
-                    {standard.is_verified ? (
-                      <span className="px-2 py-1 rounded-lg bg-indigo-100 text-indigo-700 text-[10px] font-black uppercase tracking-wider border border-indigo-200">
-                        Official Core
-                      </span>
-                    ) : (
-                      <span className="px-2 py-1 rounded-lg bg-amber-100 text-amber-700 text-[10px] font-black uppercase tracking-wider border border-amber-200">
-                        User Uploaded
-                      </span>
-                    )}
+                    {standard.is_official ? (
+                    <span className="px-2 py-1 rounded-lg bg-indigo-100 text-indigo-700 text-[10px] font-black uppercase tracking-wider border border-indigo-200">
+                      Official Core
+                    </span>
+                  ) : (
+                    <span className="px-2 py-1 rounded-lg bg-amber-100 text-amber-700 text-[10px] font-black uppercase tracking-wider border border-amber-200">
+                      User Uploaded
+                    </span>
+                  )}
                     <span className="px-2 py-1 rounded-lg bg-green-50 text-green-700 text-[10px] font-black uppercase tracking-wider border border-green-100">
                       Grade {standard.grade_level}
                     </span>
@@ -240,7 +239,7 @@ export default function StandardsManager({ organizationId, onClose }: StandardsM
                   </div>
                 </div>
 
-                {!standard.is_verified && (
+                {!standard.is_official && (
                   <button
                     onClick={() => handleDelete(standard.id)}
                     disabled={deleting === standard.id}

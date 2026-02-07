@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { createBrowserClient } from '@supabase/ssr'
 import AssessmentStandardsManager from '@/components/AssessmentStandardsManager'
 import StandardsImporter from '@/components/StandardsImporter'
 import StandardsManager from '@/components/StandardsManager'
 import AssessmentsHelpModal from '@/components/AssessmentsHelpModal'
-import { HelpCircle, Lightbulb } from 'lucide-react'
+import { HelpCircle, Lightbulb, ChevronDown, ChevronRight } from 'lucide-react'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -47,6 +47,13 @@ type Standard = {
   active: boolean
 }
 
+type MonthGroup = {
+  month: string
+  year: number
+  assessments: AssessmentWithDetails[]
+  isCollapsed: boolean
+}
+
 export default function AssessmentsPage() {
   const [currentView, setCurrentView] = useState<'results' | 'standards'>('results')
   const [assessments, setAssessments] = useState<AssessmentWithDetails[]>([])
@@ -64,6 +71,16 @@ export default function AssessmentsPage() {
     grade_level: '',
     search: ''
   })
+
+  // Assessment filters
+  const [assessmentFilters, setAssessmentFilters] = useState({
+    kid: '',
+    subject: '',
+    schoolYear: ''
+  })
+
+  // Collapsed months state
+  const [collapsedMonths, setCollapsedMonths] = useState<Set<string>>(new Set())
 
   // Fetch organization ID
   useEffect(() => {
@@ -175,9 +192,8 @@ export default function AssessmentsPage() {
     setStandardsLoading(true)
     try {
       let query = supabase
-        .from('standards')
+        .from('available_templates')  // Use the view for official + community templates
         .select('*')
-        .or(`organization_id.is.null,organization_id.eq.${organizationId}`)
 
       if (filters.subject) query = query.ilike('subject', `%${filters.subject}%`)
       if (filters.grade_level) query = query.eq('grade_level', filters.grade_level)
@@ -201,6 +217,89 @@ export default function AssessmentsPage() {
     const { error } = await supabase.from('assessments').delete().eq('id', id)
     if (error) alert("Error deleting assessment")
     else loadAssessments()
+  }
+
+  // Get unique filter options
+  const availableKids = useMemo(() => {
+    return [...new Set(assessments.map(a => a.kid_name))].sort()
+  }, [assessments])
+
+  const availableSubjectsForAssessments = useMemo(() => {
+    return [...new Set(assessments.map(a => a.lesson_subject))].filter(Boolean).sort()
+  }, [assessments])
+
+  // School year calculation (Sept-Aug)
+  const getSchoolYear = (dateString: string) => {
+    const date = new Date(dateString)
+    const year = date.getFullYear()
+    const month = date.getMonth() // 0-11
+    
+    // If Sept-Dec, school year is current-next (e.g., 2024-25)
+    // If Jan-Aug, school year is previous-current (e.g., 2024-25)
+    if (month >= 8) { // Sept (8) through Dec (11)
+      return `${year}-${(year + 1).toString().slice(2)}`
+    } else {
+      return `${year - 1}-${year.toString().slice(2)}`
+    }
+  }
+
+  const availableSchoolYears = useMemo(() => {
+    const years = new Set(assessments.map(a => getSchoolYear(a.created_at)))
+    return Array.from(years).sort().reverse()
+  }, [assessments])
+
+  // Filter assessments
+  const filteredAssessments = useMemo(() => {
+    return assessments.filter(assessment => {
+      if (assessmentFilters.kid && assessment.kid_name !== assessmentFilters.kid) return false
+      if (assessmentFilters.subject && assessment.lesson_subject !== assessmentFilters.subject) return false
+      if (assessmentFilters.schoolYear && getSchoolYear(assessment.created_at) !== assessmentFilters.schoolYear) return false
+      return true
+    })
+  }, [assessments, assessmentFilters])
+
+  // Group by month
+  const monthlyGroups = useMemo(() => {
+    const groups = new Map<string, AssessmentWithDetails[]>()
+    
+    filteredAssessments.forEach(assessment => {
+      const date = new Date(assessment.created_at)
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+      
+      if (!groups.has(monthKey)) {
+        groups.set(monthKey, [])
+      }
+      groups.get(monthKey)!.push(assessment)
+    })
+
+    const monthGroups: MonthGroup[] = []
+    groups.forEach((assessments, key) => {
+      const [year, month] = key.split('-')
+      const date = new Date(parseInt(year), parseInt(month) - 1)
+      const monthName = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+      
+      monthGroups.push({
+        month: monthName,
+        year: parseInt(year),
+        assessments,
+        isCollapsed: collapsedMonths.has(key)
+      })
+    })
+
+    return monthGroups.sort((a, b) => {
+      if (a.year !== b.year) return b.year - a.year
+      return new Date(b.month).getMonth() - new Date(a.month).getMonth()
+    })
+  }, [filteredAssessments, collapsedMonths])
+
+  const toggleMonth = (monthKey: string) => {
+    const newCollapsed = new Set(collapsedMonths)
+    if (newCollapsed.has(monthKey)) {
+      newCollapsed.delete(monthKey)
+    } else {
+      newCollapsed.add(monthKey)
+    }
+    setCollapsedMonths(newCollapsed)
   }
 
   const availableSubjects = [...new Set(standards.map(s => s.subject))].filter(Boolean).sort()
@@ -288,50 +387,139 @@ export default function AssessmentsPage() {
 
         {currentView === 'results' && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 space-y-4">
+            <div className="lg:col-span-2 space-y-6">
+              {/* Assessment Filters */}
+              <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-600 mb-2 uppercase">Child</label>
+                    <select
+                      value={assessmentFilters.kid}
+                      onChange={(e) => setAssessmentFilters({ ...assessmentFilters, kid: e.target.value })}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 font-medium text-slate-900 focus:border-purple-600 outline-none"
+                    >
+                      <option value="">All Kids</option>
+                      {availableKids.map(kid => <option key={kid} value={kid}>{kid}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-600 mb-2 uppercase">Subject</label>
+                    <select
+                      value={assessmentFilters.subject}
+                      onChange={(e) => setAssessmentFilters({ ...assessmentFilters, subject: e.target.value })}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 font-medium text-slate-900 focus:border-purple-600 outline-none"
+                    >
+                      <option value="">All Subjects</option>
+                      {availableSubjectsForAssessments.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-600 mb-2 uppercase">School Year</label>
+                    <select
+                      value={assessmentFilters.schoolYear}
+                      onChange={(e) => setAssessmentFilters({ ...assessmentFilters, schoolYear: e.target.value })}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 font-medium text-slate-900 focus:border-purple-600 outline-none"
+                    >
+                      <option value="">All Years</option>
+                      {availableSchoolYears.map(year => <option key={year} value={year}>{year}</option>)}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Monthly Grouped Assessments */}
               {loading || !organizationId ? (
                 <div className="bg-white rounded-3xl p-12 text-center">
                   <div className="animate-spin h-8 w-8 border-4 border-purple-600 border-t-transparent rounded-full mx-auto mb-4"></div>
                   <div className="text-slate-400 font-bold">Loading assessments...</div>
                 </div>
-              ) : assessments.length === 0 ? (
+              ) : filteredAssessments.length === 0 ? (
                 <div className="bg-white rounded-3xl p-12 text-center">
                   <div className="text-6xl mb-4">📝</div>
-                  <h3 className="text-xl font-black text-slate-900 mb-2">No Assessments Yet</h3>
-                  <p className="text-slate-500">Create your first assessment to get started!</p>
+                  <h3 className="text-xl font-black text-slate-900 mb-2">
+                    {assessments.length === 0 ? 'No Assessments Yet' : 'No Matching Assessments'}
+                  </h3>
+                  <p className="text-slate-500">
+                    {assessments.length === 0 
+                      ? 'Create your first assessment to get started!' 
+                      : 'Try adjusting your filters to see more results.'}
+                  </p>
                 </div>
               ) : (
-                assessments.map((assessment) => (
-                  <div key={assessment.id} className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm hover:border-purple-300 transition-all">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="text-xl font-black text-slate-900">{assessment.lesson_title}</h3>
-                        <p className="text-slate-500 font-medium">{assessment.kid_name} • {assessment.type}</p>
-                        <div className="flex gap-3 mt-4">
-                          <button 
-                            onClick={() => setManagingStandards(assessment)}
-                            className="bg-slate-100 text-slate-600 px-4 py-2 rounded-xl text-xs font-bold hover:bg-purple-50 hover:text-purple-600 transition-all"
-                          >
-                            {assessment.standards_count > 0 ? `📚 ${assessment.standards_count} Standards` : '+ Add Standards'}
-                          </button>
-                        </div>
+                <div className="space-y-4">
+                  {monthlyGroups.map((group) => {
+                    const monthKey = `${group.year}-${new Date(group.month).getMonth() + 1}`
+                    const isCollapsed = collapsedMonths.has(monthKey)
+                    
+                    return (
+                      <div key={monthKey} className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+                        {/* Month Header */}
+                        <button
+                          onClick={() => toggleMonth(monthKey)}
+                          className="w-full px-6 py-4 flex items-center justify-between hover:bg-slate-50 transition-colors"
+                        >
+                          <div className="flex items-center gap-3">
+                            {isCollapsed ? (
+                              <ChevronRight className="w-5 h-5 text-slate-400" />
+                            ) : (
+                              <ChevronDown className="w-5 h-5 text-slate-400" />
+                            )}
+                            <h3 className="font-black text-slate-900 text-lg">{group.month}</h3>
+                            <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-bold">
+                              {group.assessments.length} assessment{group.assessments.length !== 1 ? 's' : ''}
+                            </span>
+                          </div>
+                          <div className="text-sm text-slate-500 font-medium">
+                            Avg: {Math.round(
+                              group.assessments
+                                .filter(a => a.result?.auto_score !== null)
+                                .reduce((sum, a) => sum + (a.result?.auto_score || 0), 0) / 
+                              group.assessments.filter(a => a.result?.auto_score !== null).length || 0
+                            )}%
+                          </div>
+                        </button>
+
+                        {/* Assessment Cards */}
+                        {!isCollapsed && (
+                          <div className="border-t border-slate-100 divide-y divide-slate-100">
+                            {group.assessments.map((assessment) => (
+                              <div key={assessment.id} className="p-6 hover:bg-slate-50 transition-colors">
+                                <div className="flex justify-between items-start">
+                                  <div>
+                                    <h4 className="text-lg font-black text-slate-900">{assessment.lesson_title}</h4>
+                                    <p className="text-slate-500 font-medium text-sm">{assessment.kid_name} • {assessment.type}</p>
+                                    <div className="flex gap-3 mt-3">
+                                      <button 
+                                        onClick={() => setManagingStandards(assessment)}
+                                        className="bg-slate-100 text-slate-600 px-4 py-2 rounded-xl text-xs font-bold hover:bg-purple-50 hover:text-purple-600 transition-all"
+                                      >
+                                        {assessment.standards_count > 0 ? `📚 ${assessment.standards_count} Standards` : '+ Add Standards'}
+                                      </button>
+                                    </div>
+                                  </div>
+                                  <div className="text-right">
+                                    <div className={`text-2xl font-black ${assessment.result ? 'text-emerald-600' : 'text-slate-300'}`}>
+                                      {assessment.result ? `${assessment.result.auto_score}%` : '--'}
+                                    </div>
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">
+                                      {assessment.result ? 'Score' : 'Pending'}
+                                    </p>
+                                    <button 
+                                      onClick={() => handleDelete(assessment.id)} 
+                                      className="text-rose-500 font-bold text-xs hover:bg-rose-50 px-3 py-1 rounded-lg mt-2"
+                                    >
+                                      Delete
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                      <div className="text-right">
-                        <div className={`text-3xl font-black ${assessment.result ? 'text-emerald-600' : 'text-slate-300'}`}>
-                          {assessment.result ? `${assessment.result.auto_score}%` : '--'}
-                        </div>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                          {assessment.result ? 'Score' : 'Pending'}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="mt-6 pt-6 border-t border-slate-50">
-                      <button onClick={() => handleDelete(assessment.id)} className="text-rose-500 font-bold text-xs hover:bg-rose-50 px-4 py-2 rounded-lg">
-                        Delete
-                      </button>
-                    </div>
-                  </div>
-                ))
+                    )
+                  })}
+                </div>
               )}
             </div>
 
@@ -341,12 +529,25 @@ export default function AssessmentsPage() {
                 <div className="space-y-4">
                   <div className="flex justify-between items-center p-4 bg-slate-50 rounded-2xl">
                     <span className="text-slate-500 font-bold text-sm uppercase">Total</span>
-                    <span className="text-2xl font-black text-slate-900">{assessments.length}</span>
+                    <span className="text-2xl font-black text-slate-900">{filteredAssessments.length}</span>
                   </div>
                   <div className="flex justify-between items-center p-4 bg-emerald-50 rounded-2xl">
                     <span className="text-emerald-600 font-bold text-sm uppercase">Completed</span>
-                    <span className="text-2xl font-black text-emerald-700">{assessments.filter(a => !!a.result).length}</span>
+                    <span className="text-2xl font-black text-emerald-700">{filteredAssessments.filter(a => !!a.result).length}</span>
                   </div>
+                  {filteredAssessments.filter(a => a.result?.auto_score !== null).length > 0 && (
+                    <div className="flex justify-between items-center p-4 bg-blue-50 rounded-2xl">
+                      <span className="text-blue-600 font-bold text-sm uppercase">Avg Score</span>
+                      <span className="text-2xl font-black text-blue-700">
+                        {Math.round(
+                          filteredAssessments
+                            .filter(a => a.result?.auto_score !== null)
+                            .reduce((sum, a) => sum + (a.result?.auto_score || 0), 0) / 
+                          filteredAssessments.filter(a => a.result?.auto_score !== null).length
+                        )}%
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
