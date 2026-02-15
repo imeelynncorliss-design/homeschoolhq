@@ -1,0 +1,216 @@
+# HomeschoolHQ Database Schema Standards
+
+## Standard Table Pattern
+
+All tables in HomeschoolHQ follow this standardized pattern for consistency and maintainability.
+
+### Required Fields (All Tables)
+
+```sql
+CREATE TABLE example_table (
+  -- Primary Key
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  -- Multi-tenancy (which family/organization owns this record)
+  organization_id uuid NOT NULL REFERENCES organizations(id),
+  
+  -- Audit Trail (who created/last modified this record)
+  user_id uuid NOT NULL REFERENCES auth.users(id),
+  
+  -- Timestamps
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  
+  -- ... table-specific fields ...
+);
+```
+
+### Purpose of Standard Fields
+
+| Field | Purpose | Used For |
+|-------|---------|----------|
+| `id` | Unique identifier | Primary key, relationships |
+| `organization_id` | Multi-tenancy | RLS access control, data isolation |
+| `user_id` | Audit trail | Tracking who created/modified (NOT for access control) |
+| `created_at` | Audit timestamp | When record was created |
+| `updated_at` | Audit timestamp | When record was last modified |
+
+### RLS Pattern (All Tables)
+
+```sql
+-- Standard RLS Policy for all tables
+CREATE POLICY "table_org_access"
+ON table_name
+FOR ALL
+TO authenticated
+USING (
+  organization_id IN (
+    SELECT organization_id 
+    FROM user_organizations 
+    WHERE user_id = auth.uid()
+  )
+)
+WITH CHECK (
+  organization_id IN (
+    SELECT organization_id 
+    FROM user_organizations 
+    WHERE user_id = auth.uid()
+  )
+);
+```
+
+**Key Principle:** 
+- ✅ Access control uses `organization_id` (via `user_organizations` junction)
+- ❌ Access control does NOT use `user_id` 
+- ✅ `user_id` is for audit trail only
+
+### Application Code Pattern
+
+```typescript
+// 1. Get current user on component mount
+const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+useEffect(() => {
+  const getUser = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) setCurrentUserId(user.id);
+  };
+  getUser();
+}, []);
+
+// 2. Include user_id in all inserts/updates
+const data = {
+  organization_id: organizationId,
+  user_id: currentUserId, // ✅ Always include for audit
+  // ... other fields
+};
+
+await supabase.from('table_name').insert(data);
+```
+
+## Tables Following This Pattern
+
+| Table | organization_id | user_id | created_at | updated_at | Notes |
+|-------|----------------|---------|------------|------------|-------|
+| `vacation_periods` | ✅ | ✅ | ✅ | ✅ | Family vacation planning |
+| `lessons` | ✅ | ✅ | ✅ | ✅ | Lesson tracking |
+| `kids` | ✅ | ✅ | ✅ | ✅ | Student profiles |
+| `assessments` | ✅ | ✅ | ✅ | ✅ | Student assessments |
+| `curriculum_imports` | ✅ | ✅ | ✅ | ✅ | Curriculum data |
+| `school_year_configs` | ✅ | ✅ | ✅ | ✅ | School year settings |
+| `planning_periods` | ✅ | ✅ | ✅ | ✅ | Planning tasks |
+| `user_standards` | ✅ | ✅ | ✅ | ✅ | Educational standards |
+
+### Exception Tables
+
+| Table | Why It's Different |
+|-------|-------------------|
+| `user_organizations` | Junction table - user_id IS part of access control |
+| `standards` | Reference data - shared across all orgs, no org_id |
+
+## Common Mistakes to Avoid
+
+### ❌ Wrong: Using user_id for access control
+```sql
+-- DON'T DO THIS
+CREATE POLICY "wrong_policy"
+ON vacation_periods
+USING (user_id = auth.uid());
+-- This would only show records you personally created
+```
+
+### ✅ Right: Using organization_id for access control
+```sql
+-- DO THIS
+CREATE POLICY "correct_policy"
+ON vacation_periods
+USING (
+  organization_id IN (
+    SELECT organization_id 
+    FROM user_organizations 
+    WHERE user_id = auth.uid()
+  )
+);
+-- This shows all records for your family
+```
+
+### ❌ Wrong: Omitting user_id from inserts
+```typescript
+// DON'T DO THIS
+const data = {
+  organization_id: orgId,
+  // Missing user_id - breaks audit trail
+};
+```
+
+### ✅ Right: Including user_id from current user
+```typescript
+// DO THIS
+const data = {
+  organization_id: orgId,
+  user_id: currentUserId, // Audit trail
+};
+```
+
+## Business Logic
+
+### Vacation Periods Example
+
+**Who can access:** Any parent in the family (organization)  
+**Who created it:** Tracked via `user_id` for audit  
+**Access control:** Based on `organization_id` membership  
+
+This means:
+- Mom creates a vacation → All parents can see/edit it
+- Dad edits the vacation → `user_id` gets updated to Dad's ID
+- Both can see all vacations for their family
+- Other families can't see your vacations
+
+### Why This Matters
+
+1. **Family Collaboration:** Both parents can manage all family data
+2. **Audit Trail:** Can see who made changes if needed
+3. **Data Isolation:** Each family only sees their own data
+4. **Consistency:** Same pattern across all tables = easier to maintain
+
+## Triggers (Future Enhancement)
+
+To automatically update `user_id` on modifications:
+
+```sql
+-- Trigger to auto-update user_id and updated_at
+CREATE OR REPLACE FUNCTION update_audit_fields()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = now();
+  NEW.user_id = auth.uid(); -- Auto-set to current user
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER vacation_periods_audit
+  BEFORE UPDATE ON vacation_periods
+  FOR EACH ROW
+  EXECUTE FUNCTION update_audit_fields();
+```
+
+**Note:** Not implemented yet, but would make audit trail automatic.
+
+## Reference: Key Tables
+
+### organization (families)
+```
+id: d52497c0-42a9-49b7-ba3b-849bffa27fc4 (Imee's test org)
+```
+
+### Important Notes
+
+1. **Always use `createClientComponentClient()`** for authenticated operations
+2. **Never use service role key** in frontend code
+3. **RLS policies protect data** even if code has bugs
+4. **Standard fields are NOT optional** - include in all tables for consistency
+
+## Schema Migration History
+
+- **2024-XX-XX:** Standardized all tables with user_id, organization_id, created_at, updated_at
+- **2026-02-06:** Fixed vacation_periods RLS to use organization_id (not user_id) for access control

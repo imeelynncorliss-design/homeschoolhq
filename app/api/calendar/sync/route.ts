@@ -1,10 +1,10 @@
 // app/api/calendar/sync/route.ts
-// Manual Calendar Sync Trigger - WITH LAZY INITIALIZATION
+// Manual Calendar Sync Trigger - WITH LAZY INITIALIZATION AND AUTO-BLOCKING
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/src/lib/supabase/server';
 import { getCalendarSyncService } from '@/src/lib/calendar/calendar-sync-service';
-import { getOrganizationId } from '@/src/lib/auth-helpers'
+import { getOrganizationId } from '@/src/lib/auth-helpers';
 
 interface SyncResult {
   eventsAdded?: number;
@@ -51,12 +51,12 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    const organizationId = await getOrganizationId()
+    const organizationId = await getOrganizationId();
     if (!organizationId) {
       return NextResponse.json({ 
         success: false, 
         message: 'Organization not found' 
-      }, { status: 404 })
+      }, { status: 404 });
     }
 
     // Verify connection belongs to user's organization
@@ -84,10 +84,53 @@ export async function POST(request: NextRequest) {
       console.log('📞 Calling syncService.syncConnection()...');
       const result: SyncResult = await syncService.syncConnection(connectionId);
      
-      
       console.log('✅ Sync completed:', result);
       
       const totalEvents = (result.eventsAdded || 0) + (result.eventsUpdated || 0);
+      
+      // ✅ TRIGGER AUTO-BLOCKING AFTER SUCCESSFUL SYNC
+      try {
+        console.log('🔄 Processing auto-blocking...');
+        
+        // Process auto-blocking for work events
+        const blockResponse = await fetch(`${request.nextUrl.origin}/api/calendar/auto-block/process`, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Cookie': request.headers.get('cookie') || '',
+          },
+          body: JSON.stringify({}),
+        });
+        
+        if (blockResponse.ok) {
+          const blockResult = await blockResponse.json();
+          console.log('✅ Auto-blocking complete:', blockResult.summary);
+        } else {
+          console.warn('⚠️ Auto-blocking failed:', await blockResponse.text());
+        }
+        
+        // Scan lessons for conflicts
+        console.log('🔍 Scanning lessons for conflicts...');
+        const scanResponse = await fetch(`${request.nextUrl.origin}/api/calendar/conflicts/scan-lessons`, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Cookie': request.headers.get('cookie') || '',
+          },
+          body: JSON.stringify({}),
+        });
+        
+        if (scanResponse.ok) {
+          const scanResult = await scanResponse.json();
+          console.log('✅ Lesson conflict scan complete:', scanResult.summary);
+        } else {
+          console.warn('⚠️ Lesson conflict scan failed:', await scanResponse.text());
+        }
+        
+      } catch (postSyncError) {
+        // Don't fail the sync if auto-blocking fails - log and continue
+        console.error('⚠️ Post-sync processing failed (non-critical):', postSyncError);
+      }
       
       return NextResponse.json({
         success: true,
@@ -159,9 +202,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const organizationId = await getOrganizationId()
+    const organizationId = await getOrganizationId();
     if (!organizationId) {
-      return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
+      return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
     }
 
     // Get recent sync logs

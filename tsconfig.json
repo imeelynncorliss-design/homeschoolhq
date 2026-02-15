@@ -36,6 +36,6 @@
     "**/*.mts",
     "components/VacationPlanner.tsx.old",
     "app/admin/assessments/page.tsx.backup"
-  ],
+, "src/lib/calendar/calendar-sync.service"  ],
   "exclude": ["node_modules"]
 }

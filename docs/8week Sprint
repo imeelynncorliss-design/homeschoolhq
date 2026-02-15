@@ -1,0 +1,279 @@
+# HomeschoolHQ: 8-Week Sprint to Launch
+**Timeline**: Feb 10 - April 7, 2026
+**Goal**: Launch Pro tier with working calendar integration differentiator
+
+---
+
+## Week 1: Feb 10-16 - Fix Calendar Sync Foundation
+**Critical Path**: Get calendar sync working again
+
+### Deliverables:
+- [ ] Complete diagnostic tests (CALENDAR_SYNC_DEBUG_PLAN.md)
+- [ ] Fix broken calendar sync
+- [ ] All Phase 3 verification tests pass
+- [ ] Calendar stays synced for 48+ hours without manual intervention
+- [ ] Document what was fixed
+
+### Success Metrics:
+- ✅ Events sync from Google Calendar to synced_work_events
+- ✅ Sync runs automatically every 15 minutes
+- ✅ No errors in logs for 48 hours
+
+### Time Budget: 12-15 hours
+- Diagnosis: 2 hours
+- Fixes: 6-8 hours
+- Testing: 2-3 hours
+- Documentation: 2 hours
+
+**DO NOT MOVE TO WEEK 2 UNTIL THIS WORKS PERFECTLY**
+
+---
+
+## Week 2: Feb 17-23 - Unified Calendar Architecture
+**Critical Path**: Make all event types visible in one place
+
+### Deliverables:
+- [ ] Create unified calendar query (lessons + vacations + work events + social + co-op)
+- [ ] Update dashboard calendar to use unified query
+- [ ] Add color coding (blue=lessons, purple=vacation, green=work, etc.)
+- [ ] Verify all 5 event types display correctly
+- [ ] Fix timezone bugs if any
+
+### Success Metrics:
+- ✅ Dashboard calendar shows all event types
+- ✅ Clicking event shows correct details
+- ✅ Color coding makes types visually distinct
+- ✅ No performance issues with full month view
+
+### Time Budget: 10-12 hours
+- Unified query: 3-4 hours
+- Dashboard integration: 4-5 hours
+- Testing: 2 hours
+- Bug fixes: 1-2 hours
+
+### Technical Notes:
+- Create database view OR service function
+- Don't modify existing tables
+- Keep vacation/lesson components working as-is
+
+---
+
+## Week 3: Feb 24 - Mar 2 - Attendance & Vacation Integration
+**Critical Path**: Make attendance respect vacations, show work context in vacation planning
+
+### Deliverables:
+- [ ] Attendance tracking excludes vacation days from "absent" count
+- [ ] Attendance dashboard shows vacation days with different styling
+- [ ] Vacation planning page shows work events as background context
+- [ ] Test with your 3 test students
+
+### Success Metrics:
+- ✅ Vacation day marked → not counted as absent
+- ✅ Attendance card shows "3 vacation days this week" when relevant
+- ✅ Can see work meetings when planning vacation (avoid conflicts)
+
+### Time Budget: 8-10 hours
+- Attendance logic update: 3-4 hours
+- Vacation page enhancement: 3-4 hours
+- Testing: 2 hours
+
+---
+
+## Week 4: Mar 3-9 - Conflict Detection & Warnings
+**Critical Path**: Show conflict warnings when lesson overlaps work meeting
+
+### Deliverables:
+- [ ] Conflict detection service (check lesson time vs work events)
+- [ ] Warning appears when creating/editing lesson that conflicts
+- [ ] Store resolution in calendar_conflict_resolutions table
+- [ ] UI shows warning with specific meeting details
+- [ ] Parent can dismiss or reschedule
+
+### Success Metrics:
+- ✅ Create lesson at 2pm when work meeting at 2pm → see warning
+- ✅ Warning shows: "⚠️ Conflicts with Team Meeting (2:00-3:00 PM)"
+- ✅ Can click to reschedule or mark as "will work around it"
+
+### Time Budget: 12-15 hours
+- Conflict detection logic: 5-6 hours
+- UI integration: 4-5 hours
+- Resolution workflow: 2-3 hours
+- Testing: 2 hours
+
+### Technical Notes:
+- Run conflict check on lesson create/update
+- Check for time overlap (start < work.end AND end > work.start)
+- Handle all-day events
+- Handle recurring work events
+
+---
+
+## Week 5: Mar 10-16 - Auto-Schedule Integration
+**Critical Path**: Auto-scheduler avoids work conflicts
+
+### Deliverables:
+- [ ] Auto-schedule checks work events before scheduling lessons
+- [ ] Skips time slots with work meetings
+- [ ] Still fills required instructional days
+- [ ] Test with full school year auto-schedule
+
+### Success Metrics:
+- ✅ Auto-schedule entire week → no conflicts with work calendar
+- ✅ If 20 work meetings/week, lessons scheduled around them
+- ✅ Can still meet instructional day requirements
+
+### Time Budget: 10-12 hours
+- Auto-schedule logic update: 6-7 hours
+- Testing with real work calendar: 3-4 hours
+- Edge cases: 2 hours
+
+---
+
+## Week 6: Mar 17-23 - Polish & Internal Testing
+**Critical Path**: Fix bugs, improve UX, prepare for beta
+
+### Deliverables:
+- [ ] Fix all known bugs from Weeks 1-5
+- [ ] Add loading states to calendar sync
+- [ ] Improve error messages
+- [ ] Write user documentation
+- [ ] Test with all 3 test students intensively
+- [ ] Create demo video
+
+### Success Metrics:
+- ✅ No critical bugs
+- ✅ Clear error messages if sync fails
+- ✅ Demo video shows: connect calendar → auto-detect conflict → reschedule
+
+### Time Budget: 12-15 hours
+- Bug fixes: 6-8 hours
+- UX polish: 3-4 hours
+- Documentation: 2 hours
+- Demo video: 1-2 hours
+
+---
+
+## Week 7: Mar 24-30 - Beta Testing
+**Critical Path**: Get 8-10 real families using it
+
+### Deliverables:
+- [ ] Recruit 8-10 beta testers
+- [ ] Send beta testing agreement
+- [ ] Onboard testers
+- [ ] Daily check-ins for issues
+- [ ] Fix critical bugs immediately
+- [ ] Log feature requests for post-launch
+
+### Success Metrics:
+- ✅ All 8-10 testers successfully connect calendar
+- ✅ At least 5 report seeing useful conflict warnings
+- ✅ No data loss or sync failures
+- ✅ Average satisfaction: 4/5 or higher
+
+### Time Budget: 15-20 hours
+- Onboarding support: 5-6 hours
+- Bug fixes: 8-10 hours
+- User interviews: 3-4 hours
+
+---
+
+## Week 8: Mar 31 - Apr 6 - Launch Prep
+**Critical Path**: Final QA, marketing, launch
+
+### Deliverables:
+- [ ] Fix all beta bugs
+- [ ] Final QA on production
+- [ ] Prepare marketing materials
+- [ ] Update website with calendar integration messaging
+- [ ] Create launch announcement
+- [ ] Set up customer support flow
+- [ ] Launch! 🚀
+
+### Success Metrics:
+- ✅ Zero critical bugs
+- ✅ Documentation complete
+- ✅ Support email/chat ready
+- ✅ First 10 paying Pro users onboarded
+
+### Time Budget: 12-15 hours
+- Final bug fixes: 4-5 hours
+- Marketing prep: 4-5 hours
+- Launch day support: 3-4 hours
+
+---
+
+## Launch Week: Apr 7-13
+**Post-Launch Support**
+
+### Priorities:
+- [ ] Monitor for critical bugs
+- [ ] Respond to support requests < 24 hours
+- [ ] Gather user feedback
+- [ ] Plan Phase 2 features based on feedback
+
+---
+
+## Total Time Commitment
+
+**Conservative estimate**: 95-115 hours over 8 weeks = **12-14 hours/week**
+
+With your extra time commitment, hitting this is realistic.
+
+---
+
+## Risk Factors & Mitigation
+
+### Risk 1: Calendar sync breaks again during integration
+**Mitigation**: 
+- Complete Week 1 thoroughly before proceeding
+- Don't modify calendar sync code after Week 1
+- All integration happens in NEW code, not calendar sync files
+
+### Risk 2: Beta testers hard to find
+**Mitigation**:
+- Start recruiting now (post in homeschool Facebook groups)
+- Offer 3 months free Pro tier as incentive
+- Only need 8-10, not 100
+
+### Risk 3: Scope creep
+**Mitigation**:
+- This sprint plan is the scope. Period.
+- Log all "nice to have" ideas for Phase 2
+- Stay ruthlessly focused on calendar integration
+
+---
+
+## Success Criteria for Launch
+
+**Must Have**:
+1. ✅ Google Calendar connects and syncs automatically
+2. ✅ Conflict warnings appear for overlapping lessons
+3. ✅ Dashboard calendar shows all event types
+4. ✅ Auto-scheduler avoids work meetings
+5. ✅ Attendance excludes vacation days
+
+**Nice to Have** (Phase 2):
+- Microsoft Outlook support
+- Smart rescheduling suggestions
+- Calendar analytics
+- Mobile push notifications for conflicts
+
+---
+
+## Weekly Check-In Questions
+
+Every Sunday, review:
+1. Did I complete this week's deliverables?
+2. Am I blocked on anything?
+3. Do I need to adjust timeline?
+4. What did I learn this week?
+
+**If answer to #1 is "no" for 2 weeks in a row, reassess timeline.**
+
+---
+
+## The Promise to Yourself
+
+"I will not integrate systems until calendar sync is stable. I will not launch with known critical bugs. I will document as I go. I will ask for help when stuck for >2 hours."
+
+Sign: _________________ Date: _____________

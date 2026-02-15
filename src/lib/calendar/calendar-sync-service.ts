@@ -110,11 +110,14 @@ export class CalendarSyncService {
         );
 
         // Detect conflicts
+        // Comment out conflict detection temporarily
+/*
         const conflictCount = await this.detectAndUpdateConflicts(
           connection.organization_id,
           syncStats.eventIds
         );
-
+        */
+        const conflictCount = 0; 
         // Update sync log
         await supabase
           .from('calendar_sync_log')
@@ -402,6 +405,7 @@ export class CalendarSyncService {
         const eventData = {
           calendar_connection_id: connection.id,
           organization_id: connection.organization_id,
+          user_id: connection.user_id,
           external_event_id: event.id,
           external_calendar_id: event.calendarId,
           title: event.title,
@@ -414,6 +418,8 @@ export class CalendarSyncService {
           is_recurring: event.isRecurring,
           recurring_event_id: event.recurringEventId,
           attendees_count: event.attendees?.length || 0,
+          attendees: event.attendees || [],     
+          status: event.status || 'confirmed',  
           last_synced_at: new Date().toISOString(),
         };
 
@@ -428,9 +434,11 @@ export class CalendarSyncService {
           if (!error) {
             updated++;
             eventIds.push(existingId);
+            console.error('❌ Failed to update event:', error); 
           }
         } else {
           // Create new event
+          console.log('📝 Creating event:', event.title);
           const { data: newEvent, error } = await supabase
             .from('synced_work_events')
             .insert(eventData)
@@ -440,6 +448,13 @@ export class CalendarSyncService {
           if (!error && newEvent) {
             created++;
             eventIds.push(newEvent.id);
+            console.log('✅ Created event:', newEvent.id); // ✅ ADD THIS
+          } else {
+            console.error('❌ Failed to create event:', { // ✅ ADD THIS
+              title: event.title,
+              error: error,
+              eventData: JSON.stringify(eventData, null, 2)
+            });
           }
         }
       }

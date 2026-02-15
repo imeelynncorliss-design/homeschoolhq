@@ -2,16 +2,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@/src/lib/supabase';
 import { Calendar, Trash2, Plus, Edit2 } from 'lucide-react';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
 
 interface VacationPeriod {
   id: string;
   organization_id: string;
+  school_year_config_id: string;
+  user_id: string;
   name: string;
   start_date: string;
   end_date: string;
@@ -26,11 +24,12 @@ interface EnhancedVacationManagerProps {
 }
 
 export default function EnhancedVacationManager({ organizationId }: EnhancedVacationManagerProps) {
-    const supabase = createClient(supabaseUrl, supabaseKey);
+  const supabase = createClient();
   const [vacations, setVacations] = useState<VacationPeriod[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingVacation, setEditingVacation] = useState<VacationPeriod | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   // Form state
   const [name, setName] = useState('');
@@ -43,22 +42,23 @@ export default function EnhancedVacationManager({ organizationId }: EnhancedVaca
 
   
   useEffect(() => {
-    const fetchConfig = async () => {
+    const initialize = async () => {
+      // Get current user for audit trail
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) setCurrentUserId(user.id);
+
+      // Get active school year config
       const { data } = await supabase
-        .from('school_year_configs') // Replace with your actual table name
+        .from('school_year_config')
         .select('id')
         .eq('organization_id', organizationId)
-        .eq('is_active', true) // Assuming you have an "active" flag
-        .single();
+        .eq('active', true)
+        .maybeSingle();
       
       if (data) setActiveConfigId(data.id);
     };
   
-    fetchConfig();
-    loadVacations();
-  }, [organizationId]);
-
-  useEffect(() => {
+    initialize();
     loadVacations();
   }, [organizationId]);
 
@@ -69,6 +69,10 @@ export default function EnhancedVacationManager({ organizationId }: EnhancedVaca
       .select('*')
       .eq('organization_id', organizationId)
       .order('start_date', { ascending: true });
+
+    if (error) {
+      console.error('Error loading vacations:', error);
+    }
 
     if (data) {
       setVacations(data);
@@ -102,9 +106,20 @@ export default function EnhancedVacationManager({ organizationId }: EnhancedVaca
       return;
     }
 
+    if (!activeConfigId) {
+      alert('No active school year configuration found. Please set up your school year first.');
+      return;
+    }
+
+    if (!currentUserId) {
+      alert('User not authenticated');
+      return;
+    }
+
     const vacationData = {
       organization_id: organizationId,
       school_year_config_id: activeConfigId,
+      user_id: currentUserId,
       name,
       start_date: startDate,
       end_date: endDate,
@@ -169,6 +184,16 @@ export default function EnhancedVacationManager({ organizationId }: EnhancedVaca
   };
 
   const refreshHolidays = async () => {
+    if (!activeConfigId) {
+      alert('No active school year configuration found. Please set up your school year first.');
+      return;
+    }
+
+    if (!currentUserId) {
+      alert('User not authenticated');
+      return;
+    }
+
     setRefreshingHolidays(true);
     
     try {
@@ -178,6 +203,8 @@ export default function EnhancedVacationManager({ organizationId }: EnhancedVaca
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           organizationId: organizationId,
+          schoolYearConfigId: activeConfigId,
+          userId: currentUserId,
           startYear: currentYear
         })
       });
@@ -186,6 +213,7 @@ export default function EnhancedVacationManager({ organizationId }: EnhancedVaca
       
       const { holidays, count } = await response.json();
       
+      // Delete existing holidays for this year
       await supabase
         .from('vacation_periods')
         .delete()
@@ -194,6 +222,7 @@ export default function EnhancedVacationManager({ organizationId }: EnhancedVaca
         .gte('start_date', `${currentYear}-01-01`)
         .lte('start_date', `${currentYear + 1}-12-31`);
       
+      // Insert new holidays
       const { error } = await supabase
         .from('vacation_periods')
         .insert(holidays);
@@ -220,7 +249,7 @@ export default function EnhancedVacationManager({ organizationId }: EnhancedVaca
     }
   };
 
-  // Calculate impact (from your old component)
+  // Calculate impact
   const totalVacationDays = vacations.reduce((sum, v) => 
     sum + calculateDays(v.start_date, v.end_date), 0
   );
@@ -254,34 +283,35 @@ export default function EnhancedVacationManager({ organizationId }: EnhancedVaca
           </p>
         </div>
         <div className="flex gap-3">
-      <button
-        onClick={refreshHolidays}
-        disabled={refreshingHolidays}
-        className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
-      >
-        {refreshingHolidays ? (
-          <>
-            <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-            Updating...
-          </>
-        ) : (
-          <>
-            <Calendar size={20} />
-            Refresh US Holidays
-          </>
-        )}
-      </button>
-      <button
-        onClick={() => setShowAddForm(true)}
-        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-      >
-        <Plus size={20} />
-        Add Vacation Period
-      </button>
-</div>
+          <button
+            onClick={refreshHolidays}
+            disabled={refreshingHolidays || !activeConfigId || !currentUserId}
+            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+          >
+            {refreshingHolidays ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                Updating...
+              </>
+            ) : (
+              <>
+                <Calendar size={20} />
+                Refresh US Holidays
+              </>
+            )}
+          </button>
+          <button
+            onClick={() => setShowAddForm(true)}
+            disabled={!activeConfigId || !currentUserId}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+          >
+            <Plus size={20} />
+            Add Vacation Period
+          </button>
+        </div>
       </div>
 
-      {/* Impact Summary - From your old component */}
+      {/* Impact Summary */}
       {totalVacationDays > 0 && (
         <div className="bg-gradient-to-r from-purple-500 to-pink-600 rounded-lg p-6 text-white">
           <h3 className="text-xl font-bold mb-4">📊 Vacation Impact on Schedule</h3>
@@ -458,7 +488,7 @@ export default function EnhancedVacationManager({ organizationId }: EnhancedVaca
         </div>
       )}
 
-      {/* Planning Tips - From your old component */}
+      {/* Planning Tips */}
       {totalVacationDays > 0 && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
           <div className="flex items-start gap-3">

@@ -68,34 +68,13 @@ function CalendarConnectContent() {
     }
   };
 
-  const connectGoogle = async () => {
-    try {
-      const response = await fetch('/api/calendar/oauth/google', {
-        method: 'POST',
-      });
-      const data = await response.json();
-      
-      if (data.authUrl) {
-        window.location.href = data.authUrl;
-      }
-    } catch (err: any) {
-      setError('Failed to initiate Google Calendar connection');
-    }
+  const connectGoogle = () => {
+    // Just navigate to the OAuth endpoint - it will handle the redirect to Google
+    window.location.href = '/api/calendar/oauth/google';
   };
 
-  const connectOutlook = async () => {
-    try {
-      const response = await fetch('/api/calendar/oauth/outlook', {
-        method: 'POST',
-      });
-      const data = await response.json();
-      
-      if (data.authUrl) {
-        window.location.href = data.authUrl;
-      }
-    } catch (err: any) {
-      setError('Failed to initiate Outlook connection');
-    }
+  const connectOutlook = () => {
+    window.location.href = '/api/calendar/oauth/outlook';
   };
 
   const syncConnection = async (connectionId: string) => {
@@ -507,7 +486,8 @@ function CalendarConnectContent() {
               <div className="flex-1">
                 <h3 className="font-semibold text-purple-900 mb-1">Auto-Block Work Time (Optional)</h3>
                 <p className="text-sm text-purple-800 mb-2">
-                  Enable in calendar settings to automatically block work meeting times in your homeschool calendar
+                Click the gear icon (⚙️) next to your connected calendar above to access settings. 
+                Enable "Auto-Block Work Events" to automatically block work meeting times in your homeschool calendar.
                 </p>
                 <div className="bg-white p-3 rounded border border-purple-300 text-sm">
                   Calendar will show: <span className="font-semibold">🚫 Team Meeting (Work)</span> - preventing lesson scheduling during that time

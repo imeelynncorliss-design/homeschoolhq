@@ -197,22 +197,23 @@ export class GoogleCalendarService {
       const params: any = {
         calendarId,
         maxResults,
-        singleEvents: true,
-        orderBy: 'startTime',
       };
 
-      // Use sync token for incremental sync if available
-      if (syncToken) {
-        params.syncToken = syncToken;
-      } else {
-        params.timeMin = timeMin.toISOString();
-        params.timeMax = timeMax.toISOString();
-      }
+     // Use sync token for incremental sync if available
+if (syncToken) {
+  // ✅ When using syncToken, ONLY pass syncToken (no singleEvents, no orderBy)
+  params.syncToken = syncToken;
+} else {
+  // ✅ Only use these params for full sync
+  params.singleEvents = true;
+  params.orderBy = 'startTime';
+  params.timeMin = timeMin.toISOString();
+  params.timeMax = timeMax.toISOString();
+}
 
-      if (pageToken) {
-        params.pageToken = pageToken;
-      }
-
+if (pageToken) {
+  params.pageToken = pageToken;
+}
       const response = await calendar.events.list(params);
 
       const events: ExternalCalendarEvent[] = (response.data.items || [])
