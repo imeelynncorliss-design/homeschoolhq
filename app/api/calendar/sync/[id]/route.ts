@@ -33,6 +33,26 @@ export async function POST(
     const syncService = getCalendarSyncService();
     const result = await syncService.syncConnection(id);
 
+    // ✅ TRIGGER AUTO-BLOCKING AFTER SUCCESSFUL SYNC
+    try {
+      console.log('🔄 Processing auto-blocking...');
+      const blockResponse = await fetch(`${request.nextUrl.origin}/api/calendar/auto-block/process`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Cookie': request.headers.get('cookie') || '',
+        },
+        body: JSON.stringify({}),
+      });
+      
+      const blockData = await blockResponse.json();
+      console.log('✅ Auto-blocking response:', blockData);
+      
+    } catch (autoBlockError: any) {
+      console.error('⚠️ Auto-blocking failed:', autoBlockError);
+      // Don't throw - sync still succeeded
+    }
+
     return NextResponse.json(result);
   } catch (error: any) {
     console.error('Sync failed:', error);

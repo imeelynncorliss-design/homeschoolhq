@@ -93,21 +93,26 @@ export async function POST(request: NextRequest) {
         console.log('🔄 Processing auto-blocking...');
         
         // Process auto-blocking for work events
-        const blockResponse = await fetch(`${request.nextUrl.origin}/api/calendar/auto-block/process`, {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'Cookie': request.headers.get('cookie') || '',
-          },
-          body: JSON.stringify({}),
-        });
-        
-        if (blockResponse.ok) {
-          const blockResult = await blockResponse.json();
-          console.log('✅ Auto-blocking complete:', blockResult.summary);
-        } else {
-          console.warn('⚠️ Auto-blocking failed:', await blockResponse.text());
+        // Process auto-blocking
+        try {
+          console.log('🔄 Processing auto-blocking...');
+          const blockResponse = await fetch(`${request.nextUrl.origin}/api/calendar/auto-block/process`, {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              'Cookie': request.headers.get('cookie') || '',
+            },
+            body: JSON.stringify({}),
+          });
+          
+          const blockData = await blockResponse.json();
+          console.log('✅ Auto-blocking response:', blockData);
+          
+        } catch (autoBlockError: any) {
+          console.error('⚠️ Auto-blocking failed:', autoBlockError.message);
+          // Don't throw - we still want sync to succeed even if auto-blocking fails
         }
+        
         
         // Scan lessons for conflicts
         console.log('🔍 Scanning lessons for conflicts...');
