@@ -8,18 +8,17 @@ import {
   Clock, 
   TrendingUp,
   AlertTriangle,
-  CheckCircle2,
   ArrowLeft,
   Users,
   User,
   Settings,
   Download,
-  ChevronRight
+  ChevronRight,
+  ExternalLink
 } from 'lucide-react'
 import { createClient } from '@/src/lib/supabase'
+import { useStateComplianceTemplates } from '@/src/hooks/useStateComplianceTemplates'
 import { useComplianceSettings } from '@/src/hooks/useComplianceSettings'      
-import { useComplianceHours } from '@/src/hooks/useComplianceHours'
-import { useComplianceHealthScore } from '@/src/hooks/useComplianceHealthScore'
 import { generateComplianceReport } from '@/src/utils/generateComplianceReport'
 
 interface Kid {
@@ -48,6 +47,19 @@ export default function CompliancePage() {
   const router = useRouter()
   const supabase = createClient()
   
+  // Hooks
+  const { templates, loading: templatesLoading, getTemplate } = useStateComplianceTemplates()
+  const { settings, loading: settingsLoading, refreshSettings } = useComplianceSettings()
+
+  // ADD THESE DEBUG LOGS
+  useEffect(() => {
+    console.log('=== TEMPLATES DEBUG ===')
+    console.log('Templates loading:', templatesLoading)
+    console.log('Templates array:', templates)
+    console.log('Templates count:', templates.length)
+    console.log('Templates:', JSON.stringify(templates, null, 2))
+  }, [templates, templatesLoading])
+  
   // State
   const [viewMode, setViewMode] = useState<'family' | 'individual'>('family')
   const [selectedKidId, setSelectedKidId] = useState<string | null>(null)
@@ -56,19 +68,25 @@ export default function CompliancePage() {
   const [loading, setLoading] = useState(true)
   const [complianceData, setComplianceData] = useState<KidComplianceData[]>([])
   const [isExporting, setIsExporting] = useState(false)
+  
+  // State configuration
+  const [selectedState, setSelectedState] = useState<string>('')
+  const [showStateSelector, setShowStateSelector] = useState(false)
+  const [schoolYearStart, setSchoolYearStart] = useState<string>('')
+  const [schoolYearEnd, setSchoolYearEnd] = useState<string>('')
+  const [saving, setSaving] = useState(false)
 
   const handleExportReport = async () => {
     setIsExporting(true)
     try {
       const currentSettings = settings
       
-      if (!currentSettings) {``
+      if (!currentSettings) {
         alert('❌ Compliance settings not found')
         setIsExporting(false)
         return
       }
   
-      // Validate required fields exist
       if (!currentSettings.school_year_start_date || !currentSettings.school_year_end_date) {
         alert('❌ School year dates are required for generating reports')
         setIsExporting(false)
@@ -78,7 +96,6 @@ export default function CompliancePage() {
       const { data: { user } } = await supabase.auth.getUser()
       const parentName = user?.user_metadata?.full_name || 'Parent'
       
-      // Now TypeScript knows these are strings (not null/undefined)
       await generateComplianceReport({
         complianceData,
         settings: {
@@ -101,44 +118,123 @@ export default function CompliancePage() {
     }
   }
 
-  // Hooks
-  const { settings, loading: settingsLoading } = useComplianceSettings()
+        // Get organization ID and kids
+        useEffect(() => {
+          async function loadData() {
+            const { data: { user } } = await supabase.auth.getUser()
+            
+            let orgId: string | null = null
+            
+            if (!user) {
+              // Dev mode - use hardcoded org
+              orgId = 'd52497c0-42a9-49b7-ba3b-849bffa27fc4'
+            } else {
+              // First try: organization_members table
+              const { data: orgMember } = await supabase
+                .from('organization_members')
+                .select('organization_id')
+                .eq('user_id', user.id)
+                .maybeSingle()
+              
+              if (orgMember?.organization_id) {
+                orgId = orgMember.organization_id
+              } else {
+                // Second try: user_profiles table
+                const { data: profile } = await supabase
+                  .from('user_profiles')
+                  .select('organization_id')
+                  .eq('id', user.id)
+                  .maybeSingle()
+                
+                if (profile?.organization_id) {
+                  orgId = profile.organization_id
+                } else {
+                  // Last resort: use user.id as org
+                  orgId = user.id
+                }
+              }
+            }
 
-  // Get organization ID and kids
+            if (!orgId) {
+              console.error('Could not determine organization ID')
+              setLoading(false)
+              return
+            }
+
+            setOrganizationId(orgId)
+
+            // Load kids using the org ID
+            const { data: kidsData } = await supabase
+              .from('kids')
+              .select('*')
+              .eq('organization_id', orgId)
+              .order('created_at', { ascending: true })
+
+            if (kidsData) setKids(kidsData)
+            setLoading(false)
+          }
+          loadData()
+        }, [router])
+
+  // Load settings and set state
   useEffect(() => {
-    async function loadData() {
-      const { data: { user } } = await supabase.auth.getUser()
-      
-      if (!user) {
-        router.push('/login')
-        return
-      }
-      
-      const { data: profile } = await supabase
-        .from('user_profiles')
-        .select('organization_id')
-        .eq('id', user.id)
-        .single()
-      
-      if (!profile?.organization_id) {
-        console.error('Organization not found for user')
-        setLoading(false)
-        return
-      }
-
-      setOrganizationId(profile.organization_id)
-
-      const { data: kidsData } = await supabase
-        .from('kids')
-        .select('*')
-        .eq('organization_id', profile.organization_id)
-        .order('created_at', { ascending: true })
-
-      if (kidsData) setKids(kidsData)
-      setLoading(false)
+    if (settings) {
+      setSelectedState(settings.state_code || '')
+      setSchoolYearStart(settings.school_year_start_date || '')
+      setSchoolYearEnd(settings.school_year_end_date || '')
+      setShowStateSelector(!settings.state_code)
     }
-    loadData()
-  }, [router])
+  }, [settings])
+
+  // Save state configuration
+  async function handleSaveState() {
+    if (!selectedState || !schoolYearStart || !schoolYearEnd || !organizationId) {
+      alert('Please fill in all fields')
+      return
+    }
+
+    try {
+      setSaving(true)
+      
+      const template = getTemplate(selectedState)
+      
+      const settingsData = {
+        organization_id: organizationId,
+        state_code: selectedState,
+        state_name: template?.state_name || selectedState,
+        school_year_start_date: schoolYearStart,
+        school_year_end_date: schoolYearEnd,
+        required_annual_days: template?.required_days || 0,
+        required_annual_hours: template?.required_hours || 0,
+        template_source: 'state_template',
+      }
+
+      if (settings?.id) {
+        await supabase
+          .from('user_compliance_settings')
+          .update(settingsData)
+          .eq('id', settings.id)
+      } else {
+        await supabase
+          .from('user_compliance_settings')
+          .insert(settingsData)
+      }
+
+      await refreshSettings()
+      setShowStateSelector(false)
+      alert('✅ State settings saved!')
+    } catch (err) {
+      console.error('Error saving:', err)
+      alert('Failed to save settings')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  // Get template and requirements
+  const template = getTemplate(selectedState || settings?.state_code || '')
+  const requiredDays = template?.required_days || settings?.required_annual_days || 0
+  const requiredHours = template?.required_hours || settings?.required_annual_hours || 0
 
   // Load compliance data for each kid
   useEffect(() => {
@@ -170,14 +266,9 @@ export default function CompliancePage() {
         const totalDays = hoursData?.[0]?.total_days || 0
         const healthScore = healthData?.[0]?.health_score || 0
 
-        const requiredHours = currentSettings.required_annual_hours || 0
-        const requiredDays = currentSettings.required_annual_days || 0
-
         const hoursRemaining = Math.max(0, requiredHours - totalHours)
         const daysRemaining = Math.max(0, requiredDays - totalDays)
 
-        const daysProgress = requiredDays > 0 ? (totalDays / requiredDays) * 100 : 100
-        const hoursProgress = requiredHours > 0 ? (totalHours / requiredHours) * 100 : 100
         const onTrack = healthScore >= 75
 
         data.push({
@@ -197,7 +288,7 @@ export default function CompliancePage() {
     }
 
     loadComplianceData()
-  }, [settings, kids, organizationId])
+  }, [settings, kids, organizationId, requiredDays, requiredHours])
 
   // Calculate family health score
   const familyHealthScore = complianceData.length > 0
@@ -222,7 +313,7 @@ export default function CompliancePage() {
     return 'bg-red-600'
   }
 
-  if (loading || settingsLoading) {
+  if (loading || settingsLoading || templatesLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -233,27 +324,121 @@ export default function CompliancePage() {
     )
   }
 
-  if (!settings) {
+  // Show state selector if no state configured
+  if (!settings || showStateSelector) {
     return (
       <div className="min-h-screen bg-gray-50 p-8">
-        <div className="max-w-2xl mx-auto">
-          <div className="bg-white rounded-2xl shadow-lg p-8 text-center">
-            <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <AlertTriangle className="text-yellow-600" size={32} />
+        <div className="max-w-3xl mx-auto">
+
+        <button
+            onClick={() => router.push('/dashboard')}
+            className="text-gray-400 flex items-center gap-2 text-xs font-bold uppercase tracking-widest hover:text-gray-600 transition-colors mb-4"
+          >
+            <ArrowLeft size={14} /> Back to Dashboard
+          </button>
+          
+          <div className="bg-white rounded-2xl shadow-lg p-8">
+            <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <ShieldCheck className="text-indigo-600" size={32} />
             </div>
-            <h2 className="text-2xl font-black text-gray-900 mb-4">
-              Compliance Settings Required
+            <h2 className="text-2xl font-black text-gray-900 mb-2 text-center">
+              Configure Compliance Settings
             </h2>
-            <p className="text-gray-600 mb-6">
-              Before you can track compliance, you need to configure your state requirements and school year dates.
+            <p className="text-gray-600 mb-6 text-center">
+              Select your state and school year to start tracking compliance
             </p>
-            <button
-              onClick={() => router.push('/settings/compliance')}
-              className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors"
-            >
-              <Settings className="inline mr-2" size={20} />
-              Configure Settings
-            </button>
+
+            <div className="space-y-6">
+              {/* State Selection */}
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">
+                  Your State
+                </label>
+                <select
+                  value={selectedState}
+                  onChange={(e) => setSelectedState(e.target.value)}
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl text-gray-900 font-medium focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 [&>option]:text-gray-900"
+                >
+                  <option value="">Select your state...</option>
+                  {templates.map(t => (
+                    <option key={t.state_code} value={t.state_code}>
+                      {t.state_name} ({t.state_code})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Template Info */}
+              {template && (
+                <div className="p-4 bg-blue-50 rounded-xl border-2 border-blue-200">
+                  <h3 className="font-bold text-gray-900 mb-2">{template.state_name} Requirements</h3>
+                  <div className="space-y-1 text-sm text-gray-700">
+                    {template.required_days > 0 && (
+                      <p>• Days: {template.required_days} ({template.day_requirement_type})</p>
+                    )}
+                    {template.required_hours > 0 && (
+                      <p>• Hours: {template.required_hours} ({template.hour_requirement_type})</p>
+                    )}
+                    {template.parental_qualifications && (
+                      <p>• Parent Qualifications: {template.parental_qualifications}</p>
+                    )}
+                  </div>
+                  <a
+                    href={template.official_source_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 mt-2 text-sm text-blue-600 hover:text-blue-800 font-medium"
+                  >
+                    Verify at {template.official_source_name}
+                    <ExternalLink size={14} />
+                  </a>
+                </div>
+              )}
+
+              {/* School Year */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                    School Year Start
+                  </label>
+                  <input
+                    type="date"
+                    value={schoolYearStart}
+                    onChange={(e) => setSchoolYearStart(e.target.value)}
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl text-gray-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                    School Year End
+                  </label>
+                  <input
+                    type="date"
+                    value={schoolYearEnd}
+                    onChange={(e) => setSchoolYearEnd(e.target.value)}
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl text-gray-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                </div>
+              </div>
+
+              {/* Disclaimer */}
+              {template && (
+                <div className="p-4 bg-yellow-50 border-2 border-yellow-200 rounded-xl">
+                  <p className="text-xs text-gray-700 italic">
+                    ⚠️ {template.disclaimer_text}
+                  </p>
+                </div>
+              )}
+
+              {/* Save Button */}
+              <button
+                onClick={handleSaveState}
+                disabled={saving || !selectedState || !schoolYearStart || !schoolYearEnd}
+                className="w-full px-6 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {saving ? 'Saving...' : 'Save & Continue'}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -285,24 +470,38 @@ export default function CompliancePage() {
                 <h1 className="text-4xl font-black text-gray-900 tracking-tight">
                   Compliance Dashboard
                 </h1>
-                <p className="text-gray-600 font-medium mt-1">
-                  {settings.state_code ? `${settings.state_code} Requirements` : 'Custom Requirements'} • 
-                  {settings.school_year_start_date && settings.school_year_end_date && (
-                    <span className="ml-1">
-                      {new Date(settings.school_year_start_date).toLocaleDateString()} - {new Date(settings.school_year_end_date).toLocaleDateString()}
+                <div className="flex items-center gap-2 mt-1">
+                  {template && (
+                    <>
+                      <span className="text-gray-600 font-medium">
+                        {template.state_name} Requirements
+                      </span>
+                      <a
+                        href={template.official_source_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:text-blue-800 text-sm flex items-center gap-1"
+                      >
+                        <ExternalLink size={14} />
+                      </a>
+                    </>
+                  )}
+                  {settings?.school_year_start_date && settings?.school_year_end_date && (
+                    <span className="text-gray-00 font-medium">
+                      • {new Date(settings.school_year_start_date).toLocaleDateString()} - {new Date(settings.school_year_end_date).toLocaleDateString()}
                     </span>
                   )}
-                </p>
+                </div>
               </div>
             </div>
 
             <div className="flex gap-3">
               <button
-                onClick={() => router.push('/settings/compliance')}
+                onClick={() => setShowStateSelector(true)}
                 className="px-4 py-2 border-2 border-gray-300 rounded-xl text-gray-700 font-bold hover:border-gray-400 transition-colors"
               >
                 <Settings className="inline mr-2" size={18} />
-                Settings
+                Change State
               </button>
               <button
                 onClick={handleExportReport}
@@ -378,7 +577,7 @@ export default function CompliancePage() {
                     {complianceData.filter(d => d.onTrack).length} of {complianceData.length} students on track
                   </p>
                   <div className="flex gap-2">
-                    {complianceData.map((data, idx) => (
+                    {complianceData.map((data) => (
                       <div
                         key={data.kid.id}
                         className={`w-12 h-12 rounded-full flex items-center justify-center text-xs font-black ${

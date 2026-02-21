@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '@/src/lib/supabase'
+import { Shield } from 'lucide-react'
 
 interface SchoolYearConfigProps {
   userId: string
@@ -10,7 +11,19 @@ interface SchoolYearConfigProps {
 export default function SchoolYearConfig({ userId }: SchoolYearConfigProps) {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [organizationId, setOrganizationId] = useState<string | null>(null)  // ✅ ADD THIS
+  const [organizationId, setOrganizationId] = useState<string | null>(null)
+  
+  const [selectedState, setSelectedState] = useState<string>('')
+  const [states, setStates] = useState<any[]>([])
+  const [stateRequirements, setStateRequirements] = useState<any>(null)
+  const [showCustomFields, setShowCustomFields] = useState(false)
+  const [customCompliance, setCustomCompliance] = useState({
+    stateName: '',
+    days: '',
+    hours: '',
+    notes: ''
+  })
+  
   const [config, setConfig] = useState({
     school_year_start: '',
     school_year_end: '',
@@ -18,24 +31,53 @@ export default function SchoolYearConfig({ userId }: SchoolYearConfigProps) {
     annual_goal_value: 180,
     weekly_goal_hours: 25
   })
-  
-  const [homeschoolDays, setHomeschoolDays] = useState<string[]>([
-    'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'
-  ])
 
-  const allDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+  const ensureHttps = (url: string) => {
+    if (!url) return ''
+    return url.startsWith('http') ? url : `https://${url}`
+  }
 
-  // ✅ GET ORGANIZATION ID FIRST
   useEffect(() => {
     getOrganizationId()
   }, [userId])
 
-  // ✅ LOAD CONFIG WHEN ORG ID IS AVAILABLE
   useEffect(() => {
     if (organizationId) {
       loadConfig()
     }
   }, [organizationId])
+
+  useEffect(() => {
+    fetchStates()
+  }, [])
+
+  useEffect(() => {
+    if (!selectedState || selectedState === 'CUSTOM') {
+      setStateRequirements(null)
+      return
+    }
+    fetchStateRequirements()
+  }, [selectedState])
+
+  // NEW: Auto-populate goals from state requirements
+  useEffect(() => {
+    if (stateRequirements) {
+      // Auto-populate annual goal if state has requirements
+      if (stateRequirements.required_days !== '0') {
+        setConfig(prev => ({
+          ...prev,
+          annual_goal_type: 'lessons',
+          annual_goal_value: parseInt(stateRequirements.required_days)
+        }))
+      } else if (stateRequirements.required_hours !== '0') {
+        setConfig(prev => ({
+          ...prev,
+          annual_goal_type: 'hours',
+          annual_goal_value: parseInt(stateRequirements.required_hours)
+        }))
+      }
+    }
+  }, [stateRequirements])
 
   const getOrganizationId = async () => {
     const { data: kids } = await supabase
@@ -49,18 +91,34 @@ export default function SchoolYearConfig({ userId }: SchoolYearConfigProps) {
     }
   }
 
+  const fetchStates = async () => {
+    const { data, error } = await supabase
+      .from('state_compliance_templates')
+      .select('state_code, state_name')
+      .eq('status', 'active')
+      .order('state_name')
+    
+    if (data) setStates(data)
+  }
+
+  const fetchStateRequirements = async () => {
+    const { data, error } = await supabase
+      .from('state_compliance_templates')
+      .select('*')
+      .eq('state_code', selectedState)
+      .single()
+    
+    if (data) setStateRequirements(data)
+  }
+
   const loadConfig = async () => {
     if (!organizationId) return
-    
-    console.log('Loading config for org:', organizationId)  // ✅ ADD
     
     const { data, error } = await supabase
       .from('school_year_settings')
       .select('*')
       .eq('organization_id', organizationId)
       .single()
-  
-    console.log('Load result:', { data, error })  // ✅ ADD
   
     if (data) {
       setConfig({
@@ -70,19 +128,20 @@ export default function SchoolYearConfig({ userId }: SchoolYearConfigProps) {
         annual_goal_value: data.annual_goal_value || 180,
         weekly_goal_hours: data.weekly_goal_hours || 25
       })
-      if (data.homeschool_days) {
-        setHomeschoolDays(data.homeschool_days)
+      if (data.selected_state) {
+        setSelectedState(data.selected_state)
+        setShowCustomFields(data.selected_state === 'CUSTOM')
+      }
+      if (data.custom_required_days || data.custom_required_hours || data.custom_compliance_notes || data.custom_state_name) {
+        setCustomCompliance({
+          stateName: data.custom_state_name || '',
+          days: data.custom_required_days?.toString() || '',
+          hours: data.custom_required_hours?.toString() || '',
+          notes: data.custom_compliance_notes || ''
+        })
       }
     }
     setLoading(false)
-  }
-
-  const toggleDay = (day: string) => {
-    setHomeschoolDays(prev => 
-      prev.includes(day) 
-        ? prev.filter(d => d !== day)
-        : [...prev, day]
-    )
   }
 
   const saveConfig = async () => {
@@ -90,24 +149,22 @@ export default function SchoolYearConfig({ userId }: SchoolYearConfigProps) {
     
     setSaving(true)
     
-    console.log('Saving config for org:', organizationId)
-    
-    const { data: existing, error: existingError } = await supabase
+    const { data: existing } = await supabase
       .from('school_year_settings')
       .select('id')
       .eq('organization_id', organizationId)
       .single()
   
-    console.log('Existing record:', existing, 'Error:', existingError)
-  
     const dataToSave = {
       ...config,
-      homeschool_days: homeschoolDays,
+      selected_state: selectedState,
+      custom_state_name: showCustomFields ? customCompliance.stateName : null,
+      custom_required_days: showCustomFields && customCompliance.days ? parseInt(customCompliance.days) : null,
+      custom_required_hours: showCustomFields && customCompliance.hours ? parseInt(customCompliance.hours) : null,
+      custom_compliance_notes: showCustomFields ? customCompliance.notes : null,
       organization_id: organizationId,
       user_id: userId
     }
-  
-    console.log('Data to save:', dataToSave)
   
     let result
     if (existing) {
@@ -121,15 +178,12 @@ export default function SchoolYearConfig({ userId }: SchoolYearConfigProps) {
         .insert([dataToSave])
     }
   
-    console.log('Save result:', result)
-  
     setSaving(false)
     
     if (result.error) {
       alert(`Error saving: ${result.error.message}`)
     } else {
       alert('Settings saved successfully!')
-      // Reload to confirm
       loadConfig()
     }
   }
@@ -137,8 +191,8 @@ export default function SchoolYearConfig({ userId }: SchoolYearConfigProps) {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">School Year Configuration</h2>
-        <p className="text-gray-600">Set up your homeschool calendar and learning goals</p>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">School Year Setup</h2>
+        <p className="text-gray-600">Configure your calendar, state compliance, and goals</p>
       </div>
 
       {/* School Year Dates */}
@@ -170,9 +224,182 @@ export default function SchoolYearConfig({ userId }: SchoolYearConfigProps) {
         </div>
       </div>
 
+      {/* State & Compliance */}
+      <div className="bg-purple-50 rounded-lg p-6 border border-purple-200">
+        <div className="flex items-center gap-2 mb-4">
+          <Shield className="w-5 h-5 text-purple-600" />
+          <h3 className="text-lg font-semibold text-gray-900">State & Compliance</h3>
+        </div>
+        
+        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded text-sm">
+          <p className="text-gray-700">
+            💡 <strong>Why select your state?</strong> Each state has different homeschool requirements. 
+            We'll show you what's legally required and help you track compliance throughout the year.
+          </p>
+          <p className="text-gray-700 mt-2">
+            We currently have detailed requirements for 10 states. If your state isn't listed, 
+            select "Custom / Other State" to enter your own requirements.
+          </p>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Your State
+          </label>
+          <select 
+            value={selectedState}
+            onChange={(e) => {
+              setSelectedState(e.target.value)
+              setShowCustomFields(e.target.value === 'CUSTOM')
+            }}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+          >
+            <option value="">Select your state...</option>
+            {states.map((state) => (
+              <option key={state.state_code} value={state.state_code}>
+                {state.state_name} ({state.state_code})
+              </option>
+            ))}
+            <option value="CUSTOM">Custom / Other State</option>
+          </select>
+          <p className="text-sm text-gray-600 mt-1">
+            {showCustomFields 
+              ? 'Enter your custom compliance requirements below'
+              : "We'll auto-load your state's homeschool requirements"
+            }
+          </p>
+        </div>
+
+        {/* Custom Fields */}
+        {showCustomFields && (
+          <div className="mt-4 space-y-4">
+            <p className="text-sm text-gray-600">
+              Enter your state's requirements or your personal goals:
+            </p>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                State/Region Name
+              </label>
+              <input
+                type="text"
+                value={customCompliance.stateName}
+                onChange={(e) => setCustomCompliance({...customCompliance, stateName: e.target.value})}
+                placeholder="e.g., Alaska, Montana, or your region"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900"
+              />
+              <p className="text-xs text-gray-600 mt-1">
+                This helps you identify your custom compliance settings
+              </p>
+            </div>
+            
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Required Days (optional)
+                </label>
+                <input
+                  type="number"
+                  value={customCompliance.days}
+                  onChange={(e) => setCustomCompliance({...customCompliance, days: e.target.value})}
+                  placeholder="e.g., 180"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Required Hours (optional)
+                </label>
+                <input
+                  type="number"
+                  value={customCompliance.hours}
+                  onChange={(e) => setCustomCompliance({...customCompliance, hours: e.target.value})}
+                  placeholder="e.g., 900"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900"
+                />
+              </div>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Notes (optional)
+              </label>
+              <textarea
+                value={customCompliance.notes}
+                onChange={(e) => setCustomCompliance({...customCompliance, notes: e.target.value})}
+                placeholder="Add any additional requirements or notes about your state's homeschool laws..."
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900"
+              />
+            </div>
+          </div>
+        )}
+        
+        {/* State Requirements Display */}
+        {selectedState && stateRequirements && (
+          <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
+            <p className="text-sm font-medium text-gray-900">
+              {stateRequirements.state_name} requirements:
+            </p>
+            
+            <ul className="text-sm text-gray-700 space-y-1">
+              {stateRequirements.required_days !== '0' && (
+                <li>
+                  • <strong>{stateRequirements.required_days} days</strong> 
+                  {stateRequirements.day_requirement_type === 'Required' ? ' (required)' : ' (guideline)'}
+                </li>
+              )}
+              {stateRequirements.required_hours !== '0' && (
+                <li>
+                  • <strong>{stateRequirements.required_hours} hours</strong> 
+                  {stateRequirements.hour_requirement_type === 'Required' ? ' (required)' : ' (guideline)'}
+                </li>
+              )}
+            </ul>
+            
+            {stateRequirements.overall_notes && (
+              <div className="mt-3 pt-3 border-t border-blue-300">
+                <p className="text-xs font-semibold text-gray-800 mb-2">📋 Additional Details:</p>
+                <p className="text-xs text-gray-700 whitespace-pre-line leading-relaxed">
+                  {stateRequirements.overall_notes}
+                </p>
+              </div>
+            )}
+            
+            <a 
+              href={ensureHttps(stateRequirements.official_source_url)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm text-blue-600 hover:text-blue-800 inline-flex items-center gap-1 mt-2"
+            >
+              Verify at {stateRequirements.official_source_name} →
+            </a>
+          </div>
+        )}
+      </div>
+
       {/* Annual Goals */}
       <div className="bg-green-50 rounded-lg p-6 border border-green-200">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">🎯 Annual Learning Goals</h3>
+        
+        {/* Helper text for preset states */}
+        {selectedState && selectedState !== 'CUSTOM' && stateRequirements && (
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded text-sm">
+            <p className="text-gray-700">
+              💡 <strong>Pre-filled from {stateRequirements.state_name} requirements.</strong> You can adjust these to exceed state minimums or match your family's goals.
+            </p>
+          </div>
+        )}
+        
+        {/* Helper text for custom */}
+        {selectedState === 'CUSTOM' && (
+          <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded text-sm">
+            <p className="text-gray-700">
+              💡 <strong>Set your own goals.</strong> Most states require 180 days or 900 hours annually.
+            </p>
+          </div>
+        )}
         
         <div className="mb-4">
           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -210,7 +437,10 @@ export default function SchoolYearConfig({ userId }: SchoolYearConfigProps) {
             <input
               type="number"
               value={config.annual_goal_value}
-              onChange={(e) => setConfig({ ...config, annual_goal_value: parseInt(e.target.value) })}
+              onChange={(e) => {
+                const value = e.target.value === '' ? 0 : parseInt(e.target.value);
+                setConfig({ ...config, annual_goal_value: isNaN(value) ? 0 : value });
+              }}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900"
               placeholder="e.g., 180"
             />
@@ -229,26 +459,15 @@ export default function SchoolYearConfig({ userId }: SchoolYearConfigProps) {
             <input
               type="number"
               value={config.weekly_goal_hours}
-              onChange={(e) => setConfig({ ...config, weekly_goal_hours: parseInt(e.target.value) })}
+              onChange={(e) => {
+                const value = e.target.value === '' ? 0 : parseInt(e.target.value);
+                setConfig({ ...config, weekly_goal_hours: isNaN(value) ? 0 : value });
+              }}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900"
               placeholder="e.g., 25"
             />
             <p className="text-xs text-gray-600 mt-1">
               Recommended hours per week
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* State Requirements Helper */}
-      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-        <div className="flex items-start gap-3">
-          <span className="text-2xl">💡</span>
-          <div>
-            <p className="font-semibold text-gray-900 mb-1">State Requirements</p>
-            <p className="text-sm text-gray-700">
-              Most states require 180 days or 900-1000 hours per year. Check your state's specific requirements 
-              to ensure compliance. Some states allow portfolio-based or test-based assessments instead of hour tracking.
             </p>
           </div>
         </div>

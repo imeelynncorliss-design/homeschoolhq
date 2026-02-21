@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
-import { supabase } from '@/src/lib/supabase'
 import CalendarView from './CalendarView'
 import CalendarFilters from './CalendarFilters'
 import ReconciliationPanel from './ReconciliationPanel'
@@ -106,7 +105,8 @@ export default function AttendanceTracker({ kids, organizationId, userId }: Atte
   const [dismissedSuggestions, setDismissedSuggestions] = useState<Set<string>>(new Set())
   const [attendanceMarkedToday, setAttendanceMarkedToday] = useState(false)
   const [selectedDate, setSelectedDate] = useState<string | null>(null)  
-  const [state, setState] = useState<string>('NC')
+  const [stateInfo, setStateInfo] = useState<any>(null)
+  const [loadingState, setLoadingState] = useState(true)
   const [organizationName, setOrganizationName] = useState<string>('My Homeschool')
   const [schoolYear, setSchoolYear] = useState<string>('2025-2026')
 
@@ -197,6 +197,67 @@ useEffect(() => {
   useEffect(() => {
     groupByMonth()
   }, [lessons, manualAttendance, socialEvents, coopEnrollments, selectedKid, startDateFilter, endDateFilter, searchTerm])
+
+  // Load state from school_year_settings
+  useEffect(() => {
+    if (!organizationId) return
+    
+    async function loadStateFromSettings() {
+      setLoadingState(true)
+      try {
+        // CRITICAL: Wait for auth session first
+        const { data: { session } } = await supabase.auth.getSession()
+        
+        if (!session) {
+          console.log('⚠️ No auth session yet, skipping state fetch')
+          setLoadingState(false)
+          return
+        }
+        
+        const { data, error } = await supabase
+          .from('school_year_settings')
+          .select('selected_state, custom_state_name')
+          .eq('organization_id', organizationId)
+          .single()
+        
+        
+        if (error) {
+          console.error('🚨 Supabase error:', error)
+        }
+        
+        if (data?.selected_state) {
+          
+          if (data.selected_state === 'CUSTOM') {
+            setStateInfo({
+              state_code: 'CUSTOM',
+              state_name: data.custom_state_name || 'Custom',
+              isCustom: true
+            })
+          } else {
+            const { data: stateData } = await supabase
+              .from('state_compliance_templates')
+              .select('*')
+              .eq('state_code', data.selected_state)
+              .single()
+            
+            if (stateData) {
+              setStateInfo({
+                ...stateData,
+                isCustom: false
+              })
+            }
+          }
+        }
+      } catch (error) {
+        console.error('❌ Exception in loadStateFromSettings:', error)
+      } finally {
+        setLoadingState(false)
+      }
+    }
+    
+    loadStateFromSettings()
+  }, [organizationId, supabase])
+  
 
   function loadDismissedSuggestions() {
     const dismissed = localStorage.getItem('dismissed_attendance_suggestions')
@@ -1074,14 +1135,14 @@ useEffect(() => {
               />
             )}
 
-          {activeTab === 'compliance' && organizationId && (
-            <ComplianceChecker
-              totalDays={stats.totalDays}
-              totalHours={stats.totalHoursNumber}
-              requiredDays={stats.required}
-              state={state}
-            />
-          )}
+        {activeTab === 'compliance' && organizationId && (
+          <ComplianceChecker
+            totalDays={stats.totalDays}
+            totalHours={stats.totalHoursNumber}
+            stateInfo={stateInfo}
+            loadingState={loadingState}
+          />
+        )}
 
           {activeTab === 'reports'&& organizationId && (
             <PDFExport
@@ -1092,7 +1153,7 @@ useEffect(() => {
               organizationName={organizationName}
               studentNames={kids.map(k => k.displayname)}
               schoolYear={schoolYear}
-              state={state}
+              state={stateInfo?.state_code || 'Not Set'}
             />
           )}
         </div>

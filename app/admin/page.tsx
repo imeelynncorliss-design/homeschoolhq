@@ -12,6 +12,7 @@ import { getTierForTesting } from '@/lib/tierTesting'
 import DevTierToggle from '@/components/DevTierToggle'
 import AuthGuard from '@/components/AuthGuard'
 
+
 type UserTier = 'FREE' | 'ESSENTIAL' | 'PRO' | 'PREMIUM'
 // 1. GLOBAL CONSTANTS
 const FEATURES: any = {
@@ -24,7 +25,7 @@ const ADMIN_TABS = [
   { id: 'planning', label: 'Planning Mode', icon: '🎨', feature: 'planning_mode', description: 'Prepare for your school year with smart planning tasks.', premium: true, color: 'green', path: '/planning' },
   { id: 'assessments', label: 'Assessments', icon: '📊', feature: 'assessments', description: 'Manage assessments and align with educational standards.', premium: false, color: 'blue', path: '/admin/assessments' },
   { id: 'transcripts', label: 'Transcripts', icon: '📚', feature: 'transcripts', description: 'Create official transcripts with GPA calculations.', premium: true, color: 'purple', path: '/transcript' },
-  { id: 'school-year', label: 'School Year', icon: '🏫', feature: 'school_year_config', description: 'Configure your school calendar and terms.', premium: false, color: 'blue' },
+  { id: 'school-year', label: 'School Year & Compliance', icon: '🏫', feature: 'school_year_config', description: 'Configure your calendar, state compliance, and goals.', premium: false, color: 'blue' },
   { id: 'progress', label: 'Progress Tracking', icon: '📈', feature: 'progress_tracking', description: 'Track learning goals and milestones.', premium: true, color: 'blue' },
   { id: 'vacation', label: 'Vacation Planner', icon: '🌴', feature: 'vacation_planner', description: 'Plan breaks and see schedule impact.', premium: true, color: 'blue' },
   { id: 'bulk-schedule', label: 'Bulk Scheduler', icon: '⚡', feature: 'bulk_scheduler', description: 'Assign dates to imported lessons.', premium: true, color: 'blue' },
@@ -39,6 +40,7 @@ function AdminContent() {
   const [activeTab, setActiveTab] = useState<string | null>(null)
   const [userTier, setUserTier] = useState<UserTier>('FREE')
   const [kids, setKids] = useState<any[]>([])
+  const organizationId = kids[0]?.organization_id || null 
   
   // UX States
   const [showScrollTop, setShowScrollTop] = useState(false)
@@ -68,6 +70,18 @@ function AdminContent() {
       loadKids()
       setUserTier(getTierForTesting()) 
     }
+    // Auto-open tab from URL param
+const params = new URLSearchParams(window.location.search)
+const tabParam = params.get('tab')
+if (tabParam) {
+  const match = ADMIN_TABS.find(t => t.id === tabParam)
+  if (match && !match.path) {
+    setActiveTab(tabParam)
+    setTimeout(() => {
+      toolRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 300)
+  }
+}
     setLoading(false)
   }
   
@@ -238,9 +252,9 @@ function AdminContent() {
             <div className="p-10 min-h-[600px]">
               {activeTab === 'school-year' && <SchoolYearConfig userId={user.id} />}
               {activeTab === 'progress' && <ProgressDashboard userId={user.id} />}
-              {activeTab === 'vacation' && <EnhancedVacationManager organizationId="d52497c0-42a9-49b7-ba3b-849bffa27fc4" />}
+              {activeTab === 'vacation' && <EnhancedVacationManager organizationId ={organizationId || ''} />}
               {activeTab === 'bulk-schedule' && <BulkLessonScheduler userId={user.id} />}
-              {activeTab === 'attendance' && <AttendanceTracker kids={kids} organizationId={user.id} userId={user.id} />}
+              {activeTab === 'attendance' && <AttendanceTracker kids={kids} organizationId={organizationId} userId={user.id} />}
             </div>
           </div>
         )}
@@ -276,13 +290,6 @@ function ToolCard({ tab, isLocked, isActive, index, isAltPressed, recentlyUsed, 
     </button>
   )
 }
-<a 
-  href="/admin/users"
-  className="block p-6 bg-white rounded-xl shadow hover:shadow-lg transition-shadow"
->
-  <h3 className="text-lg font-bold text-gray-900 mb-2">👥 User Management</h3>
-  <p className="text-sm text-gray-600">Manage beta tester subscription tiers</p>
-</a>
 
 export default function AdminPage() {
   return (
