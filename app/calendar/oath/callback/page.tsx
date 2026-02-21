@@ -3,8 +3,9 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense } from 'react'
 
-export default function OAuthCallbackPage() {
+function OAuthCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
@@ -118,4 +119,11 @@ export default function OAuthCallbackPage() {
       </div>
     </div>
   );
+}
+export default function OAuthCallbackPage() {
+  return (
+    <Suspense fallback={<div>Processing...</div>}>
+      <OAuthCallbackContent />
+    </Suspense>
+  )
 }

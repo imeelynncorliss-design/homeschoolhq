@@ -106,8 +106,8 @@ export default function TeacherAssessmentsPage() {
           if (assessmentIds.length > 0) {
             const { data: results } = await supabase.from('assessment_results').select('auto_score, submitted_at').in('assessment_id', assessmentIds).not('auto_score', 'is', null).order('submitted_at', { ascending: false });
             if (results && results.length > 0) {
-              const validScores = results.map(r => r.auto_score).filter(s => s !== null);
-              avgScore = validScores.length > 0 ? Math.round(validScores.reduce((a, b) => a + b, 0) / validScores.length) : null;
+              const validScores = results.map((r: any) => r.auto_score).filter((s: any) => s !== null);
+              avgScore = validScores.length > 0 ? Math.round(validScores.reduce((a: number, b: number) => a + b, 0) / validScores.length) : null;
               lastDate = results[0].submitted_at;
             }
           }

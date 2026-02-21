@@ -193,7 +193,7 @@ function DashboardContent() {
     if (lessonsData) {
       setAllLessons(lessonsData)
       const grouped: { [kidId: string]: any[] } = {}
-      lessonsData.forEach(lesson => {
+      lessonsData.forEach((lesson: any) => {
         if (!grouped[lesson.kid_id]) grouped[lesson.kid_id] = []
         grouped[lesson.kid_id].push(lesson)
       })
