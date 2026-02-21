@@ -27,12 +27,11 @@ export default function BulkLessonScheduler({ userId }: BulkLessonSchedulerProps
   const [kids, setKids] = useState<Child[]>([])
   const [selectedKid, setSelectedKid] = useState('')
   const [selectedSubject, setSelectedSubject] = useState('')
-  const [subjects, setSubjects] = useState<string[]>([])
+  const [subjects, setSubjects] = useState<string[]>([])           // all subjects for this kid
   const [unscheduledLessons, setUnscheduledLessons] = useState<Lesson[]>([])
   const [selectedLessons, setSelectedLessons] = useState<Set<string>>(new Set())
   const [scheduleMode, setScheduleMode] = useState<'sequential' | 'weekly'>('sequential')
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0])
-  const [daysPerWeek, setDaysPerWeek] = useState(5)
   const [lessonsPerDay, setLessonsPerDay] = useState(1)
   const [scheduling, setScheduling] = useState(false)
 
@@ -40,11 +39,23 @@ export default function BulkLessonScheduler({ userId }: BulkLessonSchedulerProps
     loadData()
   }, [userId])
 
+  // When kid changes: reload both subjects list AND lessons
   useEffect(() => {
     if (selectedKid) {
+      setSelectedSubject('')
+      setSelectedLessons(new Set())
+      loadSubjects()
       loadUnscheduledLessons()
     }
-  }, [selectedKid, selectedSubject])
+  }, [selectedKid])
+
+  // When subject filter changes: only reload lessons (subjects list stays stable)
+  useEffect(() => {
+    if (selectedKid) {
+      setSelectedLessons(new Set())
+      loadUnscheduledLessons()
+    }
+  }, [selectedSubject])
 
   const loadData = async () => {
     const { data: kidsData } = await supabase
@@ -62,6 +73,21 @@ export default function BulkLessonScheduler({ userId }: BulkLessonSchedulerProps
     setLoading(false)
   }
 
+  // Load ALL subjects for the kid (not filtered) — keeps dropdown stable
+  const loadSubjects = async () => {
+    const { data } = await supabase
+      .from('lessons')
+      .select('subject')
+      .eq('kid_id', selectedKid)
+      .is('lesson_date', null)
+
+    if (data) {
+      const unique = [...new Set(data.map(l => l.subject).filter(Boolean))].sort() as string[]
+      setSubjects(unique)
+    }
+  }
+
+  // Load lessons, optionally filtered by subject
   const loadUnscheduledLessons = async () => {
     let query = supabase
       .from('lessons')
@@ -76,33 +102,18 @@ export default function BulkLessonScheduler({ userId }: BulkLessonSchedulerProps
     }
 
     const { data } = await query
-
-    if (data) {
-      setUnscheduledLessons(data)
-      
-      // Get unique subjects
-      const uniqueSubjects = [...new Set(data.map(l => l.subject))]
-      setSubjects(uniqueSubjects)
-    }
+    if (data) setUnscheduledLessons(data)
   }
 
   const toggleLessonSelect = (lessonId: string) => {
     const newSelected = new Set(selectedLessons)
-    if (newSelected.has(lessonId)) {
-      newSelected.delete(lessonId)
-    } else {
-      newSelected.add(lessonId)
-    }
+    if (newSelected.has(lessonId)) newSelected.delete(lessonId)
+    else newSelected.add(lessonId)
     setSelectedLessons(newSelected)
   }
 
-  const selectAll = () => {
-    setSelectedLessons(new Set(unscheduledLessons.map(l => l.id)))
-  }
-
-  const deselectAll = () => {
-    setSelectedLessons(new Set())
-  }
+  const selectAll = () => setSelectedLessons(new Set(unscheduledLessons.map(l => l.id)))
+  const deselectAll = () => setSelectedLessons(new Set())
 
   const bulkSchedule = async () => {
     if (selectedLessons.size === 0) {
@@ -112,35 +123,30 @@ export default function BulkLessonScheduler({ userId }: BulkLessonSchedulerProps
 
     setScheduling(true)
 
-    // Get selected lessons in order
     const lessonsToSchedule = unscheduledLessons.filter(l => selectedLessons.has(l.id))
-    
     let currentDate = moment(startDate)
     let lessonCount = 0
 
+    // Build updates array to batch — avoids N+1 round trips
+    const updates: { id: string; lesson_date: string }[] = []
+
     for (const lesson of lessonsToSchedule) {
-      // Skip weekends if using weekly mode
+      // Skip weekends in weekly mode
       if (scheduleMode === 'weekly') {
         while (currentDate.day() === 0 || currentDate.day() === 6) {
           currentDate.add(1, 'day')
         }
       }
 
-      await supabase
-        .from('lessons')
-        .update({ lesson_date: currentDate.format('YYYY-MM-DD') })
-        .eq('id', lesson.id)
-
+      updates.push({ id: lesson.id, lesson_date: currentDate.format('YYYY-MM-DD') })
       lessonCount++
 
-      // Move to next date based on mode
       if (scheduleMode === 'sequential') {
         currentDate.add(1, 'day')
-      } else if (scheduleMode === 'weekly') {
-        // Check if we've hit the daily limit
+      } else {
+        // Advance day after hitting the per-day limit
         if (lessonCount % lessonsPerDay === 0) {
           currentDate.add(1, 'day')
-          // Skip weekends
           while (currentDate.day() === 0 || currentDate.day() === 6) {
             currentDate.add(1, 'day')
           }
@@ -148,8 +154,23 @@ export default function BulkLessonScheduler({ userId }: BulkLessonSchedulerProps
       }
     }
 
-    alert(`Scheduled ${selectedLessons.size} lessons successfully!`)
+    // Execute all updates in parallel instead of sequentially
+    const results = await Promise.all(
+      updates.map(({ id, lesson_date }) =>
+        supabase.from('lessons').update({ lesson_date }).eq('id', id)
+      )
+    )
+
+    const errors = results.filter(r => r.error)
+    if (errors.length > 0) {
+      alert(`${errors.length} lesson(s) failed to schedule. Please try again.`)
+    } else {
+      alert(`✅ ${selectedLessons.size} lessons scheduled successfully!`)
+    }
+
     setSelectedLessons(new Set())
+    // Refresh both subjects and lessons after scheduling
+    loadSubjects()
     loadUnscheduledLessons()
     setScheduling(false)
   }
@@ -170,16 +191,10 @@ export default function BulkLessonScheduler({ userId }: BulkLessonSchedulerProps
         <h3 className="font-semibold text-gray-900 mb-4">Select Lessons</h3>
         <div className="grid md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Child
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Child</label>
             <select
               value={selectedKid}
-              onChange={(e) => {
-                setSelectedKid(e.target.value)
-                setSelectedSubject('')
-                setSelectedLessons(new Set())
-              }}
+              onChange={(e) => setSelectedKid(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900"
             >
               {kids.map(kid => (
@@ -187,7 +202,7 @@ export default function BulkLessonScheduler({ userId }: BulkLessonSchedulerProps
               ))}
             </select>
           </div>
-          
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Subject (optional)
@@ -209,21 +224,21 @@ export default function BulkLessonScheduler({ userId }: BulkLessonSchedulerProps
       {/* Scheduling Options */}
       <div className="bg-purple-50 rounded-lg p-6 border border-purple-200">
         <h3 className="font-semibold text-gray-900 mb-4">Scheduling Options</h3>
-        
+
         <div className="grid md:grid-cols-2 gap-6">
           {/* Schedule Mode */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3">
-              Schedule Mode
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-3">Schedule Mode</label>
             <div className="space-y-2">
-              <label className="flex items-center p-3 border-2 rounded-lg cursor-pointer hover:bg-white transition-colors"
-                style={{ borderColor: scheduleMode === 'sequential' ? '#9333ea' : '#d1d5db' }}>
+              <label
+                className="flex items-center p-3 border-2 rounded-lg cursor-pointer hover:bg-white transition-colors"
+                style={{ borderColor: scheduleMode === 'sequential' ? '#9333ea' : '#d1d5db' }}
+              >
                 <input
                   type="radio"
                   value="sequential"
                   checked={scheduleMode === 'sequential'}
-                  onChange={(e) => setScheduleMode(e.target.value as 'sequential')}
+                  onChange={() => setScheduleMode('sequential')}
                   className="mr-3"
                 />
                 <div>
@@ -231,14 +246,16 @@ export default function BulkLessonScheduler({ userId }: BulkLessonSchedulerProps
                   <div className="text-xs text-gray-600">One lesson per day, consecutive days</div>
                 </div>
               </label>
-              
-              <label className="flex items-center p-3 border-2 rounded-lg cursor-pointer hover:bg-white transition-colors"
-                style={{ borderColor: scheduleMode === 'weekly' ? '#9333ea' : '#d1d5db' }}>
+
+              <label
+                className="flex items-center p-3 border-2 rounded-lg cursor-pointer hover:bg-white transition-colors"
+                style={{ borderColor: scheduleMode === 'weekly' ? '#9333ea' : '#d1d5db' }}
+              >
                 <input
                   type="radio"
                   value="weekly"
                   checked={scheduleMode === 'weekly'}
-                  onChange={(e) => setScheduleMode(e.target.value as 'weekly')}
+                  onChange={() => setScheduleMode('weekly')}
                   className="mr-3"
                 />
                 <div>
@@ -252,9 +269,7 @@ export default function BulkLessonScheduler({ userId }: BulkLessonSchedulerProps
           {/* Date Settings */}
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Start Date
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
               <input
                 type="date"
                 value={startDate}
@@ -273,7 +288,7 @@ export default function BulkLessonScheduler({ userId }: BulkLessonSchedulerProps
                   min="1"
                   max="10"
                   value={lessonsPerDay}
-                  onChange={(e) => setLessonsPerDay(parseInt(e.target.value))}
+                  onChange={(e) => setLessonsPerDay(parseInt(e.target.value) || 1)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900"
                 />
               </div>
@@ -341,9 +356,11 @@ export default function BulkLessonScheduler({ userId }: BulkLessonSchedulerProps
         <div className="bg-green-50 border border-green-200 rounded-lg p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="font-semibold text-gray-900">Ready to schedule {selectedLessons.size} lessons</p>
+              <p className="font-semibold text-gray-900">
+                Ready to schedule {selectedLessons.size} lesson{selectedLessons.size !== 1 ? 's' : ''}
+              </p>
               <p className="text-sm text-gray-600">
-                Starting {moment(startDate).format('MMM D, YYYY')} using {scheduleMode} mode
+                Starting {moment(startDate).format('MMM D, YYYY')} · {scheduleMode} mode
               </p>
             </div>
             <button
@@ -351,7 +368,7 @@ export default function BulkLessonScheduler({ userId }: BulkLessonSchedulerProps
               disabled={scheduling}
               className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold disabled:bg-green-400"
             >
-              {scheduling ? 'Scheduling...' : `Schedule ${selectedLessons.size} Lessons`}
+              {scheduling ? 'Scheduling...' : `Schedule ${selectedLessons.size} Lesson${selectedLessons.size !== 1 ? 's' : ''}`}
             </button>
           </div>
         </div>

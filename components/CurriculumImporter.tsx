@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { usePlanningAutoComplete } from '@/lib/usePlanningAutoComplete';
+import { CANONICAL_SUBJECTS } from '@/src/constants/subjects';
 
 interface Lesson {
   title: string;
@@ -18,13 +19,10 @@ interface Props {
   onImportComplete: () => void;
 }
 
-// ✅ NEW: Duration units for days/weeks/minutes
 const DURATION_UNITS = ['minutes', 'days', 'weeks'] as const;
 type DurationUnit = typeof DURATION_UNITS[number];
 
 export default function CurriculumImporter({ childId, childName, onClose, onImportComplete }: Props) {
-  // ✅ ADD THIS AT THE TOP - Single declaration for the whole component
-  const testOrgId = 'd52497c0-42a9-49b7-ba3b-849bffa27fc4';
   const [file, setFile] = useState<File | null>(null);
   const [extractedLessons, setExtractedLessons] = useState<Lesson[]>([]);
   const [selectedLessons, setSelectedLessons] = useState<Set<number>>(new Set());
@@ -33,22 +31,22 @@ export default function CurriculumImporter({ childId, childName, onClose, onImpo
   const [step, setStep] = useState<'upload' | 'preview' | 'success'>('upload');
   const [error, setError] = useState<string>('');
   const [importResults, setImportResults] = useState<{ imported: number; skipped: number }>({ imported: 0, skipped: 0 });
-  
-  // ✅ NEW: Subject selection
+
+  // Subject selection
   const [selectedSubject, setSelectedSubject] = useState<string>('');
   const [customSubject, setCustomSubject] = useState<string>('');
   const [existingSubjects, setExistingSubjects] = useState<string[]>([]);
-  
-  // ✅ NEW: Bulk duration settings
+
+  // Bulk duration settings
   const [bulkDurationValue, setBulkDurationValue] = useState<number>(1);
   const [bulkDurationUnit, setBulkDurationUnit] = useState<DurationUnit>('weeks');
   const [applyBulkDuration, setApplyBulkDuration] = useState<boolean>(false);
 
-  // ✅ NEW: Start date for scheduling lessons
+  // Start date for scheduling
   const [useStartDate, setUseStartDate] = useState<boolean>(false);
   const [startDate, setStartDate] = useState<string>('');
 
-  // ✅ NEW: Planning mode integration
+  // Planning mode
   const { triggerAutoComplete } = usePlanningAutoComplete();
   const [activePlanningPeriod, setActivePlanningPeriod] = useState<{
     id: string;
@@ -58,55 +56,58 @@ export default function CurriculumImporter({ childId, childName, onClose, onImpo
   } | null>(null);
   const [organizationId, setOrganizationId] = useState<string>('');
 
-// ✅ Load existing subjects (using hardcoded test org)
-useEffect(() => {
-  const loadSubjects = async () => {
-    const { supabase } = await import('@/src/lib/supabase');
-    
-    const { data } = await supabase
-      .from('lessons')
-      .select('subject')
-      .eq('organization_id', testOrgId);
-    
-    if (data) {
-      const uniqueSubjects = [...new Set(data.map(d => d.subject))].filter(Boolean);
-      setExistingSubjects(uniqueSubjects);
-    }
-  };
-  loadSubjects();
-}, []);
+  // ── Load existing subjects from DB (real user org, not hardcoded) ──────────
+  useEffect(() => {
+    const loadSubjectsAndOrg = async () => {
+      const { supabase } = await import('@/src/lib/supabase');
 
-// ✅ Load planning period (using hardcoded test org)
-useEffect(() => {
-  const loadPlanningPeriod = async () => {
-    const { supabase } = await import('@/src/lib/supabase');
-    
-    console.log('⚠️ Using test organization:', testOrgId);
-    setOrganizationId(testOrgId);
-    
-    // Check for active planning period
-    const { data: period } = await supabase
-      .from('planning_periods')
-      .select('*')
-      .eq('organization_id', testOrgId)
-      .eq('is_active', true)
-      .lte('start_date', new Date().toISOString().split('T')[0])
-      .gte('end_date', new Date().toISOString().split('T')[0])
-      .maybeSingle();
-    
-    if (period) {
-      console.log('📅 Active planning period:', period.period_name);
-      setActivePlanningPeriod(period);
-    }
-  };
-  
-  loadPlanningPeriod();
-}, []);
+      // Get real authenticated user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Get org ID from kids table
+      const { data: kidData } = await supabase
+        .from('kids')
+        .select('organization_id')
+        .eq('user_id', user.id)
+        .limit(1)
+        .maybeSingle();
+
+      const orgId = kidData?.organization_id || user.id;
+      setOrganizationId(orgId);
+
+      // Load distinct subjects already in use by this org
+      const { data } = await supabase
+        .from('lessons')
+        .select('subject')
+        .eq('organization_id', orgId);
+
+      if (data) {
+        const uniqueExisting = [...new Set(data.map(d => d.subject).filter(Boolean))] as string[];
+        // Only keep subjects that are NOT already in the canonical list
+        // (canonical ones will appear via the canonical list in the dropdown)
+        const nonCanonicalExisting = uniqueExisting.filter(s => !CANONICAL_SUBJECTS.includes(s))
+        setExistingSubjects(nonCanonicalExisting);
+      }
+
+      // Check for active planning period
+      const { data: period } = await supabase
+        .from('planning_periods')
+        .select('*')
+        .eq('organization_id', orgId)
+        .eq('is_active', true)
+        .lte('start_date', new Date().toISOString().split('T')[0])
+        .gte('end_date', new Date().toISOString().split('T')[0])
+        .maybeSingle();
+
+      if (period) setActivePlanningPeriod(period);
+    };
+
+    loadSubjectsAndOrg();
+  }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
-    
-    // ✅ UPDATED: Accept PDF and images
     if (selectedFile) {
       const validTypes = ['application/pdf', 'image/jpeg', 'image/png'];
       if (validTypes.includes(selectedFile.type)) {
@@ -121,10 +122,9 @@ useEffect(() => {
   const extractLessons = async () => {
     if (!file) return;
 
-    // ✅ NEW: Validate subject selection
-    const finalSubject = selectedSubject === 'custom' ? customSubject : selectedSubject;
-    if (!finalSubject || finalSubject.trim() === '') {
-      setError('Please select or enter a subject');
+    const finalSubject = selectedSubject === '__custom__' ? customSubject.trim() : selectedSubject;
+    if (!finalSubject) {
+      setError('Please select or enter a subject before uploading');
       return;
     }
 
@@ -133,7 +133,7 @@ useEffect(() => {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('childId', childId);
-    formData.append('subject', finalSubject); // ✅ NEW: Pass subject to API
+    formData.append('subject', finalSubject);
 
     try {
       const response = await fetch('/api/import-curriculum', {
@@ -142,31 +142,28 @@ useEffect(() => {
       });
 
       const data = await response.json();
-      
+
       if (!response.ok) {
         setError(data.error || 'Failed to extract lessons');
         setLoading(false);
         return;
       }
-      
+
       if (data.lessons) {
-        // Sort lessons by extracting number from title
         const sortedLessons = data.lessons.sort((a: Lesson, b: Lesson) => {
           const numA = parseInt(a.title.match(/\d+/)?.[0] || '0');
           const numB = parseInt(b.title.match(/\d+/)?.[0] || '0');
           return numA - numB;
         });
-        
-        // ✅ NEW: Apply subject to all lessons
+
         const lessonsWithSubject = sortedLessons.map((lesson: Lesson) => ({
           ...lesson,
           subject: finalSubject
         }));
-        
+
         setExtractedLessons(lessonsWithSubject);
         setSelectedLessons(new Set(lessonsWithSubject.map((_: any, i: number) => i)));
-        
-        // ✅ NEW: Apply bulk duration if checkbox is checked
+
         if (applyBulkDuration) {
           const bulkDurations: { [key: number]: { value: number; unit: DurationUnit } } = {};
           lessonsWithSubject.forEach((_: any, i: number) => {
@@ -174,7 +171,7 @@ useEffect(() => {
           });
           setLessonDurations(bulkDurations);
         }
-        
+
         setStep('preview');
       }
     } catch (error) {
@@ -187,195 +184,149 @@ useEffect(() => {
 
   const toggleLesson = (index: number) => {
     const newSelected = new Set(selectedLessons);
-    if (newSelected.has(index)) {
-      newSelected.delete(index);
-    } else {
-      newSelected.add(index);
-    }
+    if (newSelected.has(index)) newSelected.delete(index);
+    else newSelected.add(index);
     setSelectedLessons(newSelected);
   };
 
   const handleDurationChange = (index: number, value: number, unit: DurationUnit) => {
-    setLessonDurations(prev => ({
-      ...prev,
-      [index]: { value, unit }
-    }));
+    setLessonDurations(prev => ({ ...prev, [index]: { value, unit } }));
   };
 
   const importLessons = async () => {
-    console.log('🚀 Import button clicked');
-  console.log('📊 Current state:', { 
-    organizationId, 
-    selectedCount: selectedLessons.size,
-    hasFile: !!file 
-  });
     setLoading(true);
 
     if (!organizationId) {
-      console.error('❌ Organization ID is missing!');
       alert('Organization not loaded. Please refresh and try again.');
       setLoading(false);
       return;
     }
-    
-    console.log('✅ Organization ID present, proceeding with import...');
-    
+
     const lessonsToImport = extractedLessons.filter((_, i) => selectedLessons.has(i));
-    
+
     try {
-      // Fetch existing lessons for this child using Supabase
       const { supabase } = await import('@/src/lib/supabase');
-      
-      // Get current user
       const { data: { user } } = await supabase.auth.getUser();
-      const userId = user?.id || '00000000-0000-0000-0000-000000000001'; // ✅ CORRECT
-      if (!user) {
-        console.log('⚠️ No authenticated user - using test user ID');
-}
-      
+      const userId = user?.id;
+
+      if (!userId) {
+        alert('You must be logged in to import lessons.');
+        setLoading(false);
+        return;
+      }
+
       const { data: existingLessons } = await supabase
         .from('lessons')
         .select('title, subject')
         .eq('kid_id', childId);
-      
-      // Check which lessons already exist (match on title + subject)
-      const newLessons = lessonsToImport.filter(lesson => {
-        return !existingLessons?.some((existing: any) => 
+
+      const newLessons = lessonsToImport.filter(lesson =>
+        !existingLessons?.some((existing: any) =>
           existing.title === lesson.title && existing.subject === lesson.subject
-        );
-      });
-      
+        )
+      );
+
       const duplicateCount = lessonsToImport.length - newLessons.length;
-      
-      // Prepare lessons for bulk insert
+
       const lessonsToInsert = [];
       let currentDate = useStartDate && startDate ? new Date(startDate) : null;
-      
+
       for (let i = 0; i < extractedLessons.length; i++) {
         const lesson = extractedLessons[i];
         if (selectedLessons.has(i) && newLessons.includes(lesson)) {
-          // ✅ UPDATED: Convert duration value/unit to minutes for storage
           let durationMinutes = null;
           let durationDays = 0;
-          
+
           if (lessonDurations[i]) {
             const { value, unit } = lessonDurations[i];
             if (unit === 'minutes') {
               durationMinutes = value;
               durationDays = 0;
             } else if (unit === 'days') {
-              // Assuming 6 hours per school day
               durationMinutes = value * 6 * 60;
               durationDays = value;
             } else if (unit === 'weeks') {
-              // Assuming 5 days per week, 6 hours per day
               durationMinutes = value * 5 * 6 * 60;
               durationDays = value * 5;
             }
           }
-          
-          // ✅ NEW: Calculate lesson date based on start date and sequential scheduling
+
           let lessonDate = null;
           if (currentDate) {
             lessonDate = currentDate.toISOString().split('T')[0];
-            // Advance date by duration for next lesson
-            if (durationDays > 0) {
-              currentDate = new Date(currentDate);
-              currentDate.setDate(currentDate.getDate() + durationDays);
-            } else {
-              // If no duration, assume 1 day per lesson
-              currentDate = new Date(currentDate);
-              currentDate.setDate(currentDate.getDate() + 1);
-            }
+            currentDate = new Date(currentDate);
+            currentDate.setDate(currentDate.getDate() + (durationDays > 0 ? durationDays : 1));
           }
-          
+
           lessonsToInsert.push({
             kid_id: childId,
-            user_id: userId,  // ✅ Use the userId variable instead change back to user.id
-            organization_id: organizationId,  
+            user_id: userId,
+            organization_id: organizationId,
             subject: lesson.subject,
             title: lesson.title,
             description: lesson.description,
             lesson_date: lessonDate,
             duration_minutes: durationMinutes,
             status: 'not_started',
-            // ✅ NEW: Link to planning period if active
             planning_period_id: activePlanningPeriod?.id || null,
           });
         }
       }
-      
-    // Bulk insert all lessons at once
-if (lessonsToInsert.length > 0) {
-  console.log('📝 About to insert lessons:', {
-    count: lessonsToInsert.length,
-    sample: lessonsToInsert[0],
-    organizationId,
-    userId
-  });
-  
-  const { error } = await supabase
-    .from('lessons')
-    .insert(lessonsToInsert);
-  
-  console.log('✅ Insert result:', { error });
-  
-  if (error) {
-    console.error('❌ Database insert error:', error);
-    alert(`Failed to import lessons: ${error.message}`);
-    return; // Exit early - the finally block will still run
-  }
-  
-  // ✅ Track curriculum import for planning auto-completion
-  if (activePlanningPeriod && organizationId) {
-    await supabase
-      .from('curriculum_imports')
-      .insert({
-        organization_id: organizationId,
-        planning_period_id: activePlanningPeriod.id,
-        import_source: file?.type.includes('pdf') ? 'pdf' : 'image',
-        lessons_created: lessonsToInsert.length,
-        file_url: file?.name,
-        metadata: {
-          subject: lessonsToInsert[0]?.subject,
-          total_lessons: lessonsToInsert.length,
-          start_date: startDate || null,
-        }
-      });
-    
-    // Trigger auto-completion check
-    const result = await triggerAutoComplete(
-      'curriculum_import',
-      organizationId,
-      activePlanningPeriod.id
-    );
-    
-    if (result.completed_tasks.length > 0) {
-      console.log('✨ Auto-completed planning tasks:', result.completed_tasks);
-    }
-  }
-} // ✅ IMPORTANT: Closing brace for "if (lessonsToInsert.length > 0)"
 
-    // Store results for success message
-    setImportResults({ imported: lessonsToInsert.length, skipped: duplicateCount });
-    setStep('success');
+      if (lessonsToInsert.length > 0) {
+        const { error } = await supabase.from('lessons').insert(lessonsToInsert);
+
+        if (error) {
+          console.error('Database insert error:', error);
+          alert(`Failed to import lessons: ${error.message}`);
+          return;
+        }
+
+        if (activePlanningPeriod && organizationId) {
+          await supabase.from('curriculum_imports').insert({
+            organization_id: organizationId,
+            planning_period_id: activePlanningPeriod.id,
+            import_source: file?.type.includes('pdf') ? 'pdf' : 'image',
+            lessons_created: lessonsToInsert.length,
+            file_url: file?.name,
+            metadata: {
+              subject: lessonsToInsert[0]?.subject,
+              total_lessons: lessonsToInsert.length,
+              start_date: startDate || null,
+            }
+          });
+
+          const result = await triggerAutoComplete(
+            'curriculum_import',
+            organizationId,
+            activePlanningPeriod.id
+          );
+
+          if (result.completed_tasks.length > 0) {
+            console.log('Auto-completed planning tasks:', result.completed_tasks);
+          }
+        }
+      }
+
+      setImportResults({ imported: lessonsToInsert.length, skipped: duplicateCount });
+      setStep('success');
 
     } catch (error: any) {
-      console.error('❌ Import error:', error);
-      console.error('❌ Error details:', {
-        message: error?.message,
-        code: error?.code,
-        details: error?.details,
-        hint: error?.hint,
-        full: JSON.stringify(error, null, 2)
-      });
-      
-      const errorMessage = error?.message || error?.code || 'Unknown error';
-      alert(`Failed to import lessons: ${errorMessage}`);
+      console.error('Import error:', error);
+      alert(`Failed to import lessons: ${error?.message || 'Unknown error'}`);
     } finally {
       setLoading(false);
     }
   };
+
+  // ── Helpers ──────────────────────────────────────────────────────────────────
+
+  // Build the merged subject list: canonical first, then any custom subjects
+  // already in this org's DB that aren't in the canonical list
+  const subjectOptions = [
+    ...CANONICAL_SUBJECTS,
+    ...existingSubjects, // already filtered to non-canonical above
+  ];
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -384,9 +335,7 @@ if (lessonsToInsert.length > 0) {
           <h2 className="text-2xl font-bold text-gray-900">
             📥 Import Curriculum for {childName}
           </h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700 text-2xl">
-            ×
-          </button>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-700 text-2xl">×</button>
         </div>
 
         <div className="p-6">
@@ -395,14 +344,14 @@ if (lessonsToInsert.length > 0) {
               <p className="text-gray-600">
                 Upload your curriculum's <strong>table of contents</strong> (PDF or image, max 15MB) and we'll extract the lesson plans automatically.
               </p>
-              
+
               {error && (
                 <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
                   {error}
                 </div>
               )}
-              
-              {/* ✅ NEW: Planning Context Banner */}
+
+              {/* Planning Context Banner */}
               {activePlanningPeriod && (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                   <div className="flex items-center gap-2">
@@ -410,43 +359,66 @@ if (lessonsToInsert.length > 0) {
                     <div>
                       <p className="font-semibold text-blue-900">Planning Mode Active</p>
                       <p className="text-sm text-blue-700">
-                        You're planning for {activePlanningPeriod.period_name}. 
+                        You're planning for {activePlanningPeriod.period_name}.
                         Importing curriculum will auto-complete your planning task!
                       </p>
                     </div>
                   </div>
                 </div>
               )}
-              
-              {/* ✅ NEW: Subject Selection */}
+
+              {/* ── Subject Selection ── */}
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700">
                   What subject is this curriculum for?
                 </label>
+
                 <select
                   value={selectedSubject}
                   onChange={(e) => setSelectedSubject(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-4 py-2 text-gray-900"
+                  className="w-full border border-gray-300 rounded-lg px-4 py-2 text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 >
                   <option value="">-- Select Subject --</option>
-                  {existingSubjects.map(subject => (
-                    <option key={subject} value={subject}>{subject}</option>
-                  ))}
-                  <option value="custom">➕ Create New Subject</option>
+
+                  {/* Canonical subjects first */}
+                  <optgroup label="Standard Subjects">
+                    {CANONICAL_SUBJECTS.map(s => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </optgroup>
+
+                  {/* Previously used custom subjects (non-canonical) */}
+                  {existingSubjects.length > 0 && (
+                    <optgroup label="Your Custom Subjects">
+                      {existingSubjects.map(s => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </optgroup>
+                  )}
+
+                  <option value="__custom__">✏️ Add a new custom subject...</option>
                 </select>
-                
-                {selectedSubject === 'custom' && (
-                  <input
-                    type="text"
-                    placeholder="Enter subject name (e.g., Math, Science, History)"
-                    value={customSubject}
-                    onChange={(e) => setCustomSubject(e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-4 py-2 text-gray-900"
-                  />
+
+                {/* Custom subject input */}
+                {selectedSubject === '__custom__' && (
+                  <div className="mt-2">
+                    <input
+                      type="text"
+                      placeholder="e.g., Latin, Robotics, Home Economics"
+                      value={customSubject}
+                      onChange={(e) => setCustomSubject(e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg px-4 py-2 text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      autoFocus
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      💡 Use title case (e.g., "Latin" not "latin") so this subject groups
+                      correctly in reports and shows up consistently in your dropdowns.
+                    </p>
+                  </div>
                 )}
               </div>
 
-              {/* ✅ NEW: Bulk Duration Settings */}
+              {/* ── Bulk Duration Settings ── */}
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
                 <div className="flex items-center gap-2">
                   <input
@@ -460,7 +432,7 @@ if (lessonsToInsert.length > 0) {
                     Set duration for all lessons
                   </label>
                 </div>
-                
+
                 {applyBulkDuration && (
                   <div className="flex gap-3 items-center">
                     <input
@@ -476,9 +448,7 @@ if (lessonsToInsert.length > 0) {
                       className="border border-gray-300 rounded px-3 py-2 text-gray-900"
                     >
                       {DURATION_UNITS.map(unit => (
-                        <option key={unit} value={unit}>
-                          {unit}
-                        </option>
+                        <option key={unit} value={unit}>{unit}</option>
                       ))}
                     </select>
                     <span className="text-sm text-gray-600">per lesson</span>
@@ -486,7 +456,7 @@ if (lessonsToInsert.length > 0) {
                 )}
               </div>
 
-              {/* ✅ NEW: Start Date Selection */}
+              {/* ── Start Date Selection ── */}
               <div className="bg-green-50 border border-green-200 rounded-lg p-4 space-y-3">
                 <div className="flex items-center gap-2">
                   <input
@@ -500,8 +470,8 @@ if (lessonsToInsert.length > 0) {
                     Schedule lessons starting from a specific date
                   </label>
                 </div>
-                
-                {useStartDate && (
+
+                {useStartDate ? (
                   <div className="space-y-2">
                     <input
                       type="date"
@@ -514,16 +484,14 @@ if (lessonsToInsert.length > 0) {
                       If no duration is set, each lesson will be 1 day apart.
                     </p>
                   </div>
-                )}
-                
-                {!useStartDate && (
+                ) : (
                   <p className="text-xs text-gray-600">
-                    Lessons will be imported without dates - you can schedule them later from the calendar.
+                    Lessons will be imported without dates — you can schedule them later from the calendar.
                   </p>
                 )}
               </div>
-              
-              {/* ✅ UPDATED: File upload accepts images */}
+
+              {/* ── File Upload ── */}
               <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
                 <input
                   type="file"
@@ -577,11 +545,10 @@ if (lessonsToInsert.length > 0) {
                 </button>
               </div>
 
-              {/* ✅ NEW: Show scheduling info if start date is set */}
               {useStartDate && startDate && (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                   <p className="text-sm text-blue-900">
-                    📅 Lessons will be scheduled starting from <strong>{new Date(startDate).toLocaleDateString()}</strong>, 
+                    📅 Lessons will be scheduled starting from <strong>{new Date(startDate + 'T00:00:00').toLocaleDateString()}</strong>,
                     spaced according to their duration.
                   </p>
                 </div>
@@ -591,9 +558,7 @@ if (lessonsToInsert.length > 0) {
                 {extractedLessons.map((lesson, index) => (
                   <div
                     key={index}
-                    className={`border rounded-lg p-4 ${
-                      selectedLessons.has(index) ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
-                    }`}
+                    className={`border rounded-lg p-4 ${selectedLessons.has(index) ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}`}
                   >
                     <div className="flex items-start gap-3">
                       <input
@@ -607,8 +572,8 @@ if (lessonsToInsert.length > 0) {
                           <div className="flex-1">
                             <h3 className="font-semibold text-gray-900">{lesson.title}</h3>
                             <p className="text-sm text-gray-600">
-                              {typeof lesson.description === 'string' 
-                                ? lesson.description 
+                              {typeof lesson.description === 'string'
+                                ? lesson.description
                                 : JSON.stringify(lesson.description)}
                             </p>
                             <div className="flex gap-3 mt-2 text-xs text-gray-500">
@@ -620,7 +585,6 @@ if (lessonsToInsert.length > 0) {
                               )}
                             </div>
                           </div>
-                          {/* ✅ UPDATED: Duration with value + unit */}
                           <div className="flex flex-col gap-1">
                             <label className="text-xs text-gray-600">Duration (optional)</label>
                             <div className="flex gap-2">
@@ -641,8 +605,7 @@ if (lessonsToInsert.length > 0) {
                                 value={lessonDurations[index]?.unit || 'weeks'}
                                 onChange={(e) => {
                                   const value = lessonDurations[index]?.value || 1;
-                                  const unit = e.target.value as DurationUnit;
-                                  handleDurationChange(index, value, unit);
+                                  handleDurationChange(index, value, e.target.value as DurationUnit);
                                 }}
                                 className="text-sm border rounded px-2 py-1 text-gray-900"
                                 disabled={!selectedLessons.has(index)}
@@ -681,19 +644,17 @@ if (lessonsToInsert.length > 0) {
           {step === 'success' && (
             <div className="text-center py-8">
               <div className="text-6xl mb-4">✅</div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                Import Complete!
-              </h3>
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">Import Complete!</h3>
               <p className="text-gray-600 mb-2">
                 {importResults.imported} new lesson{importResults.imported !== 1 ? 's' : ''} added to {childName}'s list
               </p>
               {useStartDate && startDate ? (
                 <p className="text-sm text-gray-500 mb-4">
-                  📅 Lessons scheduled starting from {new Date(startDate).toLocaleDateString()}
+                  📅 Lessons scheduled starting from {new Date(startDate + 'T00:00:00').toLocaleDateString()}
                 </p>
               ) : (
                 <p className="text-sm text-gray-500 mb-4">
-                  📅 Lessons are unscheduled - assign dates when you're ready to teach them
+                  📅 Lessons are unscheduled — assign dates when you're ready to teach them
                 </p>
               )}
               {importResults.skipped > 0 && (
@@ -702,10 +663,7 @@ if (lessonsToInsert.length > 0) {
                 </p>
               )}
               <button
-                onClick={() => {
-                  onImportComplete();
-                  onClose();
-                }}
+                onClick={() => { onImportComplete(); onClose(); }}
                 className="mt-6 bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700"
               >
                 Done

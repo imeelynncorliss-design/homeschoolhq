@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/src/lib/supabase'
+import { CANONICAL_SUBJECTS } from '@/src/constants/subjects'
 
 interface Course {
   id: string
@@ -193,16 +194,22 @@ export default function CourseManager({ kidId, userId }: CourseManagerProps) {
       {showForm && (
         <form onSubmit={handleSubmit} className="bg-white border rounded-lg p-6 mb-6 space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Course Name *</label>
+          <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Subject *</label>
               <input
                 type="text"
-                value={courseName}
-                onChange={(e) => setCourseName(e.target.value)}
+                list="subjects-list-courses"
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
                 className="w-full px-3 py-2 border rounded text-gray-900"
-                placeholder="e.g., Algebra I"
+                placeholder="e.g., Mathematics"
                 required
               />
+              <datalist id="subjects-list-courses">
+                {CANONICAL_SUBJECTS.map(s => (
+                  <option key={s} value={s} />
+                ))}
+              </datalist>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Subject *</label>

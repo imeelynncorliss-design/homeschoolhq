@@ -19,7 +19,7 @@ import { ReactNode } from 'react'
 import PersonalizedAssessmentCreator from '@/components/PersonalizedAssessmentCreator'
 import { DEFAULT_HOLIDAYS_2025_2026 } from '@/app/utils/holidayUtils'
 import AssessmentTaking from '@/components/AssessmentTaking'
-import AutoScheduleModal from '@/components/AutoScheduleModal' 
+import AutoScheduleModal from '@/components/AutoScheduleModal'
 import HelpWidget from '../../components/HelpWidget'
 import PastAssessmentsViewer from '@/components/PastAssessmentsViewer'
 import PlanningModeDashboard from '@/components/PlanningModeDashboard'
@@ -27,16 +27,14 @@ import AttendanceReminder from '@/components/AttendanceReminder'
 import AttendanceTracker from '@/components/AttendanceTracker'
 import ParentProfileManager from '@/components/ParentProfileManager'
 import AuthGuard from '@/components/AuthGuard'
-import ComplianceWizard from '@/components/ComplianceWizard';
+import ComplianceWizard from '@/components/ComplianceWizard'
 import { type UserTier, hasFeature as checkFeature, getTierForTesting, getChildLimit, getUpgradeMessage } from '@/lib/tierTesting'
 import UserMenu from '@/src/components/UserMenu'
+import { CANONICAL_SUBJECTS } from '@/src/constants/subjects'
 
+const DURATION_UNITS = ['minutes', 'days', 'weeks'] as const
+type DurationUnit = typeof DURATION_UNITS[number]
 
-
-const DURATION_UNITS = ['minutes', 'days', 'weeks'] as const;
-type DurationUnit = typeof DURATION_UNITS[number];
-
-// Color mapping for children - cycles through these colors
 const CHILD_COLORS = [
   { border: 'border-blue-400', bg: 'bg-blue-50', dot: 'bg-blue-500' },
   { border: 'border-purple-400', bg: 'bg-purple-50', dot: 'bg-purple-500' },
@@ -44,33 +42,26 @@ const CHILD_COLORS = [
   { border: 'border-pink-400', bg: 'bg-pink-50', dot: 'bg-pink-500' },
   { border: 'border-orange-400', bg: 'bg-orange-50', dot: 'bg-orange-500' },
   { border: 'border-teal-400', bg: 'bg-teal-50', dot: 'bg-teal-500' },
-];
-
+]
 
 const convertMinutesToDuration = (minutes: number | null): { value: number; unit: DurationUnit } => {
-  if (!minutes) return { value: 30, unit: 'minutes' };
-  if (minutes >= 1800 && minutes % 1800 === 0) {
-    return { value: minutes / 1800, unit: 'weeks' };
-  }
-  if (minutes >= 360 && minutes % 360 === 0) {
-    return { value: minutes / 360, unit: 'days' };
-  }
-  if (minutes >= 360) {
-    return { value: Math.round(minutes / 360), unit: 'days' };
-  }
-  return { value: minutes, unit: 'minutes' };
-};
+  if (!minutes) return { value: 30, unit: 'minutes' }
+  if (minutes >= 1800 && minutes % 1800 === 0) return { value: minutes / 1800, unit: 'weeks' }
+  if (minutes >= 360 && minutes % 360 === 0) return { value: minutes / 360, unit: 'days' }
+  if (minutes >= 360) return { value: Math.round(minutes / 360), unit: 'days' }
+  return { value: minutes, unit: 'minutes' }
+}
 
 const convertDurationToMinutes = (value: number, unit: DurationUnit): number => {
-  if (unit === 'minutes') return value;
-  else if (unit === 'days') return value * 6 * 60;
-  else return value * 5 * 6 * 60;
-};
+  if (unit === 'minutes') return value
+  if (unit === 'days') return value * 6 * 60
+  return value * 5 * 6 * 60
+}
 
 function DashboardContent() {
-  const searchParams = useSearchParams();
-  const [showGenerator, setShowGenerator] = useState(false);
-  const [showImporter, setShowImporter] = useState(false);
+  const searchParams = useSearchParams()
+  const [showGenerator, setShowGenerator] = useState(false)
+  const [showImporter, setShowImporter] = useState(false)
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [kids, setKids] = useState<any[]>([])
@@ -90,33 +81,32 @@ function DashboardContent() {
   const [editingKid, setEditingKid] = useState<any | null>(null)
   const [showLessonForm, setShowLessonForm] = useState(false)
   const [showLessonEditModal, setShowLessonEditModal] = useState(false)
+
+  // Add lesson state
   const [lessonSubject, setLessonSubject] = useState('')
+  const [lessonSubjectSelect, setLessonSubjectSelect] = useState('')
+  const [lessonSubjectCustom, setLessonSubjectCustom] = useState('')
   const [lessonTitle, setLessonTitle] = useState('')
   const [lessonDescription, setLessonDescription] = useState('')
   const [lessonDate, setLessonDate] = useState('')
   const [addingLesson, setAddingLesson] = useState(false)
   const [lessonDurationValue, setLessonDurationValue] = useState<number>(30)
   const [lessonDurationUnit, setLessonDurationUnit] = useState<DurationUnit>('minutes')
+
+  // Edit lesson state
   const [editingLessonId, setEditingLessonId] = useState<string | null>(null)
   const [editLessonTitle, setEditLessonTitle] = useState('')
   const [editLessonSubject, setEditLessonSubject] = useState('')
+  const [editLessonSubjectSelect, setEditLessonSubjectSelect] = useState('')
+  const [editLessonSubjectCustom, setEditLessonSubjectCustom] = useState('')
   const [editLessonDescription, setEditLessonDescription] = useState('')
   const [editLessonDate, setEditLessonDate] = useState('')
   const [editLessonEndDate, setEditLessonEndDate] = useState('')
   const [editLessonDurationValue, setEditLessonDurationValue] = useState<number>(30)
   const [editLessonDurationUnit, setEditLessonDurationUnit] = useState<DurationUnit>('minutes')
+
+  // Cascade state
   const [showCascadeModal, setShowCascadeModal] = useState(false)
-  const [showPersonalizedAssessment, setShowPersonalizedAssessment] = useState(false);
-  const [showAssessmentTaking, setShowAssessmentTaking] = useState(false);
-  const [generatedAssessment, setGeneratedAssessment] = useState<any>(null);
-  const [assessmentForLesson, setAssessmentForLesson] = useState<any>(null);
-  const [showPastAssessments, setShowPastAssessments] = useState(false)
-  const [pastAssessmentsKidId, setPastAssessmentsKidId] = useState<string | null>(null)
-  const [pastAssessmentsKidName, setPastAssessmentsKidName] = useState('')
-  const [lessonAssessmentScore, setLessonAssessmentScore] = useState<number | null>(null)
-  const [vacationPeriods, setVacationPeriods] = useState<any[]>([])
-  const [schoolYearSettings, setSchoolYearSettings] = useState<any>(null)
-  const [complianceHealthScore, setComplianceHealthScore] = useState<number | null>(null)
   const [cascadeData, setCascadeData] = useState<{
     lessonId: string
     originalDate: string
@@ -125,13 +115,27 @@ function DashboardContent() {
     kidId: string
   } | null>(null)
   const [cascadeDays, setCascadeDays] = useState<number>(1)
+
+  // Assessment state
+  const [showPersonalizedAssessment, setShowPersonalizedAssessment] = useState(false)
+  const [showAssessmentTaking, setShowAssessmentTaking] = useState(false)
+  const [generatedAssessment, setGeneratedAssessment] = useState<any>(null)
+  const [assessmentForLesson, setAssessmentForLesson] = useState<any>(null)
+  const [showPastAssessments, setShowPastAssessments] = useState(false)
+  const [pastAssessmentsKidId, setPastAssessmentsKidId] = useState<string | null>(null)
+  const [pastAssessmentsKidName, setPastAssessmentsKidName] = useState('')
+  const [lessonAssessmentScore, setLessonAssessmentScore] = useState<number | null>(null)
+
+  // Settings state
+  const [vacationPeriods, setVacationPeriods] = useState<any[]>([])
+  const [schoolYearSettings, setSchoolYearSettings] = useState<any>(null)
+  const [complianceHealthScore, setComplianceHealthScore] = useState<number | null>(null)
   const [parentName, setParentName] = useState('')
-  
-  const [showHelp, setShowHelp] = useState(false);
-  const [showSettingsMenu, setShowSettingsMenu] = useState(false);
+  const [showHelp, setShowHelp] = useState(false)
+  const [showSettingsMenu, setShowSettingsMenu] = useState(false)
   const [expandedFaq, setExpandedFaq] = useState<string | null>(null)
 
-  // NEW: Social integration state
+  // Social integration state
   const [socialEvents, setSocialEvents] = useState<any[]>([])
   const [coopEnrollments, setCoopEnrollments] = useState<any[]>([])
   const [manualAttendance, setManualAttendance] = useState<any[]>([])
@@ -141,10 +145,9 @@ function DashboardContent() {
     showCoopClasses: true,
     showManualAttendance: true
   })
-  
+
   const router = useRouter()
-  
-  // This helper function provides the colors for the kid cards on line 731
+
   const getChildColor = (index: number) => {
     const colors = [
       { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-100', accent: 'bg-blue-500' },
@@ -152,44 +155,43 @@ function DashboardContent() {
       { bg: 'bg-pink-50', text: 'text-pink-700', border: 'border-pink-100', accent: 'bg-pink-500' },
       { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-100', accent: 'bg-orange-500' },
       { bg: 'bg-teal-50', text: 'text-teal-700', border: 'border-teal-100', accent: 'bg-teal-500' },
-    ];
-    return colors[index % colors.length];
-  };
+    ]
+    return colors[index % colors.length]
+  }
 
-  // 1. DATA LOADING FUNCTIONS
+  // ─── DATA LOADING ───────────────────────────────────────────────────────────
+
   const loadKids = async () => {
-    if (!user) return;
+    if (!user) return
     const { data, error } = await supabase
       .from('kids')
       .select('*')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
-      if (error) {
-        console.error('Error loading kids:', error.message)
-        return // Stop the function here if there's an error
-      }
+    if (error) {
+      console.error('Error loading kids:', error.message)
+      return
+    }
     if (data) {
       setKids(data)
       if (data.length > 0 && !selectedKid) setSelectedKid(data[0].id)
     }
   }
 
-  // UPDATED: Load all activities including social events
   const loadAllLessons = async () => {
-    if (!user) return;
-    
-    // Load lessons
+    if (!user) return
+
     const { data: lessonsData, error: lessonsError } = await supabase
       .from('lessons')
       .select('*')
       .eq('user_id', user.id)
       .order('lesson_date', { ascending: false })
-  
+
     if (lessonsError) {
       console.error('Error loading lessons:', lessonsError.message)
       return
     }
-    
+
     if (lessonsData) {
       setAllLessons(lessonsData)
       const grouped: { [kidId: string]: any[] } = {}
@@ -200,116 +202,94 @@ function DashboardContent() {
       setLessonsByKid(grouped)
     }
 
-    // Load social events
     const { data: eventsData } = await supabase
       .from('social_events')
       .select('*')
       .or(`is_public.eq.true,created_by.eq.${user.id}`)
       .order('event_date', { ascending: false })
-
     if (eventsData) setSocialEvents(eventsData)
 
-    // Load co-op enrollments
     const { data: enrollmentsData } = await supabase
       .from('class_enrollments')
-      .select(`
-        *,
-        coop_classes(*)
-      `)
+      .select('*, coop_classes(*)')
       .eq('user_id', user.id)
-
     if (enrollmentsData) setCoopEnrollments(enrollmentsData)
 
-    // Load manual attendance
     const { data: attendanceData } = await supabase
       .from('daily_attendance')
       .select('*')
       .eq('organization_id', kids[0]?.organization_id || user.id)
       .order('attendance_date', { ascending: false })
-
     if (attendanceData) setManualAttendance(attendanceData)
-  };
-
-// Simplified - AuthGuard already verified auth, just get the user
-const getUser = async () => {
-  const { data: { user } } = await supabase.auth.getUser()
-  
-  // If AuthGuard let us through but there's no real user, we must be in dev mode
-  if (!user) {
-    const devUser = { 
-      id: 'd52497c0-42a9-49b7-ba3b-849bffa27fc4',
-      email: 'dev@homeschoolhq.com' 
-    }
-    setUser(devUser)
-  } else {
-    setUser(user)
   }
-  setLoading(false)
-}
+
+  const getUser = async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      // AuthGuard dev mode fallback
+      setUser({ id: 'd52497c0-42a9-49b7-ba3b-849bffa27fc4', email: 'dev@homeschoolhq.com' })
+    } else {
+      setUser(user)
+    }
+    setLoading(false)
+  }
 
   const checkUserTier = async () => {
     if (!user) return
     setUserTier(getTierForTesting())
-  } 
+  }
 
-  // 3. EFFECTS
+  // ─── EFFECTS ────────────────────────────────────────────────────────────────
+
   useEffect(() => { getUser() }, [])
   useEffect(() => { if (kids.length > 0) loadAllLessons() }, [kids])
-
-    useEffect(() => {
-      if (!kids.length || !schoolYearSettings || !allLessons.length) return
-      
-      const goalValue = parseInt(schoolYearSettings.annual_goal_value) || 180
-      const completedLessons = allLessons.filter(l => l.status === 'completed').length
-      const score = Math.min(100, Math.round((completedLessons / goalValue) * 100))
-      
-      setComplianceHealthScore(score)
-    }, [kids, schoolYearSettings, allLessons])
-
   useEffect(() => { if (user) checkUserTier() }, [user])
 
   useEffect(() => {
-    if (user) {
-      loadKids()
-    }
-    if (!user ) return; // Don't fetch settings for mock user
-    
+    if (!kids.length || !schoolYearSettings || !allLessons.length) return
+    const goalValue = parseInt(schoolYearSettings.annual_goal_value) || 180
+    const completedLessons = allLessons.filter(l => l.status === 'completed').length
+    const score = Math.min(100, Math.round((completedLessons / goalValue) * 100))
+    setComplianceHealthScore(score)
+  }, [kids, schoolYearSettings, allLessons])
+
+  useEffect(() => {
+    if (user) loadKids()
+    if (!user) return
+
     let mounted = true
     const loadSettings = async () => {
       try {
-        // Get org ID first
         const { data: kidsData } = await supabase
           .from('kids')
           .select('organization_id')
           .eq('user_id', user.id)
           .limit(1)
           .maybeSingle()
-        
+
         const orgId = kidsData?.organization_id || user.id
-    
+
         const { data: settings, error: settingsError } = await supabase
           .from('school_year_settings')
           .select('*')
           .eq('organization_id', orgId)
           .maybeSingle()
-        
+
         if (settingsError) {
           console.error('Settings error:', settingsError.message)
           return
         }
-        
+
         if (settings && mounted) {
           setSchoolYearSettings(settings)
-          const orgId = settings.organization_id || user.id
           const { data: vacations } = await supabase
             .from('vacation_periods')
             .select('*')
-            .eq('organization_id', orgId)
-          
+            .eq('organization_id', settings.organization_id || user.id)
           if (vacations && mounted) setVacationPeriods(vacations)
         }
       } catch (err) {
-        console.error('Error loading vacation settings:', err)
+        console.error('Error loading settings:', err)
       }
     }
     loadSettings()
@@ -318,38 +298,28 @@ const getUser = async () => {
 
   useEffect(() => {
     const loadLessonAssessmentScore = async () => {
-      if (!selectedLesson) {
-        setLessonAssessmentScore(null);
-        return;
-      }
-
+      if (!selectedLesson) { setLessonAssessmentScore(null); return }
       const { data: assessments } = await supabase
         .from('assessments')
-        .select(`
-          id,
-          assessment_results (
-            auto_score,
-            submitted_at
-          )
-        `)
+        .select('id, assessment_results(auto_score, submitted_at)')
         .eq('lesson_id', selectedLesson.id)
-        .limit(1);
-
-      if (assessments && assessments.length > 0 && assessments[0].assessment_results.length > 0) {
-        const latestResult = assessments[0].assessment_results[0];
-        setLessonAssessmentScore(latestResult.auto_score);
+        .limit(1)
+      if (assessments?.length > 0 && assessments[0].assessment_results.length > 0) {
+        setLessonAssessmentScore(assessments[0].assessment_results[0].auto_score)
       } else {
-        setLessonAssessmentScore(null);
+        setLessonAssessmentScore(null)
       }
-    };
+    }
+    loadLessonAssessmentScore()
+  }, [selectedLesson])
 
-    loadLessonAssessmentScore();
-  }, [selectedLesson]);
-  
+  // ─── HELPERS ────────────────────────────────────────────────────────────────
+
   const hasFeature = (feature: string) => checkFeature(userTier, feature)
-  
   const canAddChild = () => kids.length < getChildLimit(userTier)
-  
+
+  // ─── CRUD FUNCTIONS ─────────────────────────────────────────────────────────
+
   const deleteKid = async (id: string, kidDisplayName: string) => {
     if (confirm(`Delete ${kidDisplayName}? This will also delete all their lessons.`)) {
       await supabase.from('kids').delete().eq('id', id)
@@ -363,26 +333,30 @@ const getUser = async () => {
     if (!selectedKid) return
     setAddingLesson(true)
 
-    // Define orgId inside the function so the code below can see it
-    const orgId = schoolYearSettings?.organization_id || user.id;
+    const orgId = schoolYearSettings?.organization_id || user.id
+    const durationInMinutes = convertDurationToMinutes(lessonDurationValue, lessonDurationUnit)
+    const resolvedSubject = lessonSubjectSelect === '__custom__' ? lessonSubjectCustom : lessonSubjectSelect
 
-    const durationInMinutes = convertDurationToMinutes(lessonDurationValue, lessonDurationUnit);
     const { error } = await supabase.from('lessons').insert([{
       user_id: user.id,
       organization_id: orgId,
       kid_id: selectedKid,
-      subject: lessonSubject,
+      subject: resolvedSubject,
       title: lessonTitle,
       description: lessonDescription,
       lesson_date: lessonDate || null,
       duration_minutes: durationInMinutes,
       status: 'not_started'
     }])
+
     if (error) {
       console.error('Insert error:', error)
       alert('Error adding lesson: ' + error.message)
     }
+
     setLessonSubject('')
+    setLessonSubjectSelect('')
+    setLessonSubjectCustom('')
     setLessonTitle('')
     setLessonDescription('')
     setLessonDate('')
@@ -397,11 +371,15 @@ const getUser = async () => {
     setEditingLessonId(lesson.id)
     setEditLessonTitle(lesson.title)
     setEditLessonSubject(lesson.subject)
+    // Detect whether existing subject is canonical or custom
+    const isCustom = lesson.subject && !CANONICAL_SUBJECTS.includes(lesson.subject)
+    setEditLessonSubjectSelect(isCustom ? '__custom__' : (lesson.subject || ''))
+    setEditLessonSubjectCustom(isCustom ? lesson.subject : '')
     setEditLessonDescription(formatLessonDescription(lesson.description) || '')
     setEditLessonDate(lesson.lesson_date || '')
-    const duration = convertMinutesToDuration(lesson.duration_minutes);
-    setEditLessonDurationValue(duration.value);
-    setEditLessonDurationUnit(duration.unit);
+    const duration = convertMinutesToDuration(lesson.duration_minutes)
+    setEditLessonDurationValue(duration.value)
+    setEditLessonDurationUnit(duration.unit)
     if (lesson.lesson_date && lesson.duration_minutes) {
       const start = new Date(lesson.lesson_date + 'T12:00:00')
       const durationDays = Math.ceil(lesson.duration_minutes / 360)
@@ -413,80 +391,61 @@ const getUser = async () => {
     }
   }
 
-  const cancelEditLesson = () => setEditingLessonId(null)
+  const cancelEditLesson = () => {
+    setEditingLessonId(null)
+    setShowLessonEditModal(false)
+  }
 
   const saveEditLesson = async (id: string) => {
-    console.log('🔵 saveEditLesson called with ID:', id);
-    console.log('🔵 Current edit states:', {
-      title: editLessonTitle,
-      subject: editLessonSubject,
-      date: editLessonDate,
-      durationValue: editLessonDurationValue,
-      durationUnit: editLessonDurationUnit
-    });
-    
     const durationInMinutes = convertDurationToMinutes(editLessonDurationValue, editLessonDurationUnit)
-    
+    const resolvedSubject = editLessonSubjectSelect === '__custom__' ? editLessonSubjectCustom : editLessonSubjectSelect
+
     const updates = {
       title: editLessonTitle,
-      subject: editLessonSubject,
+      subject: resolvedSubject,
       description: editLessonDescription,
       lesson_date: editLessonDate || null,
       duration_minutes: durationInMinutes
     }
-    
-    console.log('🔵 Updates object:', updates);
-    
+
     if (editLessonDate && vacationPeriods.length > 0) {
-      const vacation = vacationPeriods.find(v => 
+      const vacation = vacationPeriods.find(v =>
         editLessonDate >= v.start_date && editLessonDate <= v.end_date
       )
-      
       if (vacation) {
-        if (!confirm(`⚠️ ${editLessonDate} falls during ${vacation.name}.\n\nSave lesson anyway?`)) {
-          console.log('❌ User cancelled due to vacation warning');
-          return
-        }
+        if (!confirm(`⚠️ ${editLessonDate} falls during ${vacation.name}.\n\nSave lesson anyway?`)) return
       }
     }
-    
+
     if (editLessonDate) {
       const holiday = DEFAULT_HOLIDAYS_2025_2026.find((h: any) => {
         const holidayDate = h.date || h.start
         return holidayDate === editLessonDate
       })
-      
       if (holiday) {
-        if (!confirm(`⚠️ ${editLessonDate} is ${holiday.name}.\n\nSave lesson anyway?`)) {
-          console.log('❌ User cancelled due to holiday warning');
-          return
-        }
+        if (!confirm(`⚠️ ${editLessonDate} is ${holiday.name}.\n\nSave lesson anyway?`)) return
       }
     }
-    
+
     const currentLesson = allLessons.find(l => l.id === id)
-    console.log('🔵 Current lesson from DB:', currentLesson);
-    
-    if (currentLesson && 
-        currentLesson.lesson_date && 
-        editLessonDate && 
-        currentLesson.lesson_date !== editLessonDate) {
-      
-      const subsequentLessons = allLessons.filter(lesson => 
+
+    if (
+      currentLesson &&
+      currentLesson.lesson_date &&
+      editLessonDate &&
+      currentLesson.lesson_date !== editLessonDate
+    ) {
+      const subsequentLessons = allLessons.filter(lesson =>
         lesson.kid_id === currentLesson.kid_id &&
         lesson.id !== id &&
         lesson.lesson_date &&
         lesson.lesson_date > currentLesson.lesson_date
       )
-      
-      console.log('🔵 Found subsequent lessons:', subsequentLessons.length);
-      
+
       if (subsequentLessons.length > 0) {
         const oldDate = new Date(currentLesson.lesson_date)
         const newDateObj = new Date(editLessonDate)
         const suggestedShift = Math.round((newDateObj.getTime() - oldDate.getTime()) / (1000 * 60 * 60 * 24))
-        
-        console.log('🔵 Setting cascade modal data');
         setCascadeData({
           lessonId: id,
           originalDate: currentLesson.lesson_date,
@@ -499,92 +458,47 @@ const getUser = async () => {
         return
       }
     }
-    
-    console.log('🟢 Calling performLessonUpdate');
+
     await performLessonUpdate(id, updates)
   }
 
   const performLessonUpdate = async (id: string, updates: any) => {
-    setAllLessons(prev => prev.map(lesson => 
-      lesson.id === id ? { ...lesson, ...updates } : lesson
-    ))
+    setAllLessons(prev => prev.map(lesson => lesson.id === id ? { ...lesson, ...updates } : lesson))
     setLessonsByKid(prev => {
       const updated = { ...prev }
       Object.keys(updated).forEach(kidId => {
-        updated[kidId] = updated[kidId].map(lesson =>
-          lesson.id === id ? { ...lesson, ...updates } : lesson
-        )
+        updated[kidId] = updated[kidId].map(lesson => lesson.id === id ? { ...lesson, ...updates } : lesson)
       })
       return updated
     })
-    
-    if (selectedLesson?.id === id) {
-      setSelectedLesson({ ...selectedLesson, ...updates })
-    }
-    
+    if (selectedLesson?.id === id) setSelectedLesson({ ...selectedLesson, ...updates })
+
     const { error } = await supabase.from('lessons').update(updates).eq('id', id)
-    
     if (error) {
       console.error('Error saving lesson:', error)
       alert('Failed to save lesson changes')
       loadAllLessons()
     } else {
       setEditingLessonId(null)
+      setShowLessonEditModal(false)
     }
   }
 
-  const handleViewPastAssessments = (kidId: string, kidName: string) => {
-    setPastAssessmentsKidId(kidId);
-    setPastAssessmentsKidName(kidName);
-    setShowPastAssessments(true);
-  };
-  
-  const handleGeneratePersonalizedAssessment = (lesson: any) => {
-    setAssessmentForLesson(lesson);
-    setShowPersonalizedAssessment(true);
-  };
-  
-  const handleAssessmentCreated = (assessmentData: any) => {
-    setGeneratedAssessment(assessmentData);
-    setShowPersonalizedAssessment(false);
-    setShowAssessmentTaking(true);
-  };
-  
-  const handleAssessmentSubmitted = (results: any) => {
-    console.log('Assessment submitted:', results);
-    loadAllLessons();
-  };
-  
-  const handleClosePersonalizedAssessment = () => {
-    setShowPersonalizedAssessment(false);
-    setShowAssessmentTaking(false);
-    setGeneratedAssessment(null);
-    setAssessmentForLesson(null);
-  };
-  
   const handleStatusChange = async (lessonId: string, newStatus: 'not_started' | 'in_progress' | 'completed') => {
     const updates: any = { status: newStatus }
     if (newStatus === 'completed') updates.completed_at = new Date().toISOString()
     if (newStatus === 'not_started') updates.completed_at = null
-    
-    setAllLessons(prev => prev.map(lesson => 
-      lesson.id === lessonId ? { ...lesson, ...updates } : lesson
-    ))
+
+    setAllLessons(prev => prev.map(lesson => lesson.id === lessonId ? { ...lesson, ...updates } : lesson))
     setLessonsByKid(prev => {
       const updated = { ...prev }
       Object.keys(updated).forEach(kidId => {
-        updated[kidId] = updated[kidId].map(lesson =>
-          lesson.id === lessonId ? { ...lesson, ...updates } : lesson
-        )
+        updated[kidId] = updated[kidId].map(lesson => lesson.id === lessonId ? { ...lesson, ...updates } : lesson)
       })
       return updated
     })
+    if (selectedLesson?.id === lessonId) setSelectedLesson({ ...selectedLesson, ...updates })
 
-    // ADD THIS: Update the modal's displayed lesson
-  if (selectedLesson?.id === lessonId) {
-    setSelectedLesson({ ...selectedLesson, ...updates })
-  }
-    
     const { error } = await supabase.from('lessons').update(updates).eq('id', lessonId)
     if (error) {
       console.error('Error updating lesson status:', error)
@@ -595,49 +509,41 @@ const getUser = async () => {
 
   const handleCascadeUpdate = async (updateAll: boolean) => {
     if (!cascadeData) return
-    
+
     const { lessonId, originalDate, kidId } = cascadeData
     const daysDiff = cascadeDays
-    
     const durationInMinutes = convertDurationToMinutes(editLessonDurationValue, editLessonDurationUnit)
+    const resolvedSubject = editLessonSubjectSelect === '__custom__' ? editLessonSubjectCustom : editLessonSubjectSelect
     const updates = {
       title: editLessonTitle,
-      subject: editLessonSubject,
+      subject: resolvedSubject,
       description: editLessonDescription,
       lesson_date: editLessonDate || null,
       duration_minutes: durationInMinutes
     }
-    
+
     await performLessonUpdate(lessonId, updates)
-    
+
     if (updateAll && daysDiff !== 0) {
-      const subsequentLessons = allLessons.filter(lesson => 
+      const subsequentLessons = allLessons.filter(lesson =>
         lesson.kid_id === kidId &&
         lesson.id !== lessonId &&
         lesson.lesson_date &&
         lesson.lesson_date > originalDate
       )
-      
+
       const updatePromises = subsequentLessons.map(lesson => {
         const lessonDate = new Date(lesson.lesson_date!)
         lessonDate.setDate(lessonDate.getDate() + daysDiff)
-        const newLessonDate = lessonDate.toISOString().split('T')[0]
-        
-        return supabase
-          .from('lessons')
-          .update({ lesson_date: newLessonDate })
-          .eq('id', lesson.id)
+        return supabase.from('lessons').update({ lesson_date: lessonDate.toISOString().split('T')[0] }).eq('id', lesson.id)
       })
-      
+
       const results = await Promise.all(updatePromises)
-      const updatedCount = results.filter(result => !result.error).length
-      
+      const updatedCount = results.filter(r => !r.error).length
       await loadAllLessons()
-      
       setShowCascadeModal(false)
       setCascadeData(null)
       setCascadeDays(1)
-      
       setTimeout(() => {
         alert(`✅ Updated ${updatedCount} subsequent lesson${updatedCount !== 1 ? 's' : ''}. All dates shifted by ${Math.abs(daysDiff)} day${Math.abs(daysDiff) !== 1 ? 's' : ''} ${daysDiff > 0 ? 'later' : 'earlier'}.`)
       }, 100)
@@ -645,10 +551,7 @@ const getUser = async () => {
       setShowCascadeModal(false)
       setCascadeData(null)
       setCascadeDays(1)
-      
-      setTimeout(() => {
-        alert('✅ Lesson date updated. Other lessons unchanged.')
-      }, 100)
+      setTimeout(() => { alert('✅ Lesson date updated. Other lessons unchanged.') }, 100)
     }
   }
 
@@ -675,10 +578,7 @@ const getUser = async () => {
 
   const copyLessonToChild = async () => {
     if (!copyTargetChildId || !selectedLesson) return
-
-    // Define orgId inside the function so the code below can see it
-    const orgId = schoolYearSettings?.organization_id || user.id;
-    
+    const orgId = schoolYearSettings?.organization_id || user.id
     const targetChild = kids.find(k => k.id === copyTargetChildId)
     if (!targetChild) return
     const { error } = await supabase.from('lessons').insert([{
@@ -703,150 +603,132 @@ const getUser = async () => {
     }
   }
 
+  // ─── ASSESSMENT HANDLERS ─────────────────────────────────────────────────────
+
+  const handleViewPastAssessments = (kidId: string, kidName: string) => {
+    setPastAssessmentsKidId(kidId)
+    setPastAssessmentsKidName(kidName)
+    setShowPastAssessments(true)
+  }
+
+  const handleGeneratePersonalizedAssessment = (lesson: any) => {
+    setAssessmentForLesson(lesson)
+    setShowPersonalizedAssessment(true)
+  }
+
+  const handleAssessmentCreated = (assessmentData: any) => {
+    setGeneratedAssessment(assessmentData)
+    setShowPersonalizedAssessment(false)
+    setShowAssessmentTaking(true)
+  }
+
+  const handleAssessmentSubmitted = (results: any) => {
+    loadAllLessons()
+  }
+
+  const handleClosePersonalizedAssessment = () => {
+    setShowPersonalizedAssessment(false)
+    setShowAssessmentTaking(false)
+    setGeneratedAssessment(null)
+    setAssessmentForLesson(null)
+  }
+
   const handleLogout = async () => {
     await supabase.auth.signOut()
     router.push('/')
   }
 
   if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>
-  
+
+  // ─── RENDER ──────────────────────────────────────────────────────────────────
+
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-7xl mx-auto">
-        {/* Header Section with Quick Tips Toggle */}
+
+        {/* ── Header ── */}
         <div className="bg-white rounded-lg shadow p-6 mb-6">
           <div className="flex justify-between items-center mb-4">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">HomeschoolHQ Dashboard</h1>
               <UserMenu />
               <div className="mt-1">
-                <ParentProfileManager 
-                  userId={user.id} 
-                  onNameUpdate={(name) => setParentName(name)} 
-                />
+                <ParentProfileManager userId={user.id} onNameUpdate={(name) => setParentName(name)} />
               </div>
             </div>
             <div className="flex gap-2">
-            <button 
-              onClick={() => setShowHelp(!showHelp)}
-              className={`px-4 py-2 rounded-lg font-medium text-sm transition-all ${
-                showHelp 
-                  ? 'bg-blue-50 border-2 border-blue-200 text-blue-700' 
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-             {showHelp ? '✕ Hide Tips' : '💡 How To'}
-        </button>
-
-        <button 
-          onClick={() => router.push('/social')}
-          className="px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 font-medium"
-        >
-          🤝 Social Hub
-        </button>
-
-        {/* Settings Dropdown */}
-        <div className="relative">
-          <button
-            onClick={() => setShowSettingsMenu(!showSettingsMenu)}
-            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium flex items-center gap-2"
-          >
-            ⚙️ Settings
-            <span className={`transition-transform ${showSettingsMenu ? 'rotate-180' : ''}`}>▼</span>
-          </button>
-          
-          {showSettingsMenu && (
-            <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
               <button
-                onClick={() => {
-                  router.push('/materials');
-                  setShowSettingsMenu(false);
-                }}
-                className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 text-gray-700 w-full text-left"
+                onClick={() => setShowHelp(!showHelp)}
+                className={`px-4 py-2 rounded-lg font-medium text-sm transition-all ${showHelp ? 'bg-blue-50 border-2 border-blue-200 text-blue-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
               >
-                📦 Materials
+                {showHelp ? '✕ Hide Tips' : '💡 How To'}
               </button>
-              
-              <button
-                onClick={() => {
-                  router.push('/calendar/connect');
-                  setShowSettingsMenu(false);
-                }}
-                className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 text-gray-700 w-full text-left"
-              >
-                📅 Work Calendar
-              </button>
-              
-          
 
-              <button
-                onClick={() => {
-                  router.push('/admin');
-                  setShowSettingsMenu(false);
-                }}
-                className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 text-gray-700 w-full text-left"
-              >
-                🏫 School Year & Compliance
+              <button onClick={() => router.push('/social')} className="px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 font-medium">
+                🤝 Social Hub
+              </button>
+
+              {/* Settings Dropdown */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowSettingsMenu(!showSettingsMenu)}
+                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium flex items-center gap-2"
+                >
+                  ⚙️ Settings
+                  <span className={`transition-transform ${showSettingsMenu ? 'rotate-180' : ''}`}>▼</span>
+                </button>
+                {showSettingsMenu && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+                    <button onClick={() => { router.push('/materials'); setShowSettingsMenu(false) }} className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 text-gray-700 w-full text-left">
+                      📦 Materials
+                    </button>
+                    <button onClick={() => { router.push('/calendar/connect'); setShowSettingsMenu(false) }} className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 text-gray-700 w-full text-left">
+                      📅 Work Calendar
+                    </button>
+                    <button onClick={() => { router.push('/admin'); setShowSettingsMenu(false) }} className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 text-gray-700 w-full text-left">
+                      🏫 School Year & Compliance
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <button onClick={handleLogout} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium">
+                Logout
               </button>
             </div>
-          )}
-        </div>
+          </div>
 
-        <button 
-          onClick={handleLogout}
-          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium"
-        >
-          Logout
-        </button>
-        </div>
-        </div>
-
-          {/* Help Panel - Collapsible */}
+          {/* Help Panel */}
           {showHelp && (
             <div className="mt-4 pt-4 border-t border-gray-100 animate-in fade-in slide-in-from-top-4 duration-300">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border border-blue-200">
-                  <h3 className="font-bold text-blue-900 mb-2 flex items-center gap-2">
-                    <span className="text-xl">🎯</span>
-                    Getting Started
-                  </h3>
+                  <h3 className="font-bold text-blue-900 mb-2 flex items-center gap-2"><span className="text-xl">🎯</span>Getting Started</h3>
                   <p className="text-sm text-blue-800 leading-relaxed">
-                    <strong>Step 1:</strong> Add your children in the left sidebar<br/>
-                    <strong>Step 2:</strong> Import curriculum or create lessons<br/>
+                    <strong>Step 1:</strong> Add your children in the left sidebar<br />
+                    <strong>Step 2:</strong> Import curriculum or create lessons<br />
                     <strong>Step 3:</strong> Use calendar views to track progress
                   </p>
                 </div>
-
                 <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-4 border border-purple-200">
-                  <h3 className="font-bold text-purple-900 mb-2 flex items-center gap-2">
-                    <span className="text-xl">✨</span>
-                    Power Features
-                  </h3>
+                  <h3 className="font-bold text-purple-900 mb-2 flex items-center gap-2"><span className="text-xl">✨</span>Power Features</h3>
                   <p className="text-sm text-purple-800 leading-relaxed">
-                    <strong>Auto-Schedule:</strong> Bulk assign dates to lessons<br/>
-                    <strong>AI Generate:</strong> Create supplemental lessons instantly<br/>
+                    <strong>Auto-Schedule:</strong> Bulk assign dates to lessons<br />
+                    <strong>AI Generate:</strong> Create supplemental lessons instantly<br />
                     <strong>Import:</strong> Upload curriculum from PDFs
                   </p>
                 </div>
-
                 <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-4 border border-green-200">
-                  <h3 className="font-bold text-green-900 mb-2 flex items-center gap-2">
-                    <span className="text-xl">📊</span>
-                    View Modes
-                  </h3>
+                  <h3 className="font-bold text-green-900 mb-2 flex items-center gap-2"><span className="text-xl">📊</span>View Modes</h3>
                   <p className="text-sm text-green-800 leading-relaxed">
-                    <strong>Today:</strong> Focus on today's lessons<br/>
-                    <strong>This Week:</strong> See your weekly schedule<br/>
-                    <strong>Calendar:</strong> Month view with all children<br/>
+                    <strong>Today:</strong> Focus on today's lessons<br />
+                    <strong>This Week:</strong> See your weekly schedule<br />
+                    <strong>Calendar:</strong> Month view with all children<br />
                     <strong>Lessons:</strong> Detailed list by child
                   </p>
                 </div>
-
                 <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg p-4 border border-orange-200">
-                  <h3 className="font-bold text-orange-900 mb-2 flex items-center gap-2">
-                    <span className="text-xl">❓</span>
-                    Frequently Asked
-                  </h3>
+                  <h3 className="font-bold text-orange-900 mb-2 flex items-center gap-2"><span className="text-xl">❓</span>Frequently Asked</h3>
                   <div className="space-y-2">
                     {[
                       { q: "How do I get started?", a: "Click the '+ Add a Child' button in the left sidebar to create your first profile." },
@@ -855,17 +737,12 @@ const getUser = async () => {
                       { q: "How do AI features work?", a: "The Lesson Generator automatically creates supplemental lessons based on your topic." }
                     ].map((faq, i) => (
                       <div key={i} className="border-b border-orange-200 pb-2 last:border-0">
-                        <button 
-                          onClick={() => setExpandedFaq(expandedFaq === faq.q ? null : faq.q)}
-                          className="flex justify-between items-center w-full text-left text-xs font-medium text-orange-900 hover:text-orange-700 transition-colors"
-                        >
+                        <button onClick={() => setExpandedFaq(expandedFaq === faq.q ? null : faq.q)} className="flex justify-between items-center w-full text-left text-xs font-medium text-orange-900 hover:text-orange-700 transition-colors">
                           <span>{faq.q}</span>
                           <span className="text-orange-400 font-bold">{expandedFaq === faq.q ? '−' : '+'}</span>
                         </button>
                         {expandedFaq === faq.q && (
-                          <p className="mt-1 text-xs text-orange-800 bg-orange-50 p-2 rounded leading-relaxed">
-                            {faq.a}
-                          </p>
+                          <p className="mt-1 text-xs text-orange-800 bg-orange-50 p-2 rounded leading-relaxed">{faq.a}</p>
                         )}
                       </div>
                     ))}
@@ -876,98 +753,71 @@ const getUser = async () => {
           )}
         </div>
 
-{/* Today's Progress Strip */}
-{schoolYearSettings && (
-  <div className="bg-white rounded-lg shadow p-4 mb-4">
-    <div className="flex items-center justify-between mb-3">
-      <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest">Today's Progress</h3>
-      <span className="text-xs text-gray-400">{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</span>
-    </div>
-    <div className="grid grid-cols-3 gap-4">
-      
-      {/* Lessons Today */}
-      <button
-        onClick={() => setViewMode('today')}
-        className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors text-left"
-      >
-        <span className="text-2xl">📚</span>
-        <div>
-          <p className="text-xs text-gray-500 font-medium">Lessons Today</p>
-          <p className="text-lg font-black text-gray-900">
-            {allLessons.filter(l => l.lesson_date === new Date().toISOString().split('T')[0] && l.status === 'completed').length}
-            <span className="text-sm font-medium text-gray-400">
-              /{allLessons.filter(l => l.lesson_date === new Date().toISOString().split('T')[0]).length} done
-            </span>
-          </p>
-        </div>
-      </button>
+        {/* ── Today's Progress Strip ── */}
+        {schoolYearSettings && (
+          <div className="bg-white rounded-lg shadow p-4 mb-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest">Today's Progress</h3>
+              <span className="text-xs text-gray-400">{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</span>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <button onClick={() => setViewMode('today')} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors text-left">
+                <span className="text-2xl">📚</span>
+                <div>
+                  <p className="text-xs text-gray-500 font-medium">Lessons Today</p>
+                  <p className="text-lg font-black text-gray-900">
+                    {allLessons.filter(l => l.lesson_date === new Date().toISOString().split('T')[0] && l.status === 'completed').length}
+                    <span className="text-sm font-medium text-gray-400">/{allLessons.filter(l => l.lesson_date === new Date().toISOString().split('T')[0]).length} done</span>
+                  </p>
+                </div>
+              </button>
 
-      {/* Annual Goal */}
-      <button
-        onClick={() => router.push('/admin?tab=school-year')}
-        className={`flex items-center gap-3 p-3 rounded-lg text-left transition-colors ${
-          (complianceHealthScore ?? 0) >= 80 ? 'bg-green-50 hover:bg-green-100' :
-          (complianceHealthScore ?? 0) >= 40 ? 'bg-yellow-50 hover:bg-yellow-100' :
-          'bg-red-50 hover:bg-red-100'
-        }`}
-      >
-        <span className="text-2xl">🎯</span>
-        <div>
-          <p className="text-xs text-gray-500 font-medium">Annual Goal</p>
-          <p className={`text-lg font-black ${
-            (complianceHealthScore ?? 0) >= 80 ? 'text-green-700' :
-            (complianceHealthScore ?? 0) >= 40 ? 'text-yellow-700' :
-            'text-red-700'
-          }`}>
-            {complianceHealthScore ?? 0}%
-            <span className="text-sm font-medium text-gray-400 ml-1">
-              of {schoolYearSettings.annual_goal_value} lessons
-            </span>
-          </p>
-        </div>
-      </button>
+              <button
+                onClick={() => router.push('/admin?tab=school-year')}
+                className={`flex items-center gap-3 p-3 rounded-lg text-left transition-colors ${(complianceHealthScore ?? 0) >= 80 ? 'bg-green-50 hover:bg-green-100' : (complianceHealthScore ?? 0) >= 40 ? 'bg-yellow-50 hover:bg-yellow-100' : 'bg-red-50 hover:bg-red-100'}`}
+              >
+                <span className="text-2xl">🎯</span>
+                <div>
+                  <p className="text-xs text-gray-500 font-medium">Annual Goal</p>
+                  <p className={`text-lg font-black ${(complianceHealthScore ?? 0) >= 80 ? 'text-green-700' : (complianceHealthScore ?? 0) >= 40 ? 'text-yellow-700' : 'text-red-700'}`}>
+                    {complianceHealthScore ?? 0}%
+                    <span className="text-sm font-medium text-gray-400 ml-1">of {schoolYearSettings.annual_goal_value} lessons</span>
+                  </p>
+                </div>
+              </button>
 
-      {/* Days Logged This Week */}
-      <button
-        onClick={() => router.push('/admin?tab=attendance')}
-        className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors text-left"
-      >
-        <span className="text-2xl">📋</span>
-        <div>
-          <p className="text-xs text-gray-500 font-medium">Days Logged This Week</p>
-          <p className="text-lg font-black text-gray-900">
-            {(() => {
-              const today = new Date()
-              const weekStart = new Date(today)
-              weekStart.setDate(today.getDate() - today.getDay())
-              weekStart.setHours(0,0,0,0)
-              return manualAttendance.filter(a => 
-                new Date(a.attendance_date) >= weekStart
-              ).length
-            })()}
-            <span className="text-sm font-medium text-gray-400"> this week</span>
-          </p>
-        </div>
-      </button>
+              <button onClick={() => router.push('/admin?tab=attendance')} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors text-left">
+                <span className="text-2xl">📋</span>
+                <div>
+                  <p className="text-xs text-gray-500 font-medium">Days Logged This Week</p>
+                  <p className="text-lg font-black text-gray-900">
+                    {(() => {
+                      const today = new Date()
+                      const weekStart = new Date(today)
+                      weekStart.setDate(today.getDate() - today.getDay())
+                      weekStart.setHours(0, 0, 0, 0)
+                      return manualAttendance.filter(a => new Date(a.attendance_date) >= weekStart).length
+                    })()}
+                    <span className="text-sm font-medium text-gray-400"> this week</span>
+                  </p>
+                </div>
+              </button>
+            </div>
+          </div>
+        )}
 
-    </div>
-  </div>
-)}
-        {/* Attendance Reminder */}
-        <AttendanceReminder 
+        {/* ── Attendance Reminder ── */}
+        <AttendanceReminder
           onTakeAttendance={() => {
             router.push('/admin')
-            setTimeout(() => {
-              const event = new Event('openAttendance')
-              window.dispatchEvent(event)
-            }, 500)
+            setTimeout(() => { window.dispatchEvent(new Event('openAttendance')) }, 500)
           }}
           kids={kids}
           organizationId={user.id}
         />
 
         <div className="flex gap-8 mb-8">
-          {/* Children Sidebar */}
+          {/* ── Children Sidebar ── */}
           <div className={`${sidebarCollapsed ? 'w-16' : 'w-[350px]'} flex-shrink-0 transition-all duration-300`}>
             {sidebarCollapsed ? (
               <div className="bg-white rounded-lg shadow p-2 sticky top-4">
@@ -976,26 +826,15 @@ const getUser = async () => {
                 </button>
                 <div className="mt-4 space-y-2">
                   {kids.map((kid, index) => {
-                    const colors = getChildColor(index);
+                    const colors = getChildColor(index)
                     return (
-                      <button 
-                        key={kid.id}
-                        onClick={() => {
-                          setSelectedKid(kid.id); 
-                          setViewMode('list');
-                        }}
-                        className={`w-full p-2 rounded transition-colors border-2 ${selectedKid === kid.id ? `${colors.border} ${colors.bg} ring-2 ring-offset-1` : 'border-transparent hover:bg-gray-100'}`} 
-                        title={kid.displayname}
-                      >
-                        {kid.photo_url ? (
-                          <img src={kid.photo_url} alt={kid.displayname} className="w-10 h-10 rounded-full object-cover mx-auto" />
-                        ) : (
-                          <div className={`w-10 h-10 rounded-full ${colors.bg} flex items-center justify-center mx-auto text-sm font-bold`}>
-                            {kid.displayname.charAt(0)}
-                          </div>
-                        )}
+                      <button key={kid.id} onClick={() => { setSelectedKid(kid.id); setViewMode('list') }} className={`w-full p-2 rounded transition-colors border-2 ${selectedKid === kid.id ? `${colors.border} ${colors.bg} ring-2 ring-offset-1` : 'border-transparent hover:bg-gray-100'}`} title={kid.displayname}>
+                        {kid.photo_url
+                          ? <img src={kid.photo_url} alt={kid.displayname} className="w-10 h-10 rounded-full object-cover mx-auto" />
+                          : <div className={`w-10 h-10 rounded-full ${colors.bg} flex items-center justify-center mx-auto text-sm font-bold`}>{kid.displayname.charAt(0)}</div>
+                        }
                       </button>
-                    );
+                    )
                   })}
                 </div>
               </div>
@@ -1017,51 +856,25 @@ const getUser = async () => {
                   ) : (
                     <div className="space-y-4 mb-6">
                       {kids.map((kid, index) => {
-                        const colors = getChildColor(index);
+                        const colors = getChildColor(index)
                         return (
-                          <div
-                            key={kid.id}
-                            className={`rounded-lg border-3 transition-all ${
-                              selectedKid === kid.id 
-                                ? `${colors.border} ${colors.bg} border-3 shadow-md` 
-                                : 'border-gray-200 border-2 hover:border-gray-300'
-                            }`}
-                          >
-                            <div 
-                              className="p-4 cursor-pointer"
-                              onClick={() => {
-                                setSelectedKid(kid.id);
-                                setViewMode('list');
-                              }}
-                            >
+                          <div key={kid.id} className={`rounded-lg border-3 transition-all ${selectedKid === kid.id ? `${colors.border} ${colors.bg} border-3 shadow-md` : 'border-gray-200 border-2 hover:border-gray-300'}`}>
+                            <div className="p-4 cursor-pointer" onClick={() => { setSelectedKid(kid.id); setViewMode('list') }}>
                               <div className="flex items-center gap-3 mb-3">
-                                {kid.photo_url ? (
-                                  <img src={kid.photo_url} alt={kid.displayname} className="w-12 h-12 rounded-full object-cover ring-2 ring-white shadow" />
-                                ) : (
-                                  <div className={`w-12 h-12 rounded-full ${colors.bg} flex items-center justify-center text-lg font-bold ring-2 ring-white shadow`}>
-                                    {kid.displayname.charAt(0)}
-                                  </div>
-                                )}
+                                {kid.photo_url
+                                  ? <img src={kid.photo_url} alt={kid.displayname} className="w-12 h-12 rounded-full object-cover ring-2 ring-white shadow" />
+                                  : <div className={`w-12 h-12 rounded-full ${colors.bg} flex items-center justify-center text-lg font-bold ring-2 ring-white shadow`}>{kid.displayname.charAt(0)}</div>
+                                }
                                 <div className="flex-1">
                                   <h3 className="font-bold text-gray-900">{kid.displayname}</h3>
                                   {kid.grade && <p className="text-sm text-gray-600">Grade {kid.grade} • Age {kid.age}</p>}
                                 </div>
                                 <div className={`w-3 h-3 rounded-full ${colors.accent}`}></div>
                               </div>
-                              
                               <div className="flex flex-wrap gap-2 mb-3">
-                                {kid.current_hook && (
-                                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-red-100 text-red-800 border border-red-200">
-                                    🎣 {kid.current_hook}
-                                  </span>
-                                )}
-                                {kid.todays_vibe && (
-                                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-yellow-100 text-yellow-800 border border-yellow-200">
-                                    😊 {kid.todays_vibe}
-                                  </span>
-                                )}
+                                {kid.current_hook && <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-red-100 text-red-800 border border-red-200">🎣 {kid.current_hook}</span>}
+                                {kid.todays_vibe && <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-yellow-100 text-yellow-800 border border-yellow-200">😊 {kid.todays_vibe}</span>}
                               </div>
-                              
                               {kid.current_focus && (
                                 <div className="mt-2 pt-2 border-t border-gray-200">
                                   <p className="text-xs font-semibold text-gray-700 mb-1">Current Focus</p>
@@ -1069,30 +882,12 @@ const getUser = async () => {
                                 </div>
                               )}
                             </div>
-                            
                             <div className="px-4 pb-3 flex gap-2">
-                              <button 
-                                onClick={(e) => { 
-                                  e.stopPropagation(); 
-                                  setEditingKid(kid); 
-                                  setShowProfileForm(true); 
-                                }} 
-                                className="text-xs px-3 py-1 text-blue-600 hover:bg-blue-50 rounded border border-blue-200 font-medium"
-                              >
-                                ✏️ Update
-                              </button>
-                              <button 
-                                onClick={(e) => { 
-                                  e.stopPropagation(); 
-                                  deleteKid(kid.id, kid.displayname); 
-                                }} 
-                                className="text-xs px-3 py-1 text-red-600 hover:bg-red-50 rounded border border-red-200 font-medium"
-                              >
-                                🗑️
-                              </button>
+                              <button onClick={(e) => { e.stopPropagation(); setEditingKid(kid); setShowProfileForm(true) }} className="text-xs px-3 py-1 text-blue-600 hover:bg-blue-50 rounded border border-blue-200 font-medium">✏️ Update</button>
+                              <button onClick={(e) => { e.stopPropagation(); deleteKid(kid.id, kid.displayname) }} className="text-xs px-3 py-1 text-red-600 hover:bg-red-50 rounded border border-red-200 font-medium">🗑️</button>
                             </div>
                           </div>
-                        );
+                        )
                       })}
                     </div>
                   )}
@@ -1102,7 +897,7 @@ const getUser = async () => {
             )}
           </div>
 
-          {/* Main Content Area */}
+          {/* ── Main Content Area ── */}
           <div className="flex-1 min-w-0">
             {kids.length > 0 ? (
               <>
@@ -1111,61 +906,41 @@ const getUser = async () => {
                     <div className="flex justify-center items-center">
                       <h2 className="text-2xl font-bold text-gray-900">Family Schedule</h2>
                     </div>
-                    
+
+                    {/* Action Buttons */}
                     <div className="flex justify-center">
                       <div className="flex flex-wrap gap-3 justify-center">
-                        <button 
-                          onClick={() => setShowAutoSchedule(true)} 
-                          className="px-4 py-2.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium shadow-sm transition-all"
-                        >
+                        <button onClick={() => setShowAutoSchedule(true)} className="px-4 py-2.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium shadow-sm transition-all">
                           📅 Auto-Schedule
                         </button>
-                        
+
                         {hasFeature('curriculum_import') ? (
-                          <button 
-                            onClick={() => setShowImporter(true)} 
-                            className="px-4 py-2.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium shadow-sm transition-all"
-                          >
+                          <button onClick={() => setShowImporter(true)} className="px-4 py-2.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium shadow-sm transition-all">
                             📥 Import
                           </button>
                         ) : (
-                          <button 
-                          onClick={() => { 
-                            alert(getUpgradeMessage('curriculum_import')); 
-                            router.push('/pricing') 
-                          }}
-                            className="px-4 py-2.5 text-sm bg-gray-300 text-gray-600 rounded-lg cursor-not-allowed relative"
-                          >
+                          <button onClick={() => { alert(getUpgradeMessage('curriculum_import')); router.push('/pricing') }} className="px-4 py-2.5 text-sm bg-gray-300 text-gray-600 rounded-lg cursor-not-allowed relative">
                             📥 Import 🔒
                           </button>
                         )}
-                        <button 
-                          onClick={() => setShowLessonForm(!showLessonForm)} 
-                          className="px-4 py-2.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium shadow-sm transition-all"
-                        >
+
+                        <button onClick={() => setShowLessonForm(!showLessonForm)} className="px-4 py-2.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium shadow-sm transition-all">
                           + Add Lesson
                         </button>
+
                         {hasFeature('ai_generation') ? (
-                          <button 
-                            onClick={() => setShowGenerator(true)} 
-                            className="px-4 py-2.5 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium shadow-sm transition-all"
-                          >
+                          <button onClick={() => setShowGenerator(true)} className="px-4 py-2.5 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium shadow-sm transition-all">
                             ✨ Generate Lessons
                           </button>
                         ) : (
-                          <button 
-                          onClick={() => { 
-                            alert(getUpgradeMessage('ai_generation')); 
-                            router.push('/pricing') 
-                          }}
-                            className="px-4 py-2.5 text-sm bg-gray-300 text-gray-600 rounded-lg cursor-not-allowed relative"
-                          >
+                          <button onClick={() => { alert(getUpgradeMessage('ai_generation')); router.push('/pricing') }} className="px-4 py-2.5 text-sm bg-gray-300 text-gray-600 rounded-lg cursor-not-allowed relative">
                             ✨ Generate Lessons 🔒
                           </button>
                         )}
                       </div>
                     </div>
-                    
+
+                    {/* View Mode Tabs */}
                     <div className="flex justify-center">
                       <div className="flex bg-gray-100 rounded-lg p-1">
                         <button onClick={() => setViewMode('today')} className={`px-5 py-2 text-sm rounded transition-all ${viewMode === 'today' ? 'bg-white shadow text-gray-900 font-semibold' : 'text-gray-600 hover:text-gray-900'}`}>📚 Today</button>
@@ -1177,39 +952,13 @@ const getUser = async () => {
                   </div>
                 </div>
 
-                {showLessonForm && (
-                  <div className="bg-white rounded-lg shadow p-6 mb-6">
-                    <div className="flex justify-between items-center mb-3">
-                      <h3 className="font-semibold text-gray-900">Add New Lesson</h3>
-                      <button type="button" onClick={() => setShowLessonForm(false)} className="text-gray-500 hover:text-gray-700 text-2xl leading-none">×</button>
-                    </div>
-                    <form onSubmit={addLesson} className="space-y-3">
-                      <select value={selectedKid || ''} onChange={(e) => setSelectedKid(e.target.value)} className="w-full px-3 py-2 border rounded text-gray-900" required>
-                        <option value="">Select Child *</option>
-                        {kids.map(kid => (<option key={kid.id} value={kid.id}>{kid.displayname}</option>))}
-                      </select>
-                      <input type="text" value={lessonSubject} onChange={(e) => setLessonSubject(e.target.value)} className="w-full px-3 py-2 border rounded text-gray-900" placeholder="Subject (e.g., Math, Science) *" required />
-                      <input type="text" value={lessonTitle} onChange={(e) => setLessonTitle(e.target.value)} className="w-full px-3 py-2 border rounded text-gray-900" placeholder="Title *" required />
-                      <textarea value={lessonDescription} onChange={(e) => setLessonDescription(e.target.value)} className="w-full px-3 py-2 border rounded text-gray-900" placeholder="Description" rows={3} />
-                      <input type="date" value={lessonDate} onChange={(e) => setLessonDate(e.target.value)} className="w-full px-3 py-2 border rounded text-gray-900" />
-                      <div className="flex gap-2">
-                        <input type="number" min="1" value={lessonDurationValue} onChange={(e) => setLessonDurationValue(parseInt(e.target.value) || 1)} placeholder="Duration" className="flex-1 px-3 py-2 border rounded text-gray-900" />
-                        <select value={lessonDurationUnit} onChange={(e) => setLessonDurationUnit(e.target.value as DurationUnit)} className="px-3 py-2 border rounded text-gray-900">
-                          {DURATION_UNITS.map(unit => (<option key={unit} value={unit}>{unit}</option>))}
-                        </select>
-                      </div>
-                      <button type="submit" disabled={addingLesson} className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700">{addingLesson ? 'Adding...' : 'Add Lesson'}</button>
-                    </form>
-                  </div>
-                )}
-
+                {/* ── View Content ── */}
                 {viewMode === 'today' ? (
                   <TodaysDashboard kids={kids} lessonsByKid={lessonsByKid} onStatusChange={handleStatusChange} onLessonClick={(lesson, child) => { setSelectedLesson(lesson); setSelectedLessonChild(child) }} />
                 ) : viewMode === 'week' ? (
                   <ThisWeekDashboard kids={kids} lessonsByKid={lessonsByKid} onStatusChange={handleStatusChange} onLessonClick={(lesson, child) => { setSelectedLesson(lesson); setSelectedLessonChild(child) }} />
                 ) : viewMode === 'calendar' ? (
                   <>
-                    {/* NEW: Calendar Filters */}
                     <div className="mb-6">
                       <CalendarFilters
                         filters={calendarFilters}
@@ -1222,37 +971,35 @@ const getUser = async () => {
                         }}
                       />
                     </div>
-
-                    {/* Calendar with all activity types */}
-                    <LessonCalendar 
-                      kids={kids} 
+                    <LessonCalendar
+                      kids={kids}
                       lessonsByKid={lessonsByKid}
                       socialEvents={socialEvents}
                       coopEnrollments={coopEnrollments}
                       manualAttendance={manualAttendance}
                       filters={calendarFilters}
                       onLessonClick={(lesson, child) => {
-                        setSelectedLesson(lesson); 
-                        setSelectedLessonChild(child); 
-                        startEditLesson(lesson);
-                        setShowLessonEditModal(true); 
-                      }} 
+                        setSelectedLesson(lesson)
+                        setSelectedLessonChild(child)
+                        startEditLesson(lesson)
+                        setShowLessonEditModal(true)
+                      }}
                       onStatusChange={handleStatusChange}
                       userId={user.id}
                     />
                   </>
                 ) : (
-                  <AllChildrenList 
-                    kids={kids} 
-                    lessonsByKid={lessonsByKid} 
-                    autoExpandKid={selectedKid} 
-                    onEditLesson={(lesson) => { 
-                      setSelectedLesson(lesson); 
-                      setSelectedLessonChild(kids.find(k => k.id === lesson.kid_id) || null); 
-                      startEditLesson(lesson) 
-                      setShowLessonEditModal(true);
-                    }} 
-                    onDeleteLesson={deleteLesson} 
+                  <AllChildrenList
+                    kids={kids}
+                    lessonsByKid={lessonsByKid}
+                    autoExpandKid={selectedKid}
+                    onEditLesson={(lesson) => {
+                      setSelectedLesson(lesson)
+                      setSelectedLessonChild(kids.find(k => k.id === lesson.kid_id) || null)
+                      startEditLesson(lesson)
+                      setShowLessonEditModal(true)
+                    }}
+                    onDeleteLesson={deleteLesson}
                     onCycleStatus={cycleLessonStatus}
                     onGenerateAssessment={handleGeneratePersonalizedAssessment}
                     onViewPastAssessments={handleViewPastAssessments}
@@ -1260,197 +1007,167 @@ const getUser = async () => {
                 )}
 
                 {showGenerator && <LessonGenerator kids={kids} userId={user.id} onClose={() => setShowGenerator(false)} />}
-                {showImporter && selectedKid && <CurriculumImporter childId={selectedKid} childName={kids.find(k => k.id === selectedKid)?.displayname || ''} onClose={() => setShowImporter(false)} onImportComplete={() => { setShowImporter(false); loadAllLessons() }} />}
+                {showImporter && selectedKid && (
+                  <CurriculumImporter
+                    childId={selectedKid}
+                    childName={kids.find(k => k.id === selectedKid)?.displayname || ''}
+                    onClose={() => setShowImporter(false)}
+                    onImportComplete={() => { setShowImporter(false); loadAllLessons() }}
+                  />
+                )}
               </>
             ) : (
               <div className="bg-white rounded-lg shadow p-12 text-center">
                 <div className="text-6xl mb-4">👋</div>
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome to HomeschoolHQ!</h2>
                 <p className="text-gray-600 mb-6">Let's get started by adding your first child.</p>
-                <button 
-                  onClick={() => { setEditingKid(null); setShowProfileForm(true) }}
-                  className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium shadow-lg"
-                >
+                <button onClick={() => { setEditingKid(null); setShowProfileForm(true) }} className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium shadow-lg">
                   + Add Your First Child
                 </button>
               </div>
             )}
           </div>
         </div>
-
-
       </div>
-      
-      {/* Modals */}
-      {showProfileForm && (
-  <KidProfileForm 
-    kid={editingKid || undefined} 
-    onSave={async (data) => {
-      try {
-        if (data.id) {
-          // UPDATE EXISTING KID
-          const updateData: any = {
-            user_id: user.id,
-            organization_id: user.id,
-            firstname: data.firstname,
-            lastname: data.lastname,
-            displayname: data.displayname || data.firstname,
-            age: data.age,
-            grade: data.grade,
-            learning_style: data.learning_style,
-            pace_of_learning: data.pace_of_learning,
-            environmental_needs: data.environmental_needs,
-            current_hook: data.current_hook,
-            todays_vibe: data.todays_vibe,
-            current_focus: data.current_focus
-          }
-          
-          if (data.photoFile) {
-            const fileExt = data.photoFile.name.split('.').pop()
-            const fileName = `${data.id}/${Date.now()}.${fileExt}`
-            const { error: uploadError } = await supabase.storage
-              .from('child-photos')
-              .upload(fileName, data.photoFile)
-            
-            if (!uploadError) {
-              const { data: { publicUrl } } = supabase.storage
-                .from('child-photos')
-                .getPublicUrl(fileName)
-              updateData.photo_url = publicUrl
-            } else {
-              console.error('Photo upload error:', uploadError)
-            }
-          }
-          
-          const { error: updateError } = await supabase
-            .from('kids')
-            .update(updateData)
-            .eq('id', data.id)
-          
-          if (updateError) {
-            console.error('Error updating kid:', updateError)
-            alert('Error updating child: ' + updateError.message)
-            return
-          }
-          
-          if (data.subject_proficiencies?.length > 0) {
-            await supabase.from('subject_proficiency').delete().eq('kid_id', data.id)
-            const proficienciesToInsert = data.subject_proficiencies.map((sp: any) => ({
-              kid_id: data.id,
-              subject: sp.subject,
-              proficiency: sp.proficiency,
-              notes: sp.notes || ''
-            }))
-            const { error: profError } = await supabase
-              .from('subject_proficiency')
-              .insert(proficienciesToInsert)
-            
-            if (profError) {
-              console.error('Error saving subject proficiencies:', profError)
-            }
-          }
-        } else {
-          // CREATE NEW KID
-          const { data: newKid, error } = await supabase.from('kids').insert([{
-            user_id: user.id,
-            organization_id: user.id,
-            firstname: data.firstname,
-            lastname: data.lastname,
-            displayname: data.displayname || data.firstname,
-            age: data.age,
-            grade: data.grade,
-            learning_style: data.learning_style,
-            pace_of_learning: data.pace_of_learning,
-            environmental_needs: data.environmental_needs,
-            current_hook: data.current_hook,
-            todays_vibe: data.todays_vibe,
-            current_focus: data.current_focus
-          }]).select()
-          
-          if (error) {
-            console.error('Error creating kid:', error)
-            alert('Error creating child: ' + error.message)
-            return
-          }
-          
-          if (!newKid || newKid.length === 0) {
-            alert('Error: Child was not created. Please try again.')
-            return
-          }
-          
-          const newKidId = newKid[0].id
-          console.log('✅ New kid created with ID:', newKidId)
-          
-          if (data.photoFile) {
-            const fileExt = data.photoFile.name.split('.').pop()
-            const fileName = `${newKidId}/${Date.now()}.${fileExt}`
-            const { error: uploadError } = await supabase.storage
-              .from('child-photos')
-              .upload(fileName, data.photoFile)
-            
-            if (!uploadError) {
-              const { data: { publicUrl } } = supabase.storage
-                .from('child-photos')
-                .getPublicUrl(fileName)
-              await supabase.from('kids').update({ photo_url: publicUrl }).eq('id', newKidId)
-            } else {
-              console.error('Photo upload error:', uploadError)
-            }
-          }
-          
-          if (data.subject_proficiencies?.length > 0) {
-            const proficienciesToInsert = data.subject_proficiencies.map((sp: any) => ({
-              kid_id: newKidId,
-              subject: sp.subject,
-              proficiency: sp.proficiency,
-              notes: sp.notes || ''
-            }))
-            const { error: profError } = await supabase
-              .from('subject_proficiency')
-              .insert(proficienciesToInsert)
-            
-            if (profError) {
-              console.error('Error saving subject proficiencies:', profError)
-            }
-          }
-        }
-        
-        // Reload kids list
-        console.log('🔄 Reloading kids list...')
-        await loadKids()
-        
-        setShowProfileForm(false)
-        setEditingKid(null)
-        
-        if (data.id) {
-          setSelectedKid(data.id)
-        }
-      } catch (err) {
-        console.error('❌ Unexpected error saving kid profile:', err)
-        alert('An unexpected error occurred. Please try again.')
-      }
-    }}
-    onCancel={() => { 
-      setShowProfileForm(false); 
-      setEditingKid(null) 
-    }} 
-  />
-)}
 
+      {/* ════════════════════════════════════════
+          MODALS
+      ════════════════════════════════════════ */}
+
+      {/* ── Kid Profile Form ── */}
+      {showProfileForm && (
+        <KidProfileForm
+          kid={editingKid || undefined}
+          onSave={async (data) => {
+            try {
+              if (data.id) {
+                const updateData: any = {
+                  user_id: user.id,
+                  organization_id: user.id,
+                  firstname: data.firstname,
+                  lastname: data.lastname,
+                  displayname: data.displayname || data.firstname,
+                  age: data.age,
+                  grade: data.grade,
+                  learning_style: data.learning_style,
+                  pace_of_learning: data.pace_of_learning,
+                  environmental_needs: data.environmental_needs,
+                  current_hook: data.current_hook,
+                  todays_vibe: data.todays_vibe,
+                  current_focus: data.current_focus
+                }
+
+                if (data.photoFile) {
+                  const fileExt = data.photoFile.name.split('.').pop()
+                  const fileName = `${data.id}/${Date.now()}.${fileExt}`
+                  const { error: uploadError } = await supabase.storage.from('child-photos').upload(fileName, data.photoFile)
+                  if (!uploadError) {
+                    const { data: { publicUrl } } = supabase.storage.from('child-photos').getPublicUrl(fileName)
+                    updateData.photo_url = publicUrl
+                  } else {
+                    console.error('Photo upload error:', uploadError)
+                  }
+                }
+
+                const { error: updateError } = await supabase.from('kids').update(updateData).eq('id', data.id)
+                if (updateError) {
+                  console.error('Error updating kid:', updateError)
+                  alert('Error updating child: ' + updateError.message)
+                  return
+                }
+
+                if (data.subject_proficiencies?.length > 0) {
+                  await supabase.from('subject_proficiency').delete().eq('kid_id', data.id)
+                  const { error: profError } = await supabase.from('subject_proficiency').insert(
+                    data.subject_proficiencies.map((sp: any) => ({
+                      kid_id: data.id,
+                      subject: sp.subject,
+                      proficiency: sp.proficiency,
+                      notes: sp.notes || ''
+                    }))
+                  )
+                  if (profError) console.error('Error saving subject proficiencies:', profError)
+                }
+              } else {
+                const { data: newKid, error } = await supabase.from('kids').insert([{
+                  user_id: user.id,
+                  organization_id: user.id,
+                  firstname: data.firstname,
+                  lastname: data.lastname,
+                  displayname: data.displayname || data.firstname,
+                  age: data.age,
+                  grade: data.grade,
+                  learning_style: data.learning_style,
+                  pace_of_learning: data.pace_of_learning,
+                  environmental_needs: data.environmental_needs,
+                  current_hook: data.current_hook,
+                  todays_vibe: data.todays_vibe,
+                  current_focus: data.current_focus
+                }]).select()
+
+                if (error) {
+                  console.error('Error creating kid:', error)
+                  alert('Error creating child: ' + error.message)
+                  return
+                }
+
+                if (!newKid || newKid.length === 0) {
+                  alert('Error: Child was not created. Please try again.')
+                  return
+                }
+
+                const newKidId = newKid[0].id
+
+                if (data.photoFile) {
+                  const fileExt = data.photoFile.name.split('.').pop()
+                  const fileName = `${newKidId}/${Date.now()}.${fileExt}`
+                  const { error: uploadError } = await supabase.storage.from('child-photos').upload(fileName, data.photoFile)
+                  if (!uploadError) {
+                    const { data: { publicUrl } } = supabase.storage.from('child-photos').getPublicUrl(fileName)
+                    await supabase.from('kids').update({ photo_url: publicUrl }).eq('id', newKidId)
+                  } else {
+                    console.error('Photo upload error:', uploadError)
+                  }
+                }
+
+                if (data.subject_proficiencies?.length > 0) {
+                  const { error: profError } = await supabase.from('subject_proficiency').insert(
+                    data.subject_proficiencies.map((sp: any) => ({
+                      kid_id: newKidId,
+                      subject: sp.subject,
+                      proficiency: sp.proficiency,
+                      notes: sp.notes || ''
+                    }))
+                  )
+                  if (profError) console.error('Error saving subject proficiencies:', profError)
+                }
+              }
+
+              await loadKids()
+              setShowProfileForm(false)
+              setEditingKid(null)
+              if (data.id) setSelectedKid(data.id)
+            } catch (err) {
+              console.error('Unexpected error saving kid profile:', err)
+              alert('An unexpected error occurred. Please try again.')
+            }
+          }}
+          onCancel={() => { setShowProfileForm(false); setEditingKid(null) }}
+        />
+      )}
+
+      {/* ── Auto Schedule ── */}
       {showAutoSchedule && selectedKid && (
         <AutoScheduleModal
           isOpen={showAutoSchedule}
           onClose={() => setShowAutoSchedule(false)}
           kidId={selectedKid}
           kidName={kids.find(k => k.id === selectedKid)?.displayname}
-          onScheduleComplete={() => {
-            loadAllLessons()
-            setShowAutoSchedule(false)
-            setViewMode('calendar')
-          }}
+          onScheduleComplete={() => { loadAllLessons(); setShowAutoSchedule(false); setViewMode('calendar') }}
         />
       )}
 
+      {/* ── Assessment Creator ── */}
       {showPersonalizedAssessment && assessmentForLesson && (
         <PersonalizedAssessmentCreator
           lessonId={assessmentForLesson.id}
@@ -1462,6 +1179,7 @@ const getUser = async () => {
         />
       )}
 
+      {/* ── Assessment Taking ── */}
       {showAssessmentTaking && generatedAssessment && assessmentForLesson && (
         <AssessmentTaking
           assessmentData={generatedAssessment.assessment}
@@ -1473,297 +1191,340 @@ const getUser = async () => {
         />
       )}
 
+      {/* ── Past Assessments ── */}
       {showPastAssessments && pastAssessmentsKidId && (
         <PastAssessmentsViewer
           kidId={pastAssessmentsKidId}
           kidName={pastAssessmentsKidName}
-          onClose={() => {
-            setShowPastAssessments(false);
-            setPastAssessmentsKidId(null);
-            setPastAssessmentsKidName('');
-          }}
+          onClose={() => { setShowPastAssessments(false); setPastAssessmentsKidId(null); setPastAssessmentsKidName('') }}
         />
       )}
-      {/* Lesson Edit Modal */}
-  {showLessonForm && (
-    <div className="bg-white rounded-lg shadow p-6 mb-6">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="font-semibold text-gray-900">Add New Lesson</h3>
-        <button 
-          type="button" 
-          onClick={() => setShowLessonForm(false)} 
-          className="text-gray-500 hover:text-gray-700 text-2xl leading-none"
-        >
-          ×
-        </button>
-      </div>
-      
-      <form onSubmit={addLesson} className="space-y-4">
-        {/* Child Selection */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Select Child *
-          </label>
-          <select 
-            value={selectedKid || ''} 
-            onChange={(e) => setSelectedKid(e.target.value)} 
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
-            required
-          >
-            <option value="">Choose a child...</option>
-            {kids.map(kid => (
-              <option key={kid.id} value={kid.id}>
-                {kid.displayname}{kid.grade ? ` (Grade ${kid.grade})` : ''}
-              </option>
-            ))}
-          </select>
-        </div>
 
-        {/* Subject */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Subject *
-          </label>
-          <input 
-            type="text" 
-            value={lessonSubject} 
-            onChange={(e) => setLessonSubject(e.target.value)} 
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
-            placeholder="e.g., Math, Science, History" 
-            list="common-subjects"
-            required 
-          />
-          <datalist id="common-subjects">
-            <option value="Math" />
-            <option value="Reading" />
-            <option value="Writing" />
-            <option value="Science" />
-            <option value="History" />
-            <option value="Art" />
-            <option value="Music" />
-            <option value="Physical Education" />
-          </datalist>
-        </div>
+      {/* ── Add Lesson Form ── */}
+      {showLessonForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
 
-        {/* Title */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Lesson Title *
-          </label>
-          <input 
-            type="text" 
-            value={lessonTitle} 
-            onChange={(e) => setLessonTitle(e.target.value)} 
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
-            placeholder="e.g., Introduction to Fractions" 
-            required 
-          />
-        </div>
+            {/* Header */}
+            <div className="bg-gradient-to-r from-green-500 to-teal-500 px-6 py-4 rounded-t-xl">
+              <div className="flex justify-between items-center">
+                <h3 className="text-xl font-bold text-white">+ Add New Lesson</h3>
+                <button onClick={() => setShowLessonForm(false)} className="text-white hover:text-gray-200 text-2xl leading-none font-light">×</button>
+              </div>
+            </div>
 
-        {/* Description */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Description (optional)
-          </label>
-          <textarea 
-            value={lessonDescription} 
-            onChange={(e) => setLessonDescription(e.target.value)} 
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
-            placeholder="What will you cover in this lesson?" 
-            rows={3} 
-          />
-        </div>
+            <form onSubmit={addLesson} className="p-6 space-y-4">
 
-        {/* Duration Settings - Blue Box */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
-          <label className="block text-sm font-medium text-gray-700">
-            How long will this lesson take?
-          </label>
-          
-          {/* Quick Duration Buttons */}
-          <div>
-            <p className="text-xs text-gray-600 mb-2">Quick select (minutes):</p>
-            <div className="flex gap-2">
-              {[15, 30, 45, 60].map(min => (
-                <button
-                  key={min}
-                  type="button"
-                  onClick={() => {
-                    setLessonDurationValue(min);
-                    setLessonDurationUnit('minutes');
-                  }}
-                  className={`flex-1 px-3 py-2 rounded-lg font-medium transition-all ${
-                    lessonDurationValue === min && lessonDurationUnit === 'minutes'
-                      ? 'bg-blue-600 text-white shadow-md'
-                      : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
-                  }`}
+              {/* Child Selection */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Select Child *</label>
+                <select
+                  value={selectedKid || ''}
+                  onChange={(e) => setSelectedKid(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  required
                 >
-                  {min} min
+                  <option value="">Choose a child...</option>
+                  {kids.map(kid => (
+                    <option key={kid.id} value={kid.id}>{kid.displayname}{kid.grade ? ` (Grade ${kid.grade})` : ''}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Subject */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Subject *</label>
+                <select
+                  value={lessonSubjectSelect}
+                  onChange={(e) => setLessonSubjectSelect(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  required
+                >
+                  <option value="">Choose a subject...</option>
+                  {CANONICAL_SUBJECTS.map(s => <option key={s} value={s}>{s}</option>)}
+                  <option value="__custom__">✏️ Custom subject...</option>
+                </select>
+                {lessonSubjectSelect === '__custom__' && (
+                  <div className="mt-2">
+                    <input
+                      type="text"
+                      value={lessonSubjectCustom}
+                      onChange={(e) => setLessonSubjectCustom(e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                      placeholder="e.g., Latin, Robotics, Home Economics"
+                      required
+                      autoFocus
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      💡 Use title case (e.g., "Latin" not "latin") so lessons group correctly in reports
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Title */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Lesson Title *</label>
+                <input
+                  type="text"
+                  value={lessonTitle}
+                  onChange={(e) => setLessonTitle(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  placeholder="e.g., Introduction to Fractions"
+                  required
+                />
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Description (optional)</label>
+                <textarea
+                  value={lessonDescription}
+                  onChange={(e) => setLessonDescription(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  placeholder="What will you cover in this lesson?"
+                  rows={3}
+                />
+              </div>
+
+              {/* Duration */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
+                <label className="block text-sm font-medium text-gray-700">How long will this lesson take?</label>
+                <div>
+                  <p className="text-xs text-gray-600 mb-2">Quick select (minutes):</p>
+                  <div className="flex gap-2">
+                    {[15, 30, 45, 60].map(min => (
+                      <button key={min} type="button"
+                        onClick={() => { setLessonDurationValue(min); setLessonDurationUnit('minutes') }}
+                        className={`flex-1 px-3 py-2 rounded-lg font-medium transition-all ${lessonDurationValue === min && lessonDurationUnit === 'minutes' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'}`}
+                      >{min} min</button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-600 mb-2">Or set custom duration:</p>
+                  <div className="flex gap-2">
+                    <input type="number" min="1" value={lessonDurationValue} onChange={(e) => setLessonDurationValue(parseInt(e.target.value) || 1)} className="w-24 px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                    <select value={lessonDurationUnit} onChange={(e) => setLessonDurationUnit(e.target.value as DurationUnit)} className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                      <option value="minutes">minutes</option>
+                      <option value="days">days</option>
+                      <option value="weeks">weeks</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Date */}
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <input type="checkbox" id="schedule-now" checked={!!lessonDate}
+                    onChange={(e) => { if (!e.target.checked) setLessonDate(''); else setLessonDate(new Date().toISOString().split('T')[0]) }}
+                    className="rounded"
+                  />
+                  <label htmlFor="schedule-now" className="text-sm font-medium text-gray-700">Schedule for a specific date</label>
+                </div>
+                {lessonDate ? (
+                  <div className="space-y-2">
+                    <input type="date" value={lessonDate} onChange={(e) => setLessonDate(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-green-500 focus:border-transparent" />
+                    <p className="text-xs text-gray-600">📅 This lesson will appear on your calendar for this date</p>
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-600">Lesson will be added without a date — you can schedule it later from the calendar</p>
+                )}
+              </div>
+
+              <button type="submit" disabled={addingLesson} className="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-medium transition-colors">
+                {addingLesson ? 'Adding Lesson...' : 'Add Lesson'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Edit Lesson Modal ── */}
+      {showLessonEditModal && editingLessonId && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+
+            {/* Header */}
+            <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-4 rounded-t-xl">
+              <div className="flex justify-between items-center">
+                <h3 className="text-xl font-bold text-white flex items-center gap-2">✏️ Edit Lesson</h3>
+                <button onClick={cancelEditLesson} className="text-white hover:text-gray-200 text-2xl leading-none font-light">×</button>
+              </div>
+              {selectedLessonChild && (
+                <p className="text-blue-100 text-sm mt-1">
+                  {selectedLessonChild.displayname}{selectedLessonChild.grade ? ` • Grade ${selectedLessonChild.grade}` : ''}
+                </p>
+              )}
+            </div>
+
+            <div className="p-6 space-y-4">
+
+              {/* Subject */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Subject *</label>
+                <select
+                  value={editLessonSubjectSelect}
+                  onChange={(e) => setEditLessonSubjectSelect(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required
+                >
+                  <option value="">Choose a subject...</option>
+                  {CANONICAL_SUBJECTS.map(s => <option key={s} value={s}>{s}</option>)}
+                  <option value="__custom__">✏️ Custom subject...</option>
+                </select>
+                {editLessonSubjectSelect === '__custom__' && (
+                  <div className="mt-2">
+                    <input
+                      type="text"
+                      value={editLessonSubjectCustom}
+                      onChange={(e) => setEditLessonSubjectCustom(e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="e.g., Latin, Robotics, Home Economics"
+                      required
+                      autoFocus
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      💡 Use title case (e.g., "Latin" not "latin") so lessons group correctly in reports
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Title */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Lesson Title *</label>
+                <input
+                  type="text"
+                  value={editLessonTitle}
+                  onChange={(e) => setEditLessonTitle(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="e.g., Introduction to Fractions"
+                  required
+                />
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Description (optional)</label>
+                <textarea
+                  value={editLessonDescription}
+                  onChange={(e) => setEditLessonDescription(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="What will you cover in this lesson?"
+                  rows={3}
+                />
+              </div>
+
+              {/* Duration */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
+                <label className="block text-sm font-medium text-gray-700">How long is this lesson?</label>
+                <div>
+                  <p className="text-xs text-gray-600 mb-2">Quick select (minutes):</p>
+                  <div className="flex gap-2">
+                    {[15, 30, 45, 60].map(min => (
+                      <button key={min} type="button"
+                        onClick={() => { setEditLessonDurationValue(min); setEditLessonDurationUnit('minutes') }}
+                        className={`flex-1 px-3 py-2 rounded-lg font-medium transition-all ${editLessonDurationValue === min && editLessonDurationUnit === 'minutes' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'}`}
+                      >{min} min</button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-600 mb-2">Or set custom duration:</p>
+                  <div className="flex gap-2">
+                    <input type="number" min="1" value={editLessonDurationValue} onChange={(e) => setEditLessonDurationValue(parseInt(e.target.value) || 1)} className="w-24 px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                    <select value={editLessonDurationUnit} onChange={(e) => setEditLessonDurationUnit(e.target.value as DurationUnit)} className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                      <option value="minutes">minutes</option>
+                      <option value="days">days</option>
+                      <option value="weeks">weeks</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Date */}
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <input type="checkbox" id="edit-schedule-date" checked={!!editLessonDate}
+                    onChange={(e) => { if (!e.target.checked) setEditLessonDate(''); else setEditLessonDate(new Date().toISOString().split('T')[0]) }}
+                    className="rounded"
+                  />
+                  <label htmlFor="edit-schedule-date" className="text-sm font-medium text-gray-700">Schedule for a specific date</label>
+                </div>
+                {editLessonDate ? (
+                  <div className="space-y-2">
+                    <input type="date" value={editLessonDate} onChange={(e) => setEditLessonDate(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-green-500 focus:border-transparent" />
+                    <p className="text-xs text-gray-600">📅 This lesson will appear on your calendar for this date</p>
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-600">No date set — lesson will appear in your unscheduled list</p>
+                )}
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={cancelEditLesson} className="flex-1 px-4 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors">
+                  Cancel
                 </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Custom Duration */}
-          <div>
-            <p className="text-xs text-gray-600 mb-2">Or set custom duration:</p>
-            <div className="flex gap-2">
-              <input
-                type="number"
-                min="1"
-                value={lessonDurationValue}
-                onChange={(e) => setLessonDurationValue(parseInt(e.target.value) || 1)}
-                className="w-24 px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="1"
-              />
-              <select
-                value={lessonDurationUnit}
-                onChange={(e) => setLessonDurationUnit(e.target.value as DurationUnit)}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="minutes">minutes</option>
-                <option value="days">days</option>
-                <option value="weeks">weeks</option>
-              </select>
+                <button type="button" onClick={() => saveEditLesson(editingLessonId)} className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors">
+                  Save Changes
+                </button>
+              </div>
             </div>
           </div>
         </div>
+      )}
 
-        {/* Schedule Date - Green Box */}
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4 space-y-3">
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id="schedule-now"
-              checked={!!lessonDate}
-              onChange={(e) => {
-                if (!e.target.checked) {
-                  setLessonDate('');
-                } else {
-                  setLessonDate(new Date().toISOString().split('T')[0]);
-                }
-              }}
-              className="rounded"
-            />
-            <label htmlFor="schedule-now" className="text-sm font-medium text-gray-700">
-              Schedule for a specific date
-            </label>
-          </div>
-          
-          {lessonDate ? (
-            <div className="space-y-2">
-              <input
-                type="date"
-                value={lessonDate}
-                onChange={(e) => setLessonDate(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-              <p className="text-xs text-gray-600">
-                📅 This lesson will appear on your calendar for this date
-              </p>
-            </div>
-          ) : (
-            <p className="text-xs text-gray-600">
-              Lesson will be added without a date - you can schedule it later from the calendar
-            </p>
-          )}
-        </div>
-
-        {/* Submit Button */}
-        <button 
-          type="submit" 
-          disabled={addingLesson} 
-          className="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-medium transition-colors"
-        >
-          {addingLesson ? 'Adding Lesson...' : 'Add Lesson'}
-        </button>
-      </form>
-    </div>
-  )}
-
-      {/* Cascade Update Modal */}
+      {/* ── Cascade Update Modal ── */}
       {showCascadeModal && cascadeData && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
             <div className="bg-gradient-to-r from-yellow-400 to-orange-500 px-6 py-4 rounded-t-lg">
-              <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                <span>⚠️</span>
-                Date Change Detected
-              </h3>
+              <h3 className="text-xl font-bold text-white flex items-center gap-2">⚠️ Date Change Detected</h3>
             </div>
-
             <div className="p-6 space-y-4">
               <p className="text-gray-900">
-              You're changing the lesson date from <strong>{new Date(cascadeData.originalDate + 'T00:00:00').toLocaleDateString()}</strong> to <strong>{new Date(cascadeData.newDate + 'T00:00:00').toLocaleDateString()}</strong>.
+                You're changing the lesson date from <strong>{new Date(cascadeData.originalDate + 'T00:00:00').toLocaleDateString()}</strong> to <strong>{new Date(cascadeData.newDate + 'T00:00:00').toLocaleDateString()}</strong>.
               </p>
-
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <p className="text-sm font-semibold text-blue-900 mb-2">
-                  📅 This affects {cascadeData.affectedCount} subsequent lesson{cascadeData.affectedCount !== 1 ? 's' : ''}
-                </p>
-                <p className="text-sm text-blue-800">
-                  Would you like to shift all subsequent lessons by the same amount?
-                </p>
+                <p className="text-sm font-semibold text-blue-900 mb-2">📅 This affects {cascadeData.affectedCount} subsequent lesson{cascadeData.affectedCount !== 1 ? 's' : ''}</p>
+                <p className="text-sm text-blue-800">Would you like to shift all subsequent lessons by the same amount?</p>
               </div>
-
               <div className="bg-gray-50 rounded-lg p-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Shift subsequent lessons by:
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Shift subsequent lessons by:</label>
                 <div className="flex items-center gap-2">
-                  <input
-                    type="number"
-                    value={cascadeDays}
-                    onChange={(e) => setCascadeDays(parseInt(e.target.value) || 0)}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded text-gray-900"
-                  />
+                  <input type="number" value={cascadeDays} onChange={(e) => setCascadeDays(parseInt(e.target.value) || 0)} className="flex-1 px-3 py-2 border border-gray-300 rounded text-gray-900" />
                   <span className="text-sm text-gray-600">day{Math.abs(cascadeDays) !== 1 ? 's' : ''}</span>
                 </div>
                 <p className="text-xs text-gray-500 mt-1">
-                  {cascadeDays > 0 ? `Push ${cascadeDays} day${cascadeDays !== 1 ? 's' : ''} later` : 
-                  cascadeDays < 0 ? `Pull ${Math.abs(cascadeDays)} day${Math.abs(cascadeDays) !== 1 ? 's' : ''} earlier` : 
-                  'No change'}
+                  {cascadeDays > 0 ? `Push ${cascadeDays} day${cascadeDays !== 1 ? 's' : ''} later` : cascadeDays < 0 ? `Pull ${Math.abs(cascadeDays)} day${Math.abs(cascadeDays) !== 1 ? 's' : ''} earlier` : 'No change'}
                 </p>
               </div>
             </div>
-
             <div className="bg-gray-50 border-t border-gray-200 px-6 py-4 flex gap-3">
-            <button
-              onClick={() => {
-                setShowCascadeModal(false);
-                setCascadeData(null);
-                setCascadeDays(1);
-                // Reload to make sure UI is in sync
-                loadAllLessons();
-              }}
-              className="px-4 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-100 font-medium transition-colors"
-            >
-              Cancel
-            </button>
-            <div className="flex-1"></div>
-            <button
-              onClick={() => handleCascadeUpdate(false)}
-              className="px-4 py-2 border border-blue-300 bg-blue-50 rounded text-blue-700 hover:bg-blue-100 font-medium transition-colors"
-            >
-              This Lesson Only
-            </button>
-            <button
-              onClick={() => handleCascadeUpdate(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-medium transition-colors"
-            >
-              Update All ({cascadeData.affectedCount})
-            </button>
-          </div>
+              <button onClick={() => { setShowCascadeModal(false); setCascadeData(null); setCascadeDays(1); loadAllLessons() }} className="px-4 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-100 font-medium transition-colors">
+                Cancel
+              </button>
+              <div className="flex-1"></div>
+              <button onClick={() => handleCascadeUpdate(false)} className="px-4 py-2 border border-blue-300 bg-blue-50 rounded text-blue-700 hover:bg-blue-100 font-medium transition-colors">
+                This Lesson Only
+              </button>
+              <button onClick={() => handleCascadeUpdate(true)} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-medium transition-colors">
+                Update All ({cascadeData.affectedCount})
+              </button>
+            </div>
           </div>
         </div>
       )}
-      <DevTierToggle /> 
+
+      <DevTierToggle />
       <HelpWidget />
     </div>
   )
 }
 
-// 3. THE EXPORT (The "Bouncer" layer at the very end)
 export default function DashboardPage() {
   return (
     <AuthGuard>

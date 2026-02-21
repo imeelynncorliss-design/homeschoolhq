@@ -80,8 +80,6 @@ export default function AttendanceTracker({ kids, organizationId, userId }: Atte
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       if (data.user) {
-        console.log('🆔 YOUR USER ID:', data.user.id)
-        console.log('📧 YOUR EMAIL:', data.user.email)
       }
     })
   }, [])
@@ -109,6 +107,7 @@ export default function AttendanceTracker({ kids, organizationId, userId }: Atte
   const [loadingState, setLoadingState] = useState(true)
   const [organizationName, setOrganizationName] = useState<string>('My Homeschool')
   const [schoolYear, setSchoolYear] = useState<string>('2025-2026')
+  const [requiredDays, setRequiredDays] = useState(180)
 
   // NEW: Activity filters
   const [filters, setFilters] = useState({
@@ -205,6 +204,16 @@ useEffect(() => {
     async function loadStateFromSettings() {
       setLoadingState(true)
       try {
+        // After setting stateInfo, also read the user's goal:
+          const { data: complianceData } = await supabase
+          .from('user_compliance_settings')
+          .select('annual_days_goal')
+          .eq('organization_id', organizationId)
+          .single()
+
+          if (complianceData?.annual_days_goal) {
+          setRequiredDays(complianceData.annual_days_goal)
+          }
         // CRITICAL: Wait for auth session first
         const { data: { session } } = await supabase.auth.getSession()
         
@@ -774,7 +783,7 @@ useEffect(() => {
       totalHoursNumber: totalHours,
       avgHoursPerDay: avgHoursPerDay.toFixed(1),
       completion: Math.round((totalDays / 180) * 100),
-      required: 180
+      required: requiredDays
     }
   }, [monthGroups])
 

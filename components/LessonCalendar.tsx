@@ -48,6 +48,7 @@ interface LessonCalendarProps {
   onLessonClick: (lesson: Lesson, child: Child) => void
   onStatusChange?: (lessonId: string, newStatus: 'not_started' | 'in_progress' | 'completed') => void
   userId: string
+  organizationId: string
 }
 
 // Color palette for children
@@ -79,7 +80,8 @@ export default function LessonCalendar({
   filters,
   onLessonClick, 
   onStatusChange,
-  userId
+  userId,
+  organizationId
 }: LessonCalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [showFamilyNotes, setShowFamilyNotes] = useState(false)
@@ -117,7 +119,7 @@ export default function LessonCalendar({
 
   // Custom date cell to show note indicator and make day clickable
   const DateCellWrapper = ({ children, value }: any) => {
-    const dateStr = moment(value).format('YYYY-MM-DD')
+    const dateStr = moment.utc(value).format('YYYY-MM-DD')
     const hasNotes = datesWithNotes.has(dateStr)
     
     return (
@@ -419,7 +421,6 @@ export default function LessonCalendar({
     if (event.activityType === 'lesson') {
       onLessonClick(event.resource.lesson, event.resource.child)
     } else {
-      // For social events and co-op classes, open the day details modal
       setSelectedDate(event.start)
       setShowDayDetails(true)
     }
@@ -436,7 +437,6 @@ export default function LessonCalendar({
         
         {/* Child Legend */}
         <div className="print-legend flex flex-wrap gap-3 mb-4">
-          {/* Children */}
           {kids.map(kid => (
             <div key={kid.id} className="print-legend-item flex items-center gap-2 bg-white border border-gray-200 px-3 py-1 rounded-full shadow-sm">
               {kid.photo_url && (
@@ -454,7 +454,6 @@ export default function LessonCalendar({
             </div>
           ))}
           
-          {/* Activity Type Legend */}
           {filters.showSocialEvents && (
             <div className="print-legend-item flex items-center gap-2 bg-white border border-gray-200 px-3 py-1 rounded-full shadow-sm">
               <span className="text-sm">🎉</span>
@@ -547,7 +546,6 @@ export default function LessonCalendar({
             font-weight: 600;
           }
           
-          /* Show print header only when printing */
           @media print {
             .print-header {
               display: block !important;
@@ -575,16 +573,16 @@ export default function LessonCalendar({
         />
       </div>
       
-      {/* Day Details Modal (NEW) */}
+      {/* Day Details Modal */}
       {showDayDetails && selectedDate && (
         <DayDetails
-          date={moment(selectedDate).format('YYYY-MM-DD')}
+          date={moment.utc(selectedDate).format('YYYY-MM-DD')}
           onClose={() => {
             setShowDayDetails(false)
             setSelectedDate(null)
           }}
           userId={userId}
-          organizationId={userId}
+          organizationId={organizationId}
         />
       )}
       
