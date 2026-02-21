@@ -8,9 +8,9 @@ import CurriculumImporter from '@/components/CurriculumImporter'
 import ChildPhotoUpload from '@/components/ChildPhotoUpload'
 import LessonCalendar from '@/components/LessonCalendar'
 import AllChildrenList from '@/components/AllChildrenList'
-import TodaysDashboard from '@/components/TodaysDashboard'
-import ThisWeekDashboard from '@/components/ThisWeekDashboard'
-import KidCard from '@/components/KidCard'
+// import TodaysDashboard from '@/components/TodaysDashboard'
+// import ThisWeekDashboard from '@/components/ThisWeekDashboard'
+import KidQuickPanel from '@/components/KidQuickPanel'
 import KidProfileForm from '@/components/KidProfileForm'
 import CalendarFilters from '@/components/CalendarFilters'
 import DevTierToggle from '@/components/DevTierToggle'
@@ -22,7 +22,6 @@ import AssessmentTaking from '@/components/AssessmentTaking'
 import AutoScheduleModal from '@/components/AutoScheduleModal'
 import HelpWidget from '../../components/HelpWidget'
 import PastAssessmentsViewer from '@/components/PastAssessmentsViewer'
-import PlanningModeDashboard from '@/components/PlanningModeDashboard'
 import AttendanceReminder from '@/components/AttendanceReminder'
 import AttendanceTracker from '@/components/AttendanceTracker'
 import ParentProfileManager from '@/components/ParentProfileManager'
@@ -34,15 +33,6 @@ import { CANONICAL_SUBJECTS } from '@/src/constants/subjects'
 
 const DURATION_UNITS = ['minutes', 'days', 'weeks'] as const
 type DurationUnit = typeof DURATION_UNITS[number]
-
-const CHILD_COLORS = [
-  { border: 'border-blue-400', bg: 'bg-blue-50', dot: 'bg-blue-500' },
-  { border: 'border-purple-400', bg: 'bg-purple-50', dot: 'bg-purple-500' },
-  { border: 'border-green-400', bg: 'bg-green-50', dot: 'bg-green-500' },
-  { border: 'border-pink-400', bg: 'bg-pink-50', dot: 'bg-pink-500' },
-  { border: 'border-orange-400', bg: 'bg-orange-50', dot: 'bg-orange-500' },
-  { border: 'border-teal-400', bg: 'bg-teal-50', dot: 'bg-teal-500' },
-]
 
 const convertMinutesToDuration = (minutes: number | null): { value: number; unit: DurationUnit } => {
   if (!minutes) return { value: 30, unit: 'minutes' }
@@ -69,10 +59,11 @@ function DashboardContent() {
   const [allLessons, setAllLessons] = useState<any[]>([])
   const [lessonsByKid, setLessonsByKid] = useState<{ [kidId: string]: any[] }>({})
   const [selectedKid, setSelectedKid] = useState<string | null>(null)
+  const [organizationId, setOrganizationId] = useState<string | null>(null)
   const [showAssessmentGenerator, setShowAssessmentGenerator] = useState(false)
   const [showAutoSchedule, setShowAutoSchedule] = useState(false)
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
-  const [viewMode, setViewMode] = useState<'today' | 'week' | 'calendar' | 'list'>('calendar')
+  const [showHamburger, setShowHamburger] = useState(false)
+  const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar')
   const [selectedLesson, setSelectedLesson] = useState<any | null>(null)
   const [selectedLessonChild, setSelectedLessonChild] = useState<any | null>(null)
   const [showCopyModal, setShowCopyModal] = useState(false)
@@ -81,6 +72,8 @@ function DashboardContent() {
   const [editingKid, setEditingKid] = useState<any | null>(null)
   const [showLessonForm, setShowLessonForm] = useState(false)
   const [showLessonEditModal, setShowLessonEditModal] = useState(false)
+  const [showHelp, setShowHelp] = useState(false)
+  const [expandedFaq, setExpandedFaq] = useState<string | null>(null)
 
   // Add lesson state
   const [lessonSubject, setLessonSubject] = useState('')
@@ -131,9 +124,7 @@ function DashboardContent() {
   const [schoolYearSettings, setSchoolYearSettings] = useState<any>(null)
   const [complianceHealthScore, setComplianceHealthScore] = useState<number | null>(null)
   const [parentName, setParentName] = useState('')
-  const [showHelp, setShowHelp] = useState(false)
   const [showSettingsMenu, setShowSettingsMenu] = useState(false)
-  const [expandedFaq, setExpandedFaq] = useState<string | null>(null)
 
   // Social integration state
   const [socialEvents, setSocialEvents] = useState<any[]>([])
@@ -147,17 +138,6 @@ function DashboardContent() {
   })
 
   const router = useRouter()
-
-  const getChildColor = (index: number) => {
-    const colors = [
-      { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-100', accent: 'bg-blue-500' },
-      { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-100', accent: 'bg-purple-500' },
-      { bg: 'bg-pink-50', text: 'text-pink-700', border: 'border-pink-100', accent: 'bg-pink-500' },
-      { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-100', accent: 'bg-orange-500' },
-      { bg: 'bg-teal-50', text: 'text-teal-700', border: 'border-teal-100', accent: 'bg-teal-500' },
-    ]
-    return colors[index % colors.length]
-  }
 
   // ─── DATA LOADING ───────────────────────────────────────────────────────────
 
@@ -226,7 +206,6 @@ function DashboardContent() {
   const getUser = async () => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
-      // AuthGuard dev mode fallback
       setUser({ id: 'd52497c0-42a9-49b7-ba3b-849bffa27fc4', email: 'dev@homeschoolhq.com' })
     } else {
       setUser(user)
@@ -268,6 +247,7 @@ function DashboardContent() {
           .maybeSingle()
 
         const orgId = kidsData?.organization_id || user.id
+        setOrganizationId(orgId)
 
         const { data: settings, error: settingsError } = await supabase
           .from('school_year_settings')
@@ -313,10 +293,35 @@ function DashboardContent() {
     loadLessonAssessmentScore()
   }, [selectedLesson])
 
+  // Close hamburger when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement
+      if (!target.closest('.hamburger-wrap')) {
+        setShowHamburger(false)
+      }
+    }
+    document.addEventListener('click', handleClickOutside)
+    return () => document.removeEventListener('click', handleClickOutside)
+  }, [])
+
   // ─── HELPERS ────────────────────────────────────────────────────────────────
 
   const hasFeature = (feature: string) => checkFeature(userTier, feature)
   const canAddChild = () => kids.length < getChildLimit(userTier)
+
+  const selectedKidData = kids.find(k => k.id === selectedKid) || null
+  const selectedKidLessons = selectedKid ? (lessonsByKid[selectedKid] || []) : []
+
+  // Progress stats for nav strip
+  const todayStr = new Date().toISOString().split('T')[0]
+  const lessonsToday = allLessons.filter(l => l.lesson_date === todayStr)
+  const lessonsDoneToday = lessonsToday.filter(l => l.status === 'completed').length
+  const today = new Date()
+  const weekStart = new Date(today)
+  weekStart.setDate(today.getDate() - today.getDay())
+  weekStart.setHours(0, 0, 0, 0)
+  const daysLoggedThisWeek = manualAttendance.filter(a => new Date(a.attendance_date) >= weekStart).length
 
   // ─── CRUD FUNCTIONS ─────────────────────────────────────────────────────────
 
@@ -333,7 +338,7 @@ function DashboardContent() {
     if (!selectedKid) return
     setAddingLesson(true)
 
-    const orgId = schoolYearSettings?.organization_id || user.id
+    const orgId = organizationId || user.id
     const durationInMinutes = convertDurationToMinutes(lessonDurationValue, lessonDurationUnit)
     const resolvedSubject = lessonSubjectSelect === '__custom__' ? lessonSubjectCustom : lessonSubjectSelect
 
@@ -371,7 +376,6 @@ function DashboardContent() {
     setEditingLessonId(lesson.id)
     setEditLessonTitle(lesson.title)
     setEditLessonSubject(lesson.subject)
-    // Detect whether existing subject is canonical or custom
     const isCustom = lesson.subject && !CANONICAL_SUBJECTS.includes(lesson.subject)
     setEditLessonSubjectSelect(isCustom ? '__custom__' : (lesson.subject || ''))
     setEditLessonSubjectCustom(isCustom ? lesson.subject : '')
@@ -578,7 +582,7 @@ function DashboardContent() {
 
   const copyLessonToChild = async () => {
     if (!copyTargetChildId || !selectedLesson) return
-    const orgId = schoolYearSettings?.organization_id || user.id
+    const orgId = organizationId || user.id
     const targetChild = kids.find(k => k.id === copyTargetChildId)
     if (!targetChild) return
     const { error } = await supabase.from('lessons').insert([{
@@ -643,391 +647,443 @@ function DashboardContent() {
   // ─── RENDER ──────────────────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gray-50">
 
-        {/* ── Header ── */}
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <div className="flex justify-between items-center mb-4">
+      {/* ════════════════════════════════════════
+          TOP NAV
+      ════════════════════════════════════════ */}
+      <div className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between gap-4">
+
+          {/* Left: Logo + Welcome + Kid Avatars */}
+          <div className="flex items-center gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">HomeschoolHQ Dashboard</h1>
-              <UserMenu />
-              <div className="mt-1">
-                <ParentProfileManager userId={user.id} onNameUpdate={(name) => setParentName(name)} />
-              </div>
+              <span className="text-lg font-black text-indigo-900 tracking-tight">Homeschool</span>
+              <span className="text-lg font-black text-purple-600 tracking-tight">HQ</span>
             </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setShowHelp(!showHelp)}
-                className={`px-4 py-2 rounded-lg font-medium text-sm transition-all ${showHelp ? 'bg-blue-50 border-2 border-blue-200 text-blue-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
-              >
-                {showHelp ? '✕ Hide Tips' : '💡 How To'}
-              </button>
+            <div className="text-sm text-gray-500">
+              Welcome, <span className="font-semibold text-gray-700">{parentName || user?.email?.split('@')[0]}</span> 👋
+            </div>
 
-              <button onClick={() => router.push('/social')} className="px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 font-medium">
-                🤝 Social Hub
-              </button>
+            <div className="w-px h-6 bg-gray-200" />
 
-              {/* Settings Dropdown */}
-              <div className="relative">
+            {/* Kid Avatars */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-gray-400 uppercase tracking-wide">Kids</span>
+              {kids.map((kid) => (
                 <button
-                  onClick={() => setShowSettingsMenu(!showSettingsMenu)}
-                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium flex items-center gap-2"
+                  key={kid.id}
+                  onClick={() => setSelectedKid(kid.id)}
+                  title={kid.displayname}
+                  className={`w-9 h-9 rounded-full overflow-hidden border-2 transition-all flex-shrink-0 ${
+                    selectedKid === kid.id
+                      ? 'border-purple-500 shadow-md ring-2 ring-purple-200'
+                      : 'border-gray-200 hover:border-purple-300'
+                  }`}
                 >
-                  ⚙️ Settings
-                  <span className={`transition-transform ${showSettingsMenu ? 'rotate-180' : ''}`}>▼</span>
+                  {kid.photo_url ? (
+                    <img src={kid.photo_url} alt={kid.displayname} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-violet-400 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
+                      {kid.displayname.charAt(0).toUpperCase()}
+                    </div>
+                  )}
                 </button>
-                {showSettingsMenu && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
-                    <button onClick={() => { router.push('/materials'); setShowSettingsMenu(false) }} className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 text-gray-700 w-full text-left">
-                      📦 Materials
-                    </button>
-                    <button onClick={() => { router.push('/calendar/connect'); setShowSettingsMenu(false) }} className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 text-gray-700 w-full text-left">
-                      📅 Work Calendar
-                    </button>
-                    <button onClick={() => { router.push('/admin'); setShowSettingsMenu(false) }} className="flex items-center gap-2 px-4 py-2 hover:bg-gray-100 text-gray-700 w-full text-left">
-                      🏫 School Year & Compliance
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              <button onClick={handleLogout} className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium">
-                Logout
-              </button>
+              ))}
+              {canAddChild() && (
+                <button
+                  onClick={() => { setEditingKid(null); setShowProfileForm(true) }}
+                  title="Add a child"
+                  className="w-9 h-9 rounded-full border-2 border-dashed border-gray-300 hover:border-purple-400 flex items-center justify-center text-gray-400 hover:text-purple-500 transition-all text-lg font-light"
+                >
+                  +
+                </button>
+              )}
             </div>
           </div>
 
-          {/* Help Panel */}
-          {showHelp && (
-            <div className="mt-4 pt-4 border-t border-gray-100 animate-in fade-in slide-in-from-top-4 duration-300">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border border-blue-200">
-                  <h3 className="font-bold text-blue-900 mb-2 flex items-center gap-2"><span className="text-xl">🎯</span>Getting Started</h3>
-                  <p className="text-sm text-blue-800 leading-relaxed">
-                    <strong>Step 1:</strong> Add your children in the left sidebar<br />
-                    <strong>Step 2:</strong> Import curriculum or create lessons<br />
-                    <strong>Step 3:</strong> Use calendar views to track progress
-                  </p>
-                </div>
-                <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-4 border border-purple-200">
-                  <h3 className="font-bold text-purple-900 mb-2 flex items-center gap-2"><span className="text-xl">✨</span>Power Features</h3>
-                  <p className="text-sm text-purple-800 leading-relaxed">
-                    <strong>Auto-Schedule:</strong> Bulk assign dates to lessons<br />
-                    <strong>AI Generate:</strong> Create supplemental lessons instantly<br />
-                    <strong>Import:</strong> Upload curriculum from PDFs
-                  </p>
-                </div>
-                <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-4 border border-green-200">
-                  <h3 className="font-bold text-green-900 mb-2 flex items-center gap-2"><span className="text-xl">📊</span>View Modes</h3>
-                  <p className="text-sm text-green-800 leading-relaxed">
-                    <strong>Today:</strong> Focus on today's lessons<br />
-                    <strong>This Week:</strong> See your weekly schedule<br />
-                    <strong>Calendar:</strong> Month view with all children<br />
-                    <strong>Lessons:</strong> Detailed list by child
-                  </p>
-                </div>
-                <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg p-4 border border-orange-200">
-                  <h3 className="font-bold text-orange-900 mb-2 flex items-center gap-2"><span className="text-xl">❓</span>Frequently Asked</h3>
-                  <div className="space-y-2">
-                    {[
-                      { q: "How do I get started?", a: "Click the '+ Add a Child' button in the left sidebar to create your first profile." },
-                      { q: "What's the best way to organize?", a: "Start with one subject and use 'Auto-Schedule' to map out your week or month." },
-                      { q: "Can I track multiple children?", a: "Yes, you can add all your children and switch between them using the sidebar." },
-                      { q: "How do AI features work?", a: "The Lesson Generator automatically creates supplemental lessons based on your topic." }
-                    ].map((faq, i) => (
-                      <div key={i} className="border-b border-orange-200 pb-2 last:border-0">
-                        <button onClick={() => setExpandedFaq(expandedFaq === faq.q ? null : faq.q)} className="flex justify-between items-center w-full text-left text-xs font-medium text-orange-900 hover:text-orange-700 transition-colors">
-                          <span>{faq.q}</span>
-                          <span className="text-orange-400 font-bold">{expandedFaq === faq.q ? '−' : '+'}</span>
-                        </button>
-                        {expandedFaq === faq.q && (
-                          <p className="mt-1 text-xs text-orange-800 bg-orange-50 p-2 rounded leading-relaxed">{faq.a}</p>
-                        )}
-                      </div>
-                    ))}
+          {/* Right: Progress strip + How To + Hamburger */}
+          <div className="flex items-center gap-3">
+
+            {/* Progress Strip */}
+            {schoolYearSettings && (
+              <div className="flex items-center bg-gray-50 border border-gray-200 rounded-xl px-1 py-1 gap-0">
+                <div className="flex items-center gap-2 px-3 py-1 rounded-lg hover:bg-white transition-colors cursor-default">
+                  <span className="text-lg">📚</span>
+                  <div>
+                    <div className="text-xs text-gray-400 font-semibold uppercase tracking-wide leading-none">Today</div>
+                    <div className={`text-sm font-black leading-tight ${lessonsDoneToday === lessonsToday.length && lessonsToday.length > 0 ? 'text-green-600' : 'text-gray-800'}`}>
+                      {lessonsDoneToday}<span className="text-xs font-medium text-gray-400">/{lessonsToday.length} done</span>
+                    </div>
                   </div>
                 </div>
+                <div className="w-px h-7 bg-gray-200" />
+                <button
+                  onClick={() => router.push('/admin?tab=school-year')}
+                  className={`flex items-center gap-2 px-3 py-1 rounded-lg transition-colors ${
+                    (complianceHealthScore ?? 0) >= 80 ? 'hover:bg-green-50' :
+                    (complianceHealthScore ?? 0) >= 40 ? 'hover:bg-yellow-50' : 'hover:bg-red-50'
+                  }`}
+                >
+                  <span className="text-lg">🎯</span>
+                  <div>
+                    <div className="text-xs text-gray-400 font-semibold uppercase tracking-wide leading-none">Annual Goal</div>
+                    <div className={`text-sm font-black leading-tight ${
+                      (complianceHealthScore ?? 0) >= 80 ? 'text-green-600' :
+                      (complianceHealthScore ?? 0) >= 40 ? 'text-yellow-600' : 'text-red-500'
+                    }`}>
+                      {complianceHealthScore ?? 0}%<span className="text-xs font-medium text-gray-400"> of {schoolYearSettings.annual_goal_value}</span>
+                    </div>
+                  </div>
+                </button>
+                <div className="w-px h-7 bg-gray-200" />
+                <button
+                  onClick={() => router.push('/admin?tab=attendance')}
+                  className="flex items-center gap-2 px-3 py-1 rounded-lg hover:bg-white transition-colors"
+                >
+                  <span className="text-lg">📋</span>
+                  <div>
+                    <div className="text-xs text-gray-400 font-semibold uppercase tracking-wide leading-none">This Week</div>
+                    <div className="text-sm font-black leading-tight text-gray-800">
+                      {daysLoggedThisWeek}<span className="text-xs font-medium text-gray-400"> days</span>
+                    </div>
+                  </div>
+                </button>
               </div>
+            )}
+
+            {/* How To */}
+            <button
+              onClick={() => setShowHelp(!showHelp)}
+              className={`px-3 py-2 rounded-lg font-medium text-sm transition-all border ${
+                showHelp
+                  ? 'bg-blue-50 border-blue-200 text-blue-700'
+                  : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              💡 How To
+            </button>
+
+            {/* Hamburger Menu */}
+            <div className="hamburger-wrap relative">
+              <button
+                onClick={(e) => { e.stopPropagation(); setShowHamburger(!showHamburger) }}
+                className="w-10 h-10 rounded-xl bg-indigo-900 hover:bg-indigo-800 flex flex-col items-center justify-center gap-1.5 transition-colors"
+              >
+                <span className="block w-4 h-0.5 bg-white rounded-full" />
+                <span className="block w-4 h-0.5 bg-white rounded-full" />
+                <span className="block w-4 h-0.5 bg-white rounded-full" />
+              </button>
+
+              {showHamburger && (
+                <div className="absolute right-0 top-12 bg-white border border-gray-200 rounded-xl shadow-xl min-w-[200px] py-2 z-[100]">
+                  <button
+                    onClick={() => { router.push('/social'); setShowHamburger(false) }}
+                    className="flex items-center gap-3 w-full px-4 py-2.5 text-sm font-semibold text-pink-600 hover:bg-pink-50 transition-colors"
+                  >
+                    🤝 Social Hub
+                  </button>
+                  <div className="h-px bg-gray-100 my-1" />
+                  <button
+                    onClick={() => { router.push('/materials'); setShowHamburger(false) }}
+                    className="flex items-center gap-3 w-full px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    📦 Materials
+                  </button>
+                  <button
+                    onClick={() => { router.push('/calendar/connect'); setShowHamburger(false) }}
+                    className="flex items-center gap-3 w-full px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    📅 Work Calendar
+                  </button>
+                  <button
+                    onClick={() => { router.push('/admin'); setShowHamburger(false) }}
+                    className="flex items-center gap-3 w-full px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    🏫 School Year &amp; Compliance
+                  </button>
+                  <button
+                    onClick={() => { setEditingKid(selectedKidData); setShowProfileForm(true); setShowHamburger(false) }}
+                    className="flex items-center gap-3 w-full px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    👤 Child Profiles
+                  </button>
+                  <div className="h-px bg-gray-100 my-1" />
+                  <button
+                    onClick={handleLogout}
+                    className="flex items-center gap-3 w-full px-4 py-2.5 text-sm font-semibold text-red-600 hover:bg-red-50 transition-colors"
+                  >
+                    Logout
+                  </button>
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
 
-        {/* ── Today's Progress Strip ── */}
-        {schoolYearSettings && (
-          <div className="bg-white rounded-lg shadow p-4 mb-4">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest">Today's Progress</h3>
-              <span className="text-xs text-gray-400">{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</span>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-              <button onClick={() => setViewMode('today')} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors text-left">
-                <span className="text-2xl">📚</span>
-                <div>
-                  <p className="text-xs text-gray-500 font-medium">Lessons Today</p>
-                  <p className="text-lg font-black text-gray-900">
-                    {allLessons.filter(l => l.lesson_date === new Date().toISOString().split('T')[0] && l.status === 'completed').length}
-                    <span className="text-sm font-medium text-gray-400">/{allLessons.filter(l => l.lesson_date === new Date().toISOString().split('T')[0]).length} done</span>
-                  </p>
+        {/* Help Panel */}
+        {showHelp && (
+          <div className="border-t border-gray-100 bg-white px-6 py-4 max-w-7xl mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border border-blue-200">
+                <h3 className="font-bold text-blue-900 mb-2 flex items-center gap-2"><span className="text-xl">🎯</span>Getting Started</h3>
+                <p className="text-sm text-blue-800 leading-relaxed">
+                  <strong>Step 1:</strong> Add your children using the + button<br />
+                  <strong>Step 2:</strong> Import curriculum or create lessons<br />
+                  <strong>Step 3:</strong> Use the calendar to track progress
+                </p>
+              </div>
+              <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-4 border border-purple-200">
+                <h3 className="font-bold text-purple-900 mb-2 flex items-center gap-2"><span className="text-xl">✨</span>Power Features</h3>
+                <p className="text-sm text-purple-800 leading-relaxed">
+                  <strong>Auto-Schedule:</strong> Bulk assign dates to lessons<br />
+                  <strong>AI Generate:</strong> Create supplemental lessons instantly<br />
+                  <strong>Import:</strong> Upload curriculum from PDFs
+                </p>
+              </div>
+              <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-4 border border-green-200">
+                <h3 className="font-bold text-green-900 mb-2 flex items-center gap-2"><span className="text-xl">📊</span>View Modes</h3>
+                <p className="text-sm text-green-800 leading-relaxed">
+                  <strong>Calendar:</strong> Month view with all children<br />
+                  <strong>Lessons:</strong> Detailed list by child<br />
+                  <strong>Click any day</strong> to view and work through that day's lessons
+                </p>
+              </div>
+              <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg p-4 border border-orange-200">
+                <h3 className="font-bold text-orange-900 mb-2 flex items-center gap-2"><span className="text-xl">❓</span>Frequently Asked</h3>
+                <div className="space-y-2">
+                  {[
+                    { q: "How do I get started?", a: "Click the + button next to Kids in the top nav to add your first child." },
+                    { q: "What's the best way to organize?", a: "Start with one subject and use 'Auto-Schedule' to map out your week or month." },
+                    { q: "Can I track multiple children?", a: "Yes — click any child's avatar in the top nav to switch between them." },
+                    { q: "How do AI features work?", a: "The Lesson Generator automatically creates supplemental lessons based on your topic." }
+                  ].map((faq, i) => (
+                    <div key={i} className="border-b border-orange-200 pb-2 last:border-0">
+                      <button onClick={() => setExpandedFaq(expandedFaq === faq.q ? null : faq.q)} className="flex justify-between items-center w-full text-left text-xs font-medium text-orange-900 hover:text-orange-700 transition-colors">
+                        <span>{faq.q}</span>
+                        <span className="text-orange-400 font-bold">{expandedFaq === faq.q ? '−' : '+'}</span>
+                      </button>
+                      {expandedFaq === faq.q && (
+                        <p className="mt-1 text-xs text-orange-800 bg-orange-50 p-2 rounded leading-relaxed">{faq.a}</p>
+                      )}
+                    </div>
+                  ))}
                 </div>
-              </button>
-
-              <button
-                onClick={() => router.push('/admin?tab=school-year')}
-                className={`flex items-center gap-3 p-3 rounded-lg text-left transition-colors ${(complianceHealthScore ?? 0) >= 80 ? 'bg-green-50 hover:bg-green-100' : (complianceHealthScore ?? 0) >= 40 ? 'bg-yellow-50 hover:bg-yellow-100' : 'bg-red-50 hover:bg-red-100'}`}
-              >
-                <span className="text-2xl">🎯</span>
-                <div>
-                  <p className="text-xs text-gray-500 font-medium">Annual Goal</p>
-                  <p className={`text-lg font-black ${(complianceHealthScore ?? 0) >= 80 ? 'text-green-700' : (complianceHealthScore ?? 0) >= 40 ? 'text-yellow-700' : 'text-red-700'}`}>
-                    {complianceHealthScore ?? 0}%
-                    <span className="text-sm font-medium text-gray-400 ml-1">of {schoolYearSettings.annual_goal_value} lessons</span>
-                  </p>
-                </div>
-              </button>
-
-              <button onClick={() => router.push('/admin?tab=attendance')} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors text-left">
-                <span className="text-2xl">📋</span>
-                <div>
-                  <p className="text-xs text-gray-500 font-medium">Days Logged This Week</p>
-                  <p className="text-lg font-black text-gray-900">
-                    {(() => {
-                      const today = new Date()
-                      const weekStart = new Date(today)
-                      weekStart.setDate(today.getDate() - today.getDay())
-                      weekStart.setHours(0, 0, 0, 0)
-                      return manualAttendance.filter(a => new Date(a.attendance_date) >= weekStart).length
-                    })()}
-                    <span className="text-sm font-medium text-gray-400"> this week</span>
-                  </p>
-                </div>
-              </button>
+              </div>
             </div>
           </div>
         )}
+      </div>
 
-        {/* ── Attendance Reminder ── */}
+      {/* ════════════════════════════════════════
+          MAIN CONTENT
+      ════════════════════════════════════════ */}
+      <div className="max-w-7xl mx-auto px-6 py-4 space-y-4">
+
+        {/* Attendance Reminder */}
         <AttendanceReminder
           onTakeAttendance={() => {
             router.push('/admin')
             setTimeout(() => { window.dispatchEvent(new Event('openAttendance')) }, 500)
           }}
           kids={kids}
-          organizationId={user.id}
+          organizationId={organizationId ?? user.id}
         />
 
-        <div className="flex gap-8 mb-8">
-          {/* ── Children Sidebar ── */}
-          <div className={`${sidebarCollapsed ? 'w-16' : 'w-[350px]'} flex-shrink-0 transition-all duration-300`}>
-            {sidebarCollapsed ? (
-              <div className="bg-white rounded-lg shadow p-2 sticky top-4">
-                <button onClick={() => setSidebarCollapsed(false)} className="w-full p-3 bg-gray-100 hover:bg-gray-200 rounded flex items-center justify-center transition-colors mb-2" title="Show children sidebar">
-                  <span className="text-3xl font-black text-black">→</span>
-                </button>
-                <div className="mt-4 space-y-2">
-                  {kids.map((kid, index) => {
-                    const colors = getChildColor(index)
-                    return (
-                      <button key={kid.id} onClick={() => { setSelectedKid(kid.id); setViewMode('list') }} className={`w-full p-2 rounded transition-colors border-2 ${selectedKid === kid.id ? `${colors.border} ${colors.bg} ring-2 ring-offset-1` : 'border-transparent hover:bg-gray-100'}`} title={kid.displayname}>
-                        {kid.photo_url
-                          ? <img src={kid.photo_url} alt={kid.displayname} className="w-10 h-10 rounded-full object-cover mx-auto" />
-                          : <div className={`w-10 h-10 rounded-full ${colors.bg} flex items-center justify-center mx-auto text-sm font-bold`}>{kid.displayname.charAt(0)}</div>
-                        }
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-6">
-                <div className="bg-white rounded-lg shadow p-8 kids-section">
-                  <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-xl font-bold text-gray-900">Your Children</h2>
-                    <button onClick={() => setSidebarCollapsed(true)} className="p-2 bg-gray-100 hover:bg-gray-200 rounded transition-colors" title="Collapse sidebar">
-                      <span className="text-3xl font-black text-black">←</span>
-                    </button>
-                  </div>
-                  <p className="text-sm text-gray-600 mb-4">👉 Click a child's name to view their lessons</p>
-                  {kids.length === 0 ? (
-                    <div className="text-center py-8">
-                      <p className="text-gray-600 mb-4">No children added yet.</p>
-                      <p className="text-sm text-gray-500 italic">Start by adding your first child below!</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-4 mb-6">
-                      {kids.map((kid, index) => {
-                        const colors = getChildColor(index)
-                        return (
-                          <div key={kid.id} className={`rounded-lg border-3 transition-all ${selectedKid === kid.id ? `${colors.border} ${colors.bg} border-3 shadow-md` : 'border-gray-200 border-2 hover:border-gray-300'}`}>
-                            <div className="p-4 cursor-pointer" onClick={() => { setSelectedKid(kid.id); setViewMode('list') }}>
-                              <div className="flex items-center gap-3 mb-3">
-                                {kid.photo_url
-                                  ? <img src={kid.photo_url} alt={kid.displayname} className="w-12 h-12 rounded-full object-cover ring-2 ring-white shadow" />
-                                  : <div className={`w-12 h-12 rounded-full ${colors.bg} flex items-center justify-center text-lg font-bold ring-2 ring-white shadow`}>{kid.displayname.charAt(0)}</div>
-                                }
-                                <div className="flex-1">
-                                  <h3 className="font-bold text-gray-900">{kid.displayname}</h3>
-                                  {kid.grade && <p className="text-sm text-gray-600">Grade {kid.grade} • Age {kid.age}</p>}
-                                </div>
-                                <div className={`w-3 h-3 rounded-full ${colors.accent}`}></div>
-                              </div>
-                              <div className="flex flex-wrap gap-2 mb-3">
-                                {kid.current_hook && <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-red-100 text-red-800 border border-red-200">🎣 {kid.current_hook}</span>}
-                                {kid.todays_vibe && <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-yellow-100 text-yellow-800 border border-yellow-200">😊 {kid.todays_vibe}</span>}
-                              </div>
-                              {kid.current_focus && (
-                                <div className="mt-2 pt-2 border-t border-gray-200">
-                                  <p className="text-xs font-semibold text-gray-700 mb-1">Current Focus</p>
-                                  <p className="text-sm text-gray-900">{kid.current_focus}</p>
-                                </div>
-                              )}
-                            </div>
-                            <div className="px-4 pb-3 flex gap-2">
-                              <button onClick={(e) => { e.stopPropagation(); setEditingKid(kid); setShowProfileForm(true) }} className="text-xs px-3 py-1 text-blue-600 hover:bg-blue-50 rounded border border-blue-200 font-medium">✏️ Update</button>
-                              <button onClick={(e) => { e.stopPropagation(); deleteKid(kid.id, kid.displayname) }} className="text-xs px-3 py-1 text-red-600 hover:bg-red-50 rounded border border-red-200 font-medium">🗑️</button>
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )}
-                  <button onClick={() => { setEditingKid(null); setShowProfileForm(true) }} className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 font-medium">+ Add a Child</button>
-                </div>
-              </div>
-            )}
+        {kids.length === 0 ? (
+          /* ── Empty state ── */
+          <div className="bg-white rounded-lg shadow p-12 text-center">
+            <div className="text-6xl mb-4">👋</div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome to HomeschoolHQ!</h2>
+            <p className="text-gray-600 mb-6">Let's get started by adding your first child.</p>
+            <button
+              onClick={() => { setEditingKid(null); setShowProfileForm(true) }}
+              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium shadow-lg"
+            >
+              + Add Your First Child
+            </button>
           </div>
+        ) : (
+          <>
+            {/* ── Kid Quick Panel ── */}
+            {selectedKidData && (
+              <KidQuickPanel
+                kid={selectedKidData}
+                lessons={selectedKidLessons}
+                onEditProfile={() => { setEditingKid(selectedKidData); setShowProfileForm(true) }}
+                onViewAssessments={() => handleViewPastAssessments(selectedKidData.id, selectedKidData.displayname)}
+                onViewCoverage={() => router.push('/coverage')}
+                isPro={hasFeature('subject_coverage')}
+              />
+            )}
 
-          {/* ── Main Content Area ── */}
-          <div className="flex-1 min-w-0">
-            {kids.length > 0 ? (
-              <>
-                <div className="bg-white rounded-lg shadow p-8 mb-8">
-                  <div className="space-y-6">
-                    <div className="flex justify-center items-center">
-                      <h2 className="text-2xl font-bold text-gray-900">Family Schedule</h2>
-                    </div>
+            {/* ── Action Bar ── */}
+            <div className="bg-white rounded-lg border border-gray-200 shadow-sm px-4 py-3 flex items-center justify-between gap-4 flex-wrap">
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* Creation actions */}
+                <button
+                  onClick={() => setShowAutoSchedule(true)}
+                  className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
+                >
+                  📅 Auto-Schedule
+                </button>
 
-                    {/* Action Buttons */}
-                    <div className="flex justify-center">
-                      <div className="flex flex-wrap gap-3 justify-center">
-                        <button onClick={() => setShowAutoSchedule(true)} className="px-4 py-2.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium shadow-sm transition-all">
-                          📅 Auto-Schedule
-                        </button>
-
-                        {hasFeature('curriculum_import') ? (
-                          <button onClick={() => setShowImporter(true)} className="px-4 py-2.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium shadow-sm transition-all">
-                            📥 Import
-                          </button>
-                        ) : (
-                          <button onClick={() => { alert(getUpgradeMessage('curriculum_import')); router.push('/pricing') }} className="px-4 py-2.5 text-sm bg-gray-300 text-gray-600 rounded-lg cursor-not-allowed relative">
-                            📥 Import 🔒
-                          </button>
-                        )}
-
-                        <button onClick={() => setShowLessonForm(!showLessonForm)} className="px-4 py-2.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium shadow-sm transition-all">
-                          + Add Lesson
-                        </button>
-
-                        {hasFeature('ai_generation') ? (
-                          <button onClick={() => setShowGenerator(true)} className="px-4 py-2.5 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium shadow-sm transition-all">
-                            ✨ Generate Lessons
-                          </button>
-                        ) : (
-                          <button onClick={() => { alert(getUpgradeMessage('ai_generation')); router.push('/pricing') }} className="px-4 py-2.5 text-sm bg-gray-300 text-gray-600 rounded-lg cursor-not-allowed relative">
-                            ✨ Generate Lessons 🔒
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* View Mode Tabs */}
-                    <div className="flex justify-center">
-                      <div className="flex bg-gray-100 rounded-lg p-1">
-                        <button onClick={() => setViewMode('today')} className={`px-5 py-2 text-sm rounded transition-all ${viewMode === 'today' ? 'bg-white shadow text-gray-900 font-semibold' : 'text-gray-600 hover:text-gray-900'}`}>📚 Today</button>
-                        <button onClick={() => setViewMode('week')} className={`px-5 py-2 text-sm rounded transition-all ${viewMode === 'week' ? 'bg-white shadow text-gray-900 font-semibold' : 'text-gray-600 hover:text-gray-900'}`}>📅 This Week</button>
-                        <button onClick={() => setViewMode('calendar')} className={`px-5 py-2 text-sm rounded transition-all ${viewMode === 'calendar' ? 'bg-white shadow text-gray-900 font-semibold' : 'text-gray-600 hover:text-gray-900'}`}>🗓️ Calendar</button>
-                        <button onClick={() => setViewMode('list')} className={`px-5 py-2 text-sm rounded transition-all ${viewMode === 'list' ? 'bg-white shadow text-gray-900 font-semibold' : 'text-gray-600 hover:text-gray-900'}`}>📋 Lessons</button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* ── View Content ── */}
-                {viewMode === 'today' ? (
-                  <TodaysDashboard kids={kids} lessonsByKid={lessonsByKid} onStatusChange={handleStatusChange} onLessonClick={(lesson, child) => { setSelectedLesson(lesson); setSelectedLessonChild(child) }} />
-                ) : viewMode === 'week' ? (
-                  <ThisWeekDashboard kids={kids} lessonsByKid={lessonsByKid} onStatusChange={handleStatusChange} onLessonClick={(lesson, child) => { setSelectedLesson(lesson); setSelectedLessonChild(child) }} />
-                ) : viewMode === 'calendar' ? (
-                  <>
-                    <div className="mb-6">
-                      <CalendarFilters
-                        filters={calendarFilters}
-                        onChange={setCalendarFilters}
-                        counts={{
-                          lessons: allLessons.filter(l => l.lesson_date).length,
-                          socialEvents: socialEvents.length,
-                          coopClasses: coopEnrollments.length,
-                          manualAttendance: manualAttendance.length
-                        }}
-                      />
-                    </div>
-                    <LessonCalendar
-                      kids={kids}
-                      lessonsByKid={lessonsByKid}
-                      socialEvents={socialEvents}
-                      coopEnrollments={coopEnrollments}
-                      manualAttendance={manualAttendance}
-                      filters={calendarFilters}
-                      onLessonClick={(lesson, child) => {
-                        setSelectedLesson(lesson)
-                        setSelectedLessonChild(child)
-                        startEditLesson(lesson)
-                        setShowLessonEditModal(true)
-                      }}
-                      onStatusChange={handleStatusChange}
-                      userId={user.id}
-                    />
-                  </>
+                {hasFeature('curriculum_import') ? (
+                  <button
+                    onClick={() => setShowImporter(true)}
+                    className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
+                  >
+                    📥 Import
+                  </button>
                 ) : (
-                  <AllChildrenList
-                    kids={kids}
-                    lessonsByKid={lessonsByKid}
-                    autoExpandKid={selectedKid}
-                    onEditLesson={(lesson) => {
-                      setSelectedLesson(lesson)
-                      setSelectedLessonChild(kids.find(k => k.id === lesson.kid_id) || null)
-                      startEditLesson(lesson)
-                      setShowLessonEditModal(true)
-                    }}
-                    onDeleteLesson={deleteLesson}
-                    onCycleStatus={cycleLessonStatus}
-                    onGenerateAssessment={handleGeneratePersonalizedAssessment}
-                    onViewPastAssessments={handleViewPastAssessments}
-                  />
+                  <button
+                    onClick={() => { alert(getUpgradeMessage('curriculum_import')); router.push('/pricing') }}
+                    className="px-4 py-2 text-sm bg-gray-200 text-gray-500 rounded-lg cursor-not-allowed font-medium"
+                  >
+                    📥 Import 🔒
+                  </button>
                 )}
 
-                {showGenerator && <LessonGenerator kids={kids} userId={user.id} onClose={() => setShowGenerator(false)} />}
-                {showImporter && selectedKid && (
-                  <CurriculumImporter
-                    childId={selectedKid}
-                    childName={kids.find(k => k.id === selectedKid)?.displayname || ''}
-                    onClose={() => setShowImporter(false)}
-                    onImportComplete={() => { setShowImporter(false); loadAllLessons() }}
-                  />
+                <button
+                  onClick={() => setShowLessonForm(!showLessonForm)}
+                  className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
+                >
+                  + Add Lesson
+                </button>
+
+                {hasFeature('ai_generation') ? (
+                  <button
+                    onClick={() => setShowGenerator(true)}
+                    className="px-4 py-2 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium transition-colors"
+                  >
+                    ✨ Generate Lessons
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => { alert(getUpgradeMessage('ai_generation')); router.push('/pricing') }}
+                    className="px-4 py-2 text-sm bg-gray-200 text-gray-500 rounded-lg cursor-not-allowed font-medium"
+                  >
+                    ✨ Generate Lessons 🔒
+                  </button>
                 )}
-              </>
-            ) : (
-              <div className="bg-white rounded-lg shadow p-12 text-center">
-                <div className="text-6xl mb-4">👋</div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome to HomeschoolHQ!</h2>
-                <p className="text-gray-600 mb-6">Let's get started by adding your first child.</p>
-                <button onClick={() => { setEditingKid(null); setShowProfileForm(true) }} className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium shadow-lg">
-                  + Add Your First Child
+
+                {/* Divider */}
+                <div className="w-px h-7 bg-gray-200 mx-1" />
+
+                {/* Reporting actions */}
+                {hasFeature('subject_coverage') ? (
+                  <button
+                    onClick={() => router.push('/coverage')}
+                    className="px-4 py-2 text-sm bg-violet-600 text-white rounded-lg hover:bg-violet-700 font-medium transition-colors flex items-center gap-1.5"
+                  >
+                    📊 Coverage
+                    <span className="text-[9px] bg-violet-400 px-1.5 py-0.5 rounded font-bold uppercase tracking-wide">Pro</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => { alert(getUpgradeMessage('subject_coverage')); router.push('/pricing') }}
+                    className="px-4 py-2 text-sm bg-gray-200 text-gray-500 rounded-lg cursor-not-allowed font-medium"
+                  >
+                    📊 Coverage 🔒
+                  </button>
+                )}
+
+                <button
+                  onClick={() => router.push('/admin?tab=compliance')}
+                  className="px-4 py-2 text-sm bg-white text-gray-700 rounded-lg border border-gray-200 hover:bg-gray-50 font-medium transition-colors"
+                >
+                  📋 Compliance
+                </button>
+
+                <button
+                  onClick={() => router.push('/admin?tab=attendance')}
+                  className="px-4 py-2 text-sm bg-white text-gray-700 rounded-lg border border-gray-200 hover:bg-gray-50 font-medium transition-colors"
+                >
+                  📄 Transcript
                 </button>
               </div>
+
+              {/* View Tabs — Calendar and Lessons only */}
+              <div className="flex bg-gray-100 rounded-lg p-1 flex-shrink-0">
+                <button
+                  onClick={() => setViewMode('calendar')}
+                  className={`px-5 py-2 text-sm rounded transition-all ${viewMode === 'calendar' ? 'bg-white shadow text-gray-900 font-semibold' : 'text-gray-600 hover:text-gray-900'}`}
+                >
+                  🗓️ Calendar
+                </button>
+                <button
+                  onClick={() => setViewMode('list')}
+                  className={`px-5 py-2 text-sm rounded transition-all ${viewMode === 'list' ? 'bg-white shadow text-gray-900 font-semibold' : 'text-gray-600 hover:text-gray-900'}`}
+                >
+                  📋 Lessons
+                </button>
+              </div>
+            </div>
+
+            {/* ── Calendar Filters (only in calendar view) ── */}
+            {viewMode === 'calendar' && (
+              <CalendarFilters
+                filters={calendarFilters}
+                onChange={setCalendarFilters}
+                counts={{
+                  lessons: allLessons.filter(l => l.lesson_date).length,
+                  socialEvents: socialEvents.length,
+                  coopClasses: coopEnrollments.length,
+                  manualAttendance: manualAttendance.length
+                }}
+              />
             )}
-          </div>
-        </div>
+
+            {/* ── View Content ── */}
+            {viewMode === 'calendar' ? (
+              <LessonCalendar
+                kids={kids}
+                lessonsByKid={lessonsByKid}
+                socialEvents={socialEvents}
+                coopEnrollments={coopEnrollments}
+                manualAttendance={manualAttendance}
+                filters={calendarFilters}
+                onLessonClick={(lesson, child) => {
+                  setSelectedLesson(lesson)
+                  setSelectedLessonChild(child)
+                  startEditLesson(lesson)
+                  setShowLessonEditModal(true)
+                }}
+                onStatusChange={handleStatusChange}
+                userId={user.id}
+                organizationId={organizationId ?? user.id}
+              />
+            ) : (
+              <AllChildrenList
+                kids={kids}
+                lessonsByKid={lessonsByKid}
+                autoExpandKid={selectedKid}
+                onEditLesson={(lesson) => {
+                  setSelectedLesson(lesson)
+                  setSelectedLessonChild(kids.find(k => k.id === lesson.kid_id) || null)
+                  startEditLesson(lesson)
+                  setShowLessonEditModal(true)
+                }}
+                onDeleteLesson={deleteLesson}
+                onCycleStatus={cycleLessonStatus}
+                onGenerateAssessment={handleGeneratePersonalizedAssessment}
+                onViewPastAssessments={handleViewPastAssessments}
+              />
+            )}
+
+            {showGenerator && (
+              <LessonGenerator kids={kids} userId={user.id} onClose={() => setShowGenerator(false)} />
+            )}
+            {showImporter && selectedKid && (
+              <CurriculumImporter
+                childId={selectedKid}
+                childName={kids.find(k => k.id === selectedKid)?.displayname || ''}
+                onClose={() => setShowImporter(false)}
+                onImportComplete={() => { setShowImporter(false); loadAllLessons() }}
+              />
+            )}
+          </>
+        )}
       </div>
 
       {/* ════════════════════════════════════════
@@ -1040,10 +1096,11 @@ function DashboardContent() {
           kid={editingKid || undefined}
           onSave={async (data) => {
             try {
+              const orgId = organizationId ?? user.id
               if (data.id) {
                 const updateData: any = {
                   user_id: user.id,
-                  organization_id: user.id,
+                  organization_id: orgId,
                   firstname: data.firstname,
                   lastname: data.lastname,
                   displayname: data.displayname || data.firstname,
@@ -1064,21 +1121,18 @@ function DashboardContent() {
                   if (!uploadError) {
                     const { data: { publicUrl } } = supabase.storage.from('child-photos').getPublicUrl(fileName)
                     updateData.photo_url = publicUrl
-                  } else {
-                    console.error('Photo upload error:', uploadError)
                   }
                 }
 
                 const { error: updateError } = await supabase.from('kids').update(updateData).eq('id', data.id)
                 if (updateError) {
-                  console.error('Error updating kid:', updateError)
                   alert('Error updating child: ' + updateError.message)
                   return
                 }
 
                 if (data.subject_proficiencies?.length > 0) {
                   await supabase.from('subject_proficiency').delete().eq('kid_id', data.id)
-                  const { error: profError } = await supabase.from('subject_proficiency').insert(
+                  await supabase.from('subject_proficiency').insert(
                     data.subject_proficiencies.map((sp: any) => ({
                       kid_id: data.id,
                       subject: sp.subject,
@@ -1086,12 +1140,11 @@ function DashboardContent() {
                       notes: sp.notes || ''
                     }))
                   )
-                  if (profError) console.error('Error saving subject proficiencies:', profError)
                 }
               } else {
                 const { data: newKid, error } = await supabase.from('kids').insert([{
                   user_id: user.id,
-                  organization_id: user.id,
+                  organization_id: orgId,
                   firstname: data.firstname,
                   lastname: data.lastname,
                   displayname: data.displayname || data.firstname,
@@ -1105,14 +1158,8 @@ function DashboardContent() {
                   current_focus: data.current_focus
                 }]).select()
 
-                if (error) {
-                  console.error('Error creating kid:', error)
-                  alert('Error creating child: ' + error.message)
-                  return
-                }
-
-                if (!newKid || newKid.length === 0) {
-                  alert('Error: Child was not created. Please try again.')
+                if (error || !newKid || newKid.length === 0) {
+                  alert('Error creating child. Please try again.')
                   return
                 }
 
@@ -1125,13 +1172,11 @@ function DashboardContent() {
                   if (!uploadError) {
                     const { data: { publicUrl } } = supabase.storage.from('child-photos').getPublicUrl(fileName)
                     await supabase.from('kids').update({ photo_url: publicUrl }).eq('id', newKidId)
-                  } else {
-                    console.error('Photo upload error:', uploadError)
                   }
                 }
 
                 if (data.subject_proficiencies?.length > 0) {
-                  const { error: profError } = await supabase.from('subject_proficiency').insert(
+                  await supabase.from('subject_proficiency').insert(
                     data.subject_proficiencies.map((sp: any) => ({
                       kid_id: newKidId,
                       subject: sp.subject,
@@ -1139,7 +1184,6 @@ function DashboardContent() {
                       notes: sp.notes || ''
                     }))
                   )
-                  if (profError) console.error('Error saving subject proficiencies:', profError)
                 }
               }
 
@@ -1204,18 +1248,13 @@ function DashboardContent() {
       {showLessonForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
-
-            {/* Header */}
             <div className="bg-gradient-to-r from-green-500 to-teal-500 px-6 py-4 rounded-t-xl">
               <div className="flex justify-between items-center">
                 <h3 className="text-xl font-bold text-white">+ Add New Lesson</h3>
                 <button onClick={() => setShowLessonForm(false)} className="text-white hover:text-gray-200 text-2xl leading-none font-light">×</button>
               </div>
             </div>
-
             <form onSubmit={addLesson} className="p-6 space-y-4">
-
-              {/* Child Selection */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Select Child *</label>
                 <select
@@ -1230,8 +1269,6 @@ function DashboardContent() {
                   ))}
                 </select>
               </div>
-
-              {/* Subject */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Subject *</label>
                 <select
@@ -1255,14 +1292,9 @@ function DashboardContent() {
                       required
                       autoFocus
                     />
-                    <p className="text-xs text-gray-500 mt-1">
-                      💡 Use title case (e.g., "Latin" not "latin") so lessons group correctly in reports
-                    </p>
                   </div>
                 )}
               </div>
-
-              {/* Title */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Lesson Title *</label>
                 <input
@@ -1274,8 +1306,6 @@ function DashboardContent() {
                   required
                 />
               </div>
-
-              {/* Description */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Description (optional)</label>
                 <textarea
@@ -1286,35 +1316,25 @@ function DashboardContent() {
                   rows={3}
                 />
               </div>
-
-              {/* Duration */}
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
                 <label className="block text-sm font-medium text-gray-700">How long will this lesson take?</label>
-                <div>
-                  <p className="text-xs text-gray-600 mb-2">Quick select (minutes):</p>
-                  <div className="flex gap-2">
-                    {[15, 30, 45, 60].map(min => (
-                      <button key={min} type="button"
-                        onClick={() => { setLessonDurationValue(min); setLessonDurationUnit('minutes') }}
-                        className={`flex-1 px-3 py-2 rounded-lg font-medium transition-all ${lessonDurationValue === min && lessonDurationUnit === 'minutes' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'}`}
-                      >{min} min</button>
-                    ))}
-                  </div>
+                <div className="flex gap-2">
+                  {[15, 30, 45, 60].map(min => (
+                    <button key={min} type="button"
+                      onClick={() => { setLessonDurationValue(min); setLessonDurationUnit('minutes') }}
+                      className={`flex-1 px-3 py-2 rounded-lg font-medium transition-all ${lessonDurationValue === min && lessonDurationUnit === 'minutes' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'}`}
+                    >{min} min</button>
+                  ))}
                 </div>
-                <div>
-                  <p className="text-xs text-gray-600 mb-2">Or set custom duration:</p>
-                  <div className="flex gap-2">
-                    <input type="number" min="1" value={lessonDurationValue} onChange={(e) => setLessonDurationValue(parseInt(e.target.value) || 1)} className="w-24 px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
-                    <select value={lessonDurationUnit} onChange={(e) => setLessonDurationUnit(e.target.value as DurationUnit)} className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                      <option value="minutes">minutes</option>
-                      <option value="days">days</option>
-                      <option value="weeks">weeks</option>
-                    </select>
-                  </div>
+                <div className="flex gap-2">
+                  <input type="number" min="1" value={lessonDurationValue} onChange={(e) => setLessonDurationValue(parseInt(e.target.value) || 1)} className="w-24 px-3 py-2 border border-gray-300 rounded-lg text-gray-900" />
+                  <select value={lessonDurationUnit} onChange={(e) => setLessonDurationUnit(e.target.value as DurationUnit)} className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-gray-900">
+                    <option value="minutes">minutes</option>
+                    <option value="days">days</option>
+                    <option value="weeks">weeks</option>
+                  </select>
                 </div>
               </div>
-
-              {/* Date */}
               <div className="bg-green-50 border border-green-200 rounded-lg p-4 space-y-3">
                 <div className="flex items-center gap-2">
                   <input type="checkbox" id="schedule-now" checked={!!lessonDate}
@@ -1323,16 +1343,10 @@ function DashboardContent() {
                   />
                   <label htmlFor="schedule-now" className="text-sm font-medium text-gray-700">Schedule for a specific date</label>
                 </div>
-                {lessonDate ? (
-                  <div className="space-y-2">
-                    <input type="date" value={lessonDate} onChange={(e) => setLessonDate(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-green-500 focus:border-transparent" />
-                    <p className="text-xs text-gray-600">📅 This lesson will appear on your calendar for this date</p>
-                  </div>
-                ) : (
-                  <p className="text-xs text-gray-600">Lesson will be added without a date — you can schedule it later from the calendar</p>
+                {lessonDate && (
+                  <input type="date" value={lessonDate} onChange={(e) => setLessonDate(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900" />
                 )}
               </div>
-
               <button type="submit" disabled={addingLesson} className="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-medium transition-colors">
                 {addingLesson ? 'Adding Lesson...' : 'Add Lesson'}
               </button>
@@ -1345,8 +1359,6 @@ function DashboardContent() {
       {showLessonEditModal && editingLessonId && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
-
-            {/* Header */}
             <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-4 rounded-t-xl">
               <div className="flex justify-between items-center">
                 <h3 className="text-xl font-bold text-white flex items-center gap-2">✏️ Edit Lesson</h3>
@@ -1358,16 +1370,13 @@ function DashboardContent() {
                 </p>
               )}
             </div>
-
             <div className="p-6 space-y-4">
-
-              {/* Subject */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Subject *</label>
                 <select
                   value={editLessonSubjectSelect}
                   onChange={(e) => setEditLessonSubjectSelect(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900"
                   required
                 >
                   <option value="">Choose a subject...</option>
@@ -1375,76 +1384,55 @@ function DashboardContent() {
                   <option value="__custom__">✏️ Custom subject...</option>
                 </select>
                 {editLessonSubjectSelect === '__custom__' && (
-                  <div className="mt-2">
-                    <input
-                      type="text"
-                      value={editLessonSubjectCustom}
-                      onChange={(e) => setEditLessonSubjectCustom(e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="e.g., Latin, Robotics, Home Economics"
-                      required
-                      autoFocus
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      💡 Use title case (e.g., "Latin" not "latin") so lessons group correctly in reports
-                    </p>
-                  </div>
+                  <input
+                    type="text"
+                    value={editLessonSubjectCustom}
+                    onChange={(e) => setEditLessonSubjectCustom(e.target.value)}
+                    className="mt-2 w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900"
+                    placeholder="e.g., Latin, Robotics, Home Economics"
+                    required
+                    autoFocus
+                  />
                 )}
               </div>
-
-              {/* Title */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Lesson Title *</label>
                 <input
                   type="text"
                   value={editLessonTitle}
                   onChange={(e) => setEditLessonTitle(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="e.g., Introduction to Fractions"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900"
                   required
                 />
               </div>
-
-              {/* Description */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Description (optional)</label>
                 <textarea
                   value={editLessonDescription}
                   onChange={(e) => setEditLessonDescription(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="What will you cover in this lesson?"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900"
                   rows={3}
                 />
               </div>
-
-              {/* Duration */}
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
                 <label className="block text-sm font-medium text-gray-700">How long is this lesson?</label>
-                <div>
-                  <p className="text-xs text-gray-600 mb-2">Quick select (minutes):</p>
-                  <div className="flex gap-2">
-                    {[15, 30, 45, 60].map(min => (
-                      <button key={min} type="button"
-                        onClick={() => { setEditLessonDurationValue(min); setEditLessonDurationUnit('minutes') }}
-                        className={`flex-1 px-3 py-2 rounded-lg font-medium transition-all ${editLessonDurationValue === min && editLessonDurationUnit === 'minutes' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'}`}
-                      >{min} min</button>
-                    ))}
-                  </div>
+                <div className="flex gap-2">
+                  {[15, 30, 45, 60].map(min => (
+                    <button key={min} type="button"
+                      onClick={() => { setEditLessonDurationValue(min); setEditLessonDurationUnit('minutes') }}
+                      className={`flex-1 px-3 py-2 rounded-lg font-medium transition-all ${editLessonDurationValue === min && editLessonDurationUnit === 'minutes' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border border-gray-300'}`}
+                    >{min} min</button>
+                  ))}
                 </div>
-                <div>
-                  <p className="text-xs text-gray-600 mb-2">Or set custom duration:</p>
-                  <div className="flex gap-2">
-                    <input type="number" min="1" value={editLessonDurationValue} onChange={(e) => setEditLessonDurationValue(parseInt(e.target.value) || 1)} className="w-24 px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
-                    <select value={editLessonDurationUnit} onChange={(e) => setEditLessonDurationUnit(e.target.value as DurationUnit)} className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                      <option value="minutes">minutes</option>
-                      <option value="days">days</option>
-                      <option value="weeks">weeks</option>
-                    </select>
-                  </div>
+                <div className="flex gap-2">
+                  <input type="number" min="1" value={editLessonDurationValue} onChange={(e) => setEditLessonDurationValue(parseInt(e.target.value) || 1)} className="w-24 px-3 py-2 border border-gray-300 rounded-lg text-gray-900" />
+                  <select value={editLessonDurationUnit} onChange={(e) => setEditLessonDurationUnit(e.target.value as DurationUnit)} className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-gray-900">
+                    <option value="minutes">minutes</option>
+                    <option value="days">days</option>
+                    <option value="weeks">weeks</option>
+                  </select>
                 </div>
               </div>
-
-              {/* Date */}
               <div className="bg-green-50 border border-green-200 rounded-lg p-4 space-y-3">
                 <div className="flex items-center gap-2">
                   <input type="checkbox" id="edit-schedule-date" checked={!!editLessonDate}
@@ -1453,22 +1441,15 @@ function DashboardContent() {
                   />
                   <label htmlFor="edit-schedule-date" className="text-sm font-medium text-gray-700">Schedule for a specific date</label>
                 </div>
-                {editLessonDate ? (
-                  <div className="space-y-2">
-                    <input type="date" value={editLessonDate} onChange={(e) => setEditLessonDate(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-green-500 focus:border-transparent" />
-                    <p className="text-xs text-gray-600">📅 This lesson will appear on your calendar for this date</p>
-                  </div>
-                ) : (
-                  <p className="text-xs text-gray-600">No date set — lesson will appear in your unscheduled list</p>
+                {editLessonDate && (
+                  <input type="date" value={editLessonDate} onChange={(e) => setEditLessonDate(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900" />
                 )}
               </div>
-
-              {/* Actions */}
               <div className="flex gap-3 pt-2">
-                <button type="button" onClick={cancelEditLesson} className="flex-1 px-4 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors">
+                <button type="button" onClick={cancelEditLesson} className="flex-1 px-4 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium">
                   Cancel
                 </button>
-                <button type="button" onClick={() => saveEditLesson(editingLessonId)} className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors">
+                <button type="button" onClick={() => saveEditLesson(editingLessonId)} className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
                   Save Changes
                 </button>
               </div>
@@ -1496,22 +1477,19 @@ function DashboardContent() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">Shift subsequent lessons by:</label>
                 <div className="flex items-center gap-2">
                   <input type="number" value={cascadeDays} onChange={(e) => setCascadeDays(parseInt(e.target.value) || 0)} className="flex-1 px-3 py-2 border border-gray-300 rounded text-gray-900" />
-                  <span className="text-sm text-gray-600">day{Math.abs(cascadeDays) !== 1 ? 's' : ''}</span>
+                  <span className="text-sm text-gray-600">days</span>
                 </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  {cascadeDays > 0 ? `Push ${cascadeDays} day${cascadeDays !== 1 ? 's' : ''} later` : cascadeDays < 0 ? `Pull ${Math.abs(cascadeDays)} day${Math.abs(cascadeDays) !== 1 ? 's' : ''} earlier` : 'No change'}
-                </p>
               </div>
             </div>
             <div className="bg-gray-50 border-t border-gray-200 px-6 py-4 flex gap-3">
-              <button onClick={() => { setShowCascadeModal(false); setCascadeData(null); setCascadeDays(1); loadAllLessons() }} className="px-4 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-100 font-medium transition-colors">
+              <button onClick={() => { setShowCascadeModal(false); setCascadeData(null); setCascadeDays(1); loadAllLessons() }} className="px-4 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-100 font-medium">
                 Cancel
               </button>
-              <div className="flex-1"></div>
-              <button onClick={() => handleCascadeUpdate(false)} className="px-4 py-2 border border-blue-300 bg-blue-50 rounded text-blue-700 hover:bg-blue-100 font-medium transition-colors">
+              <div className="flex-1" />
+              <button onClick={() => handleCascadeUpdate(false)} className="px-4 py-2 border border-blue-300 bg-blue-50 rounded text-blue-700 hover:bg-blue-100 font-medium">
                 This Lesson Only
               </button>
-              <button onClick={() => handleCascadeUpdate(true)} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-medium transition-colors">
+              <button onClick={() => handleCascadeUpdate(true)} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-medium">
                 Update All ({cascadeData.affectedCount})
               </button>
             </div>

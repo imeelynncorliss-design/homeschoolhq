@@ -35,7 +35,8 @@ export const TIER_FEATURES = {
     'ai_generation', // Moved to PRO
     'advanced_dashboards',
     'advanced_compliance_reports',
-    'attendance_automation'
+    'attendance_automation',
+    'subject_coverage'
   ],
   PREMIUM: [
     'manual_lessons',
@@ -51,7 +52,8 @@ export const TIER_FEATURES = {
     'attendance_automation',
     'social_hub', // KEY PREMIUM FEATURE
     'coop_management',
-    'family_collaboration'
+    'family_collaboration',
+    'subject_coverage'
   ]
 } as const
 
