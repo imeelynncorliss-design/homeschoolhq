@@ -647,25 +647,25 @@ function DashboardContent() {
   // ─── RENDER ──────────────────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 overflow-x-hidden">
 
       {/* ════════════════════════════════════════
           TOP NAV
       ════════════════════════════════════════ */}
       <div className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between gap-4">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 py-3 flex items-center justify-between gap-4">
 
           {/* Left: Logo + Welcome + Kid Avatars */}
-          <div className="flex items-center gap-4">
-            <div>
+          <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+            <div className="flex-shrink-0">
               <span className="text-lg font-black text-indigo-900 tracking-tight">Homeschool</span>
               <span className="text-lg font-black text-purple-600 tracking-tight">HQ</span>
             </div>
-            <div className="text-sm text-gray-500">
+            <div className="hidden sm:block text-sm text-gray-500">
               Welcome, <span className="font-semibold text-gray-700">{parentName || user?.email?.split('@')[0]}</span> 👋
             </div>
 
-            <div className="w-px h-6 bg-gray-200" />
+            <div className="hidden sm:block w-px h-6 bg-gray-200" />
 
             {/* Kid Avatars */}
             <div className="flex items-center gap-2">
@@ -709,11 +709,11 @@ function DashboardContent() {
           </div>
 
           {/* Right: Progress strip + How To + Hamburger */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
 
             {/* Progress Strip */}
             {schoolYearSettings && (
-              <div className="flex items-center bg-gray-50 border border-gray-200 rounded-xl px-1 py-1 gap-0">
+              <div className="hidden md:flex items-center bg-gray-50 border-gray-200 rounded-xl px-1 py-1 gap-0">
                 <div className="flex items-center gap-2 px-3 py-1 rounded-lg hover:bg-white transition-colors cursor-default">
                   <span className="text-lg">📚</span>
                   <div>
@@ -761,7 +761,7 @@ function DashboardContent() {
             {/* How To */}
             <button
               onClick={() => setShowHelp(!showHelp)}
-              className={`px-3 py-2 rounded-lg font-medium text-sm transition-all border ${
+              className={`hidden md:block px-3 py-2 rounded-lg font-medium text-sm transition-all border ${
                 showHelp
                   ? 'bg-blue-50 border-blue-200 text-blue-700'
                   : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
@@ -878,7 +878,7 @@ function DashboardContent() {
       {/* ════════════════════════════════════════
           MAIN CONTENT
       ════════════════════════════════════════ */}
-      <div className="max-w-7xl mx-auto px-6 py-4 space-y-4">
+     <div className="max-w-7xl mx-auto px-3 sm:px-6 py-4 space-y-4">
 
         {/* Attendance Reminder */}
         <AttendanceReminder
@@ -913,6 +913,8 @@ function DashboardContent() {
                 onEditProfile={() => { setEditingKid(selectedKidData); setShowProfileForm(true) }}
                 onViewAssessments={() => handleViewPastAssessments(selectedKidData.id, selectedKidData.displayname)}
                 onViewCoverage={() => router.push('/coverage')}
+                viewMode={viewMode}
+                onViewLessons={() => setViewMode(viewMode === 'list' ? 'calendar' : 'list')}
                 isPro={hasFeature('subject_coverage')}
               />
             )}
@@ -1000,22 +1002,6 @@ function DashboardContent() {
                   className="px-4 py-2 text-sm bg-white text-gray-700 rounded-lg border border-gray-200 hover:bg-gray-50 font-medium transition-colors"
                 >
                   📄 Transcript
-                </button>
-              </div>
-
-              {/* View Tabs — Calendar and Lessons only */}
-              <div className="flex bg-gray-100 rounded-lg p-1 flex-shrink-0">
-                <button
-                  onClick={() => setViewMode('calendar')}
-                  className={`px-5 py-2 text-sm rounded transition-all ${viewMode === 'calendar' ? 'bg-white shadow text-gray-900 font-semibold' : 'text-gray-600 hover:text-gray-900'}`}
-                >
-                  🗓️ Calendar
-                </button>
-                <button
-                  onClick={() => setViewMode('list')}
-                  className={`px-5 py-2 text-sm rounded transition-all ${viewMode === 'list' ? 'bg-white shadow text-gray-900 font-semibold' : 'text-gray-600 hover:text-gray-900'}`}
-                >
-                  📋 Lessons
                 </button>
               </div>
             </div>
