@@ -782,7 +782,7 @@ function DashboardContent() {
               </button>
 
               {showHamburger && (
-                <div className="absolute right-0 top-12 bg-white border border-gray-200 rounded-xl shadow-xl min-w-[200px] py-2 z-[100]">
+                <div className="absolute right-0 top-12 bg-white border border-gray-200 rounded-xl shadow-xl min-w-[230px] py-2 z-[100]">
                   <button
                     onClick={() => { router.push('/social'); setShowHamburger(false) }}
                     className="flex items-center gap-3 w-full px-4 py-2.5 text-sm font-semibold text-pink-600 hover:bg-pink-50 transition-colors"
@@ -807,12 +807,6 @@ function DashboardContent() {
                     className="flex items-center gap-3 w-full px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
                   >
                     🏫 School Year &amp; Compliance
-                  </button>
-                  <button
-                    onClick={() => { setEditingKid(selectedKidData); setShowProfileForm(true); setShowHamburger(false) }}
-                    className="flex items-center gap-3 w-full px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-                  >
-                    👤 Child Profiles
                   </button>
                   <div className="h-px bg-gray-100 my-1" />
                   <button
