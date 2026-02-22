@@ -49,6 +49,7 @@ interface LessonCalendarProps {
   onStatusChange?: (lessonId: string, newStatus: 'not_started' | 'in_progress' | 'completed') => void
   userId: string
   organizationId: string
+  onEditLesson?: (lesson: any) => void
 }
 
 // Color palette for children
@@ -71,18 +72,7 @@ const ACTIVITY_COLORS = {
   attendance: '#6b7280'
 }
 
-export default function LessonCalendar({ 
-  kids, 
-  lessonsByKid, 
-  socialEvents,
-  coopEnrollments,
-  manualAttendance,
-  filters,
-  onLessonClick, 
-  onStatusChange,
-  userId,
-  organizationId
-}: LessonCalendarProps) {
+
   const [currentDate, setCurrentDate] = useState(new Date())
   const [showFamilyNotes, setShowFamilyNotes] = useState(false)
   const [showDailyNotes, setShowDailyNotes] = useState(false)
@@ -90,6 +80,20 @@ export default function LessonCalendar({
   const [showDayDetails, setShowDayDetails] = useState(false)
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [datesWithNotes, setDatesWithNotes] = useState<Set<string>>(new Set())
+
+  export default function LessonCalendar({ 
+    kids, 
+    lessonsByKid, 
+    socialEvents,
+    coopEnrollments,
+    manualAttendance,
+    filters,
+    onLessonClick, 
+    onStatusChange,
+    userId,
+    organizationId,
+    onEditLesson     // ← add this line here
+  }: LessonCalendarProps) {
 
   // Load dates that have notes
   useEffect(() => {
@@ -418,12 +422,8 @@ export default function LessonCalendar({
   }
 
   const handleSelectEvent = (event: any) => {
-    if (event.activityType === 'lesson') {
-      onLessonClick(event.resource.lesson, event.resource.child)
-    } else {
-      setSelectedDate(event.start)
-      setShowDayDetails(true)
-    }
+    setSelectedDate(event.start)
+    setShowDayDetails(true)
   }
 
   return (
@@ -583,6 +583,7 @@ export default function LessonCalendar({
           }}
           userId={userId}
           organizationId={organizationId}
+          onEditLesson={onEditLesson} 
         />
       )}
       

@@ -1052,6 +1052,12 @@ function DashboardContent() {
                 onStatusChange={handleStatusChange}
                 userId={user.id}
                 organizationId={organizationId ?? user.id}
+                onEditLesson={(lesson) => {
+                  setSelectedLesson(lesson)
+                  setSelectedLessonChild(kids.find(k => k.id === lesson.kid_id) || null)
+                  startEditLesson(lesson)
+                  setShowLessonEditModal(true)
+                }}
               />
             ) : (
               <AllChildrenList
