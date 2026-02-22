@@ -19,59 +19,7 @@ interface CalendarFiltersProps {
 
 export default function CalendarFilters({ filters, onChange, counts }: CalendarFiltersProps) {
   const toggleFilter = (key: keyof typeof filters) => {
-    onChange({
-      ...filters,
-      [key]: !filters[key]
-    })
-  }
-
-  const filterOptions = [
-    {
-      key: 'showLessons' as const,
-      label: 'Lessons',
-      icon: '📚',
-      color: 'blue',
-      count: counts?.lessons || 0
-    },
-    {
-      key: 'showSocialEvents' as const,
-      label: 'Social Events',
-      icon: '🎉',
-      color: 'purple',
-      count: counts?.socialEvents || 0
-    },
-    {
-      key: 'showCoopClasses' as const,
-      label: 'Co-op Classes',
-      icon: '🏫',
-      color: 'green',
-      count: counts?.coopClasses || 0
-    },
-    {
-      key: 'showManualAttendance' as const,
-      label: 'Attendance',
-      icon: '✓',
-      color: 'gray',
-      count: counts?.manualAttendance || 0
-    }
-  ]
-
-  const getColorClasses = (color: string, isActive: boolean) => {
-    const colors = {
-      blue: isActive 
-        ? 'bg-blue-100 border-blue-500 text-blue-700' 
-        : 'bg-white border-gray-200 text-gray-400 hover:border-blue-300',
-      purple: isActive 
-        ? 'bg-purple-100 border-purple-500 text-purple-700' 
-        : 'bg-white border-gray-200 text-gray-400 hover:border-purple-300',
-      green: isActive 
-        ? 'bg-green-100 border-green-500 text-green-700' 
-        : 'bg-white border-gray-200 text-gray-400 hover:border-green-300',
-      gray: isActive 
-        ? 'bg-gray-100 border-gray-500 text-gray-700' 
-        : 'bg-white border-gray-200 text-gray-400 hover:border-gray-300'
-    }
-    return colors[color as keyof typeof colors]
+    onChange({ ...filters, [key]: !filters[key] })
   }
 
   const allEnabled = Object.values(filters).every(v => v)
@@ -87,55 +35,84 @@ export default function CalendarFilters({ filters, onChange, counts }: CalendarF
     })
   }
 
+  const filterOptions = [
+    {
+      key: 'showLessons' as const,
+      label: 'Lessons',
+      icon: '📚',
+      dotColor: 'bg-blue-500',
+      activeClasses: 'bg-blue-50 border-blue-400 text-blue-700',
+      inactiveClasses: 'bg-white border-gray-200 text-gray-400 hover:border-blue-300',
+      count: counts?.lessons || 0
+    },
+    {
+      key: 'showSocialEvents' as const,
+      label: 'Social Events',
+      icon: '🎉',
+      dotColor: 'bg-purple-500',
+      activeClasses: 'bg-purple-50 border-purple-400 text-purple-700',
+      inactiveClasses: 'bg-white border-gray-200 text-gray-400 hover:border-purple-300',
+      count: counts?.socialEvents || 0
+    },
+    {
+      key: 'showCoopClasses' as const,
+      label: 'Co-op Classes',
+      icon: '🏫',
+      dotColor: 'bg-green-500',
+      activeClasses: 'bg-green-50 border-green-400 text-green-700',
+      inactiveClasses: 'bg-white border-gray-200 text-gray-400 hover:border-green-300',
+      count: counts?.coopClasses || 0
+    },
+    {
+      key: 'showManualAttendance' as const,
+      label: 'Attendance',
+      icon: '✓',
+      dotColor: 'bg-gray-500',
+      activeClasses: 'bg-gray-50 border-gray-400 text-gray-700',
+      inactiveClasses: 'bg-white border-gray-200 text-gray-400 hover:border-gray-300',
+      count: counts?.manualAttendance || 0
+    }
+  ]
+
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-4 mb-4">
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider">
-          Calendar Filters
-        </h3>
-        <button
-          onClick={toggleAll}
-          className="text-xs text-blue-600 hover:text-blue-800 font-medium"
-        >
-          {allEnabled ? 'Hide All' : 'Show All'}
-        </button>
-      </div>
+    <div className="bg-white rounded-lg border border-gray-200 shadow-sm px-3 py-2 flex items-center gap-2 flex-wrap">
+      
+      {/* Filter pills */}
+      {filterOptions.map(option => {
+        const isActive = filters[option.key]
+        return (
+          <button
+            key={option.key}
+            onClick={() => toggleFilter(option.key)}
+            className={`
+              flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-semibold
+              transition-all whitespace-nowrap
+              ${isActive ? option.activeClasses : option.inactiveClasses}
+            `}
+          >
+            <div className={`w-2 h-2 rounded-full flex-shrink-0 ${isActive ? option.dotColor : 'bg-gray-300'}`} />
+            <span>{option.icon} {option.label}</span>
+            <span className={`font-bold ${isActive ? '' : 'text-gray-300'}`}>{option.count}</span>
+          </button>
+        )
+      })}
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-        {filterOptions.map(option => {
-          const isActive = filters[option.key]
-          
-          return (
-            <button
-              key={option.key}
-              onClick={() => toggleFilter(option.key)}
-              className={`
-                relative p-3 rounded-lg border-2 transition-all text-left
-                ${getColorClasses(option.color, isActive)}
-                ${isActive ? 'shadow-sm' : ''}
-              `}
-            >
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-xl">{option.icon}</span>
-                <span className="text-xs font-bold">{option.label}</span>
-              </div>
-              <div className={`text-xl font-bold ${isActive ? '' : 'text-gray-300'}`}>
-                {option.count}
-              </div>
-              
-              {/* Active indicator */}
-              {isActive && (
-                <div className="absolute top-2 right-2 w-2 h-2 bg-current rounded-full"></div>
-              )}
-            </button>
-          )
-        })}
-      </div>
+      {/* Spacer */}
+      <div className="flex-1" />
 
+      {/* Toggle all */}
+      <button
+        onClick={toggleAll}
+        className="text-xs text-blue-600 hover:text-blue-800 font-semibold whitespace-nowrap px-2"
+      >
+        {allEnabled ? 'Hide All' : 'Show All'}
+      </button>
+
+      {/* Warning if all disabled */}
       {allDisabled && (
-        <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-700 text-center">
-          ⚠️ All filters are disabled. Enable at least one to see activities.
-        </div>
+        <span className="text-xs text-yellow-700 bg-yellow-50 border border-yellow-200 px-2 py-1 rounded-full">
+          ⚠️ All filters off
+        </span>
       )}
     </div>
   )
