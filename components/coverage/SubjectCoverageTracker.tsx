@@ -174,7 +174,7 @@ export function SubjectCoverageTracker() {
               ) : (
                 kids.map((kid) => (
                   <option key={kid.id} value={kid.id}>
-                    {[kid.firstname, kid.lastname].filter(Boolean).join(' ')}
+                    {kid.displayname}
                   </option>
                 ))
               )}

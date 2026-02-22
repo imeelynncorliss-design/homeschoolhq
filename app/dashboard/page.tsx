@@ -669,7 +669,13 @@ function DashboardContent() {
 
             {/* Kid Avatars */}
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-gray-400 uppercase tracking-wide">Kids</span>
+            <div className="relative group">
+              <span className="text-xs font-bold text-gray-400 uppercase tracking-wide cursor-default">Kids</span>
+              <div className="absolute left-0 top-6 z-50 hidden group-hover:block bg-gray-800 text-white text-xs rounded-lg px-3 py-2 whitespace-nowrap shadow-lg">
+                Click a photo to view child details
+                <div className="absolute -top-1 left-3 w-2 h-2 bg-gray-800 rotate-45" />
+              </div>
+            </div>
               {kids.map((kid) => (
                 <button
                   key={kid.id}

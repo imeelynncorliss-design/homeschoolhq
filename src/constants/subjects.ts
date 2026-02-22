@@ -10,9 +10,9 @@ export const CANONICAL_SUBJECTS = [
     "Social Studies",
     "History",
     // State-specific
-    "North Carolina History",
-    "Virginia History",
-    "New York History",
+    //"North Carolina History",
+    //"Virginia History",
+    //"New York History",
     // Arts & Electives
     "Art",
     "Music",

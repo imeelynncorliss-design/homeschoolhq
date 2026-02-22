@@ -19,14 +19,12 @@ export interface CoverageFilters {
 }
 
 export interface CoverageSettings {
-  /** Percentage at or above which a subject is considered "on track" (default: 70) */
   onTrackThreshold: number
 }
 
 export interface Kid {
   id: string
-  firstname: string | null
-  lastname: string | null
+  displayname: string
 }
 
 export interface SchoolYearConfig {
@@ -35,9 +33,6 @@ export interface SchoolYearConfig {
   name: string | null
 }
 
-const ORG_ID = 'd52497c0-42a9-49b7-ba3b-849bffa27fc4'
-
-/** Fallback: approximate school year based on current calendar date */
 function getFallbackSchoolYear(): SchoolYearConfig {
   const now = new Date()
   const year = now.getMonth() >= 7 ? now.getFullYear() : now.getFullYear() - 1
@@ -48,6 +43,18 @@ function getFallbackSchoolYear(): SchoolYearConfig {
   }
 }
 
+async function getOrgId(): Promise<string | null> {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+  const { data } = await supabase
+    .from('kids')
+    .select('organization_id')
+    .eq('user_id', user.id)
+    .limit(1)
+    .maybeSingle()
+  return data?.organization_id || user.id
+}
+
 export function useSchoolYearConfig() {
   const [config, setConfig] = useState<SchoolYearConfig | null>(null)
   const [loading, setLoading] = useState(true)
@@ -55,10 +62,13 @@ export function useSchoolYearConfig() {
   useEffect(() => {
     async function fetchConfig() {
       try {
+        const orgId = await getOrgId()
+        if (!orgId) { setConfig(getFallbackSchoolYear()); setLoading(false); return }
+
         const { data, error } = await supabase
           .from('school_year_settings')
           .select('school_year_start, school_year_end')
-          .eq('organization_id', ORG_ID)
+          .eq('organization_id', orgId)
           .single()
 
         if (error || !data || !data.school_year_start) {
@@ -94,10 +104,13 @@ export function useSubjectCoverage(filters: CoverageFilters) {
     setError(null)
 
     try {
+      const orgId = await getOrgId()
+      if (!orgId) throw new Error('Could not determine organization')
+
       let query = supabase
         .from('lessons')
         .select('subject, status')
-        .eq('organization_id', ORG_ID)
+        .eq('organization_id', orgId)
         .eq('kid_id', filters.kidId)
 
       if (filters.startDate) query = query.gte('lesson_date', filters.startDate)
@@ -127,7 +140,6 @@ export function useSubjectCoverage(filters: CoverageFilters) {
         }
       })
 
-      // Append any non-canonical subjects found in DB (data safety net)
       for (const [subject, stats] of Object.entries(lessonMap)) {
         const isCanonical = (CANONICAL_SUBJECTS as readonly string[]).includes(subject)
         if (!isCanonical) {
@@ -162,18 +174,25 @@ export function useKids() {
 
   useEffect(() => {
     async function fetchKids() {
-      const { data } = await supabase
-        .from('kids')
-        .select('id, firstname, lastname')
-        .eq('organization_id', ORG_ID)
-        .order('firstname')
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) { setLoading(false); return }
 
-        if (data) setKids(data.map(k => ({
+        const { data } = await supabase
+          .from('kids')
+          .select('id, displayname')
+          .eq('user_id', user.id)
+          .order('displayname')
+
+        if (data) setKids(data.map((k: any) => ({
           id: k.id,
-          firstname: k.firstname,
-          lastname: k.lastname,
+          displayname: k.displayname,
         })))
-      setLoading(false)
+      } catch (err) {
+        console.error('Error fetching kids:', err)
+      } finally {
+        setLoading(false)
+      }
     }
     fetchKids()
   }, [])
