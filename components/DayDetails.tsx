@@ -50,17 +50,24 @@ export default function DayDetails({ date, onClose, userId, organizationId, onEd
 
     // Load lessons for this day — fixed: lesson_date, displayname, duration_minutes
     const { data: lessons } = await supabase
-      .from('lessons')
-      .select(`
-        *,
-        kid:kids(id, displayname, photo_url)
-      `)
-      .eq('organization_id', organizationId)
-      .eq('lesson_date', date)
-      .order('subject', { ascending: true })
+    .from('lessons')
+    .select(`*`)
+    .eq('user_id', userId)
+    .gte('lesson_date', `${date}T00:00:00`)
+    .lte('lesson_date', `${date}T23:59:59`)
+    .order('subject', { ascending: true })
+
+    // Fetch kids separately to get names and photos
+      const { data: kids } = await supabase
+      .from('kids')
+      .select('id, displayname, photo_url')
+      .eq('user_id', userId)
+
+      const kidMap: Record<string, any> = {}
+      if (kids) kids.forEach((k: any) => { kidMap[k.id] = k })
 
     if (lessons) {
-      result.push(...lessons.map(lesson => ({
+      result.push(...lessons.map((lesson: any) => ({
         id: lesson.id,
         type: 'lesson' as const,
         title: lesson.title,
@@ -82,7 +89,7 @@ export default function DayDetails({ date, onClose, userId, organizationId, onEd
       .or(`is_public.eq.true,created_by.eq.${userId}`)
 
     if (events) {
-      result.push(...events.map(event => ({
+      result.push(...events.map((event: any) => ({
         id: event.id,
         type: 'social_event' as const,
         title: event.title,
@@ -106,7 +113,7 @@ export default function DayDetails({ date, onClose, userId, organizationId, onEd
       .eq('day_of_week', dayName)
 
     if (coopClasses) {
-      result.push(...coopClasses.map(cls => ({
+      result.push(...coopClasses.map((cls: any) => ({
         id: cls.id,
         type: 'coop_class' as const,
         title: cls.class_name,
