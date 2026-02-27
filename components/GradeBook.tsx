@@ -186,10 +186,10 @@ export default function GradeBook({ kidId, userId }: GradeBookProps) {
         <table className="w-full text-left">
           <thead className="bg-slate-50 border-b-2 border-slate-100">
             <tr>
-              <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Course</th>
-              <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Avg</th>
-              <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Status</th>
-              <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Final Grade</th>
+              <th className="px-6 py-4 text-[10px] font-black text-slate-600 uppercase tracking-widest">Course</th>
+              <th className="px-6 py-4 text-[10px] font-black text-slate-600 uppercase tracking-widest text-center">Avg</th>
+              <th className="px-6 py-4 text-[10px] font-black text-slate-600 uppercase tracking-widest text-center">Status</th>
+              <th className="px-6 py-4 text-[10px] font-black text-slate-600 uppercase tracking-widest">Final Grade</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -199,7 +199,7 @@ export default function GradeBook({ kidId, userId }: GradeBookProps) {
                 <tr key={course.id} className="hover:bg-slate-50/50 transition-colors">
                   <td className="px-6 py-5">
                     <div className="font-bold text-slate-900">{course.course_name}</div>
-                    <div className="text-[10px] font-black text-indigo-500 uppercase tracking-tight">{course.subject} • {course.course_type}</div>
+                    <div className="text-xs font-black text-indigo-700 uppercase tracking-tight">{course.subject} • {course.course_type}</div>
                   </td>
                   <td className="px-6 py-5 text-center">
                     <span className={`text-xl font-black ${stats.avg >= 90 ? 'text-emerald-500' : 'text-slate-700'}`}>
@@ -217,7 +217,7 @@ export default function GradeBook({ kidId, userId }: GradeBookProps) {
                           Review
                         </button>
                       ) : (
-                        <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Settled</span>
+                        <span className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Settled</span>
                       )}
                     </div>
                   </td>
@@ -226,7 +226,7 @@ export default function GradeBook({ kidId, userId }: GradeBookProps) {
                       <select
                         value={course.letter_grade || ''}
                         onChange={(e) => updateGrade(course.id, e.target.value, course.final_percentage || 0)}
-                        className="bg-slate-50 border-2 border-slate-100 rounded-xl px-3 py-2 text-sm font-bold"
+                        className="bg-slate-50 border-2 border-slate-100 rounded-xl px-3 py-2 text-sm font-bold text-slate-600"
                       >
                         <option value="">—</option>
                         {LETTER_GRADES.map(g => <option key={g} value={g}>{g}</option>)}
@@ -235,7 +235,7 @@ export default function GradeBook({ kidId, userId }: GradeBookProps) {
                         type="number"
                         value={course.final_percentage || ''}
                         onChange={(e) => updateGrade(course.id, course.letter_grade || '', parseFloat(e.target.value))}
-                        className="w-16 bg-slate-50 border-2 border-slate-100 rounded-xl px-3 py-2 text-sm font-bold"
+                        className="w-16 bg-slate-50 border-2 border-slate-100 rounded-xl px-3 py-2 text-sm font-bold text-slate-600"
                         placeholder="%"
                       />
                     </div>

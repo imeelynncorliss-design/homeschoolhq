@@ -1,5 +1,6 @@
 import { SubjectCoverageTracker } from '@/components/coverage/SubjectCoverageTracker'
 
+
 export const metadata = {
   title: 'Subject Coverage | HomeschoolHQ',
 }

@@ -90,6 +90,15 @@ if (tabParam) {
     
     const saved = localStorage.getItem('recent_tools')
     if (saved) setRecentlyUsed(JSON.parse(saved))
+    
+    const handleTabSwitch = (e: any) => {
+      const match = ADMIN_TABS.find(t => t.id === e.detail)
+      if (match && !match.path) {
+          setActiveTab(e.detail)
+          setTimeout(() => { toolRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }, 100)
+        }
+      }
+      window.addEventListener('switchAdminTab', handleTabSwitch)
 
     const handleScroll = () => setShowScrollTop(window.scrollY > 400)
     
@@ -116,6 +125,7 @@ if (tabParam) {
       window.removeEventListener('keydown', handleKeyDown, true)
       window.removeEventListener('keyup', handleKeyUp)
       window.removeEventListener('scroll', handleScroll)
+      window.removeEventListener('switchAdminTab', handleTabSwitch)
     }
   }, [userTier]) // Corrected the closure of this useEffect
 
@@ -252,9 +262,9 @@ if (tabParam) {
             <div className="p-10 min-h-[600px]">
               {activeTab === 'school-year' && <SchoolYearConfig userId={user.id} />}
               {activeTab === 'progress' && <ProgressDashboard userId={user.id} />}
-              {activeTab === 'vacation' && <EnhancedVacationManager organizationId ={organizationId || ''} />}
+              {activeTab === 'vacation' && organizationId && <EnhancedVacationManager organizationId={organizationId} />}
               {activeTab === 'bulk-schedule' && <BulkLessonScheduler userId={user.id} />}
-              {activeTab === 'attendance' && <AttendanceTracker kids={kids} organizationId={organizationId} userId={user.id} />}
+              {activeTab === 'attendance' && organizationId && <AttendanceTracker kids={kids} organizationId={organizationId} userId={user.id} />}
             </div>
           </div>
         )}

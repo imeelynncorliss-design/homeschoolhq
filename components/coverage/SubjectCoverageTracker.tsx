@@ -3,6 +3,7 @@
 import React, { useState, useMemo, useEffect } from 'react'
 import { useSubjectCoverage, useKids, useSchoolYearConfig } from '../../hooks/useSubjectCoverage'
 import { SubjectCoverageCard } from '@/components/coverage/SubjectCoverageCard'
+import { useRouter } from 'next/navigation'
 
 const ON_TRACK_PRESETS = [
   { label: 'Relaxed (50%)', value: 50 },
@@ -14,6 +15,7 @@ const ON_TRACK_PRESETS = [
 export function SubjectCoverageTracker() {
   const { kids, loading: kidsLoading } = useKids()
   const { config: schoolYearConfig, loading: configLoading } = useSchoolYearConfig()
+  const router = useRouter()
 
   const [selectedKidId, setSelectedKidId] = useState<string>('')
   const [startDate, setStartDate] = useState<string>('')
@@ -24,7 +26,6 @@ export function SubjectCoverageTracker() {
   // On-track threshold settings
   const [selectedPreset, setSelectedPreset] = useState<number>(70)
   const [customThreshold, setCustomThreshold] = useState<number>(70)
-  const [showSettings, setShowSettings] = useState(false)
 
   const onTrackThreshold = selectedPreset === -1 ? customThreshold : selectedPreset
 
@@ -77,84 +78,73 @@ export function SubjectCoverageTracker() {
       <div className="max-w-6xl mx-auto px-4 py-8">
 
         {/* Header */}
-        <div className="flex items-start justify-between mb-8">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-xs font-semibold uppercase tracking-widest text-violet-600 bg-violet-50 px-2 py-0.5 rounded-full">
-                Pro Feature
-              </span>
-              {schoolYearConfig?.name && (
-                <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
-                  {schoolYearConfig.name}
-                </span>
-              )}
-            </div>
-            <h1 className="text-2xl font-bold text-gray-900">Subject Coverage</h1>
-            <p className="text-gray-500 text-sm mt-1">
-              Track lesson completion across all subjects for each student.
-            </p>
-          </div>
-
-          {/* Settings toggle */}
+        <div className="mb-6">
           <button
-            onClick={() => setShowSettings(!showSettings)}
-            className="flex items-center gap-1.5 text-sm font-medium text-gray-600 bg-white border border-gray-200 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors"
+            onClick={() => router.push('/dashboard')}
+            className="flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-gray-700 mb-3"
           >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-            Settings
+            ← Back to Dashboard
           </button>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-xs font-semibold uppercase tracking-widest text-violet-600 bg-violet-50 px-2 py-0.5 rounded-full">
+              Pro Feature
+            </span>
+            {schoolYearConfig?.name && (
+              <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                {schoolYearConfig.name}
+              </span>
+            )}
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900">Subject Coverage</h1>
+          <p className="text-gray-500 text-sm mt-1">
+            Track lesson completion across all subjects for each student.
+          </p>
         </div>
 
-        {/* Settings panel */}
-        {showSettings && (
-          <div className="bg-white border border-gray-200 rounded-xl p-5 mb-6">
-            <h3 className="text-sm font-semibold text-gray-700 mb-4">Summary Settings</h3>
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-2">
-                "On Track" Threshold
-                <span className="ml-2 font-normal text-gray-400">
-                  Subjects at or above this % completion count as on track
-                </span>
-              </label>
-              <div className="flex flex-wrap gap-2 mb-3">
-                {ON_TRACK_PRESETS.map((preset) => (
-                  <button
-                    key={preset.value}
-                    onClick={() => setSelectedPreset(preset.value)}
-                    className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
-                      selectedPreset === preset.value
-                        ? 'bg-violet-600 text-white border-violet-600'
-                        : 'bg-white text-gray-600 border-gray-200 hover:border-violet-300'
-                    }`}
-                  >
-                    {preset.label}
-                  </button>
-                ))}
-              </div>
-              {selectedPreset === -1 && (
-                <div className="flex items-center gap-3 mt-2">
-                  <input
-                    type="range"
-                    min={10}
-                    max={100}
-                    step={5}
-                    value={customThreshold}
-                    onChange={(e) => setCustomThreshold(Number(e.target.value))}
-                    className="w-48 accent-violet-600"
-                  />
-                  <span className="text-sm font-bold text-violet-600 w-12">{customThreshold}%</span>
-                </div>
-              )}
-              <p className="text-xs text-gray-400 mt-2">
-                Currently: subjects with ≥{onTrackThreshold}% completion are "on track"
-              </p>
+        {/* Settings panel - always visible */}
+        <div className="bg-white border border-gray-200 rounded-xl p-5 mb-6">
+          <h3 className="text-sm font-semibold text-gray-700 mb-4">Summary Settings</h3>
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-2">
+              "On Track" Threshold
+              <span className="ml-2 font-normal text-gray-400">
+                Subjects at or above this % completion count as on track
+              </span>
+            </label>
+            <div className="flex flex-wrap gap-2 mb-3">
+              {ON_TRACK_PRESETS.map((preset) => (
+                <button
+                  key={preset.value}
+                  onClick={() => setSelectedPreset(preset.value)}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
+                    selectedPreset === preset.value
+                      ? 'bg-violet-600 text-white border-violet-600'
+                      : 'bg-white text-gray-600 border-gray-200 hover:border-violet-300'
+                  }`}
+                >
+                  {preset.label}
+                </button>
+              ))}
             </div>
+            {selectedPreset === -1 && (
+              <div className="flex items-center gap-3 mt-2">
+                <input
+                  type="range"
+                  min={10}
+                  max={100}
+                  step={5}
+                  value={customThreshold}
+                  onChange={(e) => setCustomThreshold(Number(e.target.value))}
+                  className="w-48 accent-violet-600"
+                />
+                <span className="text-sm font-bold text-violet-600 w-12">{customThreshold}%</span>
+              </div>
+            )}
+            <p className="text-xs text-gray-400 mt-2">
+              Currently: subjects with ≥{onTrackThreshold}% completion are "on track"
+            </p>
           </div>
-        )}
+        </div>
 
         {/* Controls */}
         <div className="bg-white rounded-xl border border-gray-200 p-4 mb-6 flex flex-wrap gap-4 items-end">

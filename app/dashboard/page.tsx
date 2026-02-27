@@ -2,1498 +2,438 @@
 
 import { useEffect, useState, Suspense } from 'react'
 import { supabase } from '@/src/lib/supabase'
-import { useRouter, useSearchParams } from 'next/navigation'
-import LessonGenerator from '@/components/LessonGenerator'
-import CurriculumImporter from '@/components/CurriculumImporter'
-import ChildPhotoUpload from '@/components/ChildPhotoUpload'
-import LessonCalendar from '@/components/LessonCalendar'
-import AllChildrenList from '@/components/AllChildrenList'
-// import TodaysDashboard from '@/components/TodaysDashboard'
-// import ThisWeekDashboard from '@/components/ThisWeekDashboard'
-import KidQuickPanel from '@/components/KidQuickPanel'
-import KidProfileForm from '@/components/KidProfileForm'
-import CalendarFilters from '@/components/CalendarFilters'
-import DevTierToggle from '@/components/DevTierToggle'
-import { formatLessonDescription } from '@/lib/formatLessonDescription'
-import { ReactNode } from 'react'
-import PersonalizedAssessmentCreator from '@/components/PersonalizedAssessmentCreator'
-import { DEFAULT_HOLIDAYS_2025_2026 } from '@/app/utils/holidayUtils'
-import AssessmentTaking from '@/components/AssessmentTaking'
-import AutoScheduleModal from '@/components/AutoScheduleModal'
-import HelpWidget from '../../components/HelpWidget'
-import PastAssessmentsViewer from '@/components/PastAssessmentsViewer'
-import AttendanceReminder from '@/components/AttendanceReminder'
-import AttendanceTracker from '@/components/AttendanceTracker'
-import ParentProfileManager from '@/components/ParentProfileManager'
+import { useRouter } from 'next/navigation'
 import AuthGuard from '@/components/AuthGuard'
-import ComplianceWizard from '@/components/ComplianceWizard'
-import { type UserTier, hasFeature as checkFeature, getTierForTesting, getChildLimit, getUpgradeMessage } from '@/lib/tierTesting'
-import UserMenu from '@/src/components/UserMenu'
-import { CANONICAL_SUBJECTS } from '@/src/constants/subjects'
+import DevTierToggle from '@/components/DevTierToggle'
+import HelpWidget from '../../components/HelpWidget'
+import StatsBar from '@/src/components/dashboard/StatsBar'
+import { type UserTier, getTierForTesting, getChildLimit } from '@/lib/tierTesting'
 
-const DURATION_UNITS = ['minutes', 'days', 'weeks'] as const
-type DurationUnit = typeof DURATION_UNITS[number]
+// ─── Nav Card Data ────────────────────────────────────────────────────────────
 
-const convertMinutesToDuration = (minutes: number | null): { value: number; unit: DurationUnit } => {
-  if (!minutes) return { value: 30, unit: 'minutes' }
-  if (minutes >= 1800 && minutes % 1800 === 0) return { value: minutes / 1800, unit: 'weeks' }
-  if (minutes >= 360 && minutes % 360 === 0) return { value: minutes / 360, unit: 'days' }
-  if (minutes >= 360) return { value: Math.round(minutes / 360), unit: 'days' }
-  return { value: minutes, unit: 'minutes' }
+const NAV_CARDS = [
+  {
+    id: 'school',
+    icon: '🏫',
+    title: 'My School',
+    gradient: 'linear-gradient(135deg, #7c3aed, #a855f7)',
+    shadow: 'rgba(124,58,237,0.22)',
+    border: '#ede9fe',
+    dotColor: '#7c3aed',
+    items: [
+      { label: 'Calendar', icon: '📅', href: '/calendar' },
+      { label: 'Lessons', icon: '📚', href: '/lessons' },
+      { label: 'Attendance', icon: '✅', href: '/admin?tab=attendance' },
+      { label: 'Teaching Schedule', icon: '👩‍🏫', href: '/teaching-schedule' },
+    ],
+  },
+  {
+    id: 'kids',
+    icon: '👧',
+    title: 'My Kids',
+    gradient: 'linear-gradient(135deg, #0ea5e9, #38bdf8)',
+    shadow: 'rgba(14,165,233,0.22)',
+    border: '#e0f2fe',
+    dotColor: '#0ea5e9',
+    items: [
+      { label: 'Progress Tracking', icon: '📈', href: '/admin?tab=progress' },
+      { label: 'Assessments & Standards', icon: '📊', href: '/admin/assessments' },
+      { label: 'Courses', icon: '🎓', href: '/courses' },
+      { label: 'Transcripts', icon: '📄', href: '/transcript' },
+    ],
+  },
+  {
+    id: 'planning',
+    icon: '📋',
+    title: 'Planning',
+    gradient: 'linear-gradient(135deg, #ec4899, #f472b6)',
+    shadow: 'rgba(236,72,153,0.22)',
+    border: '#fce7f3',
+    dotColor: '#ec4899',
+    items: [
+      { label: 'School Year & Compliance', icon: '⚖️', href: '/admin?tab=school-year' },
+      { label: 'Vacation Planner', icon: '🌴', href: '/admin?tab=vacation' },
+      { label: 'Bulk Scheduler', icon: '⚡', href: '/admin?tab=bulk-schedule' },
+      { label: 'Planning Mode', icon: '🎨', href: '/planning' },
+      { label: 'My Homeschool', icon: '⚙️', href: '/admin' },
+    ],
+  },
+  {
+    id: 'collaborate',
+    icon: '🤝',
+    title: 'Collaborate',
+    gradient: 'linear-gradient(135deg, #10b981, #34d399)',
+    shadow: 'rgba(16,185,129,0.22)',
+    border: '#d1fae5',
+    dotColor: '#10b981',
+    items: [
+      { label: 'Social Hub', icon: '💬', href: '/social' },
+      { label: 'Work Calendar', icon: '🗓️', href: '/calendar/connect' },
+      { label: 'Manage Co-Teachers', icon: '👩‍🏫', href: '/teaching-schedule' },
+    ],
+  },
+  {
+    id: 'resources',
+    icon: '📦',
+    title: 'Resources',
+    gradient: 'linear-gradient(135deg, #f59e0b, #fbbf24)',
+    shadow: 'rgba(245,158,11,0.22)',
+    border: '#fef3c7',
+    dotColor: '#f59e0b',
+    items: [
+      { label: 'Materials', icon: '🗂️', href: '/materials' },
+      { label: 'Curriculum Import', icon: '⬆️', href: '/lessons' },
+    ],
+  },
+]
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface KidScheduleStatus {
+  id: string
+  name: string
+  unscheduled: number
+  total: number
 }
 
-const convertDurationToMinutes = (value: number, unit: DurationUnit): number => {
-  if (unit === 'minutes') return value
-  if (unit === 'days') return value * 6 * 60
-  return value * 5 * 6 * 60
+// ─── Onboarding Steps ─────────────────────────────────────────────────────────
+
+const ONBOARDING_STEPS = [
+  { id: 1, icon: '👧', title: 'Add Your Child', desc: 'Create a profile so everything is personalized.', completedLabel: 'Profile created!' },
+  { id: 2, icon: '📚', title: 'Add Your First Lesson', desc: 'Create a lesson or import from your curriculum.', completedLabel: 'First lesson added!', href: '/lessons' },
+  { id: 3, icon: '⚡', title: 'Schedule Your Lessons', desc: 'Use the Bulk Scheduler to assign dates to lessons.', completedLabel: 'All lessons scheduled!', href: '/admin?tab=bulk-schedule' },
+  { id: 4, icon: '📅', title: 'View Your Teaching Day', desc: "See what you're teaching at a glance.", completedLabel: "You're ready to teach!", href: '/calendar' },
+]
+
+// ─── Onboarding Checklist ─────────────────────────────────────────────────────
+
+function OnboardingChecklist({
+  hasKids,
+  hasLessons,
+  kidScheduleStatuses,
+  calendarVisited,
+}: {
+  hasKids: boolean
+  hasLessons: boolean
+  kidScheduleStatuses: KidScheduleStatus[]
+  calendarVisited: boolean
+}) {
+  const router = useRouter()
+  const [collapsed, setCollapsed] = useState(false)
+  const [dismissed, setDismissed] = useState(false)
+
+  const allScheduled =
+    kidScheduleStatuses.length > 0 &&
+    kidScheduleStatuses.every(k => k.unscheduled === 0)
+
+  const completed = {
+    1: hasKids,
+    2: hasLessons,
+    3: allScheduled,
+    4: calendarVisited,
+  }
+
+  const completedCount = Object.values(completed).filter(Boolean).length
+  const progressPct = Math.round((completedCount / 4) * 100)
+  const allDone = completedCount === 4
+
+  if (dismissed) return null
+
+  return (
+    <div style={css.checklistCard}>
+      {/* Header */}
+      <div style={css.checklistHeader}>
+        <div style={css.checklistHeaderLeft}>
+          <span style={{ fontSize: 22 }}>🚀</span>
+          <div>
+            <div style={css.checklistTitle}>Get Started with HomeschoolHQ</div>
+            <div style={css.checklistSub}>
+              {allDone ? "You're fully set up!" : `${completedCount} of 4 steps complete`}
+            </div>
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {allDone && (
+            <button style={css.checklistBtn} onClick={() => setDismissed(true)}>✕</button>
+          )}
+          <button style={css.checklistBtn} onClick={() => setCollapsed(!collapsed)}>
+            {collapsed ? '▼' : '▲'}
+          </button>
+        </div>
+      </div>
+
+      {/* Progress bar */}
+      <div style={css.progressTrack}>
+        <div style={{
+          ...css.progressFill,
+          width: `${progressPct}%`,
+          background: allDone
+            ? 'linear-gradient(90deg, #10b981, #34d399)'
+            : 'linear-gradient(90deg, #7c3aed, #a855f7, #ec4899)'
+        }} />
+      </div>
+
+      {/* Steps */}
+      {!collapsed && (
+        <div style={css.checklistSteps}>
+          {ONBOARDING_STEPS.map((step) => {
+            const isDone = completed[step.id as keyof typeof completed]
+            const isAccessible = isDone || completed[(step.id - 1) as keyof typeof completed] || step.id === 1
+            const isCurrent = !isDone && isAccessible
+            const isStep3 = step.id === 3
+
+            return (
+              <div key={step.id} style={{ ...css.checklistStep, opacity: isAccessible ? 1 : 0.45 }}>
+                <div style={{
+                  ...css.stepBadge,
+                  background: isDone ? 'linear-gradient(135deg, #7c3aed, #a855f7)' : isCurrent ? '#fff' : '#f3f4f6',
+                  color: isDone ? '#fff' : isCurrent ? '#7c3aed' : '#9ca3af',
+                  border: isDone ? 'none' : isCurrent ? '2px solid #7c3aed' : '2px solid #e5e7eb',
+                }}>
+                  {isDone ? '✓' : step.id}
+                </div>
+
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span>{step.icon}</span>
+                    <span style={{
+                      fontWeight: 700, fontSize: 13.5,
+                      color: isDone ? '#6b7280' : '#111827',
+                      textDecoration: isDone ? 'line-through' : 'none',
+                    }}>
+                      {step.title}
+                    </span>
+                  </div>
+
+                  <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 2 }}>
+                    {isDone ? step.completedLabel : step.desc}
+                  </div>
+
+                  {isStep3 && isCurrent && kidScheduleStatuses.length > 0 && (
+                    <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      {kidScheduleStatuses.map(kid => {
+                        const done = kid.unscheduled === 0
+                        return (
+                          <div key={kid.id} style={{
+                            display: 'flex', alignItems: 'center', gap: 6,
+                            fontSize: 12,
+                            color: done ? '#065f46' : '#92400e',
+                            background: done ? '#f0fdf4' : '#fffbeb',
+                            border: `1px solid ${done ? '#bbf7d0' : '#fde68a'}`,
+                            borderRadius: 6, padding: '4px 10px',
+                          }}>
+                            <span>{done ? '✓' : '⚠️'}</span>
+                            <span style={{ fontWeight: 700 }}>{kid.name}</span>
+                            <span style={{ color: '#6b7280' }}>
+                              {done
+                                ? 'all scheduled'
+                                : `${kid.unscheduled} lesson${kid.unscheduled !== 1 ? 's' : ''} still need dates`}
+                            </span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+
+                  {!isDone && step.href && isAccessible && (
+                    <button style={css.stepCta} onClick={() => router.push(step.href!)}>
+                      Go →
+                    </button>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
 }
+
+// ─── Nav Card ────────────────────────────────────────────────────────────────
+
+function NavCard({ card }: { card: typeof NAV_CARDS[0] }) {
+  const router = useRouter()
+  const [hovered, setHovered] = useState(false)
+  const [hoveredItem, setHoveredItem] = useState<string | null>(null)
+
+  return (
+    <div
+      style={{
+        ...css.card,
+        borderColor: card.border,
+        boxShadow: hovered
+          ? `0 16px 40px ${card.shadow}, 0 2px 8px rgba(0,0,0,0.06)`
+          : `0 2px 12px ${card.shadow}80`,
+        transform: hovered ? 'translateY(-4px)' : 'translateY(0)',
+      }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      <div style={{ ...css.cardHead, background: card.gradient }}>
+        <span style={{ fontSize: 20 }}>{card.icon}</span>
+        <span style={css.cardTitle}>{card.title}</span>
+      </div>
+      <ul style={css.itemList}>
+        {card.items.map((item, i) => (
+          <li
+            key={i}
+            style={{
+              ...css.item,
+              background: hoveredItem === `${card.id}-${i}` ? card.border : 'transparent',
+            }}
+            onMouseEnter={() => setHoveredItem(`${card.id}-${i}`)}
+            onMouseLeave={() => setHoveredItem(null)}
+            onClick={() => router.push(item.href)}
+          >
+            <span style={{ fontSize: 15, width: 22, textAlign: 'center' as const }}>{item.icon}</span>
+            <span style={css.itemLabel}>{item.label}</span>
+            <span style={{ fontSize: 12, color: card.dotColor, opacity: hoveredItem === `${card.id}-${i}` ? 1 : 0, transition: 'opacity 0.15s' }}>→</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+// ─── Dashboard Content ────────────────────────────────────────────────────────
 
 function DashboardContent() {
-  const searchParams = useSearchParams()
-  const [showGenerator, setShowGenerator] = useState(false)
-  const [showImporter, setShowImporter] = useState(false)
+  const router = useRouter()
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [kids, setKids] = useState<any[]>([])
-  const [userTier, setUserTier] = useState<UserTier>('FREE')
-  const [allLessons, setAllLessons] = useState<any[]>([])
-  const [lessonsByKid, setLessonsByKid] = useState<{ [kidId: string]: any[] }>({})
-  const [selectedKid, setSelectedKid] = useState<string | null>(null)
+  const [hasLessons, setHasLessons] = useState(false)
   const [organizationId, setOrganizationId] = useState<string | null>(null)
-  const [showAssessmentGenerator, setShowAssessmentGenerator] = useState(false)
-  const [showAutoSchedule, setShowAutoSchedule] = useState(false)
-  const [showHamburger, setShowHamburger] = useState(false)
-  const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar')
-  const [selectedLesson, setSelectedLesson] = useState<any | null>(null)
-  const [selectedLessonChild, setSelectedLessonChild] = useState<any | null>(null)
-  const [showCopyModal, setShowCopyModal] = useState(false)
-  const [copyTargetChildId, setCopyTargetChildId] = useState('')
-  const [showProfileForm, setShowProfileForm] = useState(false)
-  const [editingKid, setEditingKid] = useState<any | null>(null)
-  const [showLessonForm, setShowLessonForm] = useState(false)
-  const [showLessonEditModal, setShowLessonEditModal] = useState(false)
-  const [showHelp, setShowHelp] = useState(false)
-  const [expandedFaq, setExpandedFaq] = useState<string | null>(null)
-
-  // Add lesson state
-  const [lessonSubject, setLessonSubject] = useState('')
-  const [lessonSubjectSelect, setLessonSubjectSelect] = useState('')
-  const [lessonSubjectCustom, setLessonSubjectCustom] = useState('')
-  const [lessonTitle, setLessonTitle] = useState('')
-  const [lessonDescription, setLessonDescription] = useState('')
-  const [lessonDate, setLessonDate] = useState('')
-  const [addingLesson, setAddingLesson] = useState(false)
-  const [lessonDurationValue, setLessonDurationValue] = useState<number>(30)
-  const [lessonDurationUnit, setLessonDurationUnit] = useState<DurationUnit>('minutes')
-
-  // Edit lesson state
-  const [editingLessonId, setEditingLessonId] = useState<string | null>(null)
-  const [editLessonTitle, setEditLessonTitle] = useState('')
-  const [editLessonSubject, setEditLessonSubject] = useState('')
-  const [editLessonSubjectSelect, setEditLessonSubjectSelect] = useState('')
-  const [editLessonSubjectCustom, setEditLessonSubjectCustom] = useState('')
-  const [editLessonDescription, setEditLessonDescription] = useState('')
-  const [editLessonDate, setEditLessonDate] = useState('')
-  const [editLessonEndDate, setEditLessonEndDate] = useState('')
-  const [editLessonDurationValue, setEditLessonDurationValue] = useState<number>(30)
-  const [editLessonDurationUnit, setEditLessonDurationUnit] = useState<DurationUnit>('minutes')
-
-  // Cascade state
-  const [showCascadeModal, setShowCascadeModal] = useState(false)
-  const [cascadeData, setCascadeData] = useState<{
-    lessonId: string
-    originalDate: string
-    newDate: string
-    affectedCount: number
-    kidId: string
-  } | null>(null)
-  const [cascadeDays, setCascadeDays] = useState<number>(1)
-
-  // Assessment state
-  const [showPersonalizedAssessment, setShowPersonalizedAssessment] = useState(false)
-  const [showAssessmentTaking, setShowAssessmentTaking] = useState(false)
-  const [generatedAssessment, setGeneratedAssessment] = useState<any>(null)
-  const [assessmentForLesson, setAssessmentForLesson] = useState<any>(null)
-  const [showPastAssessments, setShowPastAssessments] = useState(false)
-  const [pastAssessmentsKidId, setPastAssessmentsKidId] = useState<string | null>(null)
-  const [pastAssessmentsKidName, setPastAssessmentsKidName] = useState('')
-  const [lessonAssessmentScore, setLessonAssessmentScore] = useState<number | null>(null)
-
-  // Settings state
-  const [vacationPeriods, setVacationPeriods] = useState<any[]>([])
-  const [schoolYearSettings, setSchoolYearSettings] = useState<any>(null)
-  const [complianceHealthScore, setComplianceHealthScore] = useState<number | null>(null)
+  const [userTier, setUserTier] = useState<UserTier>('FREE')
   const [parentName, setParentName] = useState('')
-  const [showSettingsMenu, setShowSettingsMenu] = useState(false)
+  const [kidScheduleStatuses, setKidScheduleStatuses] = useState<KidScheduleStatus[]>([])
+  const [calendarVisited, setCalendarVisited] = useState(false)
 
-  // Social integration state
-  const [socialEvents, setSocialEvents] = useState<any[]>([])
-  const [coopEnrollments, setCoopEnrollments] = useState<any[]>([])
-  const [manualAttendance, setManualAttendance] = useState<any[]>([])
-  const [calendarFilters, setCalendarFilters] = useState({
-    showLessons: true,
-    showSocialEvents: true,
-    showCoopClasses: true,
-    showManualAttendance: true
-  })
-
-  const router = useRouter()
-
-  // ─── DATA LOADING ───────────────────────────────────────────────────────────
-
-  const loadKids = async () => {
-    if (!user) return
-    const { data, error } = await supabase
-      .from('kids')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-    if (error) {
-      console.error('Error loading kids:', error.message)
-      return
-    }
-    if (data) {
-      setKids(data)
-      if (data.length > 0 && !selectedKid) setSelectedKid(data[0].id)
-    }
-  }
-
-  const loadAllLessons = async () => {
-    if (!user) return
-
-    const { data: lessonsData, error: lessonsError } = await supabase
-      .from('lessons')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('lesson_date', { ascending: false })
-
-    if (lessonsError) {
-      console.error('Error loading lessons:', lessonsError.message)
-      return
-    }
-
-    if (lessonsData) {
-      setAllLessons(lessonsData)
-      const grouped: { [kidId: string]: any[] } = {}
-      lessonsData.forEach((lesson: any) => {
-        if (!grouped[lesson.kid_id]) grouped[lesson.kid_id] = []
-        grouped[lesson.kid_id].push(lesson)
-      })
-      setLessonsByKid(grouped)
-    }
-
-    const { data: eventsData } = await supabase
-      .from('social_events')
-      .select('*')
-      .or(`is_public.eq.true,created_by.eq.${user.id}`)
-      .order('event_date', { ascending: false })
-    if (eventsData) setSocialEvents(eventsData)
-
-    const { data: enrollmentsData } = await supabase
-      .from('class_enrollments')
-      .select('*, coop_classes(*)')
-      .eq('user_id', user.id)
-    if (enrollmentsData) setCoopEnrollments(enrollmentsData)
-
-    const { data: attendanceData } = await supabase
-      .from('daily_attendance')
-      .select('*')
-      .eq('organization_id', kids[0]?.organization_id || user.id)
-      .order('attendance_date', { ascending: false })
-    if (attendanceData) setManualAttendance(attendanceData)
-  }
-
-  const getUser = async () => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      setUser({ id: 'd52497c0-42a9-49b7-ba3b-849bffa27fc4', email: 'dev@homeschoolhq.com' })
-    } else {
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { router.push('/'); return }
       setUser(user)
-    }
-    setLoading(false)
-  }
 
-  const checkUserTier = async () => {
-    if (!user) return
-    setUserTier(getTierForTesting())
-  }
+      const { data: kidsData } = await supabase
+        .from('kids')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
 
-  // ─── EFFECTS ────────────────────────────────────────────────────────────────
-
-  useEffect(() => { getUser() }, [])
-  useEffect(() => { if (kids.length > 0) loadAllLessons() }, [kids])
-  useEffect(() => { if (user) checkUserTier() }, [user])
-
-  useEffect(() => {
-    if (!kids.length || !schoolYearSettings || !allLessons.length) return
-    const goalValue = parseInt(schoolYearSettings.annual_goal_value) || 180
-    const completedLessons = allLessons.filter(l => l.status === 'completed').length
-    const score = Math.min(100, Math.round((completedLessons / goalValue) * 100))
-    setComplianceHealthScore(score)
-  }, [kids, schoolYearSettings, allLessons])
-
-  useEffect(() => {
-    if (user) loadKids()
-    if (!user) return
-
-    let mounted = true
-    const loadSettings = async () => {
-      try {
-        const { data: kidsData } = await supabase
-          .from('kids')
-          .select('organization_id')
-          .eq('user_id', user.id)
-          .limit(1)
-          .maybeSingle()
-
-        const orgId = kidsData?.organization_id || user.id
+      if (kidsData?.length) {
+        setKids(kidsData)
+        const orgId = kidsData[0].organization_id || user.id
         setOrganizationId(orgId)
 
-        const { data: settings, error: settingsError } = await supabase
-          .from('school_year_settings')
-          .select('*')
-          .eq('organization_id', orgId)
-          .maybeSingle()
+        const { count: totalCount } = await supabase
+          .from('lessons')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+        setHasLessons((totalCount ?? 0) > 0)
 
-        if (settingsError) {
-          console.error('Settings error:', settingsError.message)
-          return
-        }
+        const statuses: KidScheduleStatus[] = await Promise.all(
+          kidsData.map(async (kid: any) => {
+            const { count: total } = await supabase
+              .from('lessons')
+              .select('id', { count: 'exact', head: true })
+              .eq('kid_id', kid.id)
 
-        if (settings && mounted) {
-          setSchoolYearSettings(settings)
-          const { data: vacations } = await supabase
-            .from('vacation_periods')
-            .select('*')
-            .eq('organization_id', settings.organization_id || user.id)
-          if (vacations && mounted) setVacationPeriods(vacations)
-        }
-      } catch (err) {
-        console.error('Error loading settings:', err)
-      }
-    }
-    loadSettings()
-    return () => { mounted = false }
-  }, [user])
+            const { count: unscheduled } = await supabase
+              .from('lessons')
+              .select('id', { count: 'exact', head: true })
+              .eq('kid_id', kid.id)
+              .is('lesson_date', null)
 
-  useEffect(() => {
-    const loadLessonAssessmentScore = async () => {
-      if (!selectedLesson) { setLessonAssessmentScore(null); return }
-      const { data: assessments } = await supabase
-        .from('assessments')
-        .select('id, assessment_results(auto_score, submitted_at)')
-        .eq('lesson_id', selectedLesson.id)
-        .limit(1)
-      if (assessments?.length > 0 && assessments[0].assessment_results.length > 0) {
-        setLessonAssessmentScore(assessments[0].assessment_results[0].auto_score)
+            return {
+              id: kid.id,
+              name: kid.displayname,
+              total: total ?? 0,
+              unscheduled: unscheduled ?? 0,
+            }
+          })
+        )
+        setKidScheduleStatuses(statuses.filter(s => s.total > 0))
       } else {
-        setLessonAssessmentScore(null)
+        setOrganizationId(user.id)
       }
-    }
-    loadLessonAssessmentScore()
-  }, [selectedLesson])
 
-  // Close hamburger when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      const target = e.target as HTMLElement
-      if (!target.closest('.hamburger-wrap')) {
-        setShowHamburger(false)
-      }
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('first_name, calendar_visited_at')
+        .eq('user_id', user.id)
+        .maybeSingle()
+      if (profile?.first_name) setParentName(profile.first_name)
+      if (profile?.calendar_visited_at) setCalendarVisited(true)
+
+      setLoading(false)
     }
-    document.addEventListener('click', handleClickOutside)
-    return () => document.removeEventListener('click', handleClickOutside)
+    getUser()
   }, [])
-
-  // ─── HELPERS ────────────────────────────────────────────────────────────────
-
-  const hasFeature = (feature: string) => checkFeature(userTier, feature)
-  const canAddChild = () => kids.length < getChildLimit(userTier)
-
-  const selectedKidData = kids.find(k => k.id === selectedKid) || null
-  const selectedKidLessons = selectedKid ? (lessonsByKid[selectedKid] || []) : []
-
-  // Progress stats for nav strip
-  const todayStr = new Date().toISOString().split('T')[0]
-  const lessonsToday = allLessons.filter(l => l.lesson_date === todayStr)
-  const lessonsDoneToday = lessonsToday.filter(l => l.status === 'completed').length
-  const today = new Date()
-  const weekStart = new Date(today)
-  weekStart.setDate(today.getDate() - today.getDay())
-  weekStart.setHours(0, 0, 0, 0)
-  const daysLoggedThisWeek = manualAttendance.filter(a => new Date(a.attendance_date) >= weekStart).length
-
-  // ─── CRUD FUNCTIONS ─────────────────────────────────────────────────────────
-
-  const deleteKid = async (id: string, kidDisplayName: string) => {
-    if (confirm(`Delete ${kidDisplayName}? This will also delete all their lessons.`)) {
-      await supabase.from('kids').delete().eq('id', id)
-      if (selectedKid === id) setSelectedKid(kids[0]?.id || null)
-      loadKids()
-    }
-  }
-
-  const addLesson = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!selectedKid) return
-    setAddingLesson(true)
-
-    const orgId = organizationId || user.id
-    const durationInMinutes = convertDurationToMinutes(lessonDurationValue, lessonDurationUnit)
-    const resolvedSubject = lessonSubjectSelect === '__custom__' ? lessonSubjectCustom : lessonSubjectSelect
-
-    const { error } = await supabase.from('lessons').insert([{
-      user_id: user.id,
-      organization_id: orgId,
-      kid_id: selectedKid,
-      subject: resolvedSubject,
-      title: lessonTitle,
-      description: lessonDescription,
-      lesson_date: lessonDate || null,
-      duration_minutes: durationInMinutes,
-      status: 'not_started'
-    }])
-
-    if (error) {
-      console.error('Insert error:', error)
-      alert('Error adding lesson: ' + error.message)
-    }
-
-    setLessonSubject('')
-    setLessonSubjectSelect('')
-    setLessonSubjectCustom('')
-    setLessonTitle('')
-    setLessonDescription('')
-    setLessonDate('')
-    setLessonDurationValue(30)
-    setLessonDurationUnit('minutes')
-    setShowLessonForm(false)
-    setAddingLesson(false)
-    loadAllLessons()
-  }
-
-  const startEditLesson = (lesson: any) => {
-    setEditingLessonId(lesson.id)
-    setEditLessonTitle(lesson.title)
-    setEditLessonSubject(lesson.subject)
-    const isCustom = lesson.subject && !CANONICAL_SUBJECTS.includes(lesson.subject)
-    setEditLessonSubjectSelect(isCustom ? '__custom__' : (lesson.subject || ''))
-    setEditLessonSubjectCustom(isCustom ? lesson.subject : '')
-    setEditLessonDescription(formatLessonDescription(lesson.description) || '')
-    setEditLessonDate(lesson.lesson_date || '')
-    const duration = convertMinutesToDuration(lesson.duration_minutes)
-    setEditLessonDurationValue(duration.value)
-    setEditLessonDurationUnit(duration.unit)
-    if (lesson.lesson_date && lesson.duration_minutes) {
-      const start = new Date(lesson.lesson_date + 'T12:00:00')
-      const durationDays = Math.ceil(lesson.duration_minutes / 360)
-      const end = new Date(start)
-      end.setDate(start.getDate() + durationDays)
-      setEditLessonEndDate(end.toISOString().split('T')[0])
-    } else {
-      setEditLessonEndDate('')
-    }
-  }
-
-  const cancelEditLesson = () => {
-    setEditingLessonId(null)
-    setShowLessonEditModal(false)
-  }
-
-  const saveEditLesson = async (id: string) => {
-    const durationInMinutes = convertDurationToMinutes(editLessonDurationValue, editLessonDurationUnit)
-    const resolvedSubject = editLessonSubjectSelect === '__custom__' ? editLessonSubjectCustom : editLessonSubjectSelect
-
-    const updates = {
-      title: editLessonTitle,
-      subject: resolvedSubject,
-      description: editLessonDescription,
-      lesson_date: editLessonDate || null,
-      duration_minutes: durationInMinutes
-    }
-
-    if (editLessonDate && vacationPeriods.length > 0) {
-      const vacation = vacationPeriods.find(v =>
-        editLessonDate >= v.start_date && editLessonDate <= v.end_date
-      )
-      if (vacation) {
-        if (!confirm(`⚠️ ${editLessonDate} falls during ${vacation.name}.\n\nSave lesson anyway?`)) return
-      }
-    }
-
-    if (editLessonDate) {
-      const holiday = DEFAULT_HOLIDAYS_2025_2026.find((h: any) => {
-        const holidayDate = h.date || h.start
-        return holidayDate === editLessonDate
-      })
-      if (holiday) {
-        if (!confirm(`⚠️ ${editLessonDate} is ${holiday.name}.\n\nSave lesson anyway?`)) return
-      }
-    }
-
-    const currentLesson = allLessons.find(l => l.id === id)
-
-    if (
-      currentLesson &&
-      currentLesson.lesson_date &&
-      editLessonDate &&
-      currentLesson.lesson_date !== editLessonDate
-    ) {
-      const subsequentLessons = allLessons.filter(lesson =>
-        lesson.kid_id === currentLesson.kid_id &&
-        lesson.id !== id &&
-        lesson.lesson_date &&
-        lesson.lesson_date > currentLesson.lesson_date
-      )
-
-      if (subsequentLessons.length > 0) {
-        const oldDate = new Date(currentLesson.lesson_date)
-        const newDateObj = new Date(editLessonDate)
-        const suggestedShift = Math.round((newDateObj.getTime() - oldDate.getTime()) / (1000 * 60 * 60 * 24))
-        setCascadeData({
-          lessonId: id,
-          originalDate: currentLesson.lesson_date,
-          newDate: editLessonDate,
-          affectedCount: subsequentLessons.length,
-          kidId: currentLesson.kid_id
-        })
-        setCascadeDays(suggestedShift)
-        setShowCascadeModal(true)
-        return
-      }
-    }
-
-    await performLessonUpdate(id, updates)
-  }
-
-  const performLessonUpdate = async (id: string, updates: any) => {
-    setAllLessons(prev => prev.map(lesson => lesson.id === id ? { ...lesson, ...updates } : lesson))
-    setLessonsByKid(prev => {
-      const updated = { ...prev }
-      Object.keys(updated).forEach(kidId => {
-        updated[kidId] = updated[kidId].map(lesson => lesson.id === id ? { ...lesson, ...updates } : lesson)
-      })
-      return updated
-    })
-    if (selectedLesson?.id === id) setSelectedLesson({ ...selectedLesson, ...updates })
-
-    const { error } = await supabase.from('lessons').update(updates).eq('id', id)
-    if (error) {
-      console.error('Error saving lesson:', error)
-      alert('Failed to save lesson changes')
-      loadAllLessons()
-    } else {
-      setEditingLessonId(null)
-      setShowLessonEditModal(false)
-    }
-  }
-
-  const handleStatusChange = async (lessonId: string, newStatus: 'not_started' | 'in_progress' | 'completed') => {
-    const updates: any = { status: newStatus }
-    if (newStatus === 'completed') updates.completed_at = new Date().toISOString()
-    if (newStatus === 'not_started') updates.completed_at = null
-
-    setAllLessons(prev => prev.map(lesson => lesson.id === lessonId ? { ...lesson, ...updates } : lesson))
-    setLessonsByKid(prev => {
-      const updated = { ...prev }
-      Object.keys(updated).forEach(kidId => {
-        updated[kidId] = updated[kidId].map(lesson => lesson.id === lessonId ? { ...lesson, ...updates } : lesson)
-      })
-      return updated
-    })
-    if (selectedLesson?.id === lessonId) setSelectedLesson({ ...selectedLesson, ...updates })
-
-    const { error } = await supabase.from('lessons').update(updates).eq('id', lessonId)
-    if (error) {
-      console.error('Error updating lesson status:', error)
-      alert('Failed to update lesson status')
-      loadAllLessons()
-    }
-  }
-
-  const handleCascadeUpdate = async (updateAll: boolean) => {
-    if (!cascadeData) return
-
-    const { lessonId, originalDate, kidId } = cascadeData
-    const daysDiff = cascadeDays
-    const durationInMinutes = convertDurationToMinutes(editLessonDurationValue, editLessonDurationUnit)
-    const resolvedSubject = editLessonSubjectSelect === '__custom__' ? editLessonSubjectCustom : editLessonSubjectSelect
-    const updates = {
-      title: editLessonTitle,
-      subject: resolvedSubject,
-      description: editLessonDescription,
-      lesson_date: editLessonDate || null,
-      duration_minutes: durationInMinutes
-    }
-
-    await performLessonUpdate(lessonId, updates)
-
-    if (updateAll && daysDiff !== 0) {
-      const subsequentLessons = allLessons.filter(lesson =>
-        lesson.kid_id === kidId &&
-        lesson.id !== lessonId &&
-        lesson.lesson_date &&
-        lesson.lesson_date > originalDate
-      )
-
-      const updatePromises = subsequentLessons.map(lesson => {
-        const lessonDate = new Date(lesson.lesson_date!)
-        lessonDate.setDate(lessonDate.getDate() + daysDiff)
-        return supabase.from('lessons').update({ lesson_date: lessonDate.toISOString().split('T')[0] }).eq('id', lesson.id)
-      })
-
-      const results = await Promise.all(updatePromises)
-      const updatedCount = results.filter(r => !r.error).length
-      await loadAllLessons()
-      setShowCascadeModal(false)
-      setCascadeData(null)
-      setCascadeDays(1)
-      setTimeout(() => {
-        alert(`✅ Updated ${updatedCount} subsequent lesson${updatedCount !== 1 ? 's' : ''}. All dates shifted by ${Math.abs(daysDiff)} day${Math.abs(daysDiff) !== 1 ? 's' : ''} ${daysDiff > 0 ? 'later' : 'earlier'}.`)
-      }, 100)
-    } else {
-      setShowCascadeModal(false)
-      setCascadeData(null)
-      setCascadeDays(1)
-      setTimeout(() => { alert('✅ Lesson date updated. Other lessons unchanged.') }, 100)
-    }
-  }
-
-  const cycleLessonStatus = async (lessonId: string, currentStatus: string) => {
-    let newStatus: string
-    if (currentStatus === 'not_started') newStatus = 'in_progress'
-    else if (currentStatus === 'in_progress') newStatus = 'completed'
-    else newStatus = 'not_started'
-    await handleStatusChange(lessonId, newStatus as any)
-  }
-
-  const deleteLesson = async (id: string) => {
-    const lesson = allLessons.find(l => l.id === id)
-    let confirmMessage = 'Are you sure you want to delete this lesson?'
-    if (lesson?.duration_minutes) {
-      const hours = (lesson.duration_minutes / 60).toFixed(1)
-      confirmMessage = `This lesson has ${lesson.duration_minutes} minutes (${hours} hours) of tracked time.\n\nDeleting this lesson will remove these hours from your total.\n\nAre you sure you want to delete it?`
-    }
-    if (confirm(confirmMessage)) {
-      await supabase.from('lessons').delete().eq('id', id).eq('user_id', user.id)
-      await loadAllLessons()
-    }
-  }
-
-  const copyLessonToChild = async () => {
-    if (!copyTargetChildId || !selectedLesson) return
-    const orgId = organizationId || user.id
-    const targetChild = kids.find(k => k.id === copyTargetChildId)
-    if (!targetChild) return
-    const { error } = await supabase.from('lessons').insert([{
-      user_id: user.id,
-      organization_id: orgId,
-      kid_id: copyTargetChildId,
-      subject: selectedLesson.subject,
-      title: selectedLesson.title,
-      description: selectedLesson.description,
-      lesson_date: selectedLesson.lesson_date,
-      duration_minutes: selectedLesson.duration_minutes,
-      status: 'not_started'
-    }])
-    if (!error) {
-      alert(`Lesson copied to ${targetChild.displayname}!`)
-      setShowCopyModal(false)
-      setCopyTargetChildId('')
-      await loadAllLessons()
-    } else {
-      console.error('Copy error:', error)
-      alert('Failed to copy lesson. Please try again.')
-    }
-  }
-
-  // ─── ASSESSMENT HANDLERS ─────────────────────────────────────────────────────
-
-  const handleViewPastAssessments = (kidId: string, kidName: string) => {
-    setPastAssessmentsKidId(kidId)
-    setPastAssessmentsKidName(kidName)
-    setShowPastAssessments(true)
-  }
-
-  const handleGeneratePersonalizedAssessment = (lesson: any) => {
-    setAssessmentForLesson(lesson)
-    setShowPersonalizedAssessment(true)
-  }
-
-  const handleAssessmentCreated = (assessmentData: any) => {
-    setGeneratedAssessment(assessmentData)
-    setShowPersonalizedAssessment(false)
-    setShowAssessmentTaking(true)
-  }
-
-  const handleAssessmentSubmitted = (results: any) => {
-    loadAllLessons()
-  }
-
-  const handleClosePersonalizedAssessment = () => {
-    setShowPersonalizedAssessment(false)
-    setShowAssessmentTaking(false)
-    setGeneratedAssessment(null)
-    setAssessmentForLesson(null)
-  }
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
     router.push('/')
   }
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>
-
-  // ─── RENDER ──────────────────────────────────────────────────────────────────
+  if (loading) return (
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f5f3ff' }}>
+      <div style={{ color: '#7c3aed', fontWeight: 700, fontSize: 16 }}>Loading...</div>
+    </div>
+  )
 
   return (
-    <div className="min-h-screen bg-gray-50 overflow-x-hidden">
+    <div style={css.root}>
 
-      {/* ════════════════════════════════════════
-          TOP NAV
-      ════════════════════════════════════════ */}
-      <div className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 py-3 flex items-center justify-between gap-4">
-
-          {/* Left: Logo + Welcome + Kid Avatars */}
-          <div className="flex items-center gap-2 sm:gap-4 min-w-0">
-            <div className="flex-shrink-0">
-              <span className="text-lg font-black text-indigo-900 tracking-tight">Homeschool</span>
-              <span className="text-lg font-black text-purple-600 tracking-tight">HQ</span>
-            </div>
-            <div className="hidden sm:block text-sm text-gray-500">
-              Welcome, <span className="font-semibold text-gray-700">{parentName || user?.email?.split('@')[0]}</span> 👋
-            </div>
-
-            <div className="hidden sm:block w-px h-6 bg-gray-200" />
-
-            {/* Kid Avatars */}
-            <div className="flex items-center gap-2">
-            <div className="relative group">
-              <span className="text-xs font-bold text-gray-400 uppercase tracking-wide cursor-default">Kids</span>
-              <div className="absolute left-0 top-6 z-50 hidden group-hover:block bg-gray-800 text-white text-xs rounded-lg px-3 py-2 whitespace-nowrap shadow-lg">
-                Click a photo to view child details
-                <div className="absolute -top-1 left-3 w-2 h-2 bg-gray-800 rotate-45" />
-              </div>
-            </div>
-              {kids.map((kid) => (
-                <button
-                  key={kid.id}
-                  onClick={() => setSelectedKid(kid.id)}
-                  title={kid.displayname}
-                  className={`w-9 h-9 rounded-full overflow-hidden border-2 transition-all flex-shrink-0 ${
-                    selectedKid === kid.id
-                      ? 'border-purple-500 shadow-md ring-2 ring-purple-200'
-                      : 'border-gray-200 hover:border-purple-300'
-                  }`}
-                >
-                  {kid.photo_url ? (
-                    <img src={kid.photo_url} alt={kid.displayname} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-violet-400 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
-                      {kid.displayname.charAt(0).toUpperCase()}
-                    </div>
-                  )}
-                </button>
-              ))}
-              {canAddChild() && (
-                <button
-                  onClick={() => { setEditingKid(null); setShowProfileForm(true) }}
-                  title="Add a child"
-                  className="w-9 h-9 rounded-full border-2 border-dashed border-gray-300 hover:border-purple-400 flex items-center justify-center text-gray-400 hover:text-purple-500 transition-all text-lg font-light"
-                >
-                  +
-                </button>
-              )}
-            </div>
+      {/* ── TOP BAR ─────────────────────────────────────────────────── */}
+      <header style={css.topBar}>
+        <div style={css.topBarLeft}>
+          <div style={css.logo}>
+            <span style={css.logoMain}>Homeschool</span>
+            <span style={css.logoAccent}>HQ</span>
           </div>
-
-          {/* Right: Progress strip + How To + Hamburger */}
-          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-
-            {/* Progress Strip */}
-            {schoolYearSettings && (
-              <div className="hidden md:flex items-center bg-gray-50 border-gray-200 rounded-xl px-1 py-1 gap-0">
-                <div className="flex items-center gap-2 px-3 py-1 rounded-lg hover:bg-white transition-colors cursor-default">
-                  <span className="text-lg">📚</span>
-                  <div>
-                    <div className="text-xs text-gray-400 font-semibold uppercase tracking-wide leading-none">Today</div>
-                    <div className={`text-sm font-black leading-tight ${lessonsDoneToday === lessonsToday.length && lessonsToday.length > 0 ? 'text-green-600' : 'text-gray-800'}`}>
-                      {lessonsDoneToday}<span className="text-xs font-medium text-gray-400">/{lessonsToday.length} done</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="w-px h-7 bg-gray-200" />
-                <button
-                  onClick={() => router.push('/admin?tab=school-year')}
-                  className={`flex items-center gap-2 px-3 py-1 rounded-lg transition-colors ${
-                    (complianceHealthScore ?? 0) >= 80 ? 'hover:bg-green-50' :
-                    (complianceHealthScore ?? 0) >= 40 ? 'hover:bg-yellow-50' : 'hover:bg-red-50'
-                  }`}
-                >
-                  <span className="text-lg">🎯</span>
-                  <div>
-                    <div className="text-xs text-gray-400 font-semibold uppercase tracking-wide leading-none">Annual Goal</div>
-                    <div className={`text-sm font-black leading-tight ${
-                      (complianceHealthScore ?? 0) >= 80 ? 'text-green-600' :
-                      (complianceHealthScore ?? 0) >= 40 ? 'text-yellow-600' : 'text-red-500'
-                    }`}>
-                      {complianceHealthScore ?? 0}%<span className="text-xs font-medium text-gray-400"> of {schoolYearSettings.annual_goal_value}</span>
-                    </div>
-                  </div>
-                </button>
-                <div className="w-px h-7 bg-gray-200" />
-                <button
-                  onClick={() => router.push('/admin?tab=attendance')}
-                  className="flex items-center gap-2 px-3 py-1 rounded-lg hover:bg-white transition-colors"
-                >
-                  <span className="text-lg">📋</span>
-                  <div>
-                    <div className="text-xs text-gray-400 font-semibold uppercase tracking-wide leading-none">This Week</div>
-                    <div className="text-sm font-black leading-tight text-gray-800">
-                      {daysLoggedThisWeek}<span className="text-xs font-medium text-gray-400"> days</span>
-                    </div>
-                  </div>
-                </button>
-              </div>
-            )}
-
-            {/* How To */}
-            <button
-              onClick={() => setShowHelp(!showHelp)}
-              className={`hidden md:block px-3 py-2 rounded-lg font-medium text-sm transition-all border ${
-                showHelp
-                  ? 'bg-blue-50 border-blue-200 text-blue-700'
-                  : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
-              }`}
-            >
-              💡 How To
-            </button>
-
-            {/* Hamburger Menu */}
-            <div className="hamburger-wrap relative">
-              <button
-                onClick={(e) => { e.stopPropagation(); setShowHamburger(!showHamburger) }}
-                className="w-10 h-10 rounded-xl bg-indigo-900 hover:bg-indigo-800 flex flex-col items-center justify-center gap-1.5 transition-colors"
-              >
-                <span className="block w-4 h-0.5 bg-white rounded-full" />
-                <span className="block w-4 h-0.5 bg-white rounded-full" />
-                <span className="block w-4 h-0.5 bg-white rounded-full" />
-              </button>
-
-              {showHamburger && (
-                <div className="absolute right-0 top-12 bg-white border border-gray-200 rounded-xl shadow-xl min-w-[230px] py-2 z-[100]">
-                  <button
-                    onClick={() => { router.push('/social'); setShowHamburger(false) }}
-                    className="flex items-center gap-3 w-full px-4 py-2.5 text-sm font-semibold text-pink-600 hover:bg-pink-50 transition-colors"
-                  >
-                    🤝 Social Hub
-                  </button>
-                  <div className="h-px bg-gray-100 my-1" />
-                  <button
-                    onClick={() => { router.push('/materials'); setShowHamburger(false) }}
-                    className="flex items-center gap-3 w-full px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-                  >
-                    📦 Materials
-                  </button>
-                  <button
-                    onClick={() => { router.push('/calendar/connect'); setShowHamburger(false) }}
-                    className="flex items-center gap-3 w-full px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-                  >
-                    📅 Work Calendar
-                  </button>
-                  <button
-                    onClick={() => { router.push('/admin'); setShowHamburger(false) }}
-                    className="flex items-center gap-3 w-full px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-                  >
-                    🏫 School Year &amp; Compliance
-                  </button>
-                  <div className="h-px bg-gray-100 my-1" />
-                  <button
-                    onClick={handleLogout}
-                    className="flex items-center gap-3 w-full px-4 py-2.5 text-sm font-semibold text-red-600 hover:bg-red-50 transition-colors"
-                  >
-                    Logout
-                  </button>
-                </div>
-              )}
-            </div>
+          <div style={css.welcomeMsg}>
+            Welcome, <strong>{parentName || user?.email?.split('@')[0]}</strong> 👋
           </div>
         </div>
 
-        {/* Help Panel */}
-        {showHelp && (
-          <div className="border-t border-gray-100 bg-white px-6 py-4 max-w-7xl mx-auto">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border border-blue-200">
-                <h3 className="font-bold text-blue-900 mb-2 flex items-center gap-2"><span className="text-xl">🎯</span>Getting Started</h3>
-                <p className="text-sm text-blue-800 leading-relaxed">
-                  <strong>Step 1:</strong> Add your children using the + button<br />
-                  <strong>Step 2:</strong> Import curriculum or create lessons<br />
-                  <strong>Step 3:</strong> Use the calendar to track progress
-                </p>
-              </div>
-              <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-4 border border-purple-200">
-                <h3 className="font-bold text-purple-900 mb-2 flex items-center gap-2"><span className="text-xl">✨</span>Power Features</h3>
-                <p className="text-sm text-purple-800 leading-relaxed">
-                  <strong>Auto-Schedule:</strong> Bulk assign dates to lessons<br />
-                  <strong>AI Generate:</strong> Create supplemental lessons instantly<br />
-                  <strong>Import:</strong> Upload curriculum from PDFs
-                </p>
-              </div>
-              <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-4 border border-green-200">
-                <h3 className="font-bold text-green-900 mb-2 flex items-center gap-2"><span className="text-xl">📊</span>View Modes</h3>
-                <p className="text-sm text-green-800 leading-relaxed">
-                  <strong>Calendar:</strong> Month view with all children<br />
-                  <strong>Lessons:</strong> Detailed list by child<br />
-                  <strong>Click any day</strong> to view and work through that day's lessons
-                </p>
-              </div>
-              <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg p-4 border border-orange-200">
-                <h3 className="font-bold text-orange-900 mb-2 flex items-center gap-2"><span className="text-xl">❓</span>Frequently Asked</h3>
-                <div className="space-y-2">
-                  {[
-                    { q: "How do I get started?", a: "Click the + button next to Kids in the top nav to add your first child." },
-                    { q: "What's the best way to organize?", a: "Start with one subject and use 'Auto-Schedule' to map out your week or month." },
-                    { q: "Can I track multiple children?", a: "Yes — click any child's avatar in the top nav to switch between them." },
-                    { q: "How do AI features work?", a: "The Lesson Generator automatically creates supplemental lessons based on your topic." }
-                  ].map((faq, i) => (
-                    <div key={i} className="border-b border-orange-200 pb-2 last:border-0">
-                      <button onClick={() => setExpandedFaq(expandedFaq === faq.q ? null : faq.q)} className="flex justify-between items-center w-full text-left text-xs font-medium text-orange-900 hover:text-orange-700 transition-colors">
-                        <span>{faq.q}</span>
-                        <span className="text-orange-400 font-bold">{expandedFaq === faq.q ? '−' : '+'}</span>
-                      </button>
-                      {expandedFaq === faq.q && (
-                        <p className="mt-1 text-xs text-orange-800 bg-orange-50 p-2 rounded leading-relaxed">{faq.a}</p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
+        <div style={css.topBarRight}>
+          <button style={css.howToBtn} onClick={() => router.push('/calendar')}>💡 How To</button>
+          <button style={css.logoutBtn} onClick={handleLogout}>Logout</button>
+        </div>
+      </header>
 
-      {/* ════════════════════════════════════════
-          MAIN CONTENT
-      ════════════════════════════════════════ */}
-     <div className="max-w-7xl mx-auto px-3 sm:px-6 py-4 space-y-4">
+      {/* ── STATS BAR ───────────────────────────────────────────────── */}
+      <StatsBar organizationId={organizationId} />
 
-        {/* Attendance Reminder */}
-        <AttendanceReminder
-          onTakeAttendance={() => {
-            router.push('/admin')
-            setTimeout(() => { window.dispatchEvent(new Event('openAttendance')) }, 500)
-          }}
-          kids={kids}
-          organizationId={organizationId ?? user.id}
+      {/* ── MAIN ────────────────────────────────────────────────────── */}
+      <main style={css.main}>
+
+        <OnboardingChecklist
+          hasKids={kids.length > 0}
+          hasLessons={hasLessons}
+          kidScheduleStatuses={kidScheduleStatuses}
+          calendarVisited={calendarVisited}
         />
 
-        {kids.length === 0 ? (
-          /* ── Empty state ── */
-          <div className="bg-white rounded-lg shadow p-12 text-center">
-            <div className="text-6xl mb-4">👋</div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome to HomeschoolHQ!</h2>
-            <p className="text-gray-600 mb-6">Let's get started by adding your first child.</p>
-            <button
-              onClick={() => { setEditingKid(null); setShowProfileForm(true) }}
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium shadow-lg"
-            >
-              + Add Your First Child
-            </button>
-          </div>
-        ) : (
+        {kids.length > 0 && (
           <>
-            {/* ── Kid Quick Panel ── */}
-            {selectedKidData && (
-              <KidQuickPanel
-                kid={selectedKidData}
-                lessons={selectedKidLessons}
-                onEditProfile={() => { setEditingKid(selectedKidData); setShowProfileForm(true) }}
-                onViewAssessments={() => handleViewPastAssessments(selectedKidData.id, selectedKidData.displayname)}
-                onViewCoverage={() => router.push('/coverage')}
-                viewMode={viewMode}
-                onViewLessons={() => setViewMode(viewMode === 'list' ? 'calendar' : 'list')}
-                isPro={hasFeature('subject_coverage')}
-              />
-            )}
-
-            {/* ── Action Bar ── */}
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm px-4 py-3 flex items-center justify-between gap-4 flex-wrap">
-              <div className="flex items-center gap-2 flex-wrap">
-                {/* Creation actions */}
-                <button
-                  onClick={() => setShowAutoSchedule(true)}
-                  className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
-                >
-                  📅 Auto-Schedule
-                </button>
-
-                {hasFeature('curriculum_import') ? (
-                  <button
-                    onClick={() => setShowImporter(true)}
-                    className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
-                  >
-                    📥 Import
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => { alert(getUpgradeMessage('curriculum_import')); router.push('/pricing') }}
-                    className="px-4 py-2 text-sm bg-gray-200 text-gray-500 rounded-lg cursor-not-allowed font-medium"
-                  >
-                    📥 Import 🔒
-                  </button>
-                )}
-
-                <button
-                  onClick={() => setShowLessonForm(!showLessonForm)}
-                  className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
-                >
-                  + Add Lesson
-                </button>
-
-                {hasFeature('ai_generation') ? (
-                  <button
-                    onClick={() => setShowGenerator(true)}
-                    className="px-4 py-2 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium transition-colors"
-                  >
-                    ✨ Generate Lessons
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => { alert(getUpgradeMessage('ai_generation')); router.push('/pricing') }}
-                    className="px-4 py-2 text-sm bg-gray-200 text-gray-500 rounded-lg cursor-not-allowed font-medium"
-                  >
-                    ✨ Generate Lessons 🔒
-                  </button>
-                )}
-
-                {/* Divider */}
-                <div className="w-px h-7 bg-gray-200 mx-1" />
-
-                {/* Reporting actions */}
-                {hasFeature('subject_coverage') ? (
-                  <button
-                    onClick={() => router.push('/coverage')}
-                    className="px-4 py-2 text-sm bg-violet-600 text-white rounded-lg hover:bg-violet-700 font-medium transition-colors flex items-center gap-1.5"
-                  >
-                    📊 Coverage
-                    <span className="text-[9px] bg-violet-400 px-1.5 py-0.5 rounded font-bold uppercase tracking-wide">Pro</span>
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => { alert(getUpgradeMessage('subject_coverage')); router.push('/pricing') }}
-                    className="px-4 py-2 text-sm bg-gray-200 text-gray-500 rounded-lg cursor-not-allowed font-medium"
-                  >
-                    📊 Coverage 🔒
-                  </button>
-                )}
-
-                <button
-                  onClick={() => router.push('/admin?tab=compliance')}
-                  className="px-4 py-2 text-sm bg-white text-gray-700 rounded-lg border border-gray-200 hover:bg-gray-50 font-medium transition-colors"
-                >
-                  📋 Compliance
-                </button>
-
-                <button
-                  onClick={() => router.push('/admin?tab=attendance')}
-                  className="px-4 py-2 text-sm bg-white text-gray-700 rounded-lg border border-gray-200 hover:bg-gray-50 font-medium transition-colors"
-                >
-                  📄 Transcript
-                </button>
-              </div>
+            <div style={css.sectionLabel}>WHERE WOULD YOU LIKE TO GO?</div>
+            <div style={css.grid}>
+              {NAV_CARDS.map(card => <NavCard key={card.id} card={card} />)}
             </div>
-
-            {/* ── Calendar Filters (only in calendar view) ── */}
-            {viewMode === 'calendar' && (
-              <CalendarFilters
-                filters={calendarFilters}
-                onChange={setCalendarFilters}
-                counts={{
-                  lessons: allLessons.filter(l => l.lesson_date).length,
-                  socialEvents: socialEvents.length,
-                  coopClasses: coopEnrollments.length,
-                  manualAttendance: manualAttendance.length
-                }}
-              />
-            )}
-
-            {/* ── View Content ── */}
-            {viewMode === 'calendar' ? (
-              <LessonCalendar
-                kids={kids}
-                lessonsByKid={lessonsByKid}
-                socialEvents={socialEvents}
-                coopEnrollments={coopEnrollments}
-                manualAttendance={manualAttendance}
-                filters={calendarFilters}
-                onLessonClick={(lesson, child) => {
-                  setSelectedLesson(lesson)
-                  setSelectedLessonChild(child)
-                  startEditLesson(lesson)
-                  setShowLessonEditModal(true)
-                }}
-                onStatusChange={handleStatusChange}
-                userId={user.id}
-                organizationId={organizationId ?? user.id}
-                onEditLesson={(lesson) => {
-                  setSelectedLesson(lesson)
-                  setSelectedLessonChild(kids.find(k => k.id === lesson.kid_id) || null)
-                  startEditLesson(lesson)
-                  setShowLessonEditModal(true)
-                }}
-              />
-            ) : (
-              <AllChildrenList
-                kids={kids}
-                lessonsByKid={lessonsByKid}
-                autoExpandKid={selectedKid}
-                onEditLesson={(lesson) => {
-                  setSelectedLesson(lesson)
-                  setSelectedLessonChild(kids.find(k => k.id === lesson.kid_id) || null)
-                  startEditLesson(lesson)
-                  setShowLessonEditModal(true)
-                }}
-                onDeleteLesson={deleteLesson}
-                onCycleStatus={cycleLessonStatus}
-                onGenerateAssessment={handleGeneratePersonalizedAssessment}
-                onViewPastAssessments={handleViewPastAssessments}
-              />
-            )}
-
-            {showGenerator && (
-              <LessonGenerator kids={kids} userId={user.id} onClose={() => setShowGenerator(false)} />
-            )}
-            {showImporter && selectedKid && (
-              <CurriculumImporter
-                childId={selectedKid}
-                childName={kids.find(k => k.id === selectedKid)?.displayname || ''}
-                onClose={() => setShowImporter(false)}
-                onImportComplete={() => { setShowImporter(false); loadAllLessons() }}
-              />
-            )}
           </>
         )}
-      </div>
-
-      {/* ════════════════════════════════════════
-          MODALS
-      ════════════════════════════════════════ */}
-
-      {/* ── Kid Profile Form ── */}
-      {showProfileForm && (
-        <KidProfileForm
-          kid={editingKid || undefined}
-          onSave={async (data) => {
-            try {
-              const orgId = organizationId ?? user.id
-              if (data.id) {
-                const updateData: any = {
-                  user_id: user.id,
-                  organization_id: orgId,
-                  firstname: data.firstname,
-                  lastname: data.lastname,
-                  displayname: data.displayname || data.firstname,
-                  age: data.age,
-                  grade: data.grade,
-                  learning_style: data.learning_style,
-                  pace_of_learning: data.pace_of_learning,
-                  environmental_needs: data.environmental_needs,
-                  current_hook: data.current_hook,
-                  todays_vibe: data.todays_vibe,
-                  current_focus: data.current_focus
-                }
-
-                if (data.photoFile) {
-                  const fileExt = data.photoFile.name.split('.').pop()
-                  const fileName = `${data.id}/${Date.now()}.${fileExt}`
-                  const { error: uploadError } = await supabase.storage.from('child-photos').upload(fileName, data.photoFile)
-                  if (!uploadError) {
-                    const { data: { publicUrl } } = supabase.storage.from('child-photos').getPublicUrl(fileName)
-                    updateData.photo_url = publicUrl
-                  }
-                }
-
-                const { error: updateError } = await supabase.from('kids').update(updateData).eq('id', data.id)
-                if (updateError) {
-                  alert('Error updating child: ' + updateError.message)
-                  return
-                }
-
-                if (data.subject_proficiencies?.length > 0) {
-                  await supabase.from('subject_proficiency').delete().eq('kid_id', data.id)
-                  await supabase.from('subject_proficiency').insert(
-                    data.subject_proficiencies.map((sp: any) => ({
-                      kid_id: data.id,
-                      subject: sp.subject,
-                      proficiency: sp.proficiency,
-                      notes: sp.notes || ''
-                    }))
-                  )
-                }
-              } else {
-                const { data: newKid, error } = await supabase.from('kids').insert([{
-                  user_id: user.id,
-                  organization_id: orgId,
-                  firstname: data.firstname,
-                  lastname: data.lastname,
-                  displayname: data.displayname || data.firstname,
-                  age: data.age,
-                  grade: data.grade,
-                  learning_style: data.learning_style,
-                  pace_of_learning: data.pace_of_learning,
-                  environmental_needs: data.environmental_needs,
-                  current_hook: data.current_hook,
-                  todays_vibe: data.todays_vibe,
-                  current_focus: data.current_focus
-                }]).select()
-
-                if (error || !newKid || newKid.length === 0) {
-                  alert('Error creating child. Please try again.')
-                  return
-                }
-
-                const newKidId = newKid[0].id
-
-                if (data.photoFile) {
-                  const fileExt = data.photoFile.name.split('.').pop()
-                  const fileName = `${newKidId}/${Date.now()}.${fileExt}`
-                  const { error: uploadError } = await supabase.storage.from('child-photos').upload(fileName, data.photoFile)
-                  if (!uploadError) {
-                    const { data: { publicUrl } } = supabase.storage.from('child-photos').getPublicUrl(fileName)
-                    await supabase.from('kids').update({ photo_url: publicUrl }).eq('id', newKidId)
-                  }
-                }
-
-                if (data.subject_proficiencies?.length > 0) {
-                  await supabase.from('subject_proficiency').insert(
-                    data.subject_proficiencies.map((sp: any) => ({
-                      kid_id: newKidId,
-                      subject: sp.subject,
-                      proficiency: sp.proficiency,
-                      notes: sp.notes || ''
-                    }))
-                  )
-                }
-              }
-
-              await loadKids()
-              setShowProfileForm(false)
-              setEditingKid(null)
-              if (data.id) setSelectedKid(data.id)
-            } catch (err) {
-              console.error('Unexpected error saving kid profile:', err)
-              alert('An unexpected error occurred. Please try again.')
-            }
-          }}
-          onCancel={() => { setShowProfileForm(false); setEditingKid(null) }}
-        />
-      )}
-
-      {/* ── Auto Schedule ── */}
-      {showAutoSchedule && selectedKid && (
-        <AutoScheduleModal
-          isOpen={showAutoSchedule}
-          onClose={() => setShowAutoSchedule(false)}
-          kidId={selectedKid}
-          kidName={kids.find(k => k.id === selectedKid)?.displayname}
-          onScheduleComplete={() => { loadAllLessons(); setShowAutoSchedule(false); setViewMode('calendar') }}
-        />
-      )}
-
-      {/* ── Assessment Creator ── */}
-      {showPersonalizedAssessment && assessmentForLesson && (
-        <PersonalizedAssessmentCreator
-          lessonId={assessmentForLesson.id}
-          lessonTitle={assessmentForLesson.title}
-          kidId={assessmentForLesson.kid_id}
-          kidName={kids.find(k => k.id === assessmentForLesson.kid_id)?.displayname || 'Student'}
-          onClose={handleClosePersonalizedAssessment}
-          onAssessmentCreated={handleAssessmentCreated}
-        />
-      )}
-
-      {/* ── Assessment Taking ── */}
-      {showAssessmentTaking && generatedAssessment && assessmentForLesson && (
-        <AssessmentTaking
-          assessmentData={generatedAssessment.assessment}
-          assessmentId={generatedAssessment.assessmentId}
-          childName={kids.find(k => k.id === assessmentForLesson.kid_id)?.displayname || 'Student'}
-          lessonTitle={generatedAssessment.lessonTitle}
-          onClose={handleClosePersonalizedAssessment}
-          onSubmit={handleAssessmentSubmitted}
-        />
-      )}
-
-      {/* ── Past Assessments ── */}
-      {showPastAssessments && pastAssessmentsKidId && (
-        <PastAssessmentsViewer
-          kidId={pastAssessmentsKidId}
-          kidName={pastAssessmentsKidName}
-          onClose={() => { setShowPastAssessments(false); setPastAssessmentsKidId(null); setPastAssessmentsKidName('') }}
-        />
-      )}
-
-      {/* ── Add Lesson Form ── */}
-      {showLessonForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
-            <div className="bg-gradient-to-r from-green-500 to-teal-500 px-6 py-4 rounded-t-xl">
-              <div className="flex justify-between items-center">
-                <h3 className="text-xl font-bold text-white">+ Add New Lesson</h3>
-                <button onClick={() => setShowLessonForm(false)} className="text-white hover:text-gray-200 text-2xl leading-none font-light">×</button>
-              </div>
-            </div>
-            <form onSubmit={addLesson} className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Select Child *</label>
-                <select
-                  value={selectedKid || ''}
-                  onChange={(e) => setSelectedKid(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  required
-                >
-                  <option value="">Choose a child...</option>
-                  {kids.map(kid => (
-                    <option key={kid.id} value={kid.id}>{kid.displayname}{kid.grade ? ` (Grade ${kid.grade})` : ''}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Subject *</label>
-                <select
-                  value={lessonSubjectSelect}
-                  onChange={(e) => setLessonSubjectSelect(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  required
-                >
-                  <option value="">Choose a subject...</option>
-                  {CANONICAL_SUBJECTS.map(s => <option key={s} value={s}>{s}</option>)}
-                  <option value="__custom__">✏️ Custom subject...</option>
-                </select>
-                {lessonSubjectSelect === '__custom__' && (
-                  <div className="mt-2">
-                    <input
-                      type="text"
-                      value={lessonSubjectCustom}
-                      onChange={(e) => setLessonSubjectCustom(e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                      placeholder="e.g., Latin, Robotics, Home Economics"
-                      required
-                      autoFocus
-                    />
-                  </div>
-                )}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Lesson Title *</label>
-                <input
-                  type="text"
-                  value={lessonTitle}
-                  onChange={(e) => setLessonTitle(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  placeholder="e.g., Introduction to Fractions"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Description (optional)</label>
-                <textarea
-                  value={lessonDescription}
-                  onChange={(e) => setLessonDescription(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  placeholder="What will you cover in this lesson?"
-                  rows={3}
-                />
-              </div>
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
-                <label className="block text-sm font-medium text-gray-700">How long will this lesson take?</label>
-                <div className="flex gap-2">
-                  {[15, 30, 45, 60].map(min => (
-                    <button key={min} type="button"
-                      onClick={() => { setLessonDurationValue(min); setLessonDurationUnit('minutes') }}
-                      className={`flex-1 px-3 py-2 rounded-lg font-medium transition-all ${lessonDurationValue === min && lessonDurationUnit === 'minutes' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'}`}
-                    >{min} min</button>
-                  ))}
-                </div>
-                <div className="flex gap-2">
-                  <input type="number" min="1" value={lessonDurationValue} onChange={(e) => setLessonDurationValue(parseInt(e.target.value) || 1)} className="w-24 px-3 py-2 border border-gray-300 rounded-lg text-gray-900" />
-                  <select value={lessonDurationUnit} onChange={(e) => setLessonDurationUnit(e.target.value as DurationUnit)} className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-gray-900">
-                    <option value="minutes">minutes</option>
-                    <option value="days">days</option>
-                    <option value="weeks">weeks</option>
-                  </select>
-                </div>
-              </div>
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4 space-y-3">
-                <div className="flex items-center gap-2">
-                  <input type="checkbox" id="schedule-now" checked={!!lessonDate}
-                    onChange={(e) => { if (!e.target.checked) setLessonDate(''); else setLessonDate(new Date().toISOString().split('T')[0]) }}
-                    className="rounded"
-                  />
-                  <label htmlFor="schedule-now" className="text-sm font-medium text-gray-700">Schedule for a specific date</label>
-                </div>
-                {lessonDate && (
-                  <input type="date" value={lessonDate} onChange={(e) => setLessonDate(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900" />
-                )}
-              </div>
-              <button type="submit" disabled={addingLesson} className="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-medium transition-colors">
-                {addingLesson ? 'Adding Lesson...' : 'Add Lesson'}
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ── Edit Lesson Modal ── */}
-      {showLessonEditModal && editingLessonId && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
-            <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-4 rounded-t-xl">
-              <div className="flex justify-between items-center">
-                <h3 className="text-xl font-bold text-white flex items-center gap-2">✏️ Edit Lesson</h3>
-                <button onClick={cancelEditLesson} className="text-white hover:text-gray-200 text-2xl leading-none font-light">×</button>
-              </div>
-              {selectedLessonChild && (
-                <p className="text-blue-100 text-sm mt-1">
-                  {selectedLessonChild.displayname}{selectedLessonChild.grade ? ` • Grade ${selectedLessonChild.grade}` : ''}
-                </p>
-              )}
-            </div>
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Subject *</label>
-                <select
-                  value={editLessonSubjectSelect}
-                  onChange={(e) => setEditLessonSubjectSelect(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900"
-                  required
-                >
-                  <option value="">Choose a subject...</option>
-                  {CANONICAL_SUBJECTS.map(s => <option key={s} value={s}>{s}</option>)}
-                  <option value="__custom__">✏️ Custom subject...</option>
-                </select>
-                {editLessonSubjectSelect === '__custom__' && (
-                  <input
-                    type="text"
-                    value={editLessonSubjectCustom}
-                    onChange={(e) => setEditLessonSubjectCustom(e.target.value)}
-                    className="mt-2 w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900"
-                    placeholder="e.g., Latin, Robotics, Home Economics"
-                    required
-                    autoFocus
-                  />
-                )}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Lesson Title *</label>
-                <input
-                  type="text"
-                  value={editLessonTitle}
-                  onChange={(e) => setEditLessonTitle(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Description (optional)</label>
-                <textarea
-                  value={editLessonDescription}
-                  onChange={(e) => setEditLessonDescription(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900"
-                  rows={3}
-                />
-              </div>
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
-                <label className="block text-sm font-medium text-gray-700">How long is this lesson?</label>
-                <div className="flex gap-2">
-                  {[15, 30, 45, 60].map(min => (
-                    <button key={min} type="button"
-                      onClick={() => { setEditLessonDurationValue(min); setEditLessonDurationUnit('minutes') }}
-                      className={`flex-1 px-3 py-2 rounded-lg font-medium transition-all ${editLessonDurationValue === min && editLessonDurationUnit === 'minutes' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border border-gray-300'}`}
-                    >{min} min</button>
-                  ))}
-                </div>
-                <div className="flex gap-2">
-                  <input type="number" min="1" value={editLessonDurationValue} onChange={(e) => setEditLessonDurationValue(parseInt(e.target.value) || 1)} className="w-24 px-3 py-2 border border-gray-300 rounded-lg text-gray-900" />
-                  <select value={editLessonDurationUnit} onChange={(e) => setEditLessonDurationUnit(e.target.value as DurationUnit)} className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-gray-900">
-                    <option value="minutes">minutes</option>
-                    <option value="days">days</option>
-                    <option value="weeks">weeks</option>
-                  </select>
-                </div>
-              </div>
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4 space-y-3">
-                <div className="flex items-center gap-2">
-                  <input type="checkbox" id="edit-schedule-date" checked={!!editLessonDate}
-                    onChange={(e) => { if (!e.target.checked) setEditLessonDate(''); else setEditLessonDate(new Date().toISOString().split('T')[0]) }}
-                    className="rounded"
-                  />
-                  <label htmlFor="edit-schedule-date" className="text-sm font-medium text-gray-700">Schedule for a specific date</label>
-                </div>
-                {editLessonDate && (
-                  <input type="date" value={editLessonDate} onChange={(e) => setEditLessonDate(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900" />
-                )}
-              </div>
-              <div className="flex gap-3 pt-2">
-                <button type="button" onClick={cancelEditLesson} className="flex-1 px-4 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium">
-                  Cancel
-                </button>
-                <button type="button" onClick={() => saveEditLesson(editingLessonId)} className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
-                  Save Changes
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Cascade Update Modal ── */}
-      {showCascadeModal && cascadeData && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
-            <div className="bg-gradient-to-r from-yellow-400 to-orange-500 px-6 py-4 rounded-t-lg">
-              <h3 className="text-xl font-bold text-white flex items-center gap-2">⚠️ Date Change Detected</h3>
-            </div>
-            <div className="p-6 space-y-4">
-              <p className="text-gray-900">
-                You're changing the lesson date from <strong>{new Date(cascadeData.originalDate + 'T00:00:00').toLocaleDateString()}</strong> to <strong>{new Date(cascadeData.newDate + 'T00:00:00').toLocaleDateString()}</strong>.
-              </p>
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <p className="text-sm font-semibold text-blue-900 mb-2">📅 This affects {cascadeData.affectedCount} subsequent lesson{cascadeData.affectedCount !== 1 ? 's' : ''}</p>
-                <p className="text-sm text-blue-800">Would you like to shift all subsequent lessons by the same amount?</p>
-              </div>
-              <div className="bg-gray-50 rounded-lg p-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Shift subsequent lessons by:</label>
-                <div className="flex items-center gap-2">
-                  <input type="number" value={cascadeDays} onChange={(e) => setCascadeDays(parseInt(e.target.value) || 0)} className="flex-1 px-3 py-2 border border-gray-300 rounded text-gray-900" />
-                  <span className="text-sm text-gray-600">days</span>
-                </div>
-              </div>
-            </div>
-            <div className="bg-gray-50 border-t border-gray-200 px-6 py-4 flex gap-3">
-              <button onClick={() => { setShowCascadeModal(false); setCascadeData(null); setCascadeDays(1); loadAllLessons() }} className="px-4 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-100 font-medium">
-                Cancel
-              </button>
-              <div className="flex-1" />
-              <button onClick={() => handleCascadeUpdate(false)} className="px-4 py-2 border border-blue-300 bg-blue-50 rounded text-blue-700 hover:bg-blue-100 font-medium">
-                This Lesson Only
-              </button>
-              <button onClick={() => handleCascadeUpdate(true)} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-medium">
-                Update All ({cascadeData.affectedCount})
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      </main>
 
       <DevTierToggle />
       <HelpWidget />
     </div>
   )
 }
+
+// ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
   return (
@@ -1503,4 +443,52 @@ export default function DashboardPage() {
       </Suspense>
     </AuthGuard>
   )
+}
+
+// ─── Styles ──────────────────────────────────────────────────────────────────
+
+const css: Record<string, React.CSSProperties> = {
+  root: { fontFamily: 'var(--font-dm-sans), var(--font-nunito), sans-serif', background: '#f5f3ff', minHeight: '100vh' },
+  topBar: {
+    background: 'linear-gradient(135deg, #5b21b6 0%, #7c3aed 45%, #a855f7 75%, #ec4899 100%)',
+    padding: '0 24px', height: 58, display: 'flex', alignItems: 'center',
+    justifyContent: 'space-between', gap: 16, position: 'sticky', top: 0, zIndex: 50,
+  },
+  topBarLeft: { display: 'flex', alignItems: 'center', gap: 16, flex: 1 },
+  logo: { display: 'flex', alignItems: 'baseline', gap: 1 },
+  logoMain: { color: '#fff', fontWeight: 900, fontSize: 17, letterSpacing: -0.3 },
+  logoAccent: { color: '#fbbf24', fontWeight: 900, fontSize: 17 },
+  welcomeMsg: { color: 'rgba(255,255,255,0.85)', fontSize: 13.5 },
+  topBarRight: { display: 'flex', alignItems: 'center', gap: 10 },
+  howToBtn: {
+    background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)',
+    borderRadius: 8, color: '#fff', fontSize: 12.5, fontWeight: 600,
+    padding: '6px 14px', cursor: 'pointer',
+  },
+  logoutBtn: {
+    background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)',
+    borderRadius: 8, color: '#fff', fontSize: 12.5, fontWeight: 600,
+    padding: '6px 14px', cursor: 'pointer',
+  },
+  main: { maxWidth: 1100, margin: '0 auto', padding: '24px 24px 48px' },
+  sectionLabel: { fontSize: 11, fontWeight: 800, color: '#9ca3af', letterSpacing: 1, marginBottom: 14, marginTop: 8 },
+  grid: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 },
+  card: { background: '#fff', borderRadius: 14, border: '1.5px solid', overflow: 'hidden', transition: 'all 0.22s cubic-bezier(0.4,0,0.2,1)', cursor: 'pointer' },
+  cardHead: { padding: '13px 16px', display: 'flex', alignItems: 'center', gap: 10 },
+  cardTitle: { color: '#fff', fontWeight: 900, fontSize: 15, flex: 1, letterSpacing: 0.1 },
+  itemList: { listStyle: 'none', margin: 0, padding: '6px 0 10px' },
+  item: { display: 'flex', alignItems: 'center', gap: 10, padding: '7px 16px', cursor: 'pointer', transition: 'background 0.12s ease', borderRadius: 6, margin: '0 6px' },
+  itemLabel: { fontSize: 13, color: '#374151', fontWeight: 500, flex: 1 },
+  checklistCard: { background: '#fff', borderRadius: 14, border: '1.5px solid #ede9fe', overflow: 'hidden', marginBottom: 20, boxShadow: '0 4px 16px rgba(124,58,237,0.08)' },
+  checklistHeader: { background: 'linear-gradient(135deg, #7c3aed, #a855f7, #ec4899)', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
+  checklistHeaderLeft: { display: 'flex', alignItems: 'center', gap: 12 },
+  checklistTitle: { color: '#fff', fontWeight: 800, fontSize: 15 },
+  checklistSub: { color: 'rgba(255,255,255,0.8)', fontSize: 12, marginTop: 2 },
+  checklistBtn: { background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 6, color: '#fff', width: 28, height: 28, cursor: 'pointer', fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  progressTrack: { height: 5, background: '#ede9fe' },
+  progressFill: { height: '100%', transition: 'width 0.6s ease', borderRadius: '0 4px 4px 0' },
+  checklistSteps: { padding: '12px 20px 16px', display: 'flex', flexDirection: 'column', gap: 12 },
+  checklistStep: { display: 'flex', alignItems: 'flex-start', gap: 12, transition: 'opacity 0.2s ease' },
+  stepBadge: { width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 12, flexShrink: 0, marginTop: 2 },
+  stepCta: { marginTop: 8, background: 'linear-gradient(135deg, #7c3aed, #a855f7)', color: '#fff', border: 'none', borderRadius: 6, padding: '5px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer' },
 }

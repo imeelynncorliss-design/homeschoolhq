@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/src/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import CourseManager from '@/components/CourseManager'
 import GradeBook from '@/components/GradeBook'
 import TranscriptSettings from '@/components/TranscriptSettings'
 import TranscriptGenerator from '@/components/TranscriptGenerator'
@@ -14,68 +13,42 @@ function TranscriptContent() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState('courses')
+  const [activeTab, setActiveTab] = useState('gradebook')
   const [kids, setKids] = useState<any[]>([])
   const [selectedKid, setSelectedKid] = useState<string | null>(null)
 
-  // --- 1. THE MISSING HELPER FUNCTION ---
-  // This fixes the "getChildColor is not defined" error
-  const getChildColor = (index: number) => {
-    const colors = [
-      { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-100', accent: 'bg-blue-500' },
-      { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-100', accent: 'bg-purple-500' },
-      { bg: 'bg-pink-50', text: 'text-pink-700', border: 'border-pink-100', accent: 'bg-pink-500' },
-      { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-100', accent: 'bg-orange-500' },
-    ];
-    return colors[index % colors.length];
-  };
-
-  // --- 2. DATA LOADING ---
+  // DATA LOADING
   const loadKids = async (userId: string) => {
-    const query = supabase
+    const { data } = await supabase
       .from('kids')
       .select('*')
+      .eq('user_id', userId)
       .order('created_at', { ascending: false })
 
-    if (userId !== '00000000-0000-0000-0000-000000000001') {
-      query.eq('user_id', userId)
-    }
-
-    const { data } = await query
-    
     if (data && data.length > 0) {
       setKids(data)
       setSelectedKid(data[0].id)
     }
   }
 
-  // --- 3. AUTH BYPASS FOR LOCALHOST ---
-  // This prevents the redirect loop on your computer
+  // AUTH — no localhost bypass, AuthGuard handles protection
   const checkUser = async () => {
     const { data: { user } } = await supabase.auth.getUser()
-    
     if (!user) {
-      if (window.location.hostname === 'localhost') {
-        const mockUser = { id: '00000000-0000-0000-0000-000000000001', email: 'dev@example.com' };
-        setUser(mockUser);
-        await loadKids(mockUser.id);
-        setLoading(false);
-        return;
-      }
       router.push('/')
-    } else {
-      setUser(user)
-      await loadKids(user.id)
-      setLoading(false)
+      return
     }
+    setUser(user)
+    await loadKids(user.id)
+    setLoading(false)
   }
 
   useEffect(() => {
     checkUser()
   }, [])
 
+  // Courses tab removed — CourseManager now lives at /courses
   const tabs = [
-    { id: 'courses', label: '📚 Courses', description: 'Manage' },
     { id: 'gradebook', label: '📊 Grade Book', description: 'Grades' },
     { id: 'settings', label: '⚙️ Settings', description: 'Info' },
     { id: 'generate', label: '📄 Generate', description: 'PDF' }
@@ -94,18 +67,47 @@ function TranscriptContent() {
       <div className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-10 shadow-lg">
         <div className="max-w-6xl mx-auto flex justify-between items-start">
           <div>
-            <Link href="/admin" className="text-white/80 hover:text-white mb-6 font-bold text-sm block">
-              ← Back to Admin
+            <Link href="/dashboard" className="text-white/80 hover:text-white mb-6 font-bold text-sm block">
+              ← Back to Dashboard
             </Link>
             <h1 className="text-4xl font-black mb-2">Transcript Manager</h1>
+            <p className="text-purple-200 text-sm">Enter grades and generate official transcripts</p>
           </div>
-          <button onClick={() => router.push('/dashboard')} className="px-4 py-2 bg-white/10 rounded-xl text-xs font-bold">
-            Dashboard
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => router.push('/courses')}
+              className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-xl text-xs font-bold transition-colors"
+            >
+              📚 Manage Courses
+            </button>
+            <button
+              onClick={() => router.push('/dashboard')}
+              className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-xl text-xs font-bold transition-colors"
+            >
+              Dashboard
+            </button>
+          </div>
         </div>
       </div>
 
       <div className="max-w-6xl mx-auto p-8 -mt-8">
+
+        {/* Courses callout — guides users to the right place */}
+        <div className="mb-6 bg-indigo-50 border border-indigo-100 rounded-xl px-5 py-4 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <span className="text-xl">📚</span>
+            <p className="text-sm text-indigo-900">
+              <strong>Need to add or manage courses?</strong> Courses now have their own dedicated section.
+            </p>
+          </div>
+          <button
+            onClick={() => router.push('/courses')}
+            className="shrink-0 px-4 py-2 bg-indigo-600 text-white text-sm font-bold rounded-lg hover:bg-indigo-700 transition-colors"
+          >
+            Go to Courses →
+          </button>
+        </div>
+
         {kids.length > 0 && (
           <div className="mb-8 bg-white p-6 rounded-2xl shadow-sm border flex items-center gap-6">
             <div>
@@ -117,7 +119,7 @@ function TranscriptContent() {
                 onChange={(e) => setSelectedKid(e.target.value)}
                 className="px-4 py-2 bg-white border-2 border-slate-200 rounded-xl font-black text-slate-500 outline-none focus:border-purple-600 transition-all cursor-pointer min-w-[200px]"
               >
-                {kids.map((kid, index) => (
+                {kids.map((kid) => (
                   <option key={kid.id} value={kid.id}>{kid.displayname || kid.firstname}</option>
                 ))}
               </select>
@@ -140,7 +142,6 @@ function TranscriptContent() {
         </div>
 
         <div className="bg-white rounded-2xl shadow-xl p-8 min-h-[500px]">
-          {activeTab === 'courses' && selectedKid && user && <CourseManager kidId={selectedKid} userId={user.id} />}
           {activeTab === 'gradebook' && selectedKid && user && <GradeBook kidId={selectedKid} userId={user.id} />}
           {activeTab === 'settings' && selectedKid && user && <TranscriptSettings kidId={selectedKid} userId={user.id} />}
           {activeTab === 'generate' && selectedKid && user && (
@@ -152,7 +153,6 @@ function TranscriptContent() {
   )
 }
 
-// 4. MAIN EXPORT WRAPPED IN AUTHGUARD
 export default function TranscriptPage() {
   return (
     <AuthGuard>

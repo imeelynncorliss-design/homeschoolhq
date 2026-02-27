@@ -21,6 +21,14 @@ type Material = {
   url?: string;
 };
 
+type Course = {
+  id: string;
+  course_name: string;
+  subject: string;
+  status: string;
+  grade_level: string;
+};
+
 type LessonVariation = {
   title: string;
   approach: string;
@@ -54,6 +62,14 @@ export default function LessonGenerator({ kids, userId, onClose }: LessonGenerat
   const [editingLearningStyle, setEditingLearningStyle] = useState(false);
   const [organizationId, setOrganizationId] = useState<string | null>(null);
 
+  //Collaborator state
+  const [collaborators, setCollaborators] = useState<{id: string, user_id: string, name: string, email: string}[]>([])
+  const [assignedTo, setAssignedTo] = useState('')
+
+  // Course state
+  const [availableCourses, setAvailableCourses] = useState<Course[]>([]);
+  const [loadingCourses, setLoadingCourses] = useState(false);
+
   // Subject dropdown state
   const [subjectSelect, setSubjectSelect] = useState('');
   const [subjectCustom, setSubjectCustom] = useState('');
@@ -67,12 +83,13 @@ export default function LessonGenerator({ kids, userId, onClose }: LessonGenerat
   const [newMaterialUrl, setNewMaterialUrl] = useState('');
   const [addingMaterial, setAddingMaterial] = useState(false);
 
-  // Form data
+  // Form data — courseId is optional
   const [formData, setFormData] = useState({
     childId: '',
     childName: '',
     gradeLevel: '',
     subject: '',
+    courseId: '',
     duration: 30,
     startDate: new Date().toISOString().split('T')[0],
     learningObjectives: '',
@@ -101,6 +118,13 @@ export default function LessonGenerator({ kids, userId, onClose }: LessonGenerat
 
         if (kid?.organization_id) {
           setOrganizationId(kid.organization_id);
+      
+          const { data: collabData } = await supabase
+          .from('family_collaborators')
+          .select('id, user_id, name, email')
+          .eq('organization_id', kid.organization_id)
+        
+        if (collabData) setCollaborators(collabData)
 
           const { data: lessonSubjects } = await supabase
             .from('lessons')
@@ -109,7 +133,6 @@ export default function LessonGenerator({ kids, userId, onClose }: LessonGenerat
 
           if (lessonSubjects) {
             const unique = [...new Set(lessonSubjects.map((d: any) => d.subject).filter(Boolean))] as string[];
-            // Only show subjects not already in the canonical list
             setExistingSubjects(unique.filter(s => !CANONICAL_SUBJECTS.includes(s)));
           }
         }
@@ -127,9 +150,45 @@ export default function LessonGenerator({ kids, userId, onClose }: LessonGenerat
     }
   }, [organizationId]);
 
-  // Resolve final subject from dropdown + optional custom text
+  // Fetch matching courses whenever child + subject both have values
+  useEffect(() => {
+    const resolvedSubject = resolveSubject();
+    if (formData.childId && resolvedSubject && resolvedSubject !== '__custom__') {
+      fetchCoursesForChildAndSubject(formData.childId, resolvedSubject);
+    } else {
+      setAvailableCourses([]);
+      setFormData(prev => ({ ...prev, courseId: '' }));
+    }
+  }, [formData.childId, subjectSelect, subjectCustom]);
+
   const resolveSubject = () =>
     subjectSelect === '__custom__' ? subjectCustom.trim() : subjectSelect;
+
+  // ── Course fetching ──────────────────────────────────────────────────────
+  const fetchCoursesForChildAndSubject = async (kidId: string, subject: string) => {
+    setLoadingCourses(true);
+    try {
+      const { data, error } = await supabase
+        .from('courses')
+        .select('id, course_name, subject, status, grade_level')
+        .eq('kid_id', kidId)
+        .eq('subject', subject)
+        .in('status', ['planned', 'in_progress'])
+        .order('course_name');
+
+      if (error) {
+        console.error('Error fetching courses:', error);
+      } else {
+        setAvailableCourses(data || []);
+        // Clear course selection if previous selection no longer matches
+        setFormData(prev => ({ ...prev, courseId: '' }));
+      }
+    } catch (err) {
+      console.error('Unexpected error fetching courses:', err);
+    } finally {
+      setLoadingCourses(false);
+    }
+  };
 
   // ── Materials ────────────────────────────────────────────────────────────
   const fetchMaterials = async () => {
@@ -216,7 +275,14 @@ export default function LessonGenerator({ kids, userId, onClose }: LessonGenerat
   const handleChildSelect = (childId: string) => {
     const child = kids.find(c => c.id === childId);
     if (child) {
-      setFormData({ ...formData, childId, childName: child.displayname, gradeLevel: child.grade || '', learningStyle: child.learning_style || '' });
+      setFormData({
+        ...formData,
+        childId,
+        childName: child.displayname,
+        gradeLevel: child.grade || '',
+        learningStyle: child.learning_style || '',
+        courseId: ''
+      });
       setEditingLearningStyle(false);
     }
   };
@@ -262,13 +328,29 @@ export default function LessonGenerator({ kids, userId, onClose }: LessonGenerat
       if (kidError) console.error('Error fetching kid:', kidError);
       if (!kid?.organization_id) { alert('Could not find organization. Please refresh.'); return; }
 
-      const { error } = await supabase.from('lessons').insert([{
-        kid_id: formData.childId, user_id: userId,
-        subject: formData.subject, title: variation.title,
-        description: JSON.stringify(variation), lesson_date: formData.startDate,
+      const lessonPayload: any = {
+        kid_id: formData.childId,
+        user_id: userId,
+        subject: formData.subject,
+        title: variation.title,
+        description: JSON.stringify(variation),
+        lesson_date: formData.startDate,
         duration_minutes: Number(formData.duration) || 30,
-        status: 'not_started', organization_id: kid.organization_id
-      }]).select().single();
+        status: 'not_started',
+        organization_id: kid.organization_id,
+        assigned_to_user_id: assignedTo || null
+      };
+
+      // Only include course_id if user selected one
+      if (formData.courseId) {
+        lessonPayload.course_id = formData.courseId;
+      }
+
+      const { error } = await supabase
+        .from('lessons')
+        .insert([lessonPayload])
+        .select()
+        .single();
 
       if (error) {
         alert(`❌ Failed to save lesson: ${error.message}`);
@@ -276,7 +358,11 @@ export default function LessonGenerator({ kids, userId, onClose }: LessonGenerat
         const formattedDate = new Date(formData.startDate + 'T12:00:00').toLocaleDateString('en-US', {
           weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
         });
-        alert(`✅ Lesson scheduled!\n\n"${variation.title}" scheduled for ${kid.displayname} on ${formattedDate}.`);
+        const courseNote = formData.courseId
+          ? `\n📚 Added to: ${availableCourses.find(c => c.id === formData.courseId)?.course_name || 'course'}`
+          : '';
+        
+        alert(`✅ Lesson scheduled!\n\n"${variation.title}" scheduled for ${kid.displayname} on ${formattedDate}.${courseNote}`);
         onClose();
         setTimeout(() => { window.location.href = '/dashboard'; }, 300);
       }
@@ -294,14 +380,25 @@ export default function LessonGenerator({ kids, userId, onClose }: LessonGenerat
       if (!data.user) { alert('You must be logged in to save lessons'); return; }
 
       const { error } = await supabase.from('lessons').insert([{
-        kid_id: adaptTargetChildId, user_id: data.user.id,
-        subject: formData.subject, title: selectedVariation.title,
+        kid_id: adaptTargetChildId,
+        user_id: data.user.id,
+        subject: formData.subject,
+        title: selectedVariation.title,
         description: JSON.stringify(selectedVariation),
-        lesson_date: formData.startDate, duration_minutes: formData.duration, status: 'not_started'
+        lesson_date: formData.startDate,
+        duration_minutes: formData.duration,
+        status: 'not_started'
+        // Note: adapted lessons are not auto-assigned to a course
+        // as the target child may have a different course structure
       }]).select();
 
       if (error) { alert(`Failed to adapt lesson: ${error.message}`); }
-      else { alert(`Lesson adapted for ${targetChild.displayname}!`); setShowAdaptModal(false); setAdaptTargetChildId(''); router.refresh(); }
+      else {
+        alert(`Lesson adapted for ${targetChild.displayname}!`);
+        setShowAdaptModal(false);
+        setAdaptTargetChildId('');
+        router.refresh();
+      }
     } catch (err) { alert('Failed to adapt lesson. Please try again.'); }
   };
 
@@ -381,6 +478,56 @@ export default function LessonGenerator({ kids, userId, onClose }: LessonGenerat
               )}
             </div>
 
+            {/* Course selector — only shown when child + subject are both selected */}
+            {formData.childId && resolveSubject() && resolveSubject() !== '__custom__' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2">
+                  Add to Course <span className="text-gray-400 font-normal">(optional)</span>
+                </label>
+
+                {loadingCourses ? (
+                  <div className="border rounded-lg px-3 py-2 text-sm text-gray-500">
+                    Loading courses...
+                  </div>
+                ) : availableCourses.length === 0 ? (
+                  <div className="border border-dashed border-gray-200 rounded-lg px-3 py-3 bg-gray-50">
+                    <p className="text-sm text-gray-500">
+                      No active {resolveSubject()} courses found for {formData.childName}.{' '}
+                      <a href="/transcript" className="text-blue-600 hover:underline">
+                        Create a course
+                      </a>{' '}
+                      to link lessons to transcripts.
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <select
+                      value={formData.courseId}
+                      onChange={(e) => setFormData(prev => ({ ...prev, courseId: e.target.value }))}
+                      className="w-full border rounded-lg px-3 py-2 text-gray-900"
+                    >
+                      <option value="">No course — save as standalone lesson</option>
+                      {availableCourses.map(course => (
+                        <option key={course.id} value={course.id}>
+                          {course.course_name} ({course.grade_level} · {course.status.replace('_', ' ')})
+                        </option>
+                      ))}
+                    </select>
+                    {formData.courseId && (
+                      <p className="text-xs text-green-700 mt-1">
+                        ✓ This lesson will count toward the {availableCourses.find(c => c.id === formData.courseId)?.course_name} transcript
+                      </p>
+                    )}
+                    {!formData.courseId && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Linking a lesson to a course connects it to the transcript automatically.
+                      </p>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+
             {/* Duration */}
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-2">Duration</label>
@@ -399,6 +546,25 @@ export default function LessonGenerator({ kids, userId, onClose }: LessonGenerat
 
             {/* Date */}
             <div>
+            {collaborators.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-900 mb-2">
+                    Assign To <span className="text-gray-400 font-normal">(optional)</span>
+                  </label>
+                  <select
+                    value={assignedTo}
+                    onChange={(e) => setAssignedTo(e.target.value)}
+                    className="w-full border rounded-lg px-3 py-2 text-gray-900"
+                  >
+                    <option value="">Me (primary teacher)</option>
+                    {collaborators.map(c => (
+                      <option key={c.id} value={c.user_id}>
+                        {c.name || c.email}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <label className="block text-sm font-medium text-gray-900 mb-2">Schedule For</label>
               <input
                 type="date"
@@ -584,6 +750,17 @@ export default function LessonGenerator({ kids, userId, onClose }: LessonGenerat
         {/* ── Step 3: Preview & Choose ── */}
         {step === 3 && variations.length > 0 && (
           <div className="space-y-4">
+
+            {/* Course reminder if one was selected */}
+            {formData.courseId && (
+              <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-2 flex items-center gap-2">
+                <span className="text-green-600 text-sm font-medium">📚</span>
+                <p className="text-sm text-green-800">
+                  The selected lesson will be added to <strong>{availableCourses.find(c => c.id === formData.courseId)?.course_name}</strong>
+                </p>
+              </div>
+            )}
+
             <p className="text-gray-600 mb-4">Choose the lesson that works best for {formData.childName}:</p>
 
             <div className="grid md:grid-cols-3 gap-4">

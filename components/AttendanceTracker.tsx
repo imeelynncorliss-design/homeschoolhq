@@ -76,14 +76,6 @@ export default function AttendanceTracker({ kids, organizationId, userId }: Atte
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   ), [])
 
-  // TEMPORARY: Show user ID in console
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) {
-      }
-    })
-  }, [])
-
   const [lessons, setLessons] = useState<LessonData[]>([])
   const [manualAttendance, setManualAttendance] = useState<ManualAttendance[]>([])
   const [socialEvents, setSocialEvents] = useState<any[]>([])  // NEW
@@ -123,60 +115,6 @@ export default function AttendanceTracker({ kids, organizationId, userId }: Atte
     coopClasses: 0,
     manualAttendance: 0
   })
-
-  // DELETE OR COMMENT OUT THIS ENTIRE useEffect:
-/*
-
-  useEffect(() => {
-    const fetchOrgAndKids = async () => {
-      try {
-        console.log('🔍 Using hardcoded IDs for testing...')
-        
-        // TEMPORARY HARDCODED VALUES
-        setUserId('4320b7ea-260e-4f87-85bb-d304051eccd0')
-        setOrganizationId('d52497c0-42a9-49b7-ba3b-849bffa27fc4')
-        
-        console.log('✅ Set userId:', '4320b7ea-260e-4f87-85bb-d304051eccd0')
-        console.log('✅ Set organizationId:', 'd52497c0-42a9-49b7-ba3b-849bffa27fc4')
-        
-        // HARDCODE KIDS (replace with your actual kids' names and IDs)
-      const hardcodedKids = [
-        { 
-          id: '8cef62d2-0b1c-4594-97e5-0b7a244abede',  // You can use any ID for now
-          first_name: 'Runa',  // Replace with actual first name
-          last_name: 'LastName',  // Replace with actual last name
-          displayname: 'Runa-Buna',
-          organization_id: 'd52497c0-42a9-49b7-ba3b-849bffa27fc4'
-        },
-        {
-        id: 'b0be811c-31af-410f-987c-6725cf55545e',  // You can use any ID for now
-          first_name: 'Mary',  // Replace with actual first name
-          last_name: 'LastName',  // Replace with actual last name
-          displayname: 'Mary',
-          organization_id: 'd52497c0-42a9-49b7-ba3b-849bffa27fc4'
-        },
-        {
-          id: 'e421957f-bfb8-4a3d-9cef-b460a1cf6510',  // You can use any ID for now
-            first_name: 'Emma',  // Replace with actual first name
-            last_name: 'Bean',  // Replace with actual last name
-            displayname: 'Beanie',
-            organization_id: 'd52497c0-42a9-49b7-ba3b-849bffa27fc4'
-          },
-      ]
-      
-      setKids(hardcodedKids)
-      console.log('✅ Set hardcoded kids:', hardcodedKids.length)
-      
-      setLoading(false)
-    } catch (err) {
-      console.error('❌ Error:', err)
-      setLoading(false)
-    }
-  }
-
-  fetchOrgAndKids()
-}, [])
-*/
 
 useEffect(() => {
   loadDismissedSuggestions()

@@ -112,8 +112,8 @@ CRITICAL: Return ONLY the JSON object. No markdown formatting, no backticks, no 
     console.log('Using materials:', materials);
 
     const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 4000,
+      model: 'claude-sonnet-4-6',
+      max_tokens: 8000,
       messages: [
         {
           role: 'user',
@@ -136,13 +136,13 @@ CRITICAL: Return ONLY the JSON object. No markdown formatting, no backticks, no 
       cleanedText = cleanedText.replace(/^```\n/, '').replace(/\n```$/, '');
       
       lessonData = JSON.parse(cleanedText);
-    } catch (parseError) {
-      console.error('Failed to parse AI response:', textContent.text);
-      return NextResponse.json({ 
-        error: 'Failed to parse lesson data',
-        rawResponse: textContent.text 
-      }, { status: 500 });
-    }
+      } catch (parseError) {
+        console.error('Failed to parse AI response — likely truncated. Response length:', textContent.text.length)
+        return NextResponse.json({ 
+          error: 'Lesson generation was cut off — try again or reduce the number of focus areas',
+          details: 'Response too long for token limit'
+        }, { status: 500 })
+      }
 
     // Return the generated lessons
     return NextResponse.json({ 

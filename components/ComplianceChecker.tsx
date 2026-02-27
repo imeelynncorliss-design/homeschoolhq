@@ -95,13 +95,13 @@ export default function ComplianceChecker({
 
     // Calculate compliance - respect requirement types
     const requirementsMet = requirements.filter(r => {
-      if (r.type === 'required') {
+      const type = r.type?.toLowerCase()
+      if (type === 'required') {
         return r.met
-      } else if (r.type === 'guideline') {
-        // Guideline: 80% is considered on track
+      } else if (type === 'guideline') {
         return (r.actual / r.required) >= 0.8
       }
-      return true // 'none' type always passes
+      return true
     }).length
 
     const allMet = requirements.length > 0 ? requirementsMet === requirements.length : false
@@ -113,12 +113,12 @@ export default function ComplianceChecker({
     const descParts: string[] = []
     
     if (template.required_days > 0) {
-      const verb = template.day_requirement_type === 'required' ? 'requires' : 'recommends'
+      const verb = template.day_requirement_type?.toLowerCase() === 'required' ? 'requires' : 'recommends'
       descParts.push(`${verb} ${template.required_days} days`)
     }
     
     if (template.required_hours > 0) {
-      const verb = template.hour_requirement_type === 'required' ? 'requires' : 'recommends'
+      const verb = template.hour_requirement_type?.toLowerCase() === 'required' ? 'requires' : 'recommends'
       descParts.push(`${verb} ${template.required_hours} hours`)
     }
 
@@ -137,8 +137,8 @@ export default function ComplianceChecker({
   }, [stateInfo, totalDays, totalHours, getTemplate])
 
   const getStatusColor = (req: ComplianceRequirement) => {
-    if (req.type === 'none') return 'text-gray-600'
-    if (req.type === 'guideline') {
+    if (req.type?.toLowerCase() === 'none') return 'text-gray-600'
+    if (req.type?.toLowerCase() === 'guideline') {
       const percent = (req.actual / req.required) * 100
       if (percent >= 80) return 'text-green-600'
       if (percent >= 50) return 'text-yellow-600'
@@ -148,8 +148,8 @@ export default function ComplianceChecker({
   }
 
   const getStatusIcon = (req: ComplianceRequirement) => {
-    if (req.type === 'none') return 'ℹ️'
-    if (req.type === 'guideline') {
+    if (req.type?.toLowerCase() === 'none') return 'ℹ️'
+    if (req.type?.toLowerCase() === 'guideline') {
       const percent = (req.actual / req.required) * 100
       return percent >= 80 ? '✓' : '⚠'
     }
@@ -157,8 +157,9 @@ export default function ComplianceChecker({
   }
 
   const getStatusText = (req: ComplianceRequirement) => {
-    if (req.type === 'none') return 'Not Regulated'
-    if (req.type === 'guideline') {
+    if (req.type?.toLowerCase() === 'none') return 'Not Regulated'
+    if (req.type?.toLowerCase() === 'guideline')
+      {
       const percent = (req.actual / req.required) * 100
       return percent >= 80 ? 'On Track' : 'Below Guideline'
     }
@@ -172,8 +173,9 @@ export default function ComplianceChecker({
   }
 
   const getRequirementBorderColor = (req: ComplianceRequirement) => {
-    if (req.type === 'none') return 'border-gray-200 bg-gray-50'
-    if (req.type === 'guideline') {
+    if (req.type?.toLowerCase() === 'none') return 'border-gray-200 bg-gray-50'
+    if (req.type?.toLowerCase() === 'guideline')
+      {
       const percent = (req.actual / req.required) * 100
       if (percent >= 80) return 'border-green-200 bg-green-50'
       return 'border-yellow-200 bg-yellow-50'
@@ -288,9 +290,9 @@ export default function ComplianceChecker({
                   <span className="text-2xl">{getStatusIcon(req)}</span>
                   <div>
                     <span className="font-semibold text-gray-900">{req.name}</span>
-                    {req.type !== 'required' && (
+                    {req.type?.toLowerCase() !== 'required' && (
                       <span className="ml-2 text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-600">
-                        {req.type === 'guideline' ? 'Guideline' : 'Not Regulated'}
+                        {req.type?.toLowerCase() === 'guideline' ? 'Guideline' : 'Not Regulated'}
                       </span>
                     )}
                   </div>
@@ -302,8 +304,8 @@ export default function ComplianceChecker({
 
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <p className="text-gray-600">
-                    {req.type === 'required' ? 'Required' : req.type === 'guideline' ? 'Recommended' : 'Tracking'}
+                <p className="text-gray-600">
+                    {req.type?.toLowerCase() === 'required' ? 'Required' : req.type?.toLowerCase() === 'guideline' ? 'Recommended' : 'Tracking'}
                   </p>
                   <p className="font-semibold text-gray-900">
                     {req.required} {req.unit}

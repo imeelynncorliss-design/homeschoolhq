@@ -27,7 +27,18 @@ export default function LoginPage() {
       if (error) {
         setError(error.message)
       } else {
-        router.push('/dashboard')
+        // Check if user is a collaborator — route accordingly
+        const { data: collab } = await supabase
+          .from('family_collaborators')
+          .select('id')
+          .eq('user_id', data.user.id)
+          .maybeSingle()
+      
+        if (collab) {
+          router.push('/teaching-schedule')
+        } else {
+          router.push('/dashboard')
+        }
         router.refresh()
       }
     } catch (err) {

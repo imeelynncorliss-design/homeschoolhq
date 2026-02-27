@@ -53,6 +53,8 @@ export default function TranscriptGenerator({ kidId, userId, kidData }: Transcri
   const [unweightedGPA, setUnweightedGPA] = useState(0)
   const [weightedGPA, setWeightedGPA] = useState(0)
   const [totalCredits, setTotalCredits] = useState(0)
+  // Lesson counts per course — used to show documentation evidence on transcript
+  const [lessonCounts, setLessonCounts] = useState<{ [courseId: string]: number }>({})
 
   useEffect(() => {
     loadData()
@@ -60,35 +62,56 @@ export default function TranscriptGenerator({ kidId, userId, kidData }: Transcri
 
   const loadData = async () => {
     setLoading(true)
-    
-    // Load courses
+
+    // Load completed courses
     const { data: coursesData } = await supabase
       .from('courses')
       .select('*')
       .eq('kid_id', kidId)
       .eq('status', 'completed')
       .order('grade_level', { ascending: true })
-    
-    if (coursesData) setCourses(coursesData)
-    
+
+    if (coursesData) {
+      setCourses(coursesData)
+
+      // Load lesson counts for each completed course via course_id on lessons
+      // Only counts completed lessons as evidence of coursework
+      if (coursesData.length > 0) {
+        const courseIds = coursesData.map((c: Course) => c.id)
+        const { data: lessonsData } = await supabase
+          .from('lessons')
+          .select('course_id')
+          .in('course_id', courseIds)
+          .eq('status', 'completed')
+
+        if (lessonsData) {
+          const counts: { [courseId: string]: number } = {}
+          lessonsData.forEach((row: { course_id: string }) => {
+            counts[row.course_id] = (counts[row.course_id] || 0) + 1
+          })
+          setLessonCounts(counts)
+        }
+      }
+    }
+
     // Load settings
     const { data: settingsData } = await supabase
       .from('transcript_settings')
       .select('*')
       .eq('kid_id', kidId)
       .single()
-    
+
     if (settingsData) setSettings(settingsData)
-    
+
     // Load honors
     const { data: honorsData } = await supabase
       .from('honors_awards')
       .select('*')
       .eq('kid_id', kidId)
       .order('date_received', { ascending: false })
-    
+
     if (honorsData) setHonors(honorsData)
-    
+
     setLoading(false)
   }
 
@@ -99,7 +122,7 @@ export default function TranscriptGenerator({ kidId, userId, kidData }: Transcri
   }, [courses])
 
   const calculateGPA = () => {
-    const gradeValues: {[key: string]: number} = {
+    const gradeValues: { [key: string]: number } = {
       'A': 4.0, 'A-': 3.7, 'B+': 3.3, 'B': 3.0, 'B-': 2.7,
       'C+': 2.3, 'C': 2.0, 'C-': 1.7, 'D+': 1.3, 'D': 1.0, 'D-': 0.7, 'F': 0.0
     }
@@ -142,11 +165,14 @@ export default function TranscriptGenerator({ kidId, userId, kidData }: Transcri
     return grouped
   }
 
+  // Total completed lessons across all courses — shown in preview as documentation evidence
+  const totalLinkedLessons = Object.values(lessonCounts).reduce((sum, n) => sum + n, 0)
+
   const generatePDF = () => {
     setGenerating(true)
-    
+
     const transcriptWindow = window.open('', '_blank')
-    
+
     if (!transcriptWindow) {
       alert('Please allow popups to generate transcript')
       setGenerating(false)
@@ -156,13 +182,16 @@ export default function TranscriptGenerator({ kidId, userId, kidData }: Transcri
     const html = generateTranscriptHTML()
     transcriptWindow.document.write(html)
     transcriptWindow.document.close()
-    
+
     setGenerating(false)
   }
 
   const generateTranscriptHTML = () => {
     const groupedCourses = groupCoursesByGrade()
     const gradeLevels = Object.keys(groupedCourses).sort().reverse()
+
+    // Only include lesson count column in HTML if at least one course has linked lessons
+    const hasAnyLinkedLessons = Object.keys(lessonCounts).length > 0
 
     return `
 <!DOCTYPE html>
@@ -173,7 +202,7 @@ export default function TranscriptGenerator({ kidId, userId, kidData }: Transcri
     @media print {
       @page { margin: 0.5in; }
     }
-    
+
     body {
       font-family: 'Times New Roman', serif;
       max-width: 8.5in;
@@ -182,7 +211,7 @@ export default function TranscriptGenerator({ kidId, userId, kidData }: Transcri
       background: white;
       color: black;
     }
-    
+
     h1 {
       text-align: center;
       font-size: 18pt;
@@ -190,25 +219,23 @@ export default function TranscriptGenerator({ kidId, userId, kidData }: Transcri
       text-transform: uppercase;
       letter-spacing: 2px;
     }
-    
+
     h2 {
       text-align: center;
       font-size: 14pt;
       margin-top: 0;
       font-weight: normal;
     }
-    
+
     .header-info {
       display: flex;
       justify-content: space-between;
       margin: 20px 0;
       font-size: 11pt;
     }
-    
-    .section {
-      margin-bottom: 15px;
-    }
-    
+
+    .section { margin-bottom: 15px; }
+
     .section-title {
       font-weight: bold;
       font-size: 12pt;
@@ -217,14 +244,14 @@ export default function TranscriptGenerator({ kidId, userId, kidData }: Transcri
       margin-bottom: 10px;
       margin-top: 20px;
     }
-    
+
     table {
       width: 100%;
       border-collapse: collapse;
       font-size: 10pt;
       margin-bottom: 15px;
     }
-    
+
     th {
       background: #f0f0f0;
       padding: 6px;
@@ -232,54 +259,49 @@ export default function TranscriptGenerator({ kidId, userId, kidData }: Transcri
       border: 1px solid black;
       font-weight: bold;
     }
-    
-    td {
-      padding: 6px;
-      border: 1px solid black;
-    }
-    
+
+    td { padding: 6px; border: 1px solid black; }
+
     .center { text-align: center; }
     .right { text-align: right; }
-    
+
     .summary-box {
       border: 2px solid black;
       padding: 10px;
       margin: 20px 0;
     }
-    
+
     .summary-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 10px;
     }
-    
+
     .summary-item {
       display: flex;
       justify-content: space-between;
       padding: 3px 0;
     }
-    
+
     .signature-section {
       margin-top: 40px;
       page-break-inside: avoid;
     }
-    
+
     .signature-line {
       border-top: 1px solid black;
       margin-top: 40px;
       padding-top: 5px;
       width: 50%;
     }
-    
-    @media print {
-      button { display: none; }
-    }
+
+    @media print { button { display: none; } }
   </style>
 </head>
 <body>
   <h1>Official High School Transcript</h1>
   <h2>${settings?.school_name || 'Homeschool'}</h2>
-  
+
   <div class="header-info">
     <div>
       <strong>Student Name:</strong> ${kidData?.displayname || 'Student'}<br>
@@ -329,6 +351,7 @@ export default function TranscriptGenerator({ kidId, userId, kidData }: Transcri
             <th class="center">Type</th>
             <th class="center">Credits</th>
             <th class="center">Grade</th>
+            ${hasAnyLinkedLessons ? '<th class="center">Lessons</th>' : ''}
           </tr>
         </thead>
         <tbody>
@@ -339,12 +362,14 @@ export default function TranscriptGenerator({ kidId, userId, kidData }: Transcri
               <td class="center">${course.course_type === 'Regular' ? '' : course.course_type}</td>
               <td class="center">${course.credits}</td>
               <td class="center"><strong>${course.letter_grade || '-'}</strong></td>
+              ${hasAnyLinkedLessons ? `<td class="center">${lessonCounts[course.id] ? `${lessonCounts[course.id]}` : '-'}</td>` : ''}
             </tr>
           `).join('')}
           <tr style="background: #f9f9f9;">
-            <td colspan="3" class="right"><strong>Grade Level Total:</strong></td>
+            <td colspan="${hasAnyLinkedLessons ? '4' : '3'}" class="right"><strong>Grade Level Total:</strong></td>
             <td class="center"><strong>${groupedCourses[gradeLevel].reduce((sum, c) => sum + (c.credits || 0), 0).toFixed(2)}</strong></td>
             <td></td>
+            ${hasAnyLinkedLessons ? '<td></td>' : ''}
           </tr>
         </tbody>
       </table>
@@ -403,9 +428,7 @@ export default function TranscriptGenerator({ kidId, userId, kidData }: Transcri
       <div>${settings?.administrator_name || '__________________________'}</div>
       <div>${settings?.administrator_title || 'Administrator/Parent'}</div>
     </div>
-    <div style="margin-top: 10px;">
-      Date: ${new Date().toLocaleDateString()}
-    </div>
+    <div style="margin-top: 10px;">Date: ${new Date().toLocaleDateString()}</div>
   </div>
 
   <div style="margin-top: 40px; text-align: center;">
@@ -463,7 +486,7 @@ export default function TranscriptGenerator({ kidId, userId, kidData }: Transcri
       )}
 
       {/* Preview Stats */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-4 gap-4 mb-6">
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <div className="text-sm text-gray-600 mb-1">Unweighted GPA</div>
           <div className="text-3xl font-bold text-blue-900">{unweightedGPA.toFixed(3)}</div>
@@ -476,6 +499,10 @@ export default function TranscriptGenerator({ kidId, userId, kidData }: Transcri
           <div className="text-sm text-gray-600 mb-1">Total Credits</div>
           <div className="text-3xl font-bold text-green-900">{totalCredits.toFixed(2)}</div>
         </div>
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+          <div className="text-sm text-gray-600 mb-1">Lessons Documented</div>
+          <div className="text-3xl font-bold text-amber-900">{totalLinkedLessons}</div>
+        </div>
       </div>
 
       {/* Course Summary */}
@@ -485,9 +512,14 @@ export default function TranscriptGenerator({ kidId, userId, kidData }: Transcri
           {Object.entries(groupCoursesByGrade()).map(([grade, gradeCourses]) => (
             <div key={grade} className="flex justify-between items-center">
               <span className="font-medium text-gray-700">{grade} Grade:</span>
-              <span className="text-gray-600">
-                {gradeCourses.length} courses, {gradeCourses.reduce((sum, c) => sum + (c.credits || 0), 0).toFixed(2)} credits
-              </span>
+              <div className="flex gap-4 text-gray-600 text-sm">
+                <span>{gradeCourses.length} courses, {gradeCourses.reduce((sum, c) => sum + (c.credits || 0), 0).toFixed(2)} credits</span>
+                {gradeCourses.some(c => lessonCounts[c.id]) && (
+                  <span className="text-amber-700">
+                    {gradeCourses.reduce((sum, c) => sum + (lessonCounts[c.id] || 0), 0)} lessons documented
+                  </span>
+                )}
+              </div>
             </div>
           ))}
         </div>
@@ -514,8 +546,8 @@ export default function TranscriptGenerator({ kidId, userId, kidData }: Transcri
           <li>Send the PDF to colleges, or print and sign for a physical copy</li>
         </ol>
         <div className="mt-4 text-sm text-gray-600">
-          <p><strong>💡 Pro Tip:</strong> Most colleges accept electronic transcripts via email or their application portals. 
-          Some may require a physical signed copy - check with each school's admissions office.</p>
+          <p><strong>💡 Pro Tip:</strong> Most colleges accept electronic transcripts via email or their application portals.
+          Some may require a physical signed copy — check with each school's admissions office.</p>
         </div>
       </div>
     </div>

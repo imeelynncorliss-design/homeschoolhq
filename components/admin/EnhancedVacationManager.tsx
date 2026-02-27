@@ -42,6 +42,7 @@ export default function EnhancedVacationManager({ organizationId }: EnhancedVaca
 
   
   useEffect(() => {
+    if (!organizationId) return
     const initialize = async () => {
       // Get current user for audit trail
       const { data: { user } } = await supabase.auth.getUser();
@@ -60,6 +61,7 @@ export default function EnhancedVacationManager({ organizationId }: EnhancedVaca
   
     initialize();
     loadVacations();
+    console.log('Loading vacations for org:', organizationId)
   }, [organizationId]);
 
   const loadVacations = async () => {
