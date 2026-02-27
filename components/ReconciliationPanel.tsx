@@ -109,11 +109,11 @@ export default function ReconciliationPanel({
               <div className="h-4 w-px bg-gray-300"></div>
               
               <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-700">Mark as:</span>
+                <span className="text-sm text-gray-900">Mark as:</span>
                 <select
                   value={bulkStatus}
                   onChange={(e) => setBulkStatus(e.target.value as 'full_day' | 'half_day')}
-                  className="text-sm px-2 py-1 border border-gray-300 rounded"
+                  className="text-sm px-2 py-1 border border-gray-300 rounded text-gray-900"
                 >
                   <option value="full_day">Full Day</option>
                   <option value="half_day">Half Day</option>
@@ -129,7 +129,7 @@ export default function ReconciliationPanel({
                   step="0.5"
                   min="0"
                   max="12"
-                  className="w-16 text-sm px-2 py-1 border border-gray-300 rounded"
+                  className="w-16 text-sm px-2 py-1 border border-gray-300 rounded text-gray-900"
                 />
               </div>
 

@@ -1000,7 +1000,7 @@ useEffect(() => {
                               <h4 className="font-semibold text-gray-900">
                                 {group.month} {group.year}
                               </h4>
-                              <p className="text-sm text-gray-600">
+                              <p className="text-sm text-gray-900">
                                 {group.totalDays} days • {group.totalHours.toFixed(1)} hours
                               </p>
                             </div>
