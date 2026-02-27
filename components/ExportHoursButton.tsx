@@ -165,7 +165,7 @@ export default function ExportHoursButton({ childId, childName, lessons, onExpor
             <select
               value={dateRange}
               onChange={(e) => setDateRange(e.target.value as any)}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900"
             >
               <option value="all">All Time</option>
               <option value="thisMonth">This Month</option>

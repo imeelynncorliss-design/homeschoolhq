@@ -11,6 +11,8 @@ import DevTierToggle from '@/components/DevTierToggle'
 import { CANONICAL_SUBJECTS } from '@/src/constants/subjects'
 import { type UserTier, getTierForTesting, hasFeature as checkFeature, getUpgradeMessage } from '@/lib/tierTesting'
 import CurriculumImporter from '@/components/CurriculumImporter'
+import { formatLessonDescription } from '@/lib/formatLessonDescription'
+import { DEFAULT_HOLIDAYS_2025_2026 } from '@/app/utils/holidayUtils'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -34,6 +36,14 @@ const convertDurationToMinutes = (value: number, unit: DurationUnit): number => 
   return value * 5 * 6 * 60
 }
 
+const convertMinutesToDuration = (minutes: number | null): { value: number; unit: DurationUnit } => {
+  if (!minutes) return { value: 30, unit: 'minutes' }
+  if (minutes >= 1800 && minutes % 1800 === 0) return { value: minutes / 1800, unit: 'weeks' }
+  if (minutes >= 360 && minutes % 360 === 0) return { value: minutes / 360, unit: 'days' }
+  if (minutes >= 360) return { value: Math.round(minutes / 360), unit: 'days' }
+  return { value: minutes, unit: 'minutes' }
+}
+
 // ─── Page Content ─────────────────────────────────────────────────────────────
 
 function LessonsContent() {
@@ -45,6 +55,7 @@ function LessonsContent() {
   const [organizationId, setOrganizationId] = useState<string | null>(null)
   const [collaborators, setCollaborators] = useState<{ id: string; user_id: string; name: string; email: string }[]>([])
   const [userTier, setUserTier] = useState<UserTier>('FREE')
+  const [vacationPeriods, setVacationPeriods] = useState<any[]>([])
 
   // Add Lesson modal state
   const [showLessonForm, setShowLessonForm] = useState(false)
@@ -61,6 +72,30 @@ function LessonsContent() {
   const [showImporter, setShowImporter] = useState(false)
   const [selectedKidForImport, setSelectedKidForImport] = useState<any>(null)
 
+  // Edit Lesson modal state
+  const [showLessonEditModal, setShowLessonEditModal] = useState(false)
+  const [editingLessonId, setEditingLessonId] = useState<string | null>(null)
+  const [editLessonTitle, setEditLessonTitle] = useState('')
+  const [editLessonSubjectSelect, setEditLessonSubjectSelect] = useState('')
+  const [editLessonSubjectCustom, setEditLessonSubjectCustom] = useState('')
+  const [editLessonDescription, setEditLessonDescription] = useState('')
+  const [editLessonDate, setEditLessonDate] = useState('')
+  const [editLessonDurationValue, setEditLessonDurationValue] = useState<number>(30)
+  const [editLessonDurationUnit, setEditLessonDurationUnit] = useState<DurationUnit>('minutes')
+  const [editLessonAssignedTo, setEditLessonAssignedTo] = useState('')
+  const [selectedLessonChild, setSelectedLessonChild] = useState<any | null>(null)
+
+  // Cascade modal state
+  const [showCascadeModal, setShowCascadeModal] = useState(false)
+  const [cascadeData, setCascadeData] = useState<{
+    lessonId: string
+    originalDate: string
+    newDate: string
+    affectedCount: number
+    kidId: string
+  } | null>(null)
+  const [cascadeDays, setCascadeDays] = useState<number>(1)
+
   // Generate Lessons modal state
   const [showGenerator, setShowGenerator] = useState(false)
 
@@ -69,9 +104,12 @@ function LessonsContent() {
   const [pastAssessmentsKidId, setPastAssessmentsKidId] = useState<string | null>(null)
   const [pastAssessmentsKidName, setPastAssessmentsKidName] = useState('')
 
+  // Derived flat list of all lessons (needed for cascade detection)
+  const allLessons = Object.values(lessonsByKid).flat()
+
   // ── Data loading ────────────────────────────────────────────────────────────
 
-  const loadData = async (userId: string) => {
+  const loadData = async (userId: string, orgId?: string | null) => {
     const { data: kidsData } = await supabase
       .from('kids')
       .select('*')
@@ -85,10 +123,11 @@ function LessonsContent() {
       }
     }
 
+    const resolvedOrgId = orgId || organizationId || userId
     const { data: lessonsData } = await supabase
       .from('lessons')
       .select('*')
-      .eq('user_id', userId)
+      .eq('organization_id', resolvedOrgId)
       .order('lesson_date', { ascending: true })
 
     if (lessonsData) {
@@ -124,7 +163,14 @@ function LessonsContent() {
         .eq('organization_id', orgId)
       if (collabData) setCollaborators(collabData)
 
-      await loadData(user.id)
+      // Load vacation periods for date validation
+      const { data: vacations } = await supabase
+        .from('vacation_periods')
+        .select('*')
+        .eq('organization_id', orgId)
+      if (vacations) setVacationPeriods(vacations)
+
+      await loadData(user.id, orgId)
       setLoading(false)
     }
     init()
@@ -170,15 +216,158 @@ function LessonsContent() {
     } else {
       resetForm()
       setShowLessonForm(false)
-      await loadData(user.id)
+      await loadData(user.id, organizationId)
     }
     setAddingLesson(false)
+  }
+
+  // ── Edit Lesson ─────────────────────────────────────────────────────────────
+
+  const startEditLesson = (lesson: any) => {
+    setEditingLessonId(lesson.id)
+    setEditLessonTitle(lesson.title)
+    const isCustom = lesson.subject && !CANONICAL_SUBJECTS.includes(lesson.subject)
+    setEditLessonSubjectSelect(isCustom ? '__custom__' : (lesson.subject || ''))
+    setEditLessonSubjectCustom(isCustom ? lesson.subject : '')
+    setEditLessonDescription(formatLessonDescription(lesson.description) || '')
+    setEditLessonDate(lesson.lesson_date || '')
+    const duration = convertMinutesToDuration(lesson.duration_minutes)
+    setEditLessonDurationValue(duration.value)
+    setEditLessonDurationUnit(duration.unit)
+    setEditLessonAssignedTo(lesson.assigned_to_user_id || '')
+  }
+
+  const cancelEditLesson = () => {
+    setEditingLessonId(null)
+    setShowLessonEditModal(false)
+  }
+
+  const saveEditLesson = async (id: string) => {
+    const durationInMinutes = convertDurationToMinutes(editLessonDurationValue, editLessonDurationUnit)
+    const resolvedSubject = editLessonSubjectSelect === '__custom__' ? editLessonSubjectCustom : editLessonSubjectSelect
+    const updates = {
+      title: editLessonTitle,
+      subject: resolvedSubject,
+      description: editLessonDescription,
+      lesson_date: editLessonDate || null,
+      duration_minutes: durationInMinutes,
+      assigned_to_user_id: editLessonAssignedTo || null,
+    }
+
+    // Vacation period check
+    if (editLessonDate && vacationPeriods.length > 0) {
+      const vacation = vacationPeriods.find(v => editLessonDate >= v.start_date && editLessonDate <= v.end_date)
+      if (vacation) {
+        if (!confirm(`⚠️ ${editLessonDate} falls during ${vacation.name}.\n\nSave lesson anyway?`)) return
+      }
+    }
+
+    // Holiday check
+    if (editLessonDate) {
+      const holiday = DEFAULT_HOLIDAYS_2025_2026.find((h: any) => {
+        const holidayDate = h.date || h.start
+        return holidayDate === editLessonDate
+      })
+      if (holiday) {
+        if (!confirm(`⚠️ ${editLessonDate} is ${holiday.name}.\n\nSave lesson anyway?`)) return
+      }
+    }
+
+    // Cascade check
+    const currentLesson = allLessons.find(l => l.id === id)
+    if (currentLesson && currentLesson.lesson_date && editLessonDate && currentLesson.lesson_date !== editLessonDate) {
+      const subsequentLessons = allLessons.filter(lesson =>
+        lesson.kid_id === currentLesson.kid_id &&
+        lesson.id !== id &&
+        lesson.lesson_date &&
+        lesson.lesson_date > currentLesson.lesson_date
+      )
+      if (subsequentLessons.length > 0) {
+        const oldDate = new Date(currentLesson.lesson_date)
+        const newDateObj = new Date(editLessonDate)
+        const suggestedShift = Math.round((newDateObj.getTime() - oldDate.getTime()) / (1000 * 60 * 60 * 24))
+        setCascadeData({
+          lessonId: id,
+          originalDate: currentLesson.lesson_date,
+          newDate: editLessonDate,
+          affectedCount: subsequentLessons.length,
+          kidId: currentLesson.kid_id,
+        })
+        setCascadeDays(suggestedShift)
+        setShowCascadeModal(true)
+        return
+      }
+    }
+
+    await performLessonUpdate(id, updates)
+  }
+
+  const performLessonUpdate = async (id: string, updates: any) => {
+    const { error } = await supabase.from('lessons').update(updates).eq('id', id)
+    if (error) {
+      console.error('Error saving lesson:', error)
+      alert('Failed to save lesson changes')
+    } else {
+      setEditingLessonId(null)
+      setShowLessonEditModal(false)
+      await loadData(user.id, organizationId)
+    }
+  }
+
+  const handleCascadeUpdate = async (updateAll: boolean) => {
+    if (!cascadeData) return
+    const { lessonId, originalDate, kidId } = cascadeData
+    const daysDiff = cascadeDays
+    const durationInMinutes = convertDurationToMinutes(editLessonDurationValue, editLessonDurationUnit)
+    const resolvedSubject = editLessonSubjectSelect === '__custom__' ? editLessonSubjectCustom : editLessonSubjectSelect
+    const updates = {
+      title: editLessonTitle,
+      subject: resolvedSubject,
+      description: editLessonDescription,
+      lesson_date: editLessonDate || null,
+      duration_minutes: durationInMinutes,
+      assigned_to_user_id: editLessonAssignedTo || null,
+    }
+
+    await performLessonUpdate(lessonId, updates)
+
+    if (updateAll && daysDiff !== 0) {
+      const subsequentLessons = allLessons.filter(lesson =>
+        lesson.kid_id === kidId &&
+        lesson.id !== lessonId &&
+        lesson.lesson_date &&
+        lesson.lesson_date > originalDate
+      )
+      const updatePromises = subsequentLessons.map(lesson => {
+        const lessonDate = new Date(lesson.lesson_date!)
+        lessonDate.setDate(lessonDate.getDate() + daysDiff)
+        return supabase
+          .from('lessons')
+          .update({ lesson_date: lessonDate.toISOString().split('T')[0] })
+          .eq('id', lesson.id)
+      })
+      const results = await Promise.all(updatePromises)
+      const updatedCount = results.filter(r => !r.error).length
+      await loadData(user.id, organizationId)
+      setShowCascadeModal(false)
+      setCascadeData(null)
+      setCascadeDays(1)
+      setTimeout(() => {
+        alert(`✅ Updated ${updatedCount} subsequent lesson${updatedCount !== 1 ? 's' : ''}. All dates shifted by ${Math.abs(daysDiff)} day${Math.abs(daysDiff) !== 1 ? 's' : ''} ${daysDiff > 0 ? 'later' : 'earlier'}.`)
+      }, 100)
+    } else {
+      setShowCascadeModal(false)
+      setCascadeData(null)
+      setCascadeDays(1)
+    }
   }
 
   // ── Other handlers ──────────────────────────────────────────────────────────
 
   const handleEditLesson = (lesson: Lesson) => {
-    router.push(`/calendar?editLesson=${lesson.id}`)
+    setSelectedLessonChild(kids.find(k => k.id === lesson.kid_id) || null)
+    startEditLesson(lesson)
+    setShowLessonEditModal(true)
   }
 
   const handleDeleteLesson = async (id: string) => {
@@ -188,7 +377,7 @@ function LessonsContent() {
       : 'Delete this lesson?'
     if (!confirm(msg)) return
     await supabase.from('lessons').delete().eq('id', id).eq('user_id', user.id)
-    await loadData(user.id)
+    await loadData(user.id, organizationId)
   }
 
   const handleCycleStatus = async (lessonId: string, currentStatus: string) => {
@@ -202,7 +391,7 @@ function LessonsContent() {
     if (newStatus === 'completed') updates.completed_at = new Date().toISOString()
     if (newStatus === 'not_started') updates.completed_at = null
     await supabase.from('lessons').update(updates).eq('id', lessonId)
-    await loadData(user.id)
+    await loadData(user.id, organizationId)
   }
 
   const handleViewPastAssessments = (kidId: string, kidName: string) => {
@@ -236,7 +425,6 @@ function LessonsContent() {
         top: 0,
         zIndex: 50,
       }}>
-        {/* Left: Home + Title */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <button
             onClick={() => router.push('/dashboard')}
@@ -255,7 +443,6 @@ function LessonsContent() {
           </h1>
         </div>
 
-        {/* Right: Action buttons */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           {hasFeature('ai_generation') ? (
             <button
@@ -285,21 +472,21 @@ function LessonsContent() {
             </button>
           )}
 
-        <button
-          onClick={() => {
-            setSelectedKidForImport(kids[0] || null)
-            setShowImporter(true)
-          }}
-          style={{
-            background: 'rgba(255,255,255,0.15)',
-            border: '1px solid rgba(255,255,255,0.3)',
-            borderRadius: 8, color: '#fff',
-            fontSize: 13, fontWeight: 600,
-            padding: '6px 14px', cursor: 'pointer',
-          }}
-        >
-          ⬆️ Import Curriculum
-        </button>
+          <button
+            onClick={() => {
+              setSelectedKidForImport(kids[0] || null)
+              setShowImporter(true)
+            }}
+            style={{
+              background: 'rgba(255,255,255,0.15)',
+              border: '1px solid rgba(255,255,255,0.3)',
+              borderRadius: 8, color: '#fff',
+              fontSize: 13, fontWeight: 600,
+              padding: '6px 14px', cursor: 'pointer',
+            }}
+          >
+            ⬆️ Import Curriculum
+          </button>
 
           <button
             onClick={() => setShowLessonForm(true)}
@@ -350,6 +537,7 @@ function LessonsContent() {
             onDeleteLesson={handleDeleteLesson}
             onCycleStatus={handleCycleStatus}
             onViewPastAssessments={handleViewPastAssessments}
+            onRefresh={() => loadData(user.id, organizationId)}
           />
         )}
       </main>
@@ -358,7 +546,6 @@ function LessonsContent() {
       {showLessonForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
-            {/* Modal Header */}
             <div className="bg-gradient-to-r from-green-500 to-teal-500 px-6 py-4 rounded-t-xl">
               <div className="flex justify-between items-center">
                 <h3 className="text-xl font-bold text-white">+ Add New Lesson</h3>
@@ -370,7 +557,6 @@ function LessonsContent() {
             </div>
 
             <form onSubmit={addLesson} className="p-6 space-y-4">
-              {/* Child */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Select Child *</label>
                 <select
@@ -388,7 +574,6 @@ function LessonsContent() {
                 </select>
               </div>
 
-              {/* Subject */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Subject *</label>
                 <select
@@ -414,7 +599,6 @@ function LessonsContent() {
                 )}
               </div>
 
-              {/* Title */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Lesson Title *</label>
                 <input
@@ -427,7 +611,6 @@ function LessonsContent() {
                 />
               </div>
 
-              {/* Description */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Description (optional)</label>
                 <textarea
@@ -439,7 +622,6 @@ function LessonsContent() {
                 />
               </div>
 
-              {/* Assign To */}
               {collaborators.length > 0 && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -458,7 +640,6 @@ function LessonsContent() {
                 </div>
               )}
 
-              {/* Duration */}
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
                 <label className="block text-sm font-medium text-gray-700">How long will this lesson take?</label>
                 <div className="flex gap-2">
@@ -497,7 +678,6 @@ function LessonsContent() {
                 </div>
               </div>
 
-              {/* Date (optional) */}
               <div className="bg-green-50 border border-green-200 rounded-lg p-4 space-y-3">
                 <div className="flex items-center gap-2">
                   <input
@@ -536,12 +716,236 @@ function LessonsContent() {
         </div>
       )}
 
+      {/* ── Edit Lesson Modal ─────────────────────────────────────────── */}
+      {showLessonEditModal && editingLessonId && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-4 rounded-t-xl">
+              <div className="flex justify-between items-center">
+                <h3 className="text-xl font-bold text-white flex items-center gap-2">✏️ Edit Lesson</h3>
+                <button onClick={cancelEditLesson} className="text-white hover:text-gray-200 text-2xl leading-none font-light">×</button>
+              </div>
+              {selectedLessonChild && (
+                <p className="text-blue-100 text-sm mt-1">
+                  {selectedLessonChild.displayname}
+                  {selectedLessonChild.grade ? ` • Grade ${selectedLessonChild.grade}` : ''}
+                </p>
+              )}
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Subject *</label>
+                <select
+                  value={editLessonSubjectSelect}
+                  onChange={(e) => setEditLessonSubjectSelect(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900"
+                  required
+                >
+                  <option value="">Choose a subject...</option>
+                  {CANONICAL_SUBJECTS.map(s => <option key={s} value={s}>{s}</option>)}
+                  <option value="__custom__">✏️ Custom subject...</option>
+                </select>
+                {editLessonSubjectSelect === '__custom__' && (
+                  <input
+                    type="text"
+                    value={editLessonSubjectCustom}
+                    onChange={(e) => setEditLessonSubjectCustom(e.target.value)}
+                    className="mt-2 w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900"
+                    placeholder="e.g., Latin, Robotics, Home Economics"
+                    required
+                    autoFocus
+                  />
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Lesson Title *</label>
+                <input
+                  type="text"
+                  value={editLessonTitle}
+                  onChange={(e) => setEditLessonTitle(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Description (optional)</label>
+                <textarea
+                  value={editLessonDescription}
+                  onChange={(e) => setEditLessonDescription(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900"
+                  rows={3}
+                />
+              </div>
+
+              {collaborators.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Assign To <span className="text-gray-400 font-normal">(optional)</span>
+                  </label>
+                  <select
+                    value={editLessonAssignedTo}
+                    onChange={(e) => setEditLessonAssignedTo(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900"
+                  >
+                    <option value="">Me (primary teacher)</option>
+                    {collaborators.map(c => (
+                      <option key={c.id} value={c.user_id}>{c.name || c.email}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
+                <label className="block text-sm font-medium text-gray-700">How long is this lesson?</label>
+                <div className="flex gap-2">
+                  {[15, 30, 45, 60].map(min => (
+                    <button
+                      key={min}
+                      type="button"
+                      onClick={() => { setEditLessonDurationValue(min); setEditLessonDurationUnit('minutes') }}
+                      className={`flex-1 px-3 py-2 rounded-lg font-medium transition-all ${
+                        editLessonDurationValue === min && editLessonDurationUnit === 'minutes'
+                          ? 'bg-blue-600 text-white shadow-md'
+                          : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+                      }`}
+                    >
+                      {min} min
+                    </button>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    min="1"
+                    value={editLessonDurationValue}
+                    onChange={(e) => setEditLessonDurationValue(parseInt(e.target.value) || 1)}
+                    className="w-24 px-3 py-2 border border-gray-300 rounded-lg text-gray-900"
+                  />
+                  <select
+                    value={editLessonDurationUnit}
+                    onChange={(e) => setEditLessonDurationUnit(e.target.value as DurationUnit)}
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-gray-900"
+                  >
+                    <option value="minutes">minutes</option>
+                    <option value="days">days</option>
+                    <option value="weeks">weeks</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="edit-schedule-date"
+                    checked={!!editLessonDate}
+                    onChange={(e) => {
+                      if (!e.target.checked) setEditLessonDate('')
+                      else setEditLessonDate(new Date().toISOString().split('T')[0])
+                    }}
+                    className="rounded"
+                  />
+                  <label htmlFor="edit-schedule-date" className="text-sm font-medium text-gray-700">
+                    Schedule for a specific date
+                  </label>
+                </div>
+                {editLessonDate && (
+                  <input
+                    type="date"
+                    value={editLessonDate}
+                    onChange={(e) => setEditLessonDate(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900"
+                  />
+                )}
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={cancelEditLesson}
+                  className="flex-1 px-4 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => saveEditLesson(editingLessonId)}
+                  className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Cascade Modal ─────────────────────────────────────────────── */}
+      {showCascadeModal && cascadeData && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="bg-gradient-to-r from-yellow-400 to-orange-500 px-6 py-4 rounded-t-lg">
+              <h3 className="text-xl font-bold text-white flex items-center gap-2">⚠️ Date Change Detected</h3>
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-gray-900">
+                You're changing the lesson date from{' '}
+                <strong>{new Date(cascadeData.originalDate + 'T00:00:00').toLocaleDateString()}</strong> to{' '}
+                <strong>{new Date(cascadeData.newDate + 'T00:00:00').toLocaleDateString()}</strong>.
+              </p>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-sm font-semibold text-blue-900 mb-2">
+                  📅 This affects {cascadeData.affectedCount} subsequent lesson{cascadeData.affectedCount !== 1 ? 's' : ''}
+                </p>
+                <p className="text-sm text-blue-800">Would you like to shift all subsequent lessons by the same amount?</p>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Shift subsequent lessons by:</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    value={cascadeDays}
+                    onChange={(e) => setCascadeDays(parseInt(e.target.value) || 0)}
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded text-gray-900"
+                  />
+                  <span className="text-sm text-gray-600">days</span>
+                </div>
+              </div>
+            </div>
+            <div className="bg-gray-50 border-t border-gray-200 px-6 py-4 flex gap-3">
+              <button
+                onClick={() => { setShowCascadeModal(false); setCascadeData(null); setCascadeDays(1) }}
+                className="px-4 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-100 font-medium"
+              >
+                Cancel
+              </button>
+              <div className="flex-1" />
+              <button
+                onClick={() => handleCascadeUpdate(false)}
+                className="px-4 py-2 border border-blue-300 bg-blue-50 rounded text-blue-700 hover:bg-blue-100 font-medium"
+              >
+                This Lesson Only
+              </button>
+              <button
+                onClick={() => handleCascadeUpdate(true)}
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-medium"
+              >
+                Update All ({cascadeData.affectedCount})
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Generate Lessons Modal ────────────────────────────────────── */}
       {showGenerator && (
         <LessonGenerator
           kids={kids}
           userId={user.id}
-          onClose={() => { setShowGenerator(false); loadData(user.id) }}
+          onClose={() => { setShowGenerator(false); loadData(user.id, organizationId) }}
         />
       )}
 
@@ -552,7 +956,7 @@ function LessonsContent() {
           onClose={() => setShowImporter(false)}
           onImportComplete={() => {
             setShowImporter(false)
-            loadData(user.id)
+            loadData(user.id, organizationId)
           }}
         />
       )}
