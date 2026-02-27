@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/src/lib/supabase'
+import { redeemInvite } from '@/src/lib/invites'
 import Link from 'next/link'
 
 export default function SignupPage() {
@@ -11,6 +12,8 @@ export default function SignupPage() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [hasInviteCode, setHasInviteCode] = useState(false)
+  const [inviteCode, setInviteCode] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
@@ -34,8 +37,15 @@ export default function SignupPage() {
       return
     }
 
+    if (hasInviteCode && inviteCode.trim().length < 6) {
+      setError('Please enter a valid invite code.')
+      setLoading(false)
+      return
+    }
+
     try {
-      const { data, error } = await supabase.auth.signUp({
+      // Step 1: Create the account
+      const { data, error: signupError } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -43,19 +53,50 @@ export default function SignupPage() {
         },
       })
 
-      if (error) {
-        // Surface a helpful message for duplicate email instead of Supabase's generic one
-        if (error.message.toLowerCase().includes('already registered') ||
-            error.message.toLowerCase().includes('already exists') ||
-            error.message.toLowerCase().includes('user already')) {
+      if (signupError) {
+        if (
+          signupError.message.toLowerCase().includes('already registered') ||
+          signupError.message.toLowerCase().includes('already exists') ||
+          signupError.message.toLowerCase().includes('user already')
+        ) {
           setError('An account with this email already exists. Try signing in or reset your password.')
         } else {
-          setError(error.message)
+          setError(signupError.message)
         }
-      } else {
-        setSuccess(true)
-        setTimeout(() => router.push('/dashboard'), 2000)
+        setLoading(false)
+        return
       }
+
+      if (!data.user) {
+        setError('Account created but could not retrieve user. Please try signing in.')
+        setLoading(false)
+        return
+      }
+
+      // Step 2: If invite code provided, redeem it immediately
+      if (hasInviteCode && inviteCode.trim()) {
+        const result = await redeemInvite(inviteCode.trim(), data.user.id, email)
+
+        if (!result.success) {
+          // Account was created but invite failed — send to /join so they can retry
+          setError(
+            `Account created, but the invite code failed: ${result.error} ` +
+            `Please sign in and enter your code on the next screen.`
+          )
+          setLoading(false)
+          return
+        }
+
+        // Invite redeemed — go straight to teaching schedule
+        setSuccess(true)
+        setTimeout(() => router.push('/teaching-schedule'), 1500)
+        return
+      }
+
+      // Step 3: No invite code — normal admin signup → dashboard
+      setSuccess(true)
+      setTimeout(() => router.push('/dashboard'), 1500)
+
     } catch (err) {
       setError('An error occurred. Please try again.')
     } finally {
@@ -63,21 +104,6 @@ export default function SignupPage() {
     }
   }
 
-  if (success) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
-        <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center">
-          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <span className="text-3xl">✓</span>
-          </div>
-          <h2 className="text-2xl font-black text-gray-900 mb-2">Account Created!</h2>
-          <p className="text-gray-600">Redirecting to your dashboard...</p>
-        </div>
-      </div>
-    )
-  }
-
-  // Reusable eye toggle button
   function EyeToggle({ show, onToggle }: { show: boolean; onToggle: () => void }) {
     return (
       <button
@@ -100,6 +126,28 @@ export default function SignupPage() {
     )
   }
 
+  if (success) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
+        <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center">
+          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <h2 className="text-2xl font-black text-gray-900 mb-2">
+            {hasInviteCode ? "You're in!" : 'Account Created!'}
+          </h2>
+          <p className="text-gray-600">
+            {hasInviteCode
+              ? 'Taking you to your teaching schedule…'
+              : 'Redirecting to your dashboard…'}
+          </p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
       <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8">
@@ -109,16 +157,15 @@ export default function SignupPage() {
         </div>
 
         {error && (
-          <div className="bg-red-50 text-red-600 p-4 rounded-xl mb-6 border border-red-200">
+          <div className="bg-red-50 text-red-600 p-4 rounded-xl mb-6 border border-red-200 text-sm">
             {error}
           </div>
         )}
 
         <form onSubmit={handleSignup} className="space-y-4">
+          {/* Email */}
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">
-              Email
-            </label>
+            <label className="block text-sm font-bold text-gray-700 mb-2">Email</label>
             <input
               type="email"
               value={email}
@@ -129,10 +176,9 @@ export default function SignupPage() {
             />
           </div>
 
+          {/* Password */}
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">
-              Password
-            </label>
+            <label className="block text-sm font-bold text-gray-700 mb-2">Password</label>
             <div className="relative">
               <input
                 type={showPassword ? 'text' : 'password'}
@@ -147,10 +193,9 @@ export default function SignupPage() {
             <p className="text-xs text-gray-500 mt-1">At least 6 characters</p>
           </div>
 
+          {/* Confirm Password */}
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">
-              Confirm Password
-            </label>
+            <label className="block text-sm font-bold text-gray-700 mb-2">Confirm Password</label>
             <div className="relative">
               <input
                 type={showConfirmPassword ? 'text' : 'password'}
@@ -164,12 +209,54 @@ export default function SignupPage() {
             </div>
           </div>
 
+          {/* Invite code toggle */}
+          <div className="pt-1">
+            <button
+              type="button"
+              onClick={() => {
+                setHasInviteCode(!hasInviteCode)
+                setInviteCode('')
+              }}
+              className="flex items-center gap-2 text-sm text-indigo-600 hover:text-indigo-800 transition-colors font-medium"
+            >
+              <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${hasInviteCode ? 'bg-indigo-600 border-indigo-600' : 'border-gray-300'}`}>
+                {hasInviteCode && (
+                  <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                )}
+              </div>
+              I have an invite code
+            </button>
+
+            {/* Invite code field — reveals when toggled */}
+            {hasInviteCode && (
+              <div className="mt-3 p-4 bg-indigo-50 border border-indigo-100 rounded-xl space-y-2">
+                <label className="block text-xs font-bold text-indigo-700 uppercase tracking-wider">
+                  Invite Code
+                </label>
+                <input
+                  type="text"
+                  value={inviteCode}
+                  onChange={(e) => setInviteCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+                  maxLength={8}
+                  className="w-full px-4 py-3 border-2 border-indigo-200 rounded-xl focus:border-indigo-500 focus:outline-none font-mono text-lg tracking-widest text-center uppercase bg-white"
+                  placeholder="XXXXXXXX"
+                  autoFocus
+                />
+                <p className="text-xs text-indigo-500">
+                  Enter the 8-character code shared by the account admin.
+                </p>
+              </div>
+            )}
+          </div>
+
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors mt-2"
           >
-            {loading ? 'Creating account...' : 'Create Account'}
+            {loading ? 'Creating account…' : 'Create Account'}
           </button>
         </form>
 
