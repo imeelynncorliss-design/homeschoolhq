@@ -309,6 +309,7 @@ function DashboardContent() {
   const [parentName, setParentName] = useState('')
   const [kidScheduleStatuses, setKidScheduleStatuses] = useState<KidScheduleStatus[]>([])
   const [calendarVisited, setCalendarVisited] = useState(false)
+  const [isCollaborator, setIsCollaborator] = useState(false)
 
   useEffect(() => {
     const getUser = async () => {
@@ -316,56 +317,84 @@ function DashboardContent() {
       if (!user) { router.push('/'); return }
       setUser(user)
 
-      const { data: kidsData } = await supabase
-        .from('kids')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-
-      if (kidsData?.length) {
-        setKids(kidsData)
-        const orgId = kidsData[0].organization_id || user.id
-        setOrganizationId(orgId)
-
-        const { count: totalCount } = await supabase
-          .from('lessons')
-          .select('id', { count: 'exact', head: true })
-          .eq('user_id', user.id)
-        setHasLessons((totalCount ?? 0) > 0)
-
-        const statuses: KidScheduleStatus[] = await Promise.all(
-          kidsData.map(async (kid: any) => {
-            const { count: total } = await supabase
-              .from('lessons')
-              .select('id', { count: 'exact', head: true })
-              .eq('kid_id', kid.id)
-
-            const { count: unscheduled } = await supabase
-              .from('lessons')
-              .select('id', { count: 'exact', head: true })
-              .eq('kid_id', kid.id)
-              .is('lesson_date', null)
-
-            return {
-              id: kid.id,
-              name: kid.displayname,
-              total: total ?? 0,
-              unscheduled: unscheduled ?? 0,
-            }
-          })
-        )
-        setKidScheduleStatuses(statuses.filter(s => s.total > 0))
-      } else {
-        setOrganizationId(user.id)
-      }
-
-      const { data: profile } = await supabase
-        .from('user_profiles')
-        .select('first_name, calendar_visited_at')
+      // Check if user is a co-teacher/collaborator first
+      const { data: collaboration } = await supabase
+        .from('family_collaborators')
+        .select('organization_id, role, name')
         .eq('user_id', user.id)
         .maybeSingle()
-      if (profile?.first_name) setParentName(profile.first_name)
-      if (profile?.calendar_visited_at) setCalendarVisited(true)
+
+      let orgId: string
+
+      if (collaboration) {
+        // Co-teacher — use the family's org
+        setIsCollaborator(true)
+        orgId = collaboration.organization_id
+        setOrganizationId(orgId)
+        setParentName(collaboration.name || user.email?.split('@')[0] || '')
+
+        // Load the family's kids using org_id
+        const { data: kidsData } = await supabase
+          .from('kids')
+          .select('*')
+          .eq('organization_id', orgId)
+          .order('created_at', { ascending: false })
+
+        setKids(kidsData || [])
+      } else {
+        // Admin — original flow
+        const { data: kidsData } = await supabase
+          .from('kids')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+
+        if (kidsData?.length) {
+          setKids(kidsData)
+          orgId = kidsData[0].organization_id || user.id
+          setOrganizationId(orgId)
+
+          const { count: totalCount } = await supabase
+            .from('lessons')
+            .select('id', { count: 'exact', head: true })
+            .eq('user_id', user.id)
+          setHasLessons((totalCount ?? 0) > 0)
+
+          const statuses: KidScheduleStatus[] = await Promise.all(
+            kidsData.map(async (kid: any) => {
+              const { count: total } = await supabase
+                .from('lessons')
+                .select('id', { count: 'exact', head: true })
+                .eq('kid_id', kid.id)
+
+              const { count: unscheduled } = await supabase
+                .from('lessons')
+                .select('id', { count: 'exact', head: true })
+                .eq('kid_id', kid.id)
+                .is('lesson_date', null)
+
+              return {
+                id: kid.id,
+                name: kid.displayname,
+                total: total ?? 0,
+                unscheduled: unscheduled ?? 0,
+              }
+            })
+          )
+          setKidScheduleStatuses(statuses.filter(s => s.total > 0))
+        } else {
+          orgId = user.id
+          setOrganizationId(orgId)
+        }
+
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('first_name, calendar_visited_at')
+          .eq('user_id', user.id)
+          .maybeSingle()
+        if (profile?.first_name) setParentName(profile.first_name)
+        if (profile?.calendar_visited_at) setCalendarVisited(true)
+      }
 
       setLoading(false)
     }
@@ -385,8 +414,6 @@ function DashboardContent() {
 
   return (
     <div style={css.root}>
-
-      {/* ── TOP BAR ─────────────────────────────────────────────────── */}
       <header style={css.topBar}>
         <div style={css.topBarLeft}>
           <div style={css.logo}>
@@ -397,27 +424,27 @@ function DashboardContent() {
             Welcome, <strong>{parentName || user?.email?.split('@')[0]}</strong> 👋
           </div>
         </div>
-
         <div style={css.topBarRight}>
           <button style={css.howToBtn} onClick={() => router.push('/calendar')}>💡 How To</button>
           <button style={css.logoutBtn} onClick={handleLogout}>Logout</button>
         </div>
       </header>
 
-      {/* ── STATS BAR ───────────────────────────────────────────────── */}
       <StatsBar organizationId={organizationId} />
 
-      {/* ── MAIN ────────────────────────────────────────────────────── */}
       <main style={css.main}>
+        {/* Only show onboarding for admins */}
+        {!isCollaborator && (
+          <OnboardingChecklist
+            hasKids={kids.length > 0}
+            hasLessons={hasLessons}
+            kidScheduleStatuses={kidScheduleStatuses}
+            calendarVisited={calendarVisited}
+          />
+        )}
 
-        <OnboardingChecklist
-          hasKids={kids.length > 0}
-          hasLessons={hasLessons}
-          kidScheduleStatuses={kidScheduleStatuses}
-          calendarVisited={calendarVisited}
-        />
-
-        {kids.length > 0 && (
+        {/* Co-teachers always see nav cards; admins only see them after adding a kid */}
+        {(isCollaborator || kids.length > 0) && (
           <>
             <div style={css.sectionLabel}>WHERE WOULD YOU LIKE TO GO?</div>
             <div style={css.grid}>
