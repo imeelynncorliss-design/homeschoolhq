@@ -5,8 +5,9 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/src/lib/supabase'
 import { redeemInvite } from '@/src/lib/invites'
 import Link from 'next/link'
+import { Suspense } from 'react'
 
-export default function SignupPage() {
+function SignupContent() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -20,6 +21,7 @@ export default function SignupPage() {
   const router = useRouter()
   const supabase = createClient()
   const searchParams = useSearchParams()
+  
 
 useEffect(() => {
   const code = searchParams.get('code')
@@ -96,18 +98,16 @@ useEffect(() => {
           return
         }
 
-        // Invite redeemed — go straight to teaching schedule
-        setSuccess(true)
-        setTimeout(() => router.push('/teaching-schedule'), 1500)
-        return
-      }
-
-      // Auto-confirm user since they verified via invite email
+        // Invite redeemed — auto-confirm and go to teaching schedule
       await fetch('/api/invites/confirm-user', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: data.user.id })
       })
+      setSuccess(true)
+      setTimeout(() => router.push('/teaching-schedule'), 1500)
+      return
+      }
 
       // Step 3: No invite code — normal admin signup → dashboard
       setSuccess(true)
@@ -284,5 +284,12 @@ useEffect(() => {
         </p>
       </div>
     </div>
+  )
+}
+export default function SignupPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <SignupContent />
+    </Suspense>
   )
 }
