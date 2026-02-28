@@ -24,7 +24,7 @@ const NAV_CARDS = [
       { label: 'Calendar', icon: '📅', href: '/calendar' },
       { label: 'Lessons', icon: '📚', href: '/lessons' },
       { label: 'Attendance', icon: '✅', href: '/admin?tab=attendance' },
-      { label: 'Teaching Schedule', icon: '👩‍🏫', href: '/teaching-schedule' },
+      { label: 'Teaching Schedule', icon: '👩‍🏫', href: '/collaborators' },
     ],
   },
   {

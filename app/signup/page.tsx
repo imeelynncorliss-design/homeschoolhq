@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/src/lib/supabase'
 import { redeemInvite } from '@/src/lib/invites'
 import Link from 'next/link'
@@ -19,6 +19,15 @@ export default function SignupPage() {
   const [success, setSuccess] = useState(false)
   const router = useRouter()
   const supabase = createClient()
+  const searchParams = useSearchParams()
+
+useEffect(() => {
+  const code = searchParams.get('code')
+  if (code) {
+    setHasInviteCode(true)
+    setInviteCode(code.toUpperCase())
+  }
+}, [])
 
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault()
@@ -93,6 +102,13 @@ export default function SignupPage() {
         return
       }
 
+      // Auto-confirm user since they verified via invite email
+      await fetch('/api/invites/confirm-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: data.user.id })
+      })
+
       // Step 3: No invite code — normal admin signup → dashboard
       setSuccess(true)
       setTimeout(() => router.push('/dashboard'), 1500)
@@ -165,27 +181,27 @@ export default function SignupPage() {
         <form onSubmit={handleSignup} className="space-y-4">
           {/* Email */}
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">Email</label>
+            <label className="block text-sm font-bold text-gray-700 mb-2 text-grey-900">Email</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-600 focus:outline-none transition-colors"
+              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-600 focus:outline-none transition-colors text-gray-900"
               placeholder="your@email.com"
             />
           </div>
 
           {/* Password */}
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">Password</label>
+            <label className="block text-sm font-bold text-gray-700 mb-2 text-grey-900">Password</label>
             <div className="relative">
               <input
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="w-full px-4 py-3 pr-12 border-2 border-gray-200 rounded-xl focus:border-indigo-600 focus:outline-none transition-colors"
+                className="w-full px-4 py-3 pr-12 border-2 border-gray-200 rounded-xl focus:border-indigo-600 focus:outline-none transition-colors text-gray-900"
                 placeholder="••••••••"
               />
               <EyeToggle show={showPassword} onToggle={() => setShowPassword(!showPassword)} />
@@ -195,14 +211,14 @@ export default function SignupPage() {
 
           {/* Confirm Password */}
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-2">Confirm Password</label>
+            <label className="block text-sm font-bold text-gray-700 mb-2 text-grey-900">Confirm Password</label>
             <div className="relative">
               <input
                 type={showConfirmPassword ? 'text' : 'password'}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
-                className="w-full px-4 py-3 pr-12 border-2 border-gray-200 rounded-xl focus:border-indigo-600 focus:outline-none transition-colors"
+                className="w-full px-4 py-3 pr-12 border-2 border-gray-200 rounded-xl focus:border-indigo-600 focus:outline-none transition-colors text-gray-900"
                 placeholder="••••••••"
               />
               <EyeToggle show={showConfirmPassword} onToggle={() => setShowConfirmPassword(!showConfirmPassword)} />
@@ -240,7 +256,7 @@ export default function SignupPage() {
                   value={inviteCode}
                   onChange={(e) => setInviteCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
                   maxLength={8}
-                  className="w-full px-4 py-3 border-2 border-indigo-200 rounded-xl focus:border-indigo-500 focus:outline-none font-mono text-lg tracking-widest text-center uppercase bg-white"
+                  className="w-full px-4 py-3 border-2 border-indigo-200 rounded-xl focus:border-indigo-500 focus:outline-none font-mono text-lg tracking-widest text-center uppercase bg-white text-gray-900"
                   placeholder="XXXXXXXX"
                   autoFocus
                 />

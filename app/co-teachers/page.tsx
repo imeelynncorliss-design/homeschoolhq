@@ -1,26 +1,15 @@
 'use client';
 
-/**
- * Co-Teachers Admin Page
- * Place at: src/app/co-teachers/page.tsx
- * 
- * Admin-only page for generating and managing co-teacher invite codes.
- * Redirects non-admins back to /dashboard.
- */
-
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/src/lib/supabase';
 import {
-  createInvite,
   revokeInvite,
   getOrgInvites,
   getOrgCollaborators,
   removeCollaborator,
   type InviteRole,
 } from '@/src/lib/invites';
-
-const ORG_ID = 'd52497c0-42a9-49b7-ba3b-849bffa27fc4'; // TODO: pull from session/context in prod
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -75,6 +64,7 @@ export default function CoTeachersPage() {
   const router = useRouter();
   const supabase = createClient();
 
+  const [orgId, setOrgId] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [invites, setInvites] = useState<Invite[]>([]);
   const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
@@ -84,6 +74,7 @@ export default function CoTeachersPage() {
   const [revoking, setRevoking] = useState<string | null>(null);
   const [removing, setRemoving] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   // Form state
   const [inviteEmail, setInviteEmail] = useState('');
@@ -97,9 +88,8 @@ export default function CoTeachersPage() {
 
       const { data: membership } = await supabase
         .from('user_organizations')
-        .select('role')
+        .select('role, organization_id')
         .eq('user_id', user.id)
-        .eq('organization_id', ORG_ID)
         .single();
 
       if (membership?.role !== 'admin') {
@@ -108,17 +98,23 @@ export default function CoTeachersPage() {
       }
 
       setCurrentUserId(user.id);
-      await loadData();
+      setOrgId(membership.organization_id);
       setLoading(false);
     }
     checkAuth();
   }, []);
 
+  // Load data once orgId is set
+  useEffect(() => {
+    if (orgId) loadData();
+  }, [orgId]);
+
   // ── Data loading ────────────────────────────────────────────────────────────
   async function loadData() {
+    if (!orgId) return;
     const [{ data: inviteData }, { data: collabData }] = await Promise.all([
-      getOrgInvites(ORG_ID),
-      getOrgCollaborators(ORG_ID),
+      getOrgInvites(orgId),
+      getOrgCollaborators(orgId),
     ]);
     if (inviteData) setInvites(inviteData as Invite[]);
     if (collabData) setCollaborators(collabData as Collaborator[]);
@@ -126,20 +122,25 @@ export default function CoTeachersPage() {
 
   // ── Generate invite ─────────────────────────────────────────────────────────
   async function handleGenerate() {
-    if (!currentUserId) return;
+    if (!orgId) return;
     setError('');
+    setSuccess('');
     setGenerating(true);
 
-    const { data, error: createError } = await createInvite({
-      organizationId: ORG_ID,
-      createdBy: currentUserId,
-      email: inviteEmail.trim() || undefined,
-      role: inviteRole,
+    const res = await fetch('/api/invites/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: inviteEmail.trim() || undefined,
+        role: inviteRole,
+      }),
     });
 
-    if (createError) {
-      setError('Failed to generate invite code. Please try again.');
+    const data = await res.json();
+    if (!res.ok) {
+      setError(data.error || 'Failed to send invite');
     } else {
+      setSuccess(inviteEmail ? `Invitation sent to ${inviteEmail}` : 'Invite code generated');
       setInviteEmail('');
       await loadData();
     }
@@ -201,6 +202,18 @@ export default function CoTeachersPage() {
             </p>
           </div>
         </div>
+
+        {/* Success/Error messages */}
+        {success && (
+          <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl px-4 py-3 text-sm font-medium">
+            ✅ {success}
+          </div>
+        )}
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-600 rounded-xl px-4 py-3 text-sm font-medium">
+            ⚠️ {error}
+          </div>
+        )}
 
         {/* Active collaborators */}
         <section className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
@@ -282,10 +295,6 @@ export default function CoTeachersPage() {
                 </select>
               </div>
             </div>
-
-            {error && (
-              <p className="text-sm text-red-500">{error}</p>
-            )}
 
             <button
               onClick={handleGenerate}

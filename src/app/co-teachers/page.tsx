@@ -20,7 +20,7 @@ import {
   type InviteRole,
 } from '@/src/lib/invites';
 
-const ORG_ID = 'd52497c0-42a9-49b7-ba3b-849bffa27fc4'; // TODO: pull from session/context in prod
+const [orgId, setOrgId] = useState<string | null>(null);
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -99,14 +99,14 @@ export default function CoTeachersPage() {
         .from('user_organizations')
         .select('role')
         .eq('user_id', user.id)
-        .eq('organization_id', ORG_ID)
+        .eq('organization_id', orgId)
         .single();
 
       if (membership?.role !== 'admin') {
         router.push('/dashboard');
         return;
       }
-
+      setOrgId(membership.organization_id);
       setCurrentUserId(user.id);
       await loadData();
       setLoading(false);
@@ -116,9 +116,10 @@ export default function CoTeachersPage() {
 
   // ── Data loading ────────────────────────────────────────────────────────────
   async function loadData() {
+    if (!orgId) return;
     const [{ data: inviteData }, { data: collabData }] = await Promise.all([
-      getOrgInvites(ORG_ID),
-      getOrgCollaborators(ORG_ID),
+      getOrgInvites(orgId),
+      getOrgCollaborators(orgId),
     ]);
     if (inviteData) setInvites(inviteData as Invite[]);
     if (collabData) setCollaborators(collabData as Collaborator[]);
@@ -126,24 +127,27 @@ export default function CoTeachersPage() {
 
   // ── Generate invite ─────────────────────────────────────────────────────────
   async function handleGenerate() {
-    if (!currentUserId) return;
+    if (!orgId) return;
     setError('');
     setGenerating(true);
-
-    const { data, error: createError } = await createInvite({
-      organizationId: ORG_ID,
-      createdBy: currentUserId,
-      email: inviteEmail.trim() || undefined,
-      role: inviteRole,
-    });
-
-    if (createError) {
-      setError('Failed to generate invite code. Please try again.');
+  
+    const res = await fetch('/api/invites/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        email: inviteEmail.trim() || undefined, 
+        role: inviteRole 
+      }),
+    })
+  
+    const data = await res.json()
+    if (!res.ok) {
+      setError(data.error || 'Failed to send invite')
     } else {
-      setInviteEmail('');
-      await loadData();
+      setInviteEmail('')
+      await loadData()
     }
-    setGenerating(false);
+    setGenerating(false)
   }
 
   // ── Copy code ───────────────────────────────────────────────────────────────
