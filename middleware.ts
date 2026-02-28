@@ -33,12 +33,13 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  // Redirect logged-in users away from auth pages (EXCEPT reset-password)
-  if (user && !request.nextUrl.pathname.startsWith('/reset-password')) {
-    if (request.nextUrl.pathname === '/login' || request.nextUrl.pathname === '/signup') {
-      return NextResponse.redirect(new URL('/dashboard', request.url))
-    }
+  // Redirect logged-in users away from auth pages (EXCEPT reset-password and invite signups)
+if (user && !request.nextUrl.pathname.startsWith('/reset-password')) {
+  const hasInviteCode = request.nextUrl.searchParams.get('code')
+  if (!hasInviteCode && (request.nextUrl.pathname === '/login' || request.nextUrl.pathname === '/signup')) {
+    return NextResponse.redirect(new URL('/dashboard', request.url))
   }
+}
 
   return response
 }
