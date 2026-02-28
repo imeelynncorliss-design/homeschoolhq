@@ -107,35 +107,44 @@ export default function LessonGenerator({ kids, userId, onClose }: LessonGenerat
     const fetchOrgAndSubjects = async () => {
       if (!userId) return;
       try {
-        const { data: kid, error } = await supabase
-          .from('kids')
-          .select('organization_id')
-          .eq('user_id', userId)
-          .limit(1)
-          .maybeSingle();
+      const { data: kid } = await supabase
+      .from('kids')
+      .select('organization_id')
+      .eq('user_id', userId)
+      .limit(1)
+      .maybeSingle();
 
-        if (error) console.error('Error fetching kid:', error);
+      // Co-teacher fallback — if no kids found under user_id, check family_collaborators
+      let orgId = kid?.organization_id || null
+      if (!orgId) {
+      const { data: collab } = await supabase
+        .from('family_collaborators')
+        .select('organization_id')
+        .eq('user_id', userId)
+        .limit(1)
+        .maybeSingle()
+      orgId = collab?.organization_id || null
+      }
 
-        if (kid?.organization_id) {
-          setOrganizationId(kid.organization_id);
-      
-          const { data: collabData } = await supabase
-          .from('family_collaborators')
-          .select('id, user_id, name, email')
-          .eq('organization_id', kid.organization_id)
-        
-        if (collabData) setCollaborators(collabData)
+      if (orgId) {
+      setOrganizationId(orgId);
 
-          const { data: lessonSubjects } = await supabase
-            .from('lessons')
-            .select('subject')
-            .eq('organization_id', kid.organization_id);
+      const { data: collabData } = await supabase
+        .from('family_collaborators')
+        .select('id, user_id, name, email')
+        .eq('organization_id', orgId)
+      if (collabData) setCollaborators(collabData)
 
-          if (lessonSubjects) {
-            const unique = [...new Set(lessonSubjects.map((d: any) => d.subject).filter(Boolean))] as string[];
-            setExistingSubjects(unique.filter(s => !CANONICAL_SUBJECTS.includes(s)));
-          }
-        }
+      const { data: lessonSubjects } = await supabase
+        .from('lessons')
+        .select('subject')
+        .eq('organization_id', orgId);
+
+      if (lessonSubjects) {
+        const unique = [...new Set(lessonSubjects.map((d: any) => d.subject).filter(Boolean))] as string[];
+        setExistingSubjects(unique.filter(s => !CANONICAL_SUBJECTS.includes(s)));
+      }
+      }
       } catch (err) {
         console.error('Error fetching org/subjects:', err);
       }
@@ -731,7 +740,7 @@ export default function LessonGenerator({ kids, userId, onClose }: LessonGenerat
             <div className="mt-8 text-center space-y-3">
               <h3 className="text-2xl font-bold text-gray-900">✨ Creating Personalized Lessons</h3>
               <p className="text-gray-600 max-w-md">
-                HomeschoolHQ Assistant is generating 3 unique lesson variations tailored to{' '}
+                HomeschoolReady Assistant is generating 3 unique lesson variations tailored to{' '}
                 <span className="font-semibold text-blue-600">{formData.childName || 'your student'}</span>'s learning style...
               </p>
               <div className="mt-6 space-y-2 text-sm text-gray-500">

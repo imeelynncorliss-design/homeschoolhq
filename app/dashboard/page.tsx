@@ -24,7 +24,7 @@ const NAV_CARDS = [
       { label: 'Calendar', icon: '📅', href: '/calendar' },
       { label: 'Lessons', icon: '📚', href: '/lessons' },
       { label: 'Attendance', icon: '✅', href: '/admin?tab=attendance' },
-      { label: 'Teaching Schedule', icon: '👩‍🏫', href: '/collaborators' },
+      { label: 'Teaching Schedule', icon: '👩‍🏫', href: '/teaching-schedule' },
     ],
   },
   {
@@ -51,11 +51,11 @@ const NAV_CARDS = [
     border: '#fce7f3',
     dotColor: '#ec4899',
     items: [
+      { label: 'My Homeschool - Admin Page', icon: '⚙️', href: '/admin' },
+      { label: 'Planning Mode', icon: '🎨', href: '/planning' },
       { label: 'School Year & Compliance', icon: '⚖️', href: '/admin?tab=school-year' },
       { label: 'Vacation Planner', icon: '🌴', href: '/admin?tab=vacation' },
       { label: 'Bulk Scheduler', icon: '⚡', href: '/admin?tab=bulk-schedule' },
-      { label: 'Planning Mode', icon: '🎨', href: '/planning' },
-      { label: 'My Homeschool', icon: '⚙️', href: '/admin' },
     ],
   },
   {
@@ -69,7 +69,7 @@ const NAV_CARDS = [
     items: [
       { label: 'Social Hub', icon: '💬', href: '/social' },
       { label: 'Work Calendar', icon: '🗓️', href: '/calendar/connect' },
-      { label: 'Manage Co-Teachers', icon: '👩‍🏫', href: '/teaching-schedule' },
+      { label: 'Manage Co-Teachers', icon: '👩‍🏫', href: '/co-teachers' },
     ],
   },
   {
@@ -146,7 +146,7 @@ function OnboardingChecklist({
         <div style={css.checklistHeaderLeft}>
           <span style={{ fontSize: 22 }}>🚀</span>
           <div>
-            <div style={css.checklistTitle}>Get Started with HomeschoolHQ</div>
+            <div style={css.checklistTitle}>Get Started with HomeschoolReady</div>
             <div style={css.checklistSub}>
               {allDone ? "You're fully set up!" : `${completedCount} of 4 steps complete`}
             </div>
@@ -310,6 +310,15 @@ function DashboardContent() {
   const [kidScheduleStatuses, setKidScheduleStatuses] = useState<KidScheduleStatus[]>([])
   const [calendarVisited, setCalendarVisited] = useState(false)
   const [isCollaborator, setIsCollaborator] = useState(false)
+  const visibleNavCards = NAV_CARDS.map(card => {
+    if (card.id === 'collaborate' && isCollaborator) {
+      return {
+        ...card,
+        items: card.items.filter(item => item.label !== 'Manage Co-Teachers')
+      }
+    }
+    return card
+  })
 
   useEffect(() => {
     const getUser = async () => {
@@ -418,7 +427,7 @@ function DashboardContent() {
         <div style={css.topBarLeft}>
           <div style={css.logo}>
             <span style={css.logoMain}>Homeschool</span>
-            <span style={css.logoAccent}>HQ</span>
+            <span style={css.logoAccent}>Ready</span>
           </div>
           <div style={css.welcomeMsg}>
             Welcome, <strong>{parentName || user?.email?.split('@')[0]}</strong> 👋
@@ -448,7 +457,7 @@ function DashboardContent() {
           <>
             <div style={css.sectionLabel}>WHERE WOULD YOU LIKE TO GO?</div>
             <div style={css.grid}>
-              {NAV_CARDS.map(card => <NavCard key={card.id} card={card} />)}
+            {visibleNavCards.map(card => <NavCard key={card.id} card={card} />)}
             </div>
           </>
         )}

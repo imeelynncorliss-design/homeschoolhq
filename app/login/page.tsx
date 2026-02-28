@@ -67,7 +67,7 @@ export default function LoginPage() {
       <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-black text-gray-900 mb-2">Welcome Back</h1>
-          <p className="text-gray-600">Sign in to your HomeschoolHQ account</p>
+          <p className="text-gray-600">Sign in to your HomeschoolReady account</p>
         </div>
 
         {error && (

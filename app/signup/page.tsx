@@ -18,18 +18,19 @@ function SignupContent() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
+  const [coTeacherNeedsConfirmation, setCoTeacherNeedsConfirmation] = useState(false)
+  const [parentNeedsConfirmation, setParentNeedsConfirmation] = useState(false)
   const router = useRouter()
   const supabase = createClient()
   const searchParams = useSearchParams()
-  
 
-useEffect(() => {
-  const code = searchParams.get('code')
-  if (code) {
-    setHasInviteCode(true)
-    setInviteCode(code.toUpperCase())
-  }
-}, [])
+  useEffect(() => {
+    const code = searchParams.get('code')
+    if (code) {
+      setHasInviteCode(true)
+      setInviteCode(code.toUpperCase())
+    }
+  }, [])
 
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault()
@@ -42,8 +43,8 @@ useEffect(() => {
       return
     }
 
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters')
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters')
       setLoading(false)
       return
     }
@@ -84,12 +85,11 @@ useEffect(() => {
         return
       }
 
-      // Step 2: If invite code provided, redeem it immediately
+      // Step 2: Co-teacher path — has invite code
       if (hasInviteCode && inviteCode.trim()) {
         const result = await redeemInvite(inviteCode.trim(), data.user.id, email)
 
         if (!result.success) {
-          // Account was created but invite failed — send to /join so they can retry
           setError(
             `Account created, but the invite code failed: ${result.error} ` +
             `Please sign in and enter your code on the next screen.`
@@ -98,20 +98,35 @@ useEffect(() => {
           return
         }
 
-        // Invite redeemed — auto-confirm and go to teaching schedule
-      await fetch('/api/invites/confirm-user', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: data.user.id })
-      })
-      setSuccess(true)
-      setTimeout(() => router.push('/teaching-schedule'), 1500)
-      return
+        // Invite redeemed — auto-confirm the user
+        await fetch('/api/invites/confirm-user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: data.user.id })
+        })
+
+        if (data.session) {
+          // Session live — go straight to teaching schedule
+          setSuccess(true)
+          setTimeout(() => router.push('/teaching-schedule'), 1500)
+        } else {
+          // Email confirmation required
+          setSuccess(true)
+          setCoTeacherNeedsConfirmation(true)
+        }
+        return
       }
 
-      // Step 3: No invite code — normal admin signup → dashboard
-      setSuccess(true)
-      setTimeout(() => router.push('/dashboard'), 1500)
+      // Step 3: New parent path — no invite code
+      if (data.session) {
+        // Session live — go straight to dashboard
+        setSuccess(true)
+        setTimeout(() => router.push('/dashboard'), 1500)
+      } else {
+        // Email confirmation required
+        setSuccess(true)
+        setParentNeedsConfirmation(true)
+      }
 
     } catch (err) {
       setError('An error occurred. Please try again.')
@@ -151,14 +166,44 @@ useEffect(() => {
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h2 className="text-2xl font-black text-gray-900 mb-2">
-            {hasInviteCode ? "You're in!" : 'Account Created!'}
-          </h2>
-          <p className="text-gray-600">
-            {hasInviteCode
-              ? 'Taking you to your teaching schedule…'
-              : 'Redirecting to your dashboard…'}
-          </p>
+
+          {/* Co-teacher: session live → redirecting */}
+          {hasInviteCode && !coTeacherNeedsConfirmation && (
+            <>
+              <h2 className="text-2xl font-black text-gray-900 mb-2">You're in!</h2>
+              <p className="text-gray-600">Taking you to your teaching schedule…</p>
+            </>
+          )}
+
+          {/* Co-teacher: needs email confirmation */}
+          {coTeacherNeedsConfirmation && (
+            <>
+              <h2 className="text-2xl font-black text-gray-900 mb-2">Almost there!</h2>
+              <p className="text-gray-600">
+                Check your email and click the confirmation link to activate your co-teacher account.
+                Once confirmed, sign in and you'll be taken to your teaching schedule.
+              </p>
+            </>
+          )}
+
+          {/* New parent: session live → redirecting */}
+          {!hasInviteCode && !parentNeedsConfirmation && (
+            <>
+              <h2 className="text-2xl font-black text-gray-900 mb-2">Account Created!</h2>
+              <p className="text-gray-600">Redirecting to your dashboard…</p>
+            </>
+          )}
+
+          {/* New parent: needs email confirmation */}
+          {parentNeedsConfirmation && (
+            <>
+              <h2 className="text-2xl font-black text-gray-900 mb-2">Account Created!</h2>
+              <p className="text-gray-600">
+                Check your email and click the confirmation link to get started.
+                Once confirmed, sign in to access your dashboard.
+              </p>
+            </>
+          )}
         </div>
       </div>
     )
@@ -206,7 +251,7 @@ useEffect(() => {
               />
               <EyeToggle show={showPassword} onToggle={() => setShowPassword(!showPassword)} />
             </div>
-            <p className="text-xs text-gray-500 mt-1">At least 6 characters</p>
+            <p className="text-xs text-gray-500 mt-1">At least 8 characters</p>
           </div>
 
           {/* Confirm Password */}
@@ -245,7 +290,6 @@ useEffect(() => {
               I have an invite code
             </button>
 
-            {/* Invite code field — reveals when toggled */}
             {hasInviteCode && (
               <div className="mt-3 p-4 bg-indigo-50 border border-indigo-100 rounded-xl space-y-2">
                 <label className="block text-xs font-bold text-indigo-700 uppercase tracking-wider">
@@ -286,6 +330,7 @@ useEffect(() => {
     </div>
   )
 }
+
 export default function SignupPage() {
   return (
     <Suspense fallback={<div>Loading...</div>}>

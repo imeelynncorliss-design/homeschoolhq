@@ -56,6 +56,7 @@ function LessonsContent() {
   const [collaborators, setCollaborators] = useState<{ id: string; user_id: string; name: string; email: string }[]>([])
   const [userTier, setUserTier] = useState<UserTier>('FREE')
   const [vacationPeriods, setVacationPeriods] = useState<any[]>([])
+  const [isCoTeacher, setIsCoTeacher] = useState(false)  // NEW
 
   // Add Lesson modal state
   const [showLessonForm, setShowLessonForm] = useState(false)
@@ -110,10 +111,13 @@ function LessonsContent() {
   // ── Data loading ────────────────────────────────────────────────────────────
 
   const loadData = async (userId: string, orgId?: string | null) => {
+    const resolvedOrgId = orgId || organizationId || userId
+
+    // FIX: Query kids by organization_id so co-teachers see the same kids
     const { data: kidsData } = await supabase
       .from('kids')
       .select('*')
-      .eq('user_id', userId)
+      .eq('organization_id', resolvedOrgId)
       .order('created_at', { ascending: false })
 
     if (kidsData) {
@@ -123,7 +127,6 @@ function LessonsContent() {
       }
     }
 
-    const resolvedOrgId = orgId || organizationId || userId
     const { data: lessonsData } = await supabase
       .from('lessons')
       .select('*')
@@ -147,30 +150,48 @@ function LessonsContent() {
       setUser(user)
       setUserTier(getTierForTesting())
 
-      // Load org ID and collaborators
+      // Load org ID from kids table
       const { data: kidData } = await supabase
         .from('kids')
         .select('organization_id')
         .eq('user_id', user.id)
         .limit(1)
         .maybeSingle()
-      const orgId = kidData?.organization_id || user.id
-      setOrganizationId(orgId)
+
+      // FIX: If no kids found under user_id, check family_collaborators (co-teacher path)
+      let orgId = kidData?.organization_id || null
+
+      if (!orgId) {
+        const { data: collabData } = await supabase
+          .from('family_collaborators')
+          .select('organization_id, role')
+          .eq('user_id', user.id)
+          .limit(1)
+          .maybeSingle()
+
+        if (collabData) {
+          orgId = collabData.organization_id
+          setIsCoTeacher(true)
+        }
+      }
+
+      const resolvedOrgId = orgId || user.id
+      setOrganizationId(resolvedOrgId)
 
       const { data: collabData } = await supabase
         .from('family_collaborators')
         .select('id, user_id, name, email')
-        .eq('organization_id', orgId)
+        .eq('organization_id', resolvedOrgId)
       if (collabData) setCollaborators(collabData)
 
       // Load vacation periods for date validation
       const { data: vacations } = await supabase
         .from('vacation_periods')
         .select('*')
-        .eq('organization_id', orgId)
+        .eq('organization_id', resolvedOrgId)
       if (vacations) setVacationPeriods(vacations)
 
-      await loadData(user.id, orgId)
+      await loadData(user.id, resolvedOrgId)
       setLoading(false)
     }
     init()
@@ -515,19 +536,23 @@ function LessonsContent() {
             <div style={{ fontSize: 48, marginBottom: 12 }}>📚</div>
             <h2 style={{ fontSize: 20, fontWeight: 900, color: '#111827', margin: '0 0 8px' }}>No lessons yet</h2>
             <p style={{ color: '#6b7280', fontSize: 14, margin: '0 0 20px' }}>
-              Add your first child and lesson to get started.
+              {isCoTeacher
+                ? "No lessons found. The account admin hasn't added any lessons yet."
+                : "Add your first child and lesson to get started."}
             </p>
-            <button
-              onClick={() => router.push('/dashboard')}
-              style={{
-                background: 'linear-gradient(135deg, #7c3aed, #a855f7)',
-                color: '#fff', border: 'none', borderRadius: 10,
-                padding: '12px 28px', fontSize: 14, fontWeight: 700,
-                cursor: 'pointer',
-              }}
-            >
-              Go to Dashboard
-            </button>
+            {!isCoTeacher && (
+              <button
+                onClick={() => router.push('/dashboard')}
+                style={{
+                  background: 'linear-gradient(135deg, #7c3aed, #a855f7)',
+                  color: '#fff', border: 'none', borderRadius: 10,
+                  padding: '12px 28px', fontSize: 14, fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >
+                Go to Dashboard
+              </button>
+            )}
           </div>
         ) : (
           <AllChildrenList

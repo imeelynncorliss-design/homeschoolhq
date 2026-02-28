@@ -143,11 +143,11 @@ useEffect(() => {
       setLoadingState(true)
       try {
         // After setting stateInfo, also read the user's goal:
-          const { data: complianceData } = await supabase
-          .from('user_compliance_settings')
-          .select('annual_days_goal')
-          .eq('organization_id', organizationId)
-          .single()
+        const { data: complianceData, error: complianceError } = await supabase
+        .from('user_compliance_settings')
+        .select('annual_days_goal')
+        .eq('organization_id', organizationId)
+        .maybeSingle() 
 
           if (complianceData?.annual_days_goal) {
           setRequiredDays(complianceData.annual_days_goal)
@@ -162,16 +162,19 @@ useEffect(() => {
         }
         
         const { data, error } = await supabase
-          .from('school_year_settings')
-          .select('selected_state, custom_state_name')
-          .eq('organization_id', organizationId)
-          .single()
-        
-        
-        if (error) {
+        .from('school_year_settings')
+        .select('selected_state, custom_state_name')
+        .eq('organization_id', organizationId)
+        .single()
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          // No settings record yet — perfectly normal for new orgs
+          console.log('No school year settings found yet for this org')
+        } else {
           console.error('🚨 Supabase error:', error)
         }
-        
+      }
         if (data?.selected_state) {
           
           if (data.selected_state === 'CUSTOM') {

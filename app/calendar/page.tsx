@@ -57,6 +57,7 @@ function DashboardContent() {
   const [lessonsByKid, setLessonsByKid] = useState<{ [kidId: string]: any[] }>({})
   const [selectedKid, setSelectedKid] = useState<string | null>(null)
   const [organizationId, setOrganizationId] = useState<string | null>(null)
+  const [isCoTeacher, setIsCoTeacher] = useState(false) // NEW
   const [showAssessmentGenerator, setShowAssessmentGenerator] = useState(false)
   const [showAutoSchedule, setShowAutoSchedule] = useState(false)
   const [viewMode, setViewMode] = useState<'calendar' | 'list'>(
@@ -122,9 +123,18 @@ function DashboardContent() {
 
   const router = useRouter()
 
-  const loadKids = async () => {
-    if (!user) return
-    const { data, error } = await supabase.from('kids').select('*').eq('user_id', user.id).order('created_at', { ascending: false })
+  // FIX: loadKids now accepts orgId and queries by organization_id
+  const loadKids = async (orgId?: string | null) => {
+    if (!user && !orgId) return
+    const resolvedOrgId = orgId || organizationId
+    if (!resolvedOrgId) return
+
+    const { data, error } = await supabase
+      .from('kids')
+      .select('*')
+      .eq('organization_id', resolvedOrgId)
+      .order('created_at', { ascending: false })
+
     if (error) { console.error('Error loading kids:', error.message); return }
     if (data) {
       setKids(data)
@@ -132,9 +142,17 @@ function DashboardContent() {
     }
   }
 
-  const loadAllLessons = async () => {
+  // FIX: loadAllLessons now queries by organization_id
+  const loadAllLessons = async (orgId?: string | null) => {
     if (!user) return
-    const { data: lessonsData, error: lessonsError } = await supabase.from('lessons').select('*').eq('user_id', user.id).order('lesson_date', { ascending: false })
+    const resolvedOrgId = orgId || organizationId || user.id
+
+    const { data: lessonsData, error: lessonsError } = await supabase
+      .from('lessons')
+      .select('*')
+      .eq('organization_id', resolvedOrgId)
+      .order('lesson_date', { ascending: false })
+
     if (lessonsError) { console.error('Error loading lessons:', lessonsError.message); return }
     if (lessonsData) {
       setAllLessons(lessonsData)
@@ -149,7 +167,7 @@ function DashboardContent() {
     if (eventsData) setSocialEvents(eventsData)
     const { data: enrollmentsData } = await supabase.from('class_enrollments').select('*, coop_classes(*)').eq('user_id', user.id)
     if (enrollmentsData) setCoopEnrollments(enrollmentsData)
-    const { data: attendanceData } = await supabase.from('daily_attendance').select('*').eq('organization_id', kids[0]?.organization_id || user.id).order('attendance_date', { ascending: false })
+    const { data: attendanceData } = await supabase.from('daily_attendance').select('*').eq('organization_id', resolvedOrgId).order('attendance_date', { ascending: false })
     if (attendanceData) setManualAttendance(attendanceData)
   }
 
@@ -158,11 +176,10 @@ function DashboardContent() {
     if (!user) { router.push('/'); return }
     setUser(user)
     await supabase
-    .from('user_profiles')
-    .update({ calendar_visited_at: new Date().toISOString() })
-    .eq('user_id', user.id)
-    .is('calendar_visited_at', null)
-    setLoading(false)
+      .from('user_profiles')
+      .update({ calendar_visited_at: new Date().toISOString() })
+      .eq('user_id', user.id)
+      .is('calendar_visited_at', null)
   }
 
   const checkUserTier = async () => {
@@ -183,28 +200,67 @@ function DashboardContent() {
   }, [kids, schoolYearSettings, allLessons])
 
   useEffect(() => {
-    if (user) loadKids()
     if (!user) return
     let mounted = true
+
     const loadSettings = async () => {
       try {
-        const { data: kidsData } = await supabase.from('kids').select('organization_id').eq('user_id', user.id).limit(1).maybeSingle()
-        const orgId = kidsData?.organization_id || user.id
-        setOrganizationId(orgId)
+        // Try to get orgId from kids table (parent-admin path)
+        const { data: kidsData } = await supabase
+          .from('kids')
+          .select('organization_id')
+          .eq('user_id', user.id)
+          .limit(1)
+          .maybeSingle()
+
+        let orgId = kidsData?.organization_id || null
+
+        // FIX: Co-teacher fallback — check family_collaborators if no kids found
+        if (!orgId) {
+          const { data: collabData } = await supabase
+            .from('family_collaborators')
+            .select('organization_id, role')
+            .eq('user_id', user.id)
+            .limit(1)
+            .maybeSingle()
+
+          if (collabData) {
+            orgId = collabData.organization_id
+            if (mounted) setIsCoTeacher(true)
+          }
+        }
+
+        const resolvedOrgId = orgId || user.id
+        if (mounted) setOrganizationId(resolvedOrgId)
+
+        // Load kids using the resolved orgId
+        await loadKids(resolvedOrgId)
+        if (mounted) setLoading(false) 
+
         const { data: collabData } = await supabase
           .from('family_collaborators')
           .select('id, user_id, name, email')
-          .eq('organization_id', orgId)
+          .eq('organization_id', resolvedOrgId)
         if (collabData && mounted) setCollaborators(collabData)
-        const { data: settings, error: settingsError } = await supabase.from('school_year_settings').select('*').eq('organization_id', orgId).maybeSingle()
+
+        const { data: settings, error: settingsError } = await supabase
+          .from('school_year_settings')
+          .select('*')
+          .eq('organization_id', resolvedOrgId)
+          .maybeSingle()
+
         if (settingsError) { console.error('Settings error:', settingsError.message); return }
         if (settings && mounted) {
           setSchoolYearSettings(settings)
-          const { data: vacations } = await supabase.from('vacation_periods').select('*').eq('organization_id', settings.organization_id || user.id)
+          const { data: vacations } = await supabase
+            .from('vacation_periods')
+            .select('*')
+            .eq('organization_id', resolvedOrgId)
           if (vacations && mounted) setVacationPeriods(vacations)
         }
       } catch (err) { console.error('Error loading settings:', err) }
     }
+
     loadSettings()
     return () => { mounted = false }
   }, [user])
@@ -223,7 +279,7 @@ function DashboardContent() {
   }, [selectedLesson])
 
   const hasFeature = (feature: string) => checkFeature(userTier, feature)
-  const canAddChild = () => kids.length < getChildLimit(userTier)
+  const canAddChild = () => !isCoTeacher && kids.length < getChildLimit(userTier) // co-teachers cannot add children
   const selectedKidData = kids.find(k => k.id === selectedKid) || null
   const selectedKidLessons = selectedKid ? (lessonsByKid[selectedKid] || []) : []
   const complianceBtnClass = (complianceHealthScore ?? 0) >= 80
@@ -452,8 +508,9 @@ function DashboardContent() {
         <div className="max-w-7xl mx-auto px-3 sm:px-6 py-3 flex items-center justify-between gap-4">
           <div className="flex items-center gap-2 sm:gap-4 min-w-0">
             <div className="flex-shrink-0">
+              {/* FIX: Updated branding from HomeschoolHQ to HomeschoolReady */}
               <span className="text-lg font-black text-indigo-900 tracking-tight">Homeschool</span>
-              <span className="text-lg font-black text-purple-600 tracking-tight">HQ</span>
+              <span className="text-lg font-black text-purple-600 tracking-tight">Ready</span>
             </div>
             <div className="hidden sm:block text-sm text-gray-500">
               Welcome, <span className="font-semibold text-gray-700">{parentName || user?.email?.split('@')[0]}</span> 👋
@@ -480,6 +537,7 @@ function DashboardContent() {
                   )}
                 </button>
               ))}
+              {/* FIX: Only show + Add Child button for parent-admins, not co-teachers */}
               {canAddChild() && (
                 <button onClick={() => { setEditingKid(null); setShowProfileForm(true) }} title="Add a child"
                   className="w-9 h-9 rounded-full border-2 border-dashed border-gray-300 hover:border-purple-400 flex items-center justify-center text-gray-400 hover:text-purple-500 transition-all text-lg font-light"
@@ -501,7 +559,6 @@ function DashboardContent() {
             >
               💡 How To
             </button>
-
             <button
               onClick={handleLogout}
               className="px-3 py-2 rounded-lg font-medium text-sm transition-all border bg-gray-50 border-gray-200 text-red-600 hover:bg-red-50"
@@ -561,11 +618,21 @@ function DashboardContent() {
         {kids.length === 0 ? (
           <div className="bg-white rounded-lg shadow p-12 text-center">
             <div className="text-6xl mb-4">👋</div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome to HomeschoolHQ!</h2>
-            <p className="text-gray-600 mb-6">Let's get started by adding your first child.</p>
-            <button onClick={() => { setEditingKid(null); setShowProfileForm(true) }} className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium shadow-lg">
-              + Add Your First Child
-            </button>
+            {/* FIX: Role-aware welcome message and empty state */}
+            {isCoTeacher ? (
+              <>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome to HomeschoolReady!</h2>
+                <p className="text-gray-600 mb-6">No students have been added to this account yet. Check back once the account admin has set things up.</p>
+              </>
+            ) : (
+              <>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome to HomeschoolReady!</h2>
+                <p className="text-gray-600 mb-6">Let's get started by adding your first child.</p>
+                <button onClick={() => { setEditingKid(null); setShowProfileForm(true) }} className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium shadow-lg">
+                  + Add Your First Child
+                </button>
+              </>
+            )}
           </div>
         ) : (
           <>
@@ -582,7 +649,7 @@ function DashboardContent() {
               />
             )}
 
-            {/* ── Action Bar (slimmed) ────────────────────────────────────────── */}
+            {/* ── Action Bar ────────────────────────────────────────────────── */}
             <div className="bg-white rounded-lg border border-gray-200 shadow-sm px-4 py-3 flex items-center gap-3 flex-wrap">
               <button
                 onClick={() => setShowAutoSchedule(true)}
@@ -625,7 +692,6 @@ function DashboardContent() {
                 </div>
               </div>
 
-              {/* Quick link to Lessons page */}
               <button
                 onClick={() => router.push('/lessons')}
                 className="ml-auto px-4 py-2 text-sm bg-purple-50 text-purple-700 border border-purple-200 rounded-lg hover:bg-purple-100 font-medium transition-colors"
@@ -633,7 +699,6 @@ function DashboardContent() {
                 📚 All Lessons
               </button>
             </div>
-            {/* ── End Action Bar ──────────────────────────────────────────────── */}
 
             <StatsBar organizationId={organizationId} />
 
