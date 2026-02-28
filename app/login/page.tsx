@@ -30,22 +30,30 @@ export default function LoginPage() {
         return
       }
 
-      // Route based on user_organizations role — single source of truth
+      // Check user_organizations first (admins)
       const { data: membership } = await supabase
-        .from('user_organizations')
+      .from('user_organizations')
+      .select('role')
+      .eq('user_id', data.user.id)
+      .maybeSingle()
+
+      if (membership) {
+      router.push('/dashboard')
+      } else {
+      // Check if they're a co-teacher/collaborator
+      const { data: collaboration } = await supabase
+        .from('family_collaborators')
         .select('role')
         .eq('user_id', data.user.id)
         .maybeSingle()
 
-      if (!membership) {
-        // No org — send to join flow
-        router.push('/join')
-      } else if (membership.role === 'co_teacher' || membership.role === 'aide') {
-        router.push('/teaching-schedule')
-      } else {
+      if (collaboration) {
         router.push('/dashboard')
+      } else {
+        // No org at all — send to join flow
+        router.push('/join')
       }
-
+      }
       router.refresh()
     } catch (err) {
       setError('An error occurred. Please try again.')
