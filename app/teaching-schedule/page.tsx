@@ -107,11 +107,12 @@ function groupLessons(lessons: Lesson[]): LessonGroup[] {
 // ─── Lesson Card ──────────────────────────────────────────────────────────────
 
 function LessonCard({
-  lesson, isAssignedToMe, onComplete, onAddNote,
+  lesson, isAssignedToMe, onComplete, onUndoComplete, onAddNote,
 }: {
   lesson: Lesson
   isAssignedToMe: boolean
   onComplete: (id: string) => void
+  onUndoComplete: (id: string) => void
   onAddNote: (lesson: Lesson) => void
 }) {
   const colors = subjectColor(lesson.subject)
@@ -150,9 +151,35 @@ function LessonCard({
           )}
         </div>
         <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-          <button onClick={() => onAddNote(lesson)} style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 8, padding: '6px 10px', fontSize: 12, color: '#374151', cursor: 'pointer', fontWeight: 600 }}>📝</button>
+           <button 
+              onClick={() => onAddNote(lesson)} 
+              title="Add a teaching note"
+              style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 8, padding: '6px 10px', fontSize: 12, color: '#374151', cursor: 'pointer', fontWeight: 600 }}
+            >
+              📝
+            </button>
+            {completed && (
+            <button
+              onClick={() => {
+                if (confirm(`Mark "${lesson.title}" as not started?`)) onUndoComplete(lesson.id)
+              }}
+              title="Undo completion"
+              style={{ background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 8, padding: '6px 10px', fontSize: 12, color: '#92400e', cursor: 'pointer', fontWeight: 600 }}
+            >
+              ↩ Undo
+            </button>
+          )}
+
           {isAssignedToMe && !completed && (
-            <button onClick={() => onComplete(lesson.id)} style={{ background: 'linear-gradient(135deg, #10b981, #34d399)', border: 'none', borderRadius: 8, padding: '6px 12px', fontSize: 12, color: '#fff', cursor: 'pointer', fontWeight: 700 }}>✓ Done</button>
+            <button 
+            onClick={() => {
+              if (confirm(`Mark "${lesson.title}" as complete?`)) onComplete(lesson.id)
+            }}
+            title="Mark lesson complete"
+            style={{ background: 'linear-gradient(135deg, #10b981, #34d399)', border: 'none', borderRadius: 8, padding: '6px 12px', fontSize: 12, color: '#fff', cursor: 'pointer', fontWeight: 700 }}
+          >
+            ✓ Done
+          </button>
           )}
         </div>
       </div>
@@ -162,10 +189,11 @@ function LessonCard({
 
 // ─── Group Section ────────────────────────────────────────────────────────────
 
-function LessonGroupSection({ group, userId, onComplete, onAddNote }: {
+function LessonGroupSection({ group, userId, onComplete, onUndoComplete, onAddNote }: {
   group: LessonGroup
   userId: string
   onComplete: (id: string) => void
+  onUndoComplete: (id: string) => void 
   onAddNote: (lesson: Lesson) => void
 }) {
   const [collapsed, setCollapsed] = useState(group.defaultCollapsed)
@@ -184,7 +212,7 @@ function LessonGroupSection({ group, userId, onComplete, onAddNote }: {
       {!collapsed && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {group.lessons.map(lesson => (
-            <LessonCard key={lesson.id} lesson={lesson} isAssignedToMe={lesson.assigned_to_user_id === userId} onComplete={onComplete} onAddNote={onAddNote} />
+            <LessonCard key={lesson.id} lesson={lesson} isAssignedToMe={lesson.assigned_to_user_id === userId} onComplete={onComplete} onUndoComplete={onUndoComplete} onAddNote={onAddNote} />
           ))}
         </div>
       )}
@@ -290,6 +318,11 @@ function TeachingScheduleContent() {
     loadData()
   }
 
+  async function handleUndoComplete(lessonId: string) {
+    await supabase.from('lessons').update({ status: 'not_started', completed_at: null }).eq('id', lessonId)
+    loadData()
+  }
+
   async function handleSaveNote(lessonId: string, note: string) {
     await supabase.from('lessons').update({ notes: note }).eq('id', lessonId)
     loadData()
@@ -370,7 +403,7 @@ function TeachingScheduleContent() {
           </div>
         ) : (
           groups.map(group => (
-            <LessonGroupSection key={group.label} group={group} userId={user?.id} onComplete={handleComplete} onAddNote={setNoteLesson} />
+            <LessonGroupSection key={group.label} group={group} userId={user?.id} onComplete={handleComplete} onUndoComplete={handleUndoComplete} onAddNote={setNoteLesson} />
           ))
         )}
       </main>

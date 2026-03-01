@@ -176,11 +176,11 @@ if (tabParam) {
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="flex items-center gap-4">
               <div className="bg-blue-600 p-3 rounded-xl shadow-lg shadow-blue-200">
-                <span className="text-white text-2xl font-bold">A</span>
+                <span className="text-white text-2xl font-bold">H</span>
               </div>
               <div>
-                <h1 className="text-3xl font-black text-gray-900 tracking-tight">Admin</h1>
-                <p className="text-gray-500 font-medium italic">Homeschool Control Center</p>
+                <h1 className="text-3xl font-black text-gray-900 tracking-tight">HomeschoolReady</h1>
+                <p className="text-gray-500 font-medium italic">Control Center</p>
               </div>
             </div>
 

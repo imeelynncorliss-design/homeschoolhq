@@ -297,19 +297,21 @@ function LessonsContent() {
     // Cascade check
     const currentLesson = allLessons.find(l => l.id === id)
     if (currentLesson && currentLesson.lesson_date && editLessonDate && currentLesson.lesson_date !== editLessonDate) {
+      const currentLessonDate = currentLesson.lesson_date
+      
       const subsequentLessons = allLessons.filter(lesson =>
         lesson.kid_id === currentLesson.kid_id &&
         lesson.id !== id &&
         lesson.lesson_date &&
-        lesson.lesson_date > currentLesson.lesson_date
+        lesson.lesson_date > currentLessonDate
       )
       if (subsequentLessons.length > 0) {
-        const oldDate = new Date(currentLesson.lesson_date)
+        const oldDate = new Date(currentLessonDate)
         const newDateObj = new Date(editLessonDate)
         const suggestedShift = Math.round((newDateObj.getTime() - oldDate.getTime()) / (1000 * 60 * 60 * 24))
         setCascadeData({
           lessonId: id,
-          originalDate: currentLesson.lesson_date,
+          originalDate: currentLessonDate,
           newDate: editLessonDate,
           affectedCount: subsequentLessons.length,
           kidId: currentLesson.kid_id,
@@ -408,6 +410,10 @@ function LessonsContent() {
       completed: 'not_started',
     }
     const newStatus = next[currentStatus] ?? 'not_started'
+    // Confirm before marking complete
+    if (newStatus === 'completed') {
+      if (!confirm('Mark this lesson as complete?')) return
+    }
     const updates: any = { status: newStatus }
     if (newStatus === 'completed') updates.completed_at = new Date().toISOString()
     if (newStatus === 'not_started') updates.completed_at = null
@@ -803,6 +809,38 @@ function LessonsContent() {
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900"
                   rows={3}
                 />
+              </div>
+
+              {/* Status field — allows undoing accidental completion */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                <div className="flex gap-2">
+                  {(['not_started', 'in_progress', 'completed'] as const).map((s) => {
+                    const labels = { not_started: '⬜ Not Started', in_progress: '🔵 In Progress', completed: '✅ Complete' }
+                    const isSelected = (editingLessonId && Object.values(lessonsByKid).flat().find(l => l.id === editingLessonId)?.status === s)
+                    return (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={async () => {
+                          if (!editingLessonId) return
+                          const updates: any = { status: s }
+                          if (s === 'completed') updates.completed_at = new Date().toISOString()
+                          if (s === 'not_started') updates.completed_at = null
+                          await supabase.from('lessons').update(updates).eq('id', editingLessonId)
+                          await loadData(user.id, organizationId)
+                        }}
+                        className={`flex-1 px-3 py-2 rounded-lg text-xs font-bold border transition-all ${
+                          isSelected
+                            ? 'bg-blue-600 text-white border-blue-600'
+                            : 'bg-white text-gray-600 border-gray-300 hover:border-blue-400'
+                        }`}
+                      >
+                        {labels[s]}
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
 
               {collaborators.length > 0 && (

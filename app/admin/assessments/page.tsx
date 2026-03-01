@@ -8,6 +8,7 @@ import StandardsImporter from '@/components/StandardsImporter'
 import StandardsManager from '@/components/StandardsManager'
 import AssessmentsHelpModal from '@/components/AssessmentsHelpModal'
 import { HelpCircle, Lightbulb, ChevronDown, ChevronRight } from 'lucide-react'
+import { getOrganizationId } from '@/src/lib/getOrganizationId'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -87,16 +88,8 @@ export default function AssessmentsPage() {
     const fetchOrgId = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
-
-      const { data: kids } = await supabase
-        .from('kids')
-        .select('organization_id')
-        .eq('user_id', user.id)
-        .limit(1)
-
-      if (kids && kids.length > 0) {
-        setOrganizationId(kids[0].organization_id)
-      }
+      const { orgId } = await getOrganizationId(user.id)
+      setOrganizationId(orgId)
     }
 
     fetchOrgId()

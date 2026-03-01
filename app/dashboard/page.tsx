@@ -51,7 +51,7 @@ const NAV_CARDS = [
     border: '#fce7f3',
     dotColor: '#ec4899',
     items: [
-      { label: 'My Homeschool - Admin Page', icon: '⚙️', href: '/admin' },
+      { label: 'Control Center (All Tools)', icon: '⚙️', href: '/admin' },
       { label: 'Planning Mode', icon: '🎨', href: '/planning' },
       { label: 'School Year & Compliance', icon: '⚖️', href: '/admin?tab=school-year' },
       { label: 'Vacation Planner', icon: '🌴', href: '/admin?tab=vacation' },
@@ -439,7 +439,7 @@ function DashboardContent() {
         </div>
       </header>
 
-      <StatsBar organizationId={organizationId} />
+      {!isCollaborator && <StatsBar organizationId={organizationId} />}
 
       <main style={css.main}>
         {/* Only show onboarding for admins */}

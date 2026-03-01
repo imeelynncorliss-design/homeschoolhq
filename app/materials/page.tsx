@@ -109,9 +109,21 @@ export default function MaterialsPage() {
           .update({ organization_id: kid.organization_id })
           .eq('user_id', user.id);
       } else {
-        console.error('❌ NO ORGANIZATION_ID FOUND in either user_profiles or kids');
-        setOrganizationId(null);
+        // 3. FALLBACK: co-teacher path
+        const { data: collab } = await supabase
+        .from('family_collaborators')
+        .select('organization_id')
+        .eq('user_id', user.id)
+        .limit(1)
+        .maybeSingle()
+
+      if (collab?.organization_id) {
+        setOrganizationId(collab.organization_id)
+      } else {
+        console.error('❌ NO ORGANIZATION_ID FOUND')
+        setOrganizationId(null)
       }
+}       
   
       setLoading(false);
     } catch (error) { 

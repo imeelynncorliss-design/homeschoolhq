@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import CourseManager from '@/components/CourseManager'
 import AuthGuard from '@/components/AuthGuard'
+import { getOrganizationId } from '@/src/lib/getOrganizationId' // NEW
 
 function CoursesContent() {
   const router = useRouter()
@@ -13,12 +14,16 @@ function CoursesContent() {
   const [loading, setLoading] = useState(true)
   const [kids, setKids] = useState<any[]>([])
   const [selectedKid, setSelectedKid] = useState<string | null>(null)
+  const [isCoTeacher, setIsCoTeacher] = useState(false) // NEW
 
   const loadKids = async (userId: string) => {
+    const { orgId, isCoTeacher } = await getOrganizationId(userId) // FIX
+    setIsCoTeacher(isCoTeacher)
+
     const { data } = await supabase
       .from('kids')
       .select('*')
-      .eq('user_id', userId)
+      .eq('organization_id', orgId) // was .eq('user_id', userId)
       .order('created_at', { ascending: false })
 
     if (data && data.length > 0) {
@@ -29,18 +34,13 @@ function CoursesContent() {
 
   const checkUser = async () => {
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      router.push('/')
-      return
-    }
+    if (!user) { router.push('/'); return }
     setUser(user)
     await loadKids(user.id)
     setLoading(false)
   }
 
-  useEffect(() => {
-    checkUser()
-  }, [])
+  useEffect(() => { checkUser() }, [])
 
   if (loading) {
     return (
@@ -52,8 +52,6 @@ function CoursesContent() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-
-      {/* Header */}
       <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-10 shadow-lg">
         <div className="max-w-6xl mx-auto flex justify-between items-start">
           <div>
@@ -66,16 +64,10 @@ function CoursesContent() {
             </p>
           </div>
           <div className="flex gap-2">
-            <button
-              onClick={() => router.push('/transcript')}
-              className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-xl text-xs font-bold transition-colors"
-            >
+            <button onClick={() => router.push('/transcript')} className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-xl text-xs font-bold transition-colors">
               📄 Transcript
             </button>
-            <button
-              onClick={() => router.push('/dashboard')}
-              className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-xl text-xs font-bold transition-colors"
-            >
+            <button onClick={() => router.push('/dashboard')} className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-xl text-xs font-bold transition-colors">
               Dashboard
             </button>
           </div>
@@ -83,50 +75,46 @@ function CoursesContent() {
       </div>
 
       <div className="max-w-6xl mx-auto p-8 -mt-8">
-
-        {/* Student selector */}
-        {kids.length > 0 && (
-          <div className="mb-8 bg-white p-6 rounded-2xl shadow-sm border flex items-center gap-6">
-            <div>
-              <label className="block text-xs font-black text-slate-500 uppercase mb-1 tracking-widest">
-                Active Student
-              </label>
-              <select
-                value={selectedKid || ''}
-                onChange={(e) => setSelectedKid(e.target.value)}
-                className="px-4 py-2 bg-white border-2 border-slate-200 rounded-xl font-semibold text-slate-700 outline-none focus:border-indigo-600 transition-all cursor-pointer min-w-[200px]"
-              >
-                {kids.map((kid) => (
-                  <option key={kid.id} value={kid.id}>
-                    {kid.displayname || kid.firstname}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="text-sm text-gray-500">
-              Courses are per-student. Switch students to manage each child's course catalog separately.
-            </div>
-          </div>
-        )}
-
+        {/* FIX: Role-aware empty state */}
         {kids.length === 0 ? (
           <div className="bg-white rounded-2xl shadow p-12 text-center">
-            <div className="text-5xl mb-4">👧</div>
+            <div className="text-5xl mb-4">🤷‍♀️</div>
             <h2 className="text-xl font-bold text-gray-900 mb-2">No students found</h2>
-            <p className="text-gray-600 mb-6">Add a child to your account before creating courses.</p>
-            <button
-              onClick={() => router.push('/dashboard')}
-              className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium"
-            >
-              Go to Dashboard
-            </button>
-          </div>
-        ) : (
-          <div className="bg-white rounded-2xl shadow-xl p-8 min-h-[500px]">
-            {selectedKid && user && (
-              <CourseManager kidId={selectedKid} userId={user.id} />
+            <p className="text-gray-600 mb-6">
+              {isCoTeacher
+                ? "No students have been added to this account yet. Check back once the account admin has set things up."
+                : "Add a child to your account before creating courses."}
+            </p>
+            {!isCoTeacher && (
+              <button onClick={() => router.push('/dashboard')} className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium">
+                Go to Dashboard
+              </button>
             )}
           </div>
+        ) : (
+          <>
+            <div className="mb-8 bg-white p-6 rounded-2xl shadow-sm border flex items-center gap-6">
+              <div>
+                <label className="block text-xs font-black text-slate-500 uppercase mb-1 tracking-widest">Active Student</label>
+                <select
+                  value={selectedKid || ''}
+                  onChange={(e) => setSelectedKid(e.target.value)}
+                  className="px-4 py-2 bg-white border-2 border-slate-200 rounded-xl font-semibold text-slate-700 outline-none focus:border-indigo-600 transition-all cursor-pointer min-w-[200px]"
+                >
+                  {kids.map((kid) => (
+                    <option key={kid.id} value={kid.id}>{kid.displayname || kid.firstname}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="text-sm text-gray-500">
+                Courses are per-student. Switch students to manage each child's course catalog separately.
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-xl p-8 min-h-[500px]">
+              {selectedKid && user && <CourseManager kidId={selectedKid} userId={user.id} />}
+            </div>
+          </>
         )}
       </div>
     </div>

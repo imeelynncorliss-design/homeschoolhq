@@ -24,7 +24,9 @@ export default function ProgressDashboard({ userId }: ProgressDashboardProps) {
     trackingType: 'hours' as 'hours' | 'lessons',
     schoolYearStart: '',
     schoolYearEnd: '',
-    vacationDays: 0
+    vacationDays: 0,
+    attendanceDays: 0,
+    attendanceHours: 0,
   })
 
   useEffect(() => {
@@ -32,6 +34,9 @@ export default function ProgressDashboard({ userId }: ProgressDashboardProps) {
   }, [userId])
 
   const loadProgress = async () => {
+    let attendanceDays = 0
+    let attendanceHours = 0
+
     // Load school year settings
     const { data: settingsData } = await supabase
       .from('school_year_settings')
@@ -43,11 +48,36 @@ export default function ProgressDashboard({ userId }: ProgressDashboardProps) {
       setSettings(settingsData)
     }
 
-    // Load all lessons
-    const { data: lessons } = await supabase
-      .from('lessons')
-      .select('*, kids!inner(user_id)')
-      .eq('kids.user_id', userId)
+    // Get organization_id and all kid IDs
+    const { data: kidsData } = await supabase
+      .from('kids')
+      .select('id, organization_id')
+      .eq('user_id', userId)
+
+    const orgId = kidsData?.[0]?.organization_id
+    const kidIds = kidsData?.map(k => k.id) || []
+
+    // Load attendance records from daily_attendance
+    if (orgId) {
+      const { data: attendanceData } = await supabase
+        .from('daily_attendance')
+        .select('id, attendance_date, status, hours')
+        .eq('organization_id', orgId)
+        .in('status', ['full_day', 'half_day'])
+        .gte('attendance_date', settingsData?.school_year_start || '')
+        .lte('attendance_date', settingsData?.school_year_end || '')
+
+      attendanceDays = attendanceData?.length || 0
+      attendanceHours = attendanceData?.reduce((sum, a) => sum + (a.hours || 0), 0) || 0
+    }
+
+    // Load all lessons using kid_ids (fixes user_id vs organization_id issue)
+    const { data: lessons } = kidIds.length > 0
+      ? await supabase
+          .from('lessons')
+          .select('*')
+          .in('kid_id', kidIds)
+      : { data: [] }
 
     // Load vacation periods
     const { data: vacations } = await supabase
@@ -68,14 +98,15 @@ export default function ProgressDashboard({ userId }: ProgressDashboardProps) {
       const start = moment(v.start_date)
       const end = moment(v.end_date)
       return sum + end.diff(start, 'days') + 1
-    }, 0) || 0
+    }, 0) ?? 0
 
-    const totalHours = lessons?.reduce((sum, l) => sum + (l.duration_minutes || 0), 0) / 60 || 0
-    const completedHours = lessons?.filter(l => l.status === 'completed')
-      .reduce((sum, l) => sum + (l.duration_minutes || 0), 0) / 60 || 0
-    
+    const totalHours = (lessons?.reduce((sum, l) => sum + (l.duration_minutes || 0), 0) ?? 0) / 60
+
+    const completedHours = ((lessons?.filter(l => l.status === 'completed') ?? [])
+      .reduce((sum, l) => sum + (l.duration_minutes || 0), 0)) / 60
+
     const totalLessons = lessons?.length || 0
-    const completedLessons = lessons?.filter(l => l.status === 'completed').length || 0
+    const completedLessons = (lessons?.filter(l => l.status === 'completed') ?? []).length
 
     setStats({
       totalHours,
@@ -87,42 +118,39 @@ export default function ProgressDashboard({ userId }: ProgressDashboardProps) {
       trackingType: settingsData?.annual_goal_type || 'hours',
       schoolYearStart: settingsData?.school_year_start || '',
       schoolYearEnd: settingsData?.school_year_end || '',
-      vacationDays: totalVacationDays
+      vacationDays: totalVacationDays,
+      attendanceDays,
+      attendanceHours,
     })
     setLoading(false)
   }
 
-  // Enhanced calculation that accounts for homeschool days and vacations
   const calculateExpectedProgress = () => {
     if (!stats.schoolYearStart || !stats.schoolYearEnd) return 0
-    
+
     const start = moment(stats.schoolYearStart)
     const end = moment(stats.schoolYearEnd)
     const today = moment()
-    
+
     if (today.isBefore(start)) return 0
     if (today.isAfter(end)) return 100
-    
-    // Get homeschool days from settings
+
     const homeschoolDays = settings?.homeschool_days || [
       'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'
     ]
-    
-    // Combine default holidays with vacations
+
     const allHolidays = [...DEFAULT_HOLIDAYS_2025_2026, ...vacationHolidays]
-    
-    // Calculate total possible school days for the entire year
+
     const totalSchoolDays = calculateTotalSchoolDays(
       start.format('YYYY-MM-DD'),
       end.format('YYYY-MM-DD'),
       homeschoolDays,
       allHolidays
     )
-    
-    // Calculate elapsed school days (not calendar days!)
+
     let elapsedSchoolDays = 0
     let currentDate = moment(start)
-    
+
     while (currentDate.isSameOrBefore(today) && currentDate.isSameOrBefore(end)) {
       const dateStr = currentDate.format('YYYY-MM-DD')
       if (isValidHomeschoolDay(dateStr, homeschoolDays, allHolidays)) {
@@ -130,9 +158,9 @@ export default function ProgressDashboard({ userId }: ProgressDashboardProps) {
       }
       currentDate.add(1, 'day')
     }
-    
-    return totalSchoolDays > 0 
-      ? Math.round((elapsedSchoolDays / totalSchoolDays) * 100) 
+
+    return totalSchoolDays > 0
+      ? Math.round((elapsedSchoolDays / totalSchoolDays) * 100)
       : 0
   }
 
@@ -140,13 +168,13 @@ export default function ProgressDashboard({ userId }: ProgressDashboardProps) {
     return <div className="text-center py-8">Loading progress data...</div>
   }
 
-  const isTrackingHours = stats.trackingType === 'hours'
-  const completed = isTrackingHours ? stats.completedHours : stats.completedLessons
-  const goal = isTrackingHours ? stats.goalHours : stats.goalLessons
+  // Use attendance days as primary compliance metric
+  const completed = stats.attendanceDays
+  const goal = stats.goalLessons // 180 days
   const percentComplete = goal > 0 ? Math.round((completed / goal) * 100) : 0
 
   const expectedProgress = calculateExpectedProgress()
-  const progressStatus = 
+  const progressStatus =
     percentComplete >= expectedProgress + 10 ? 'ahead' :
     percentComplete < expectedProgress - 10 ? 'behind' : 'on-track'
 
@@ -162,9 +190,9 @@ export default function ProgressDashboard({ userId }: ProgressDashboardProps) {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="text-2xl font-bold mb-1">
-              {completed.toFixed(1)} / {goal} {isTrackingHours ? 'Hours' : 'Lessons'}
+              {completed} / {goal} Days
             </h3>
-            <p className="text-blue-100">Annual Goal Progress</p>
+            <p className="text-blue-100">Annual Compliance Progress</p>
           </div>
           <div className="text-right">
             <div className="text-4xl font-bold">{percentComplete}%</div>
@@ -172,14 +200,13 @@ export default function ProgressDashboard({ userId }: ProgressDashboardProps) {
           </div>
         </div>
 
-        {/* Progress Bar */}
         <div className="bg-white/20 rounded-full h-4 mb-2">
-          <div 
+          <div
             className="bg-white rounded-full h-4 transition-all duration-500"
             style={{ width: `${Math.min(percentComplete, 100)}%` }}
           />
         </div>
-        
+
         <div className="flex justify-between text-sm text-blue-100">
           <span>Started: {stats.schoolYearStart ? moment(stats.schoolYearStart).format('MMM D, YYYY') : 'Not set'}</span>
           <span>Ends: {stats.schoolYearEnd ? moment(stats.schoolYearEnd).format('MMM D, YYYY') : 'Not set'}</span>
@@ -212,7 +239,7 @@ export default function ProgressDashboard({ userId }: ProgressDashboardProps) {
               progressStatus === 'behind' ? 'text-red-700' :
               'text-blue-700'
             }`}>
-              {progressStatus === 'ahead' 
+              {progressStatus === 'ahead'
                 ? `You're ${percentComplete - expectedProgress}% ahead of where you should be. Great work!`
                 : progressStatus === 'behind'
                 ? `You're ${expectedProgress - percentComplete}% behind. Consider adjusting your schedule or adding extra study time.`
@@ -224,13 +251,16 @@ export default function ProgressDashboard({ userId }: ProgressDashboardProps) {
 
         {/* Comparison Bar */}
         <div className="mt-4">
-          <div className="flex justify-between text-xs mb-1">
-            <span className="font-medium">Expected Progress: {expectedProgress}%</span>
-            <span className="font-medium">Actual Progress: {percentComplete}%</span>
-          </div>
+        <div className="flex justify-between text-xs mb-1">
+          <span className="font-bold text-gray-900 bg-white/70 px-2 py-0.5 rounded">
+            Expected: {expectedProgress}%
+          </span>
+          <span className="font-bold text-gray-900 bg-white/70 px-2 py-0.5 rounded">
+            Actual: {percentComplete}%
+          </span>
+        </div>
           <div className="relative h-8 bg-white rounded-lg overflow-hidden">
-            {/* Expected progress line */}
-            <div 
+            <div
               className="absolute top-0 h-full w-1 bg-gray-800 z-10"
               style={{ left: `${expectedProgress}%` }}
             >
@@ -238,8 +268,7 @@ export default function ProgressDashboard({ userId }: ProgressDashboardProps) {
                 ↓
               </div>
             </div>
-            {/* Actual progress bar */}
-            <div 
+            <div
               className={`absolute top-0 left-0 h-full transition-all duration-500 ${
                 progressStatus === 'ahead' ? 'bg-green-500' :
                 progressStatus === 'behind' ? 'bg-red-500' :
@@ -254,15 +283,15 @@ export default function ProgressDashboard({ userId }: ProgressDashboardProps) {
       {/* Stats Grid */}
       <div className="grid md:grid-cols-4 gap-4">
         <div className="bg-white border border-gray-200 rounded-lg p-4">
-          <div className="text-3xl mb-2">📚</div>
-          <div className="text-2xl font-bold text-gray-900">{stats.totalLessons}</div>
-          <div className="text-sm text-gray-600">Total Lessons</div>
+          <div className="text-3xl mb-2">📅</div>
+          <div className="text-2xl font-bold text-gray-900">{stats.attendanceDays}</div>
+          <div className="text-sm text-gray-600">Days Logged</div>
         </div>
 
         <div className="bg-white border border-gray-200 rounded-lg p-4">
           <div className="text-3xl mb-2">✅</div>
           <div className="text-2xl font-bold text-green-600">{stats.completedLessons}</div>
-          <div className="text-sm text-gray-600">Completed</div>
+          <div className="text-sm text-gray-600">Lessons Completed</div>
         </div>
 
         <div className="bg-white border border-gray-200 rounded-lg p-4">
