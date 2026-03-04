@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/src/lib/supabase';
+import { useAppHeader } from '@/components/layout/AppHeader'
 import {
   revokeInvite,
   getOrgInvites,
@@ -62,6 +63,7 @@ function formatDate(dateStr: string) {
 
 export default function CoTeachersPage() {
   const router = useRouter();
+  useAppHeader({ title: 'Co-Teachers', backHref: '/dashboard' })  
   const supabase = createClient();
 
   const [orgId, setOrgId] = useState<string | null>(null);
@@ -186,22 +188,6 @@ export default function CoTeachersPage() {
   return (
     <div className="min-h-screen bg-slate-50">
       <div className="max-w-3xl mx-auto px-4 py-10 space-y-8">
-
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <button
-              onClick={() => router.push('/dashboard')}
-              className="text-sm text-slate-400 hover:text-slate-600 mb-2 flex items-center gap-1 transition-colors"
-            >
-              ← Home
-            </button>
-            <h1 className="text-2xl font-bold text-slate-900">Co-Teacher Management</h1>
-            <p className="text-slate-500 text-sm mt-1">
-              Invite people to help teach, then manage their access here.
-            </p>
-          </div>
-        </div>
 
         {/* Success/Error messages */}
         {success && (

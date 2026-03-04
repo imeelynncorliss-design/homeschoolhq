@@ -3,6 +3,9 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/src/lib/supabase';
 import { useRouter } from 'next/navigation';
+import { useAppHeader } from '@/components/layout/AppHeader'
+import MaterialsHelpModal from '@/components/MaterialsHelpModal'
+import { HelpCircle } from 'lucide-react'
 
 type MaterialType = 'textbook' | 'subscription' | 'physical' | 'digital';
 
@@ -24,6 +27,7 @@ interface Material {
 
 export default function MaterialsPage() {
   const router = useRouter();
+  useAppHeader({ title: '📚 Materials', backHref: '/dashboard' })
   const [loading, setLoading] = useState(true);
   const [materials, setMaterials] = useState<Material[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -46,6 +50,7 @@ export default function MaterialsPage() {
   const [formLicenseExpires, setFormLicenseExpires] = useState('');
   const [formNotes, setFormNotes] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [showHelpModal, setShowHelpModal] = useState(false)
 
   useEffect(() => {
     loadData();
@@ -354,24 +359,29 @@ export default function MaterialsPage() {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
-      {/* HEADER WITH CORRECT CONTRAST */}
-      <div className="bg-gradient-to-r from-purple-800 to-indigo-900 pb-32 pt-12 px-8">
-        <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <div>
-            <button onClick={() => router.push('/dashboard')} className="text-white/80 mb-2 block hover:text-white transition-colors text-sm font-bold">
-              ← Back to Dashboard
-            </button>
-            <h1 className="text-4xl font-black text-white tracking-tight">Materials & Resources</h1>
-            <p className="text-white/90 mt-2 font-semibold">Track your curriculum, logins, and supplies.</p>
-          </div>
-          <button onClick={openAddForm} className="bg-white text-indigo-900 px-8 py-3 rounded-xl font-black hover:bg-slate-100 transition-all shadow-xl active:scale-95">
-            + Add Material
-          </button>
-        </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto px-8 -mt-24">
+  
+      <div className="max-w-7xl mx-auto px-8 -mt-0">
         {/* STATS SUMMARY */}
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 24 }}>
+          <div>
+            <h1 style={{ fontSize: 24, fontWeight: 800, color: '#111827', margin: 0 }}>Materials & Resources</h1>
+            <p style={{ fontSize: 13, color: '#6b7280', marginTop: 4 }}>Track your curriculum, logins, and supplies</p>
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              onClick={() => setShowHelpModal(true)}
+              className="bg-white border-2 border-gray-200 text-gray-600 px-4 py-2 rounded-xl font-semibold text-sm hover:bg-gray-50 transition-all"
+            >
+              💡 How this works
+            </button>
+            <button
+              onClick={() => openAddForm()}
+              className="bg-white text-indigo-700 border-2 border-indigo-200 px-6 py-3 rounded-xl font-semibold hover:bg-indigo-50 transition-all"
+            >
+              + Add Material
+            </button>
+          </div>
+        </div>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {(['textbook', 'subscription', 'physical', 'digital'] as const).map((type) => {
             const count = materials.filter(m => m.material_type === type).length;
@@ -496,7 +506,7 @@ export default function MaterialsPage() {
           )}
         </div>
       </div>
-
+      {showHelpModal && <MaterialsHelpModal onClose={() => setShowHelpModal(false)} />}
       {/* FORM MODAL - TYPE LOCKED FOR PHYSICAL MATERIALS */}
       {showAddForm && (
         <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md flex items-center justify-center z-50 p-4">

@@ -6,10 +6,12 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import CourseManager from '@/components/CourseManager'
 import AuthGuard from '@/components/AuthGuard'
-import { getOrganizationId } from '@/src/lib/getOrganizationId' // NEW
+import { getOrganizationId } from '@/src/lib/getOrganizationId' 
+import { useAppHeader } from '@/components/layout/AppHeader'
 
 function CoursesContent() {
   const router = useRouter()
+  useAppHeader({ title: '📚 Courses', backHref: '/dashboard' })
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [kids, setKids] = useState<any[]>([])
@@ -52,27 +54,6 @@ function CoursesContent() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-10 shadow-lg">
-        <div className="max-w-6xl mx-auto flex justify-between items-start">
-          <div>
-            <Link href="/dashboard" className="text-white/80 hover:text-white mb-6 font-bold text-sm block">
-              ← Back to Dashboard
-            </Link>
-            <h1 className="text-4xl font-black mb-2">Course Manager</h1>
-            <p className="text-indigo-200 text-sm">
-              Build your course catalog — the foundation of every high school transcript
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <button onClick={() => router.push('/transcript')} className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-xl text-xs font-bold transition-colors">
-              📄 Transcript
-            </button>
-            <button onClick={() => router.push('/dashboard')} className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-xl text-xs font-bold transition-colors">
-              Dashboard
-            </button>
-          </div>
-        </div>
-      </div>
 
       <div className="max-w-6xl mx-auto p-8 -mt-8">
         {/* FIX: Role-aware empty state */}

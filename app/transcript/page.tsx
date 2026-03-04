@@ -8,10 +8,12 @@ import GradeBook from '@/components/GradeBook'
 import TranscriptSettings from '@/components/TranscriptSettings'
 import TranscriptGenerator from '@/components/TranscriptGenerator'
 import AuthGuard from '@/components/AuthGuard'
-import { getOrganizationId } from '@/src/lib/getOrganizationId' // NEW
+import { getOrganizationId } from '@/src/lib/getOrganizationId' 
+import { useAppHeader } from '@/components/layout/AppHeader'
 
 function TranscriptContent() {
   const router = useRouter()
+  useAppHeader({ title: '📄 Transcript', backHref: '/dashboard' })
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('gradebook')
@@ -67,31 +69,6 @@ function TranscriptContent() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-10 shadow-lg">
-        <div className="max-w-6xl mx-auto flex justify-between items-start">
-          <div>
-            <Link href="/dashboard" className="text-white/80 hover:text-white mb-6 font-bold text-sm block">
-              ← Back to Dashboard
-            </Link>
-            <h1 className="text-4xl font-black mb-2">Transcript Manager</h1>
-            <p className="text-purple-200 text-sm">Enter grades and generate official transcripts</p>
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => router.push('/courses')}
-              className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-xl text-xs font-bold transition-colors"
-            >
-              📚 Manage Courses
-            </button>
-            <button
-              onClick={() => router.push('/dashboard')}
-              className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-xl text-xs font-bold transition-colors"
-            >
-              Dashboard
-            </button>
-          </div>
-        </div>
-      </div>
 
       <div className="max-w-6xl mx-auto p-8 -mt-8">
 

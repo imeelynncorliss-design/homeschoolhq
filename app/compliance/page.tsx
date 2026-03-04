@@ -20,6 +20,7 @@ import { createClient } from '@/src/lib/supabase'
 import { useStateComplianceTemplates } from '@/src/hooks/useStateComplianceTemplates'
 import { useComplianceSettings } from '@/src/hooks/useComplianceSettings'      
 import { generateComplianceReport } from '@/src/utils/generateComplianceReport'
+import { useAppHeader } from '@/components/layout/AppHeader'
 
 interface Kid {
   id: string
@@ -45,6 +46,7 @@ interface KidComplianceData {
 
 export default function CompliancePage() {
   const router = useRouter()
+  useAppHeader({ title: 'Compliance', backHref: '/dashboard' })  
   const supabase = createClient()
   
   // Hooks
@@ -330,12 +332,6 @@ export default function CompliancePage() {
       <div className="min-h-screen bg-gray-50 p-8">
         <div className="max-w-3xl mx-auto">
 
-        <button
-            onClick={() => router.push('/dashboard')}
-            className="text-gray-400 flex items-center gap-2 text-xs font-bold uppercase tracking-widest hover:text-gray-600 transition-colors mb-4"
-          >
-            <ArrowLeft size={14} /> Back to Dashboard
-          </button>
           
           <div className="bg-white rounded-2xl shadow-lg p-8">
             <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -452,72 +448,6 @@ export default function CompliancePage() {
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <button
-            onClick={() => router.push('/dashboard')}
-            className="text-gray-400 flex items-center gap-2 text-xs font-bold uppercase tracking-widest hover:text-gray-600 transition-colors mb-4"
-          >
-            <ArrowLeft size={14} /> Back to Dashboard
-          </button>
-          
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 bg-indigo-100 rounded-2xl flex items-center justify-center">
-                <ShieldCheck className="text-indigo-600" size={32} />
-              </div>
-              <div>
-                <h1 className="text-4xl font-black text-gray-900 tracking-tight">
-                  Compliance Dashboard
-                </h1>
-                <div className="flex items-center gap-2 mt-1">
-                  {template && (
-                    <>
-                      <span className="text-gray-600 font-medium">
-                        {template.state_name} Requirements
-                      </span>
-                      <a
-                        href={template.official_source_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:text-blue-800 text-sm flex items-center gap-1"
-                      >
-                        <ExternalLink size={14} />
-                      </a>
-                    </>
-                  )}
-                  {settings?.school_year_start_date && settings?.school_year_end_date && (
-                    <span className="text-gray-00 font-medium">
-                      • {new Date(settings.school_year_start_date).toLocaleDateString()} - {new Date(settings.school_year_end_date).toLocaleDateString()}
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowStateSelector(true)}
-                className="px-4 py-2 border-2 border-gray-300 rounded-xl text-gray-700 font-bold hover:border-gray-400 transition-colors"
-              >
-                <Settings className="inline mr-2" size={18} />
-                Change State
-              </button>
-              <button
-                onClick={handleExportReport}
-                disabled={isExporting}
-                className={`px-4 py-2 bg-indigo-600 text-white rounded-xl font-bold transition-colors ${
-                  isExporting 
-                    ? 'opacity-50 cursor-not-allowed' 
-                    : 'hover:bg-indigo-700'
-                }`}
-              >
-                <Download className="inline mr-2" size={18} />
-                {isExporting ? 'Generating...' : 'Export Report'}
-              </button>
-            </div>
-          </div>
-        </div>
 
         {/* View Mode Toggle */}
         <div className="mb-6 flex justify-center">

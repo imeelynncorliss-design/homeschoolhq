@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/src/lib/supabase'
 import AuthGuard from '@/components/AuthGuard'
+import { useAppHeader } from '@/components/layout/AppHeader'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -151,35 +152,30 @@ function LessonCard({
           )}
         </div>
         <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-           <button 
-              onClick={() => onAddNote(lesson)} 
-              title="Add a teaching note"
-              style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 8, padding: '6px 10px', fontSize: 12, color: '#374151', cursor: 'pointer', fontWeight: 600 }}
-            >
-              📝
-            </button>
-            {completed && (
+          <button
+            onClick={() => onAddNote(lesson)}
+            title="Add a teaching note"
+            style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 8, padding: '6px 10px', fontSize: 12, color: '#374151', cursor: 'pointer', fontWeight: 600 }}
+          >
+            📝
+          </button>
+          {completed && (
             <button
-              onClick={() => {
-                if (confirm(`Mark "${lesson.title}" as not started?`)) onUndoComplete(lesson.id)
-              }}
+              onClick={() => { if (confirm(`Mark "${lesson.title}" as not started?`)) onUndoComplete(lesson.id) }}
               title="Undo completion"
               style={{ background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 8, padding: '6px 10px', fontSize: 12, color: '#92400e', cursor: 'pointer', fontWeight: 600 }}
             >
               ↩ Undo
             </button>
           )}
-
           {isAssignedToMe && !completed && (
-            <button 
-            onClick={() => {
-              if (confirm(`Mark "${lesson.title}" as complete?`)) onComplete(lesson.id)
-            }}
-            title="Mark lesson complete"
-            style={{ background: 'linear-gradient(135deg, #10b981, #34d399)', border: 'none', borderRadius: 8, padding: '6px 12px', fontSize: 12, color: '#fff', cursor: 'pointer', fontWeight: 700 }}
-          >
-            ✓ Done
-          </button>
+            <button
+              onClick={() => { if (confirm(`Mark "${lesson.title}" as complete?`)) onComplete(lesson.id) }}
+              title="Mark lesson complete"
+              style={{ background: 'linear-gradient(135deg, #10b981, #34d399)', border: 'none', borderRadius: 8, padding: '6px 12px', fontSize: 12, color: '#fff', cursor: 'pointer', fontWeight: 700 }}
+            >
+              ✓ Done
+            </button>
           )}
         </div>
       </div>
@@ -193,11 +189,10 @@ function LessonGroupSection({ group, userId, onComplete, onUndoComplete, onAddNo
   group: LessonGroup
   userId: string
   onComplete: (id: string) => void
-  onUndoComplete: (id: string) => void 
+  onUndoComplete: (id: string) => void
   onAddNote: (lesson: Lesson) => void
 }) {
   const [collapsed, setCollapsed] = useState(group.defaultCollapsed)
-
   return (
     <div style={{ marginBottom: 20 }}>
       <button
@@ -261,6 +256,9 @@ function NoteModal({ lesson, onSave, onClose }: { lesson: Lesson; onSave: (id: s
 
 function TeachingScheduleContent() {
   const router = useRouter()
+
+  useAppHeader({ title: '👩‍🏫 Teaching Schedule', backHref: '/dashboard' })
+
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<any>(null)
   const [myLessons, setMyLessons] = useState<Lesson[]>([])
@@ -338,23 +336,13 @@ function TeachingScheduleContent() {
   const todayCount = myLessons.filter(l => l.lesson_date && isToday(l.lesson_date)).length
 
   if (loading) return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f0fdf4' }}>
+    <div style={{ minHeight: 'calc(100vh - 56px)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f0fdf4' }}>
       <div style={{ color: '#10b981', fontWeight: 700 }}>Loading your schedule...</div>
     </div>
   )
 
   return (
-    <div style={{ fontFamily: 'var(--font-dm-sans), sans-serif', background: '#f0fdf4', minHeight: '100vh' }}>
-      <header style={{ background: 'linear-gradient(135deg, #10b981, #34d399)', padding: '0 24px', height: 58, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 50 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <button onClick={() => router.push('/dashboard')} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 8, color: '#fff', padding: '6px 12px', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>← Dashboard</button>
-          <span style={{ color: '#fff', fontWeight: 900, fontSize: 17 }}>👩‍🏫 Teaching Schedule</span>
-        </div>
-        <div style={{ color: 'rgba(255,255,255,0.85)', fontSize: 13 }}>
-          {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-        </div>
-      </header>
-
+    <div style={{ fontFamily: 'var(--font-dm-sans), sans-serif', background: '#f0fdf4', minHeight: 'calc(100vh - 56px)' }}>
       <main style={{ maxWidth: 780, margin: '0 auto', padding: '24px 24px 48px' }}>
         {todayCount > 0 && (
           <div style={{ background: 'linear-gradient(135deg, #10b981, #34d399)', borderRadius: 14, padding: '16px 20px', marginBottom: 20, color: '#fff', display: 'flex', alignItems: 'center', gap: 16 }}>
@@ -368,7 +356,6 @@ function TeachingScheduleContent() {
           </div>
         )}
 
-        {/* Tabs */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 20, background: '#fff', borderRadius: 12, padding: 6, border: '1.5px solid #e5e7eb' }}>
           {[
             { id: 'mine', label: `My Lessons (${myLessons.length})` },
@@ -381,7 +368,6 @@ function TeachingScheduleContent() {
           ))}
         </div>
 
-        {/* Kid filter */}
         {activeTab === 'kids' && (
           <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
             <button onClick={() => setSelectedKid(null)} style={{ padding: '6px 14px', borderRadius: 20, border: '1.5px solid', borderColor: !selectedKid ? '#10b981' : '#e5e7eb', background: !selectedKid ? '#d1fae5' : '#fff', color: !selectedKid ? '#065f46' : '#6b7280', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>All Students</button>
@@ -393,7 +379,6 @@ function TeachingScheduleContent() {
           </div>
         )}
 
-        {/* Grouped lessons */}
         {groups.length === 0 ? (
           <div style={{ background: '#fff', borderRadius: 14, border: '1.5px solid #e5e7eb', padding: '48px 24px', textAlign: 'center' }}>
             <div style={{ fontSize: 40, marginBottom: 12 }}>📭</div>

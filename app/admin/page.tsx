@@ -11,6 +11,7 @@ import AttendanceTracker from '@/components/AttendanceTracker'
 import { getTierForTesting } from '@/lib/tierTesting'
 import DevTierToggle from '@/components/DevTierToggle'
 import AuthGuard from '@/components/AuthGuard'
+import { useAppHeader } from '@/components/layout/AppHeader'
 
 
 type UserTier = 'FREE' | 'ESSENTIAL' | 'PRO' | 'PREMIUM'
@@ -34,6 +35,7 @@ const ADMIN_TABS = [
 
 function AdminContent() {
   const router = useRouter()
+  useAppHeader({ title: '⚙️ Control Center', backHref: '/dashboard' })
   const toolRef = useRef<HTMLDivElement>(null)
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
@@ -172,48 +174,6 @@ if (tabParam) {
       `}</style>
 
       <div className="max-w-7xl mx-auto">
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-8">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div className="flex items-center gap-4">
-              <div className="bg-blue-600 p-3 rounded-xl shadow-lg shadow-blue-200">
-                <span className="text-white text-2xl font-bold">H</span>
-              </div>
-              <div>
-                <h1 className="text-3xl font-black text-gray-900 tracking-tight">HomeschoolReady</h1>
-                <p className="text-gray-500 font-medium italic">Control Center</p>
-              </div>
-            </div>
-
-            <div className="flex flex-1 max-w-4xl items-center gap-4">
-              <button 
-                onClick={() => setShowHelp(!showHelp)}
-                className={`whitespace-nowrap px-4 py-2 rounded-xl font-bold text-sm transition-all border ${
-                  showHelp ? 'bg-blue-50 border-blue-200 text-blue-600 shadow-inner' : 'bg-white border-gray-200 text-gray-400 hover:border-gray-300'
-                }`}
-              >
-                {showHelp ? 'Hide Help' : 'Help & Shortcuts'}
-              </button>
-
-              <div className="relative flex-1">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 opacity-30">🔍</span>
-                <input 
-                  type="text"
-                  placeholder="Find a tool..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3 bg-gray-50 border-transparent rounded-xl focus:bg-white focus:ring-4 focus:ring-blue-100 focus:border-blue-300 transition-all outline-none text-sm font-medium"
-                />
-              </div>
-
-              <button 
-                onClick={() => router.push('/dashboard')}
-                className="flex items-center gap-2 px-5 py-3 bg-[#4a5568] hover:bg-[#2d3748] text-white rounded-lg font-medium text-sm transition-all shadow-sm active:scale-95 whitespace-nowrap"
-              >
-                <span>←</span> Back to Dashboard
-              </button>
-            </div>
-          </div>
-        </div>
 
         {showHelp && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10 animate-in fade-in zoom-in duration-300">

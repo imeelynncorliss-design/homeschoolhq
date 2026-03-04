@@ -9,6 +9,7 @@ import StandardsManager from '@/components/StandardsManager'
 import AssessmentsHelpModal from '@/components/AssessmentsHelpModal'
 import { HelpCircle, Lightbulb, ChevronDown, ChevronRight } from 'lucide-react'
 import { getOrganizationId } from '@/src/lib/getOrganizationId'
+import { useAppHeader } from '@/components/layout/AppHeader'  
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -56,6 +57,7 @@ type MonthGroup = {
 }
 
 export default function AssessmentsPage() {
+  useAppHeader({ title: '📝 Assessments & Standards', backHref: '/admin' })
   const [currentView, setCurrentView] = useState<'results' | 'standards'>('results')
   const [assessments, setAssessments] = useState<AssessmentWithDetails[]>([])
   const [loading, setLoading] = useState(true)
@@ -300,28 +302,8 @@ export default function AssessmentsPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 pb-20">
-      <div className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-10 pb-20">
-        <div className="max-w-7xl mx-auto">
-          <Link href="/admin" className="text-white/80 hover:text-white flex items-center gap-2 mb-6 font-medium">
-            ← Back to Admin
-          </Link>
-          <div className="flex justify-between items-start">
-            <div>
-              <h1 className="text-4xl font-black mb-2">Assessments & Standards</h1>
-              <p className="text-white/70">Manage student quizzes and curriculum alignment</p>
-            </div>
-            <button
-              onClick={() => setShowHelp(true)}
-              className="flex items-center gap-2 px-6 py-3 bg-white/20 hover:bg-white/30 rounded-2xl font-bold transition-all backdrop-blur-sm"
-            >
-              <HelpCircle className="w-5 h-5" />
-              Help & Guide
-            </button>
-          </div>
-        </div>
-      </div>
 
-      <div className="max-w-7xl mx-auto px-4 -mt-12">
+      <div className="max-w-7xl mx-auto px-4 -pt-8">
         <div className="flex gap-4 mb-8">
           <button 
             onClick={() => setCurrentView('results')}
