@@ -27,7 +27,8 @@ import ComplianceWizard from '@/components/ComplianceWizard'
 import { type UserTier, hasFeature as checkFeature, getTierForTesting, getChildLimit, getUpgradeMessage } from '@/lib/tierTesting'
 import UserMenu from '@/src/components/UserMenu'
 import { CANONICAL_SUBJECTS } from '@/src/constants/subjects'
-import StatsBar from "@/src/components/dashboard/StatsBar";
+import StatsBar from "@/src/components/dashboard/StatsBar"
+import { useAppHeader } from '@/components/layout/AppHeader'
 
 const DURATION_UNITS = ['minutes', 'days', 'weeks'] as const
 type DurationUnit = typeof DURATION_UNITS[number]
@@ -70,8 +71,7 @@ function DashboardContent() {
   const [showProfileForm, setShowProfileForm] = useState(false)
   const [editingKid, setEditingKid] = useState<any | null>(null)
   const [showLessonEditModal, setShowLessonEditModal] = useState(false)
-  const [showHelp, setShowHelp] = useState(false)
-  const [expandedFaq, setExpandedFaq] = useState<string | null>(null)
+
 
   const [editLessonSubject, setEditLessonSubject] = useState('')
   const [editLessonSubjectSelect, setEditLessonSubjectSelect] = useState('')
@@ -107,8 +107,6 @@ function DashboardContent() {
   const [vacationPeriods, setVacationPeriods] = useState<any[]>([])
   const [schoolYearSettings, setSchoolYearSettings] = useState<any>(null)
   const [complianceHealthScore, setComplianceHealthScore] = useState<number | null>(null)
-  const [parentName, setParentName] = useState('')
-  const [showSettingsMenu, setShowSettingsMenu] = useState(false)
   const [collaborators, setCollaborators] = useState<{id: string, user_id: string, name: string, email: string}[]>([])
 
   const [socialEvents, setSocialEvents] = useState<any[]>([])
@@ -122,6 +120,7 @@ function DashboardContent() {
   })
 
   const router = useRouter()
+  useAppHeader({ title: '📅 Calendar', backHref: '/dashboard' })
 
   // FIX: loadKids now accepts orgId and queries by organization_id
   const loadKids = async (orgId?: string | null) => {
@@ -503,112 +502,35 @@ function DashboardContent() {
   return (
     <div className="min-h-screen bg-gray-50 overflow-x-hidden">
 
-      {/* TOP NAV */}
-      <div className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 py-3 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2 sm:gap-4 min-w-0">
-            <div className="flex-shrink-0">
-              {/* FIX: Updated branding from HomeschoolHQ to HomeschoolReady */}
-              <span className="text-lg font-black text-indigo-900 tracking-tight">Homeschool</span>
-              <span className="text-lg font-black text-purple-600 tracking-tight">Ready</span>
-            </div>
-            <div className="hidden sm:block text-sm text-gray-500">
-              Welcome, <span className="font-semibold text-gray-700">{parentName || user?.email?.split('@')[0]}</span> 👋
-            </div>
-            <div className="hidden sm:block w-px h-6 bg-gray-200" />
-            <div className="flex items-center gap-2">
-              <div className="relative group">
-                <span className="text-xs font-bold text-gray-400 uppercase tracking-wide cursor-default">Kids</span>
-                <div className="absolute left-0 top-6 z-50 hidden group-hover:block bg-gray-800 text-white text-xs rounded-lg px-3 py-2 whitespace-nowrap shadow-lg">
-                  Click a photo to view child details
-                  <div className="absolute -top-1 left-3 w-2 h-2 bg-gray-800 rotate-45" />
-                </div>
-              </div>
-              {kids.map((kid) => (
-                <button key={kid.id} onClick={() => setSelectedKid(kid.id)} title={kid.displayname}
-                  className={`w-9 h-9 rounded-full overflow-hidden border-2 transition-all flex-shrink-0 ${selectedKid === kid.id ? 'border-purple-500 shadow-md ring-2 ring-purple-200' : 'border-gray-200 hover:border-purple-300'}`}
-                >
-                  {kid.photo_url ? (
-                    <img src={kid.photo_url} alt={kid.displayname} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-violet-400 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
-                      {kid.displayname.charAt(0).toUpperCase()}
-                    </div>
-                  )}
-                </button>
-              ))}
-              {/* FIX: Only show + Add Child button for parent-admins, not co-teachers */}
-              {canAddChild() && (
-                <button onClick={() => { setEditingKid(null); setShowProfileForm(true) }} title="Add a child"
-                  className="w-9 h-9 rounded-full border-2 border-dashed border-gray-300 hover:border-purple-400 flex items-center justify-center text-gray-400 hover:text-purple-500 transition-all text-lg font-light"
-                >+</button>
-              )}
-            </div>
-          </div>
-
-          <button
-            onClick={() => router.push('/dashboard')}
-            className="hidden md:block px-3 py-2 rounded-lg font-medium text-sm transition-all border bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100"
-          >
-            ← Home
-          </button>
-
-          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-            <button onClick={() => setShowHelp(!showHelp)}
-              className={`hidden md:block px-3 py-2 rounded-lg font-medium text-sm transition-all border ${showHelp ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'}`}
-            >
-              💡 How To
-            </button>
-            <button
-              onClick={handleLogout}
-              className="px-3 py-2 rounded-lg font-medium text-sm transition-all border bg-gray-50 border-gray-200 text-red-600 hover:bg-red-50"
-            >
-              Logout
-            </button>
-          </div>
-        </div>
-
-        {showHelp && (
-          <div className="border-t border-gray-100 bg-white px-6 py-4 max-w-7xl mx-auto">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border border-blue-200">
-                <h3 className="font-bold text-blue-900 mb-2 flex items-center gap-2"><span className="text-xl">🎯</span>Getting Started</h3>
-                <p className="text-sm text-blue-800 leading-relaxed"><strong>Step 1:</strong> Add your children using the + button<br /><strong>Step 2:</strong> Import curriculum or create lessons<br /><strong>Step 3:</strong> Use the calendar to track progress</p>
-              </div>
-              <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-4 border border-purple-200">
-                <h3 className="font-bold text-purple-900 mb-2 flex items-center gap-2"><span className="text-xl">✨</span>Power Features</h3>
-                <p className="text-sm text-purple-800 leading-relaxed"><strong>Auto-Schedule:</strong> Bulk assign dates to lessons<br /><strong>AI Generate:</strong> Create supplemental lessons instantly<br /><strong>Import:</strong> Upload curriculum from PDFs</p>
-              </div>
-              <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-4 border border-green-200">
-                <h3 className="font-bold text-green-900 mb-2 flex items-center gap-2"><span className="text-xl">📊</span>View Modes</h3>
-                <p className="text-sm text-green-800 leading-relaxed"><strong>Calendar:</strong> Month view with all children<br /><strong>Lessons:</strong> Detailed list by child<br /><strong>Click any day</strong> to view and work through that day's lessons</p>
-              </div>
-              <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg p-4 border border-orange-200">
-                <h3 className="font-bold text-orange-900 mb-2 flex items-center gap-2"><span className="text-xl">❓</span>Frequently Asked</h3>
-                <div className="space-y-2">
-                  {[
-                    { q: "How do I get started?", a: "Click the + button next to Kids in the top nav to add your first child." },
-                    { q: "What's the best way to organize?", a: "Start with one subject and use 'Auto-Schedule' to map out your week or month." },
-                    { q: "Can I track multiple children?", a: "Yes — click any child's avatar in the top nav to switch between them." },
-                    { q: "How do AI features work?", a: "The Lesson Generator automatically creates supplemental lessons based on your topic." }
-                  ].map((faq, i) => (
-                    <div key={i} className="border-b border-orange-200 pb-2 last:border-0">
-                      <button onClick={() => setExpandedFaq(expandedFaq === faq.q ? null : faq.q)} className="flex justify-between items-center w-full text-left text-xs font-medium text-orange-900 hover:text-orange-700 transition-colors">
-                        <span>{faq.q}</span>
-                        <span className="text-orange-400 font-bold">{expandedFaq === faq.q ? '−' : '+'}</span>
-                      </button>
-                      {expandedFaq === faq.q && <p className="mt-1 text-xs text-orange-800 bg-orange-50 p-2 rounded leading-relaxed">{faq.a}</p>}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
       {/* MAIN CONTENT */}
       <div className="max-w-7xl mx-auto px-3 sm:px-6 py-4 space-y-4">
+      <div className="flex items-center gap-2 flex-wrap">
+          <div className="relative group">
+            <span className="text-xs font-bold text-gray-400 uppercase tracking-wide cursor-default">Kids</span>
+            <div className="absolute left-0 top-6 z-50 hidden group-hover:block bg-gray-800 text-white text-xs rounded-lg px-3 py-2 whitespace-nowrap shadow-lg">
+              Click a photo to view child details
+              <div className="absolute -top-1 left-3 w-2 h-2 bg-gray-800 rotate-45" />
+            </div>
+          </div>
+            {kids.map((kid) => (
+              <button key={kid.id} onClick={() => setSelectedKid(kid.id)} title={kid.displayname}
+                className={`w-9 h-9 rounded-full overflow-hidden border-2 transition-all flex-shrink-0 ${selectedKid === kid.id ? 'border-purple-500 shadow-md ring-2 ring-purple-200' : 'border-gray-200 hover:border-purple-300'}`}
+              >
+                {kid.photo_url ? (
+                  <img src={kid.photo_url} alt={kid.displayname} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-violet-400 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
+                    {kid.displayname.charAt(0).toUpperCase()}
+                  </div>
+                )}
+              </button>
+            ))}
+            {canAddChild() && (
+              <button onClick={() => { setEditingKid(null); setShowProfileForm(true) }} title="Add a child"
+                className="w-9 h-9 rounded-full border-2 border-dashed border-gray-300 hover:border-purple-400 flex items-center justify-center text-gray-400 hover:text-purple-500 transition-all text-lg font-light"
+              >+</button>
+            )}
+          </div>
         <AttendanceReminder
           onTakeAttendance={() => { router.push('/admin'); setTimeout(() => { window.dispatchEvent(new Event('openAttendance')) }, 500) }}
           kids={kids}
