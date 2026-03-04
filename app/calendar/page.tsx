@@ -24,7 +24,7 @@ import AttendanceTracker from '@/components/AttendanceTracker'
 import ParentProfileManager from '@/components/ParentProfileManager'
 import AuthGuard from '@/components/AuthGuard'
 import ComplianceWizard from '@/components/ComplianceWizard'
-import { type UserTier, hasFeature as checkFeature, getTierForTesting, getChildLimit, getUpgradeMessage } from '@/lib/tierTesting'
+import { type UserTier, hasFeature as checkFeature, getTierForTesting, getChildLimit, getUpgradeMessage, syncBetaTier } from '@/lib/tierTesting'
 import UserMenu from '@/src/components/UserMenu'
 import { CANONICAL_SUBJECTS } from '@/src/constants/subjects'
 import StatsBar from "@/src/components/dashboard/StatsBar"
@@ -174,6 +174,7 @@ function DashboardContent() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { router.push('/'); return }
     setUser(user)
+    await syncBetaTier(user.id)
     await supabase
       .from('user_profiles')
       .update({ calendar_visited_at: new Date().toISOString() })

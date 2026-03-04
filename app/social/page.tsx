@@ -10,12 +10,14 @@ import FamilyCollaboration from '@/components/FamilyCollaboration'
 import { getTierForTesting } from '@/lib/tierTesting'
 import DevTierToggle from '@/components/DevTierToggle'
 import AuthGuard from '@/components/AuthGuard'
+import { useAppHeader } from '@/components/layout/AppHeader'
 
 type UserTier = 'FREE' | 'ESSENTIAL' | 'PRO' | 'PREMIUM'
 
 function SocialHub() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
+  useAppHeader({ title: '🎉 Social Hub', backHref: '/dashboard' })
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('social-calendar')
   const [userTier, setUserTier] = useState<UserTier>('FREE')
@@ -66,7 +68,7 @@ function SocialHub() {
     },
     { 
       id: 'collaboration', 
-      label: 'Family Sharing',
+      label: 'Family & Co-op Sharing',
       icon: '👨‍👩‍👧‍👦',
       description: 'Multi-parent access & co-teaching'
     }
@@ -80,41 +82,6 @@ function SocialHub() {
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="bg-white rounded-lg shadow p-6 mb-6 border border-gray-100">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Social Hub</h1>
-              <p className="text-gray-600 mt-1">Connect, collaborate, and coordinate with other homeschool families</p>
-            </div>
-            <button
-              onClick={() => router.push('/dashboard')}
-              className="px-4 py-2 bg-[#4a5568] hover:bg-[#2d3748] text-white rounded-lg font-medium text-sm transition-all"
-            >
-              ← Back to Dashboard
-            </button>
-          </div>
-
-          {/* Subscription Badge */}
-          <div className="flex items-center gap-3">
-          <span className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider ${
-            userTier === 'PREMIUM' ? 'bg-purple-100 text-purple-800' :
-            userTier === 'PRO' ? 'bg-blue-100 text-blue-800' :
-            userTier === 'ESSENTIAL' ? 'bg-green-100 text-green-800' :
-            'bg-gray-100 text-gray-800'
-          }`}>
-                        {userTier} Plan
-            </span>
-            {!hasFamilyTier && (
-              <button 
-                onClick={() => router.push('/pricing')}
-                className="text-xs text-blue-600 hover:text-blue-800 font-bold uppercase tracking-tight"
-              >
-                Upgrade to FAMILY Plan to unlock social features →
-              </button>
-            )}
-          </div>
-        </div>
 
         {!hasFamilyTier ? (
           /* Upgrade Prompt */
@@ -123,7 +90,7 @@ function SocialHub() {
             <h2 className="text-3xl font-black text-gray-900 mb-4 tracking-tight">Social Hub is Locked</h2>
             <p className="text-gray-500 mb-8 max-w-2xl mx-auto font-medium">
               The Social Hub is a premium feature for families who want to coordinate with others. 
-              Upgrade to the Family Plan to start collaborating.
+              Upgrade to the Premium Plan to start collaborating.
             </p>
             
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
@@ -140,7 +107,7 @@ function SocialHub() {
               onClick={() => router.push('/pricing')}
               className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-10 py-4 rounded-xl font-bold hover:shadow-lg hover:scale-105 transition-all"
             >
-              Upgrade to Family Plan
+              Upgrade to Premium Plan
             </button>
           </div>
         ) : (
