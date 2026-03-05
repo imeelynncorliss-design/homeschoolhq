@@ -42,7 +42,12 @@ export const TIER_FEATURES = {
     'advanced_compliance_reports',
     'attendance_automation',
     'subject_coverage',
-    'transcript_generator'
+    'transcript_generator',
+    // TODO: REMOVE BEFORE LAUNCH — Premium features unlocked for internal testing only
+    // @ts-ignore
+    'coop_management',   // ← add these 3
+    'org_switcher',
+   'priority_support'
   ],
   PREMIUM: [
     'manual_lessons',

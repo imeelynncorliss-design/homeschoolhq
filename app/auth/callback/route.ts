@@ -4,10 +4,11 @@
  *
  * Handles post-login/signup redirects from Supabase.
  * Checks org membership to route users correctly:
- *   - Admin     → /dashboard
+ *   - Admin (new)     → /onboarding
+ *   - Admin (returning) → /dashboard
  *   - Co-teacher / Aide → /teaching-schedule
- *   - No org    → /join (new user with invite code)
- *   - Error     → /login?error=...
+ *   - No org          → /join (new user with invite code)
+ *   - Error           → /login?error=...
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -78,10 +79,20 @@ export async function GET(request: NextRequest) {
   }
 
   switch (membership.role) {
-    case 'admin':
-      return NextResponse.redirect(`${origin}/dashboard`);
+    case 'admin': {
+      // New admins go through onboarding before seeing the dashboard
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('onboarding_completed_at')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      const destination = profile?.onboarding_completed_at ? '/dashboard' : '/onboarding';
+      return NextResponse.redirect(`${origin}${destination}`);
+    }
     case 'co_teacher':
     case 'aide':
+      // Co-teachers join an existing org — no onboarding needed
       return NextResponse.redirect(`${origin}/teaching-schedule`);
     default:
       // member or unknown role — send to dashboard as safe fallback
