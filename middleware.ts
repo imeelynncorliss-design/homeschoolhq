@@ -35,7 +35,7 @@ export async function middleware(request: NextRequest) {
 
   // Redirect logged-in users away from auth pages (EXCEPT reset-password and invite signups)
 if (user && !request.nextUrl.pathname.startsWith('/reset-password')) {
-  const hasInviteCode = request.nextUrl.searchParams.get('code')
+  const hasInviteCode = request.nextUrl.searchParams.get('invite')
   if (!hasInviteCode && (request.nextUrl.pathname === '/login' || request.nextUrl.pathname === '/signup')) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }

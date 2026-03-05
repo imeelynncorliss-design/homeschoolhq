@@ -19,7 +19,7 @@ function ResetPasswordForm() {
   // Check for error in URL (expired link, etc.)
   useEffect(() => {
     const urlError = searchParams.get('error')
-    if (urlError === 'invalid_link') {
+    if (urlError === 'invalid_reset_link') {
       setError('This password reset link is invalid or has expired. Please request a new one.')
     }
   }, [searchParams])

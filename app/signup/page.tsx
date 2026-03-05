@@ -25,7 +25,7 @@ function SignupContent() {
   const searchParams = useSearchParams()
 
   useEffect(() => {
-    const code = searchParams.get('code')
+    const code = searchParams.get('invite')
     if (code) {
       setHasInviteCode(true)
       setInviteCode(code.toUpperCase())

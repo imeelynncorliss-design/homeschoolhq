@@ -25,7 +25,7 @@ export async function sendInviteEmail({
     role === 'aide' ? 'Teaching Aide' :
     'Co-Teacher'
 
-  const acceptUrl = `https://homeschoolready.app/signup?code=${inviteCode}`
+  const acceptUrl = `https://homeschoolready.app/signup?invite=${inviteCode}`
 
   const { data, error } = await resend.emails.send({
     from: `${FROM_NAME} <${FROM_EMAIL}>`,
