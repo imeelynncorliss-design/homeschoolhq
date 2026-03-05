@@ -1,14 +1,6 @@
 /**
  * Supabase Auth Callback
  * Place at: src/app/auth/callback/route.ts
- *
- * Handles post-login/signup redirects from Supabase.
- * Checks org membership to route users correctly:
- *   - Admin (new)     → /onboarding
- *   - Admin (returning) → /dashboard
- *   - Co-teacher / Aide → /teaching-schedule
- *   - No org          → /join (new user with invite code)
- *   - Error           → /login?error=...
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -18,12 +10,7 @@ import { cookies } from 'next/headers';
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get('code');
-  const next = searchParams.get('next'); // optional override (e.g. deep link)
-
-  if (!code) {
-    // No code means this wasn't a valid auth callback — send to login
-    return NextResponse.redirect(`${origin}/login?error=missing_code`);
-  }
+  const next = searchParams.get('next');
 
   const cookieStore = await cookies();
 
@@ -43,6 +30,25 @@ export async function GET(request: NextRequest) {
       },
     }
   );
+
+  // Handle password reset via token hash
+  const tokenHash = searchParams.get('token_hash');
+  const type = searchParams.get('type');
+
+  if (tokenHash && type === 'recovery') {
+    const { error } = await supabase.auth.verifyOtp({
+      token_hash: tokenHash,
+      type: 'recovery',
+    });
+    if (error) {
+      return NextResponse.redirect(`${origin}/login?error=invalid_reset_link`);
+    }
+    return NextResponse.redirect(`${origin}/reset-password`);
+  }
+
+  if (!code) {
+    return NextResponse.redirect(`${origin}/login?error=missing_code`);
+  }
 
   // Exchange the code for a session
   const { error: sessionError } = await supabase.auth.exchangeCodeForSession(code);
@@ -74,13 +80,11 @@ export async function GET(request: NextRequest) {
     .maybeSingle();
 
   if (!membership) {
-    // No org — new user, needs to redeem an invite code
     return NextResponse.redirect(`${origin}/join`);
   }
 
   switch (membership.role) {
     case 'admin': {
-      // New admins go through onboarding before seeing the dashboard
       const { data: profile } = await supabase
         .from('user_profiles')
         .select('onboarding_completed_at')
@@ -92,10 +96,8 @@ export async function GET(request: NextRequest) {
     }
     case 'co_teacher':
     case 'aide':
-      // Co-teachers join an existing org — no onboarding needed
       return NextResponse.redirect(`${origin}/teaching-schedule`);
     default:
-      // member or unknown role — send to dashboard as safe fallback
       return NextResponse.redirect(`${origin}/dashboard`);
   }
 }
