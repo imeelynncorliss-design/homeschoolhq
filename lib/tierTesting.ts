@@ -8,33 +8,50 @@ export type UserTier = 'FREE' | 'ESSENTIAL' | 'PRO' | 'PREMIUM'
  *
  * Pricing Structure:
  * - FREE:      $0        (1 student)
- * - ESSENTIAL: $60/yr    ($5/mo)    — unlimited students, compliance, attendance
- * - PRO:       $90/yr    ($7.50/mo) — + AI, co-teachers, Google Calendar, transcripts
- * - PREMIUM:   $120/yr   ($10/mo)   — + co-op, multi-family, org switcher
+ * - ESSENTIAL: $60/yr    ($5/mo)    — unlimited students, compliance, attendance, scheduling tools
+ * - PRO:       $90/yr    ($7.50/mo) — + AI, co-teachers, Google Calendar, transcripts, progress tracking
+ * - PREMIUM:   $120/yr   ($10/mo)   — + co-op, multi-family, org switcher, planning mode
+ *
+ * Competitor reference:
+ * - Syllabird ($60/yr): includes vacation planning, bulk scheduling, transcripts — all features at base tier
+ * - Homeschool Planet ($84.95/yr): single tier, all features included
+ * → We keep vacation_planner + bulk_scheduler at ESSENTIAL to stay competitive at entry price point
  */
 export const TIER_FEATURES = {
   FREE: [
     'manual_lessons',
     'basic_calendar',
-    'basic_compliance'
+    'basic_compliance',
+    'school_year_config',
+    'assessments',
   ],
   ESSENTIAL: [
     'manual_lessons',
     'basic_calendar',
+    'basic_compliance',
+    'school_year_config',
+    'assessments',
     'unlimited_kids',
     'curriculum_import',
     'compliance_tracking',
     'attendance_tracking',
-    'basic_reporting'
+    'basic_reporting',
+    'vacation_planner',
+    'bulk_scheduler',
   ],
   PRO: [
     'manual_lessons',
     'basic_calendar',
+    'basic_compliance',
+    'school_year_config',
+    'assessments',
     'unlimited_kids',
     'curriculum_import',
     'compliance_tracking',
     'attendance_tracking',
     'basic_reporting',
+    'vacation_planner',
+    'bulk_scheduler',
     'ai_generation',
     'family_collaboration',
     'work_calendar',
@@ -43,20 +60,27 @@ export const TIER_FEATURES = {
     'attendance_automation',
     'subject_coverage',
     'transcript_generator',
+    'progress_tracking',
     // TODO: REMOVE BEFORE LAUNCH — Premium features unlocked for internal testing only
     // @ts-ignore
-    'coop_management',   // ← add these 3
+    'coop_management',
     'org_switcher',
-   'priority_support'
+    'priority_support',
+    'planning_mode',
   ],
   PREMIUM: [
     'manual_lessons',
     'basic_calendar',
+    'basic_compliance',
+    'school_year_config',
+    'assessments',
     'unlimited_kids',
     'curriculum_import',
     'compliance_tracking',
     'attendance_tracking',
     'basic_reporting',
+    'vacation_planner',
+    'bulk_scheduler',
     'ai_generation',
     'family_collaboration',
     'work_calendar',
@@ -65,16 +89,17 @@ export const TIER_FEATURES = {
     'attendance_automation',
     'subject_coverage',
     'transcript_generator',
+    'progress_tracking',
     'coop_management',
     'org_switcher',
-    'priority_support'
+    'priority_support',
+    'planning_mode',
   ]
 } as const
 
 /**
  * TIER_DISPLAY — single source of truth for the pricing page UI.
  * Update prices, labels, and feature bullets here only.
- * The pricing page reads from this automatically.
  */
 export const TIER_DISPLAY: Record<UserTier, {
   name: string
@@ -118,6 +143,8 @@ export const TIER_DISPLAY: Record<UserTier, {
       'Curriculum import (PDF)',
       'Full compliance tracking',
       'Attendance tracking',
+      'Vacation planner',
+      'Bulk lesson scheduler',
       'Basic reporting'
     ]
   },
@@ -136,6 +163,7 @@ export const TIER_DISPLAY: Record<UserTier, {
       '✨ AI lesson generation',
       '👩‍🏫 Family collaboration & co-teachers',
       '📅 Google Calendar sync',
+      '📈 Progress tracking',
       'Advanced compliance reports',
       'Subject coverage reports',
       'Transcript generator'
@@ -152,6 +180,7 @@ export const TIER_DISPLAY: Record<UserTier, {
     ctaColor: 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700',
     features: [
       'Everything in Pro',
+      '🎨 Planning mode',
       '🏫 Co-op class management',
       'Multi-family organization',
       'Org switcher',
@@ -163,31 +192,31 @@ export const TIER_DISPLAY: Record<UserTier, {
 
 /**
  * Feature comparison table rows for the pricing page.
- * Add, remove, or reorder rows here — the pricing page renders this automatically.
  * Values order: [FREE, ESSENTIAL, PRO, PREMIUM]
  */
 export const PRICING_COMPARISON_ROWS: { name: string; values: string[] }[] = [
   { name: 'Students',                    values: ['1',  '♾️', '♾️', '♾️'] },
   { name: 'Lesson Planning & Calendar',  values: ['✓',  '✓',  '✓',  '✓' ] },
   { name: 'Basic Compliance Tracking',   values: ['✓',  '–',  '–',  '–' ] },
-  { name: 'Curriculum Import (PDF)',     values: ['–',  '✓',  '✓',  '✓' ] },
+  { name: 'Curriculum Import (PDF)',      values: ['–',  '✓',  '✓',  '✓' ] },
   { name: 'Full Compliance Tracking',    values: ['–',  '✓',  '✓',  '✓' ] },
   { name: 'Attendance Tracking',         values: ['–',  '✓',  '✓',  '✓' ] },
+  { name: 'Vacation Planner',            values: ['–',  '✓',  '✓',  '✓' ] },
+  { name: 'Bulk Scheduler',              values: ['–',  '✓',  '✓',  '✓' ] },
   { name: 'Basic Reporting',             values: ['–',  '✓',  '✓',  '✓' ] },
   { name: 'AI Lesson Generation',        values: ['–',  '–',  '✓',  '✓' ] },
   { name: 'Family Collaboration',        values: ['–',  '–',  '✓',  '✓' ] },
   { name: 'Google Calendar Sync',        values: ['–',  '–',  '✓',  '✓' ] },
+  { name: 'Progress Tracking',           values: ['–',  '–',  '✓',  '✓' ] },
   { name: 'Advanced Compliance Reports', values: ['–',  '–',  '✓',  '✓' ] },
   { name: 'Subject Coverage Reports',    values: ['–',  '–',  '✓',  '✓' ] },
   { name: 'Transcript Generator',        values: ['–',  '–',  '✓',  '✓' ] },
+  { name: 'Planning Mode',               values: ['–',  '–',  '–',  '✓' ] },
   { name: 'Co-op Management',            values: ['–',  '–',  '–',  '✓' ] },
   { name: 'Multi-Family / Org Switcher', values: ['–',  '–',  '–',  '✓' ] },
   { name: 'Priority Support',            values: ['–',  '–',  '–',  '✓' ] },
 ]
 
-/**
- * Tier order for rendering (Free → Essential → Pro → Premium)
- */
 export const TIER_ORDER: UserTier[] = ['FREE', 'ESSENTIAL', 'PRO', 'PREMIUM']
 
 // ─── Runtime feature checking ────────────────────────────────────────────────
@@ -255,8 +284,8 @@ export const TIER_INFO = {
 } as const
 
 export function getRequiredTier(feature: string): UserTier | null {
-  for (const [tier, features] of Object.entries(TIER_FEATURES)) {
-    if (features.includes(feature as any)) return tier as UserTier
+  for (const tier of TIER_ORDER) {
+    if ((TIER_FEATURES[tier] as readonly string[]).includes(feature)) return tier
   }
   return null
 }

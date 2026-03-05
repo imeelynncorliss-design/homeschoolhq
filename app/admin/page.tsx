@@ -22,9 +22,9 @@ const ADMIN_TABS = [
   { id: 'assessments',   label: 'Assessments',             icon: '📊', feature: 'assessments',          requiredTier: 'FREE',      color: 'blue',  path: '/admin/assessments',    description: 'Manage assessments and align with educational standards.' },
   { id: 'transcripts',   label: 'Transcripts',             icon: '📚', feature: 'transcript_generator', requiredTier: 'PRO',       color: 'purple',path: '/transcript',           description: 'Create official transcripts with GPA calculations.' },
   { id: 'school-year',   label: 'School Year & Compliance',icon: '🏫', feature: 'school_year_config',   requiredTier: 'FREE',      color: 'blue',  path: null,                    description: 'Configure your calendar, state compliance, and goals.' },
-  { id: 'progress',      label: 'Progress Tracking',       icon: '📈', feature: 'progress_tracking',    requiredTier: 'PREMIUM',   color: 'blue',  path: null,                    description: 'Track learning goals and milestones.' },
-  { id: 'vacation',      label: 'Vacation Planner',        icon: '🌴', feature: 'vacation_planner',     requiredTier: 'PREMIUM',   color: 'blue',  path: null,                    description: 'Plan breaks and see schedule impact.' },
-  { id: 'bulk-schedule', label: 'Bulk Scheduler',          icon: '⚡', feature: 'bulk_scheduler',       requiredTier: 'PREMIUM',   color: 'blue',  path: null,                    description: 'Assign dates to imported lessons.' },
+  { id: 'progress',      label: 'Progress Tracking',       icon: '📈', feature: 'progress_tracking',    requiredTier: 'PRO',       color: 'blue',  path: null,                    description: 'Track learning goals and milestones.' },
+  { id: 'vacation',      label: 'Vacation Planner',        icon: '🌴', feature: 'vacation_planner',     requiredTier: 'ESSENTIAL', color: 'blue',  path: null,                    description: 'Plan breaks and see schedule impact.' },
+  { id: 'bulk-schedule', label: 'Bulk Scheduler',          icon: '⚡', feature: 'bulk_scheduler',       requiredTier: 'ESSENTIAL', color: 'blue',  path: null,                    description: 'Assign dates to imported lessons.' },
   { id: 'attendance',    label: 'Attendance',              icon: '📋', feature: 'attendance_tracking',  requiredTier: 'ESSENTIAL', color: 'blue',  path: null,                    description: 'Track school days and hours.' },
 ]
 
