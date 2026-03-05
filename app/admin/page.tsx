@@ -8,30 +8,25 @@ import ProgressDashboard from '@/components/ProgressDashboard'
 import EnhancedVacationManager from '@/components/admin/EnhancedVacationManager'
 import BulkLessonScheduler from '@/components/BulkLessonScheduler'
 import AttendanceTracker from '@/components/AttendanceTracker'
-import { getTierForTesting } from '@/lib/tierTesting'
+import { TIER_FEATURES, getTierForTesting } from '@/lib/tierTesting'
 import DevTierToggle from '@/components/DevTierToggle'
 import AuthGuard from '@/components/AuthGuard'
 import { useAppHeader } from '@/components/layout/AppHeader'
 
-
 type UserTier = 'FREE' | 'ESSENTIAL' | 'PRO' | 'PREMIUM'
-// 1. GLOBAL CONSTANTS
-const FEATURES: any = {
-  FREE: ['school_year_config', 'assessments'],
-  PREMIUM: ['school_year_config', 'progress_tracking', 'vacation_planner', 'bulk_scheduler', 'attendance_tracking', 'transcripts', 'planning_mode', 'assessments'],
-  FAMILY: ['school_year_config', 'progress_tracking', 'vacation_planner', 'bulk_scheduler', 'attendance_tracking', 'transcripts', 'planning_mode', 'advanced_analytics', 'assessments']
-}
+
+const TIER_ORDER: UserTier[] = ['FREE', 'ESSENTIAL', 'PRO', 'PREMIUM']
 
 const ADMIN_TABS = [
-  { id: 'planning', label: 'Planning Mode', icon: '🎨', feature: 'planning_mode', description: 'Prepare for your school year with smart planning tasks.', premium: true, color: 'green', path: '/planning' },
-  { id: 'assessments', label: 'Assessments', icon: '📊', feature: 'assessments', description: 'Manage assessments and align with educational standards.', premium: false, color: 'blue', path: '/admin/assessments' },
-  { id: 'transcripts', label: 'Transcripts', icon: '📚', feature: 'transcripts', description: 'Create official transcripts with GPA calculations.', premium: true, color: 'purple', path: '/transcript' },
-  { id: 'school-year', label: 'School Year & Compliance', icon: '🏫', feature: 'school_year_config', description: 'Configure your calendar, state compliance, and goals.', premium: false, color: 'blue' },
-  { id: 'progress', label: 'Progress Tracking', icon: '📈', feature: 'progress_tracking', description: 'Track learning goals and milestones.', premium: true, color: 'blue' },
-  { id: 'vacation', label: 'Vacation Planner', icon: '🌴', feature: 'vacation_planner', description: 'Plan breaks and see schedule impact.', premium: true, color: 'blue' },
-  { id: 'bulk-schedule', label: 'Bulk Scheduler', icon: '⚡', feature: 'bulk_scheduler', description: 'Assign dates to imported lessons.', premium: true, color: 'blue' },
-  { id: 'attendance', label: 'Attendance', icon: '📋', feature: 'attendance_tracking', description: 'Track school days and hours.', premium: true, color: 'blue' }
-];
+  { id: 'planning',      label: 'Planning Mode',           icon: '🎨', feature: 'planning_mode',       requiredTier: 'PREMIUM',   color: 'green', path: '/planning',             description: 'Prepare for your school year with smart planning tasks.' },
+  { id: 'assessments',   label: 'Assessments',             icon: '📊', feature: 'assessments',          requiredTier: 'FREE',      color: 'blue',  path: '/admin/assessments',    description: 'Manage assessments and align with educational standards.' },
+  { id: 'transcripts',   label: 'Transcripts',             icon: '📚', feature: 'transcript_generator', requiredTier: 'PRO',       color: 'purple',path: '/transcript',           description: 'Create official transcripts with GPA calculations.' },
+  { id: 'school-year',   label: 'School Year & Compliance',icon: '🏫', feature: 'school_year_config',   requiredTier: 'FREE',      color: 'blue',  path: null,                    description: 'Configure your calendar, state compliance, and goals.' },
+  { id: 'progress',      label: 'Progress Tracking',       icon: '📈', feature: 'progress_tracking',    requiredTier: 'PREMIUM',   color: 'blue',  path: null,                    description: 'Track learning goals and milestones.' },
+  { id: 'vacation',      label: 'Vacation Planner',        icon: '🌴', feature: 'vacation_planner',     requiredTier: 'PREMIUM',   color: 'blue',  path: null,                    description: 'Plan breaks and see schedule impact.' },
+  { id: 'bulk-schedule', label: 'Bulk Scheduler',          icon: '⚡', feature: 'bulk_scheduler',       requiredTier: 'PREMIUM',   color: 'blue',  path: null,                    description: 'Assign dates to imported lessons.' },
+  { id: 'attendance',    label: 'Attendance',              icon: '📋', feature: 'attendance_tracking',  requiredTier: 'ESSENTIAL', color: 'blue',  path: null,                    description: 'Track school days and hours.' },
+]
 
 function AdminContent() {
   const router = useRouter()
@@ -42,15 +37,20 @@ function AdminContent() {
   const [activeTab, setActiveTab] = useState<string | null>(null)
   const [userTier, setUserTier] = useState<UserTier>('FREE')
   const [kids, setKids] = useState<any[]>([])
-  const organizationId = kids[0]?.organization_id || null 
-  
-  // UX States
+  const organizationId = kids[0]?.organization_id || null
+
   const [showScrollTop, setShowScrollTop] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [isAltPressed, setIsAltPressed] = useState(false)
-  const [showHelp, setShowHelp] = useState(false)
   const [recentlyUsed, setRecentlyUsed] = useState<string[]>([])
   const [shakingId, setShakingId] = useState<string | null>(null)
+
+  // Check if the user's tier includes a given feature (cumulative — PRO includes ESSENTIAL includes FREE)
+  const hasFeature = (feature: string) => {
+    return TIER_ORDER
+      .slice(0, TIER_ORDER.indexOf(userTier) + 1)
+      .some(t => (TIER_FEATURES[t as keyof typeof TIER_FEATURES] as readonly string[])?.includes(feature))
+  }
 
   const loadKids = async () => {
     const { data } = await supabase.from('kids').select('*').order('created_at', { ascending: false })
@@ -59,55 +59,55 @@ function AdminContent() {
 
   const checkUser = async () => {
     const { data: { user } } = await supabase.auth.getUser()
-    
+
     if (!user) {
       if (window.location.hostname === 'localhost') {
-        setUser({ id: '00000000-0000-0000-0000-000000000001', email: 'dev@example.com', role: 'admin' }) // ✅ Admin Bypass
-        setUserTier(getTierForTesting()) 
+        setUser({ id: '00000000-0000-0000-0000-000000000001', email: 'dev@example.com', role: 'admin' })
+        setUserTier(getTierForTesting())
       } else {
         router.push('/')
       }
     } else {
       setUser(user)
       loadKids()
-      setUserTier(getTierForTesting()) 
+      setUserTier(getTierForTesting())
     }
+
     // Auto-open tab from URL param
-const params = new URLSearchParams(window.location.search)
-const tabParam = params.get('tab')
-if (tabParam) {
-  const match = ADMIN_TABS.find(t => t.id === tabParam)
-  if (match && !match.path) {
-    setActiveTab(tabParam)
-    setTimeout(() => {
-      toolRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    }, 300)
-  }
-}
+    const params = new URLSearchParams(window.location.search)
+    const tabParam = params.get('tab')
+    if (tabParam) {
+      const match = ADMIN_TABS.find(t => t.id === tabParam)
+      if (match && !match.path) {
+        setActiveTab(tabParam)
+        setTimeout(() => {
+          toolRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }, 300)
+      }
+    }
     setLoading(false)
   }
-  
+
   useEffect(() => {
     checkUser()
-    
+
     const saved = localStorage.getItem('recent_tools')
     if (saved) setRecentlyUsed(JSON.parse(saved))
-    
+
     const handleTabSwitch = (e: any) => {
       const match = ADMIN_TABS.find(t => t.id === e.detail)
       if (match && !match.path) {
-          setActiveTab(e.detail)
-          setTimeout(() => { toolRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }, 100)
-        }
+        setActiveTab(e.detail)
+        setTimeout(() => { toolRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }, 100)
       }
-      window.addEventListener('switchAdminTab', handleTabSwitch)
+    }
+    window.addEventListener('switchAdminTab', handleTabSwitch)
 
     const handleScroll = () => setShowScrollTop(window.scrollY > 400)
-    
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.altKey) setIsAltPressed(true)
       if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') return
-
       const keyNum = parseInt(e.key)
       if (!isNaN(keyNum) && keyNum >= 1 && keyNum <= ADMIN_TABS.length) {
         e.preventDefault()
@@ -122,24 +122,22 @@ if (tabParam) {
     window.addEventListener('keydown', handleKeyDown, true)
     window.addEventListener('keyup', handleKeyUp)
     window.addEventListener('scroll', handleScroll)
-    
+
     return () => {
       window.removeEventListener('keydown', handleKeyDown, true)
       window.removeEventListener('keyup', handleKeyUp)
       window.removeEventListener('scroll', handleScroll)
       window.removeEventListener('switchAdminTab', handleTabSwitch)
     }
-  }, [userTier]) // Corrected the closure of this useEffect
-
-  const hasFeature = (feature: string) => FEATURES[userTier]?.includes(feature) || false
+  }, [userTier])
 
   const handleToolClick = (tab: any) => {
-    if (tab.premium && !hasFeature(tab.feature)) {
+    if (!hasFeature(tab.feature)) {
       setShakingId(tab.id)
       setTimeout(() => setShakingId(null), 500)
       return
     }
-    
+
     const newRecent = [tab.id, ...recentlyUsed.filter(id => id !== tab.id)].slice(0, 3)
     setRecentlyUsed(newRecent)
     localStorage.setItem('recent_tools', JSON.stringify(newRecent))
@@ -152,7 +150,7 @@ if (tabParam) {
     }
   }
 
-  const filteredTabs = ADMIN_TABS.filter(t => 
+  const filteredTabs = ADMIN_TABS.filter(t =>
     t.label.toLowerCase().includes(searchTerm.toLowerCase()) ||
     t.description.toLowerCase().includes(searchTerm.toLowerCase())
   )
@@ -175,24 +173,21 @@ if (tabParam) {
 
       <div className="max-w-7xl mx-auto">
 
-        {showHelp && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10 animate-in fade-in zoom-in duration-300">
-            <div className="bg-blue-600 rounded-2xl p-6 text-white shadow-lg">
-              <h3 className="font-bold mb-1">🚀 Quick Nav</h3>
-              <p className="text-blue-100 text-[11px]">Top row: New Pages. Bottom row: Workspaces.</p>
-            </div>
-            <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm text-center">
-              <h3 className="font-bold text-gray-900 mb-2">⌨️ Keyboard Shortcuts</h3>
-              <p className="text-[11px] text-gray-500 text-gray-900 uppercase font-black tracking-widest">[1-8] Open </p>
-            </div>
-          </div>
-        )}
-
         <div className="mb-12">
           <h2 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] mb-5 ml-1">External Pages</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             {externalTools.map((tab) => (
-              <ToolCard key={tab.id} tab={tab} index={ADMIN_TABS.findIndex(t => t.id === tab.id) + 1} isLocked={tab.premium && !hasFeature(tab.feature)} isActive={false} isAltPressed={isAltPressed} recentlyUsed={recentlyUsed.includes(tab.id)} isShaking={shakingId === tab.id} onClick={() => handleToolClick(tab)} />
+              <ToolCard
+                key={tab.id}
+                tab={tab}
+                index={ADMIN_TABS.findIndex(t => t.id === tab.id) + 1}
+                isLocked={!hasFeature(tab.feature)}
+                isActive={false}
+                isAltPressed={isAltPressed}
+                recentlyUsed={recentlyUsed.includes(tab.id)}
+                isShaking={shakingId === tab.id}
+                onClick={() => handleToolClick(tab)}
+              />
             ))}
           </div>
         </div>
@@ -201,7 +196,17 @@ if (tabParam) {
           <h2 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] mb-5 ml-1">On-Page Management</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             {internalTools.map((tab) => (
-              <ToolCard key={tab.id} tab={tab} index={ADMIN_TABS.findIndex(t => t.id === tab.id) + 1} isLocked={tab.premium && !hasFeature(tab.feature)} isActive={activeTab === tab.id} isAltPressed={isAltPressed} recentlyUsed={recentlyUsed.includes(tab.id)} isShaking={shakingId === tab.id} onClick={() => handleToolClick(tab)} />
+              <ToolCard
+                key={tab.id}
+                tab={tab}
+                index={ADMIN_TABS.findIndex(t => t.id === tab.id) + 1}
+                isLocked={!hasFeature(tab.feature)}
+                isActive={activeTab === tab.id}
+                isAltPressed={isAltPressed}
+                recentlyUsed={recentlyUsed.includes(tab.id)}
+                isShaking={shakingId === tab.id}
+                onClick={() => handleToolClick(tab)}
+              />
             ))}
           </div>
         </div>
@@ -229,17 +234,26 @@ if (tabParam) {
           </div>
         )}
       </div>
+
+      <DevTierToggle />
     </div>
   )
 }
 
 function ToolCard({ tab, isLocked, isActive, index, isAltPressed, recentlyUsed, isShaking, onClick }: any) {
   const colorSchemes: any = {
-    green: 'from-green-50 to-green-100 border-green-200',
-    blue: 'from-blue-50 to-blue-100 border-blue-200',
-    purple: 'from-purple-50 to-purple-100 border-purple-200'
+    green:  'from-green-50 to-green-100 border-green-200',
+    blue:   'from-blue-50 to-blue-100 border-blue-200',
+    purple: 'from-purple-50 to-purple-100 border-purple-200',
   }
   const scheme = colorSchemes[tab.color] || colorSchemes.blue
+
+  const tierBadgeColor: any = {
+    FREE:      'bg-blue-600',
+    ESSENTIAL: 'bg-green-600',
+    PRO:       'bg-indigo-600',
+    PREMIUM:   'bg-purple-600',
+  }
 
   return (
     <button
@@ -254,8 +268,8 @@ function ToolCard({ tab, isLocked, isActive, index, isAltPressed, recentlyUsed, 
       </div>
       <h3 className="font-black text-gray-900 mb-1">{tab.label}</h3>
       <p className="text-[11px] text-gray-500 mb-4 line-clamp-2">{tab.description}</p>
-      <div className={`text-[9px] px-2.5 py-1 rounded-lg text-white font-black uppercase ${tab.premium ? 'bg-purple-600' : 'bg-blue-600'}`}>
-        {tab.premium ? 'Premium' : 'Free'}
+      <div className={`text-[9px] px-2.5 py-1 rounded-lg text-white font-black uppercase inline-block ${tierBadgeColor[tab.requiredTier] || 'bg-gray-600'}`}>
+        {tab.requiredTier}
       </div>
     </button>
   )

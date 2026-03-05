@@ -8,11 +8,8 @@ import {
   Clock, 
   TrendingUp,
   AlertTriangle,
-  ArrowLeft,
   Users,
   User,
-  Settings,
-  Download,
   ChevronRight,
   ExternalLink
 } from 'lucide-react'
@@ -49,20 +46,9 @@ export default function CompliancePage() {
   useAppHeader({ title: 'Compliance', backHref: '/dashboard' })  
   const supabase = createClient()
   
-  // Hooks
   const { templates, loading: templatesLoading, getTemplate } = useStateComplianceTemplates()
   const { settings, loading: settingsLoading, refreshSettings } = useComplianceSettings()
 
-  // ADD THESE DEBUG LOGS
-  useEffect(() => {
-    console.log('=== TEMPLATES DEBUG ===')
-    console.log('Templates loading:', templatesLoading)
-    console.log('Templates array:', templates)
-    console.log('Templates count:', templates.length)
-    console.log('Templates:', JSON.stringify(templates, null, 2))
-  }, [templates, templatesLoading])
-  
-  // State
   const [viewMode, setViewMode] = useState<'family' | 'individual'>('family')
   const [selectedKidId, setSelectedKidId] = useState<string | null>(null)
   const [kids, setKids] = useState<Kid[]>([])
@@ -71,7 +57,6 @@ export default function CompliancePage() {
   const [complianceData, setComplianceData] = useState<KidComplianceData[]>([])
   const [isExporting, setIsExporting] = useState(false)
   
-  // State configuration
   const [selectedState, setSelectedState] = useState<string>('')
   const [showStateSelector, setShowStateSelector] = useState(false)
   const [schoolYearStart, setSchoolYearStart] = useState<string>('')
@@ -107,7 +92,7 @@ export default function CompliancePage() {
           school_year_end_date: currentSettings.school_year_end_date,
         },
         familyHealthScore,
-        organizationName: 'HomeschoolHQ Family',
+        organizationName: 'HomeschoolReady Family',
         parentName
       })
       
@@ -120,63 +105,62 @@ export default function CompliancePage() {
     }
   }
 
-        // Get organization ID and kids
-        useEffect(() => {
-          async function loadData() {
-            const { data: { user } } = await supabase.auth.getUser()
-            
-            let orgId: string | null = null
-            
-            if (!user) {
-              // Dev mode - use hardcoded org
-              orgId = 'd52497c0-42a9-49b7-ba3b-849bffa27fc4'
-            } else {
-              // First try: organization_members table
-              const { data: orgMember } = await supabase
-                .from('organization_members')
-                .select('organization_id')
-                .eq('user_id', user.id)
-                .maybeSingle()
-              
-              if (orgMember?.organization_id) {
-                orgId = orgMember.organization_id
-              } else {
-                // Second try: user_profiles table
-                const { data: profile } = await supabase
-                  .from('user_profiles')
-                  .select('organization_id')
-                  .eq('id', user.id)
-                  .maybeSingle()
-                
-                if (profile?.organization_id) {
-                  orgId = profile.organization_id
-                } else {
-                  // Last resort: use user.id as org
-                  orgId = user.id
-                }
-              }
-            }
+  // Get organization ID and kids
+  useEffect(() => {
+    async function loadData() {
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      if (!user) {
+        router.push('/')
+        return
+      }
 
-            if (!orgId) {
-              console.error('Could not determine organization ID')
-              setLoading(false)
-              return
-            }
+      let orgId: string | null = null
 
-            setOrganizationId(orgId)
+      // First try: user_profiles table
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('organization_id')
+        .eq('user_id', user.id)
+        .maybeSingle()
+      
+      if (profile?.organization_id) {
+        orgId = profile.organization_id
+      } else {
+        // Second try: kids table
+        const { data: kid } = await supabase
+          .from('kids')
+          .select('organization_id')
+          .eq('user_id', user.id)
+          .limit(1)
+          .maybeSingle()
 
-            // Load kids using the org ID
-            const { data: kidsData } = await supabase
-              .from('kids')
-              .select('*')
-              .eq('organization_id', orgId)
-              .order('created_at', { ascending: true })
+        if (kid?.organization_id) {
+          orgId = kid.organization_id
+        } else {
+          // Last resort: use user.id as org
+          orgId = user.id
+        }
+      }
 
-            if (kidsData) setKids(kidsData)
-            setLoading(false)
-          }
-          loadData()
-        }, [router])
+      if (!orgId) {
+        setLoading(false)
+        return
+      }
+
+      setOrganizationId(orgId)
+
+      const { data: kidsData } = await supabase
+        .from('kids')
+        .select('*')
+        .eq('organization_id', orgId)
+        .order('created_at', { ascending: true })
+
+      if (kidsData) setKids(kidsData)
+      setLoading(false)
+    }
+    loadData()
+  }, [router])
 
   // Load settings and set state
   useEffect(() => {
@@ -226,14 +210,13 @@ export default function CompliancePage() {
       setShowStateSelector(false)
       alert('✅ State settings saved!')
     } catch (err) {
-      console.error('Error saving:', err)
+      console.error('Error saving compliance settings:', err)
       alert('Failed to save settings')
     } finally {
       setSaving(false)
     }
   }
 
-  // Get template and requirements
   const template = getTemplate(selectedState || settings?.state_code || '')
   const requiredDays = template?.required_days || settings?.required_annual_days || 0
   const requiredHours = template?.required_hours || settings?.required_annual_hours || 0
@@ -270,7 +253,6 @@ export default function CompliancePage() {
 
         const hoursRemaining = Math.max(0, requiredHours - totalHours)
         const daysRemaining = Math.max(0, requiredDays - totalDays)
-
         const onTrack = healthScore >= 75
 
         data.push({
@@ -292,7 +274,6 @@ export default function CompliancePage() {
     loadComplianceData()
   }, [settings, kids, organizationId, requiredDays, requiredHours])
 
-  // Calculate family health score
   const familyHealthScore = complianceData.length > 0
     ? Math.round(complianceData.reduce((sum, d) => sum + d.healthScore, 0) / complianceData.length)
     : 0
@@ -326,13 +307,10 @@ export default function CompliancePage() {
     )
   }
 
-  // Show state selector if no state configured
   if (!settings || showStateSelector) {
     return (
       <div className="min-h-screen bg-gray-50 p-8">
         <div className="max-w-3xl mx-auto">
-
-          
           <div className="bg-white rounded-2xl shadow-lg p-8">
             <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <ShieldCheck className="text-indigo-600" size={32} />
@@ -345,11 +323,8 @@ export default function CompliancePage() {
             </p>
 
             <div className="space-y-6">
-              {/* State Selection */}
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">
-                  Your State
-                </label>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Your State</label>
                 <select
                   value={selectedState}
                   onChange={(e) => setSelectedState(e.target.value)}
@@ -364,7 +339,6 @@ export default function CompliancePage() {
                 </select>
               </div>
 
-              {/* Template Info */}
               {template && (
                 <div className="p-4 bg-blue-50 rounded-xl border-2 border-blue-200">
                   <h3 className="font-bold text-gray-900 mb-2">{template.state_name} Requirements</h3>
@@ -391,12 +365,9 @@ export default function CompliancePage() {
                 </div>
               )}
 
-              {/* School Year */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">
-                    School Year Start
-                  </label>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">School Year Start</label>
                   <input
                     type="date"
                     value={schoolYearStart}
@@ -405,9 +376,7 @@ export default function CompliancePage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">
-                    School Year End
-                  </label>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">School Year End</label>
                   <input
                     type="date"
                     value={schoolYearEnd}
@@ -417,7 +386,6 @@ export default function CompliancePage() {
                 </div>
               </div>
 
-              {/* Disclaimer */}
               {template && (
                 <div className="p-4 bg-yellow-50 border-2 border-yellow-200 rounded-xl">
                   <p className="text-xs text-gray-700 italic">
@@ -426,7 +394,6 @@ export default function CompliancePage() {
                 </div>
               )}
 
-              {/* Save Button */}
               <button
                 onClick={handleSaveState}
                 disabled={saving || !selectedState || !schoolYearStart || !schoolYearEnd}
@@ -485,7 +452,6 @@ export default function CompliancePage() {
         {/* Family Overview Mode */}
         {viewMode === 'family' && (
           <div className="space-y-6">
-            {/* Family Health Score Card */}
             <div className={`rounded-[2rem] border-2 p-8 ${getHealthBg(familyHealthScore)}`}>
               <div className="flex items-center justify-between">
                 <div>
@@ -524,7 +490,6 @@ export default function CompliancePage() {
               </div>
             </div>
 
-            {/* Student Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {complianceData.map((data) => {
                 const daysProgress = data.requiredDays > 0 ? (data.totalDays / data.requiredDays) * 100 : 0
@@ -539,7 +504,6 @@ export default function CompliancePage() {
                       setViewMode('individual')
                     }}
                   >
-                    {/* Header */}
                     <div className={`p-6 border-b-4 ${
                       data.healthScore >= 80 ? 'border-green-500 bg-green-50' :
                       data.healthScore >= 60 ? 'border-yellow-500 bg-yellow-50' :
@@ -559,26 +523,19 @@ export default function CompliancePage() {
                             </div>
                           )}
                           <div>
-                            <h3 className="font-black text-gray-900 text-lg">
-                              {data.kid.displayname}
-                            </h3>
+                            <h3 className="font-black text-gray-900 text-lg">{data.kid.displayname}</h3>
                             {data.kid.grade && (
-                              <p className="text-xs text-gray-600 font-bold">
-                                Grade {data.kid.grade}
-                              </p>
+                              <p className="text-xs text-gray-600 font-bold">Grade {data.kid.grade}</p>
                             )}
                           </div>
                         </div>
-                        
                         <div className={`text-3xl font-black ${getHealthColor(data.healthScore)}`}>
                           {data.healthScore}%
                         </div>
                       </div>
                     </div>
 
-                    {/* Progress Metrics */}
                     <div className="p-6 space-y-4">
-                      {/* Days Progress */}
                       {data.requiredDays > 0 && (
                         <div>
                           <div className="flex items-center justify-between mb-2">
@@ -597,14 +554,11 @@ export default function CompliancePage() {
                             />
                           </div>
                           {data.daysRemaining > 0 && (
-                            <p className="text-xs text-gray-500 mt-1">
-                              {data.daysRemaining} days remaining
-                            </p>
+                            <p className="text-xs text-gray-500 mt-1">{data.daysRemaining} days remaining</p>
                           )}
                         </div>
                       )}
 
-                      {/* Hours Progress */}
                       {data.requiredHours > 0 && (
                         <div>
                           <div className="flex items-center justify-between mb-2">
@@ -623,18 +577,13 @@ export default function CompliancePage() {
                             />
                           </div>
                           {data.hoursRemaining > 0 && (
-                            <p className="text-xs text-gray-500 mt-1">
-                              {data.hoursRemaining} hours remaining
-                            </p>
+                            <p className="text-xs text-gray-500 mt-1">{data.hoursRemaining} hours remaining</p>
                           )}
                         </div>
                       )}
 
-                      {/* Status Badge */}
                       <div className={`mt-4 p-3 rounded-xl border-2 ${
-                        data.onTrack 
-                          ? 'bg-green-50 border-green-200' 
-                          : 'bg-red-50 border-red-200'
+                        data.onTrack ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
                       }`}>
                         <div className="flex items-center justify-between">
                           <span className={`text-xs font-black uppercase ${
@@ -656,7 +605,6 @@ export default function CompliancePage() {
         {/* Individual Detail Mode */}
         {viewMode === 'individual' && selectedKidData && (
           <div className="space-y-6">
-            {/* Student Selector */}
             <div className="bg-white rounded-2xl shadow-lg p-4">
               <div className="flex items-center gap-3 overflow-x-auto">
                 {complianceData.map((data) => (
@@ -693,15 +641,11 @@ export default function CompliancePage() {
               </div>
             </div>
 
-            {/* Detailed Stats */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Health Score */}
               <div className={`rounded-2xl border-2 p-6 ${getHealthBg(selectedKidData.healthScore)}`}>
                 <div className="flex items-center gap-2 mb-3">
                   <TrendingUp size={20} className={getHealthColor(selectedKidData.healthScore)} />
-                  <h3 className="text-sm font-black text-gray-600 uppercase">
-                    Health Score
-                  </h3>
+                  <h3 className="text-sm font-black text-gray-600 uppercase">Health Score</h3>
                 </div>
                 <div className={`text-5xl font-black ${getHealthColor(selectedKidData.healthScore)}`}>
                   {selectedKidData.healthScore}%
@@ -711,18 +655,13 @@ export default function CompliancePage() {
                 </p>
               </div>
 
-              {/* Days Progress */}
               {selectedKidData.requiredDays > 0 && (
                 <div className="bg-white rounded-2xl border-2 border-gray-200 p-6">
                   <div className="flex items-center gap-2 mb-3">
                     <Calendar size={20} className="text-indigo-600" />
-                    <h3 className="text-sm font-black text-gray-600 uppercase">
-                      School Days
-                    </h3>
+                    <h3 className="text-sm font-black text-gray-600 uppercase">School Days</h3>
                   </div>
-                  <div className="text-5xl font-black text-gray-900">
-                    {selectedKidData.totalDays}
-                  </div>
+                  <div className="text-5xl font-black text-gray-900">{selectedKidData.totalDays}</div>
                   <p className="text-sm text-gray-600 font-medium mt-2">
                     of {selectedKidData.requiredDays} required
                     {selectedKidData.daysRemaining > 0 && (
@@ -734,18 +673,13 @@ export default function CompliancePage() {
                 </div>
               )}
 
-              {/* Hours Progress */}
               {selectedKidData.requiredHours > 0 && (
                 <div className="bg-white rounded-2xl border-2 border-gray-200 p-6">
                   <div className="flex items-center gap-2 mb-3">
                     <Clock size={20} className="text-indigo-600" />
-                    <h3 className="text-sm font-black text-gray-600 uppercase">
-                      Instructional Hours
-                    </h3>
+                    <h3 className="text-sm font-black text-gray-600 uppercase">Instructional Hours</h3>
                   </div>
-                  <div className="text-5xl font-black text-gray-900">
-                    {selectedKidData.totalHours}
-                  </div>
+                  <div className="text-5xl font-black text-gray-900">{selectedKidData.totalHours}</div>
                   <p className="text-sm text-gray-600 font-medium mt-2">
                     of {selectedKidData.requiredHours} required
                     {selectedKidData.hoursRemaining > 0 && (
@@ -758,27 +692,19 @@ export default function CompliancePage() {
               )}
             </div>
 
-            {/* Progress Chart Placeholder */}
             <div className="bg-white rounded-2xl shadow-lg p-8">
-              <h3 className="text-xl font-black text-gray-900 mb-4">
-                Progress Over Time
-              </h3>
+              <h3 className="text-xl font-black text-gray-900 mb-4">Progress Over Time</h3>
               <div className="h-64 bg-gray-50 rounded-xl flex items-center justify-center border-2 border-dashed border-gray-200">
-                <p className="text-gray-400 font-medium">
-                  📊 Chart coming in next phase
-                </p>
+                <p className="text-gray-400 font-medium">📊 Chart coming in next phase</p>
               </div>
             </div>
 
-            {/* Recommendations */}
             {!selectedKidData.onTrack && (
               <div className="bg-orange-50 border-2 border-orange-200 rounded-2xl p-6">
                 <div className="flex items-start gap-3">
                   <AlertTriangle className="text-orange-600 flex-shrink-0 mt-1" size={24} />
                   <div>
-                    <h3 className="font-black text-orange-900 mb-2">
-                      Action Needed
-                    </h3>
+                    <h3 className="font-black text-orange-900 mb-2">Action Needed</h3>
                     <ul className="space-y-1 text-sm text-orange-800">
                       {selectedKidData.daysRemaining > 0 && (
                         <li>• Schedule {selectedKidData.daysRemaining} more school days before year end</li>

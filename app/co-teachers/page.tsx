@@ -86,7 +86,7 @@ export default function CoTeachersPage() {
   useEffect(() => {
     async function checkAuth() {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.push('/login'); return; }
+      if (!user) { router.push('/'); return; }
 
       const { data: membership } = await supabase
         .from('user_organizations')

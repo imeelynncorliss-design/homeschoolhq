@@ -272,7 +272,7 @@ function TeachingScheduleContent() {
 
   async function loadData() {
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { router.push('/login'); return }
+    if (!user) { router.push('/'); return }
     setUser(user)
 
     let orgId: string | null = null

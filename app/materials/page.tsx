@@ -5,7 +5,6 @@ import { supabase } from '@/src/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { useAppHeader } from '@/components/layout/AppHeader'
 import MaterialsHelpModal from '@/components/MaterialsHelpModal'
-import { HelpCircle } from 'lucide-react'
 
 type MaterialType = 'textbook' | 'subscription' | 'physical' | 'digital';
 
@@ -69,46 +68,32 @@ export default function MaterialsPage() {
         router.push('/'); 
         return; 
       }
-  
-      console.log('🔍 Looking for organization_id for user:', user.id);
-  
-      // 1. PRIMARY: Try user_profiles first (most direct)
-      const { data: profile, error: profileError } = await supabase
+
+      // 1. PRIMARY: Try user_profiles first
+      const { data: profile } = await supabase
         .from('user_profiles')
         .select('organization_id')
         .eq('user_id', user.id)
         .maybeSingle();
-  
-      if (profileError) {
-        console.error('⚠️ Error fetching user_profiles:', profileError.message);
-      }
-  
+
       if (profile?.organization_id) {
-        console.log('✅ Found organization_id from user_profiles:', profile.organization_id);
         setOrganizationId(profile.organization_id);
         setLoading(false);
         return;
       }
-  
-      // 2. FALLBACK: Try kids table (in case profile isn't populated yet)
-      console.log('📋 Trying fallback: checking kids table...');
-      const { data: kid, error: kidError } = await supabase
+
+      // 2. FALLBACK: Try kids table
+      const { data: kid } = await supabase
         .from('kids')
         .select('organization_id')
         .eq('user_id', user.id)
         .limit(1)
         .maybeSingle();
-  
-      if (kidError) {
-        console.error('⚠️ Error fetching kids:', kidError.message);
-      }
-  
+
       if (kid?.organization_id) {
-        console.log('✅ Found organization_id from kids table:', kid.organization_id);
         setOrganizationId(kid.organization_id);
         
-        // BONUS: Backfill user_profiles so next time it's faster
-        console.log('💾 Backfilling user_profiles with organization_id...');
+        // Backfill user_profiles so next time it's faster
         await supabase
           .from('user_profiles')
           .update({ organization_id: kid.organization_id })
@@ -116,23 +101,22 @@ export default function MaterialsPage() {
       } else {
         // 3. FALLBACK: co-teacher path
         const { data: collab } = await supabase
-        .from('family_collaborators')
-        .select('organization_id')
-        .eq('user_id', user.id)
-        .limit(1)
-        .maybeSingle()
+          .from('family_collaborators')
+          .select('organization_id')
+          .eq('user_id', user.id)
+          .limit(1)
+          .maybeSingle()
 
-      if (collab?.organization_id) {
-        setOrganizationId(collab.organization_id)
-      } else {
-        console.error('❌ NO ORGANIZATION_ID FOUND')
-        setOrganizationId(null)
+        if (collab?.organization_id) {
+          setOrganizationId(collab.organization_id)
+        } else {
+          setOrganizationId(null)
+        }
       }
-}       
   
       setLoading(false);
     } catch (error) { 
-      console.error('💥 Critical error loading data:', error); 
+      console.error('Error loading materials data:', error); 
       setLoading(false);
     }
   };
@@ -155,10 +139,7 @@ export default function MaterialsPage() {
       return;
     }
 
-    if (!organizationId) {
-      console.warn('⚠️ Cannot load materials without organization_id');
-      return;
-    }
+    if (!organizationId) return;
 
     setLoading(true);
     try {
@@ -243,8 +224,6 @@ export default function MaterialsPage() {
       notes: formNotes || null,
     };
 
-    console.log('💾 Attempting to save material:', materialData);
-
     try {
       // DEV MODE SESSION STORAGE
       if (organizationId === '00000000-0000-0000-0000-000000000000') {
@@ -258,7 +237,6 @@ export default function MaterialsPage() {
           ? existing.map((m: any) => m.id === editingMaterial.id ? newItem : m) 
           : [newItem, ...existing];
         sessionStorage.setItem('dev_materials', JSON.stringify(updated));
-        console.log('✅ Material saved to session storage (dev mode)');
         setShowAddForm(false); 
         resetForm(); 
         loadMaterials(); 
@@ -268,30 +246,18 @@ export default function MaterialsPage() {
 
       // PRODUCTION DATABASE SAVE
       if (editingMaterial) {
-        console.log('📝 Updating existing material:', editingMaterial.id);
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from('materials')
           .update(materialData)
           .eq('id', editingMaterial.id)
           .select();
-        
-        if (error) {
-          console.error('❌ Update failed:', error);
-          throw error;
-        }
-        console.log('✅ Material updated successfully:', data);
+        if (error) throw error;
       } else {
-        console.log('➕ Inserting new material');
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from('materials')
           .insert([materialData])
           .select();
-        
-        if (error) {
-          console.error('❌ Insert failed:', error);
-          throw error;
-        }
-        console.log('✅ Material created successfully:', data);
+        if (error) throw error;
       }
 
       setShowAddForm(false); 
@@ -299,13 +265,8 @@ export default function MaterialsPage() {
       loadMaterials();
       alert('✅ Material saved successfully!');
     } catch (error: any) { 
-      console.error('💥 Save error details:', {
-        message: error.message,
-        hint: error.hint,
-        details: error.details,
-        code: error.code
-      });
-      alert(`Failed to save material: ${error.message || 'Unknown error'}\n\nCheck console for details.`); 
+      console.error('Error saving material:', error);
+      alert(`Failed to save material: ${error.message || 'Unknown error'}`); 
     } finally {
       setIsSaving(false);
     }
@@ -398,7 +359,7 @@ export default function MaterialsPage() {
           })}
         </div>
 
-        {/* SEARCH & FILTERS - DARKER TEXT */}
+        {/* SEARCH & FILTERS */}
         <div className="bg-white rounded-2xl shadow-md border border-slate-200 p-6 mb-8">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="relative flex-1">
@@ -421,7 +382,7 @@ export default function MaterialsPage() {
           </div>
         </div>
 
-        {/* RESOURCE LIST - HIGH CONTRAST WITH DESCRIPTIONS */}
+        {/* RESOURCE LIST */}
         <div className="space-y-8 pb-20">
           {(['textbook', 'subscription', 'physical', 'digital'] as MaterialType[]).map(type => {
             const typeMaterials = materials.filter(m => m.material_type === type);
@@ -507,7 +468,7 @@ export default function MaterialsPage() {
         </div>
       </div>
       {showHelpModal && <MaterialsHelpModal onClose={() => setShowHelpModal(false)} />}
-      {/* FORM MODAL - TYPE LOCKED FOR PHYSICAL MATERIALS */}
+      {/* FORM MODAL */}
       {showAddForm && (
         <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-3xl p-10 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-200">
