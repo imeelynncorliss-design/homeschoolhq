@@ -58,7 +58,7 @@ function DashboardContent() {
   const [lessonsByKid, setLessonsByKid] = useState<{ [kidId: string]: any[] }>({})
   const [selectedKid, setSelectedKid] = useState<string | null>(null)
   const [organizationId, setOrganizationId] = useState<string | null>(null)
-  const [isCoTeacher, setIsCoTeacher] = useState(false) // NEW
+  const [isCoTeacher, setIsCoTeacher] = useState(false)
   const [showAssessmentGenerator, setShowAssessmentGenerator] = useState(false)
   const [showAutoSchedule, setShowAutoSchedule] = useState(false)
   const [viewMode, setViewMode] = useState<'calendar' | 'list'>(
@@ -71,7 +71,6 @@ function DashboardContent() {
   const [showProfileForm, setShowProfileForm] = useState(false)
   const [editingKid, setEditingKid] = useState<any | null>(null)
   const [showLessonEditModal, setShowLessonEditModal] = useState(false)
-
 
   const [editLessonSubject, setEditLessonSubject] = useState('')
   const [editLessonSubjectSelect, setEditLessonSubjectSelect] = useState('')
@@ -122,7 +121,6 @@ function DashboardContent() {
   const router = useRouter()
   useAppHeader({ title: '📅 Calendar', backHref: '/dashboard' })
 
-  // FIX: loadKids now accepts orgId and queries by organization_id
   const loadKids = async (orgId?: string | null) => {
     if (!user && !orgId) return
     const resolvedOrgId = orgId || organizationId
@@ -141,7 +139,6 @@ function DashboardContent() {
     }
   }
 
-  // FIX: loadAllLessons now queries by organization_id
   const loadAllLessons = async (orgId?: string | null) => {
     if (!user) return
     const resolvedOrgId = orgId || organizationId || user.id
@@ -205,17 +202,24 @@ function DashboardContent() {
 
     const loadSettings = async () => {
       try {
-        // Try to get orgId from kids table (parent-admin path)
-        const { data: kidsData } = await supabase
-          .from('kids')
-          .select('organization_id')
+        // FIX: Resolve org from user_organizations first (works for both admins and co-teachers).
+        // The old approach queried kids by user_id and fell back to family_collaborators only
+        // when no kids were found — causing new admins to get isCoTeacher=true and orgId=user.id.
+        const { data: orgMembership } = await supabase
+          .from('user_organizations')
+          .select('organization_id, role')
           .eq('user_id', user.id)
           .limit(1)
           .maybeSingle()
 
-        let orgId = kidsData?.organization_id || null
+        let orgId = orgMembership?.organization_id || null
 
-        // FIX: Co-teacher fallback — check family_collaborators if no kids found
+        // FIX: Determine co-teacher from explicit role field, not absence of kids
+        if (orgMembership && orgMembership.role !== 'admin' && orgMembership.role !== 'owner') {
+          if (mounted) setIsCoTeacher(true)
+        }
+
+        // FALLBACK: family_collaborators for users not yet in user_organizations
         if (!orgId) {
           const { data: collabData } = await supabase
             .from('family_collaborators')
@@ -226,16 +230,18 @@ function DashboardContent() {
 
           if (collabData) {
             orgId = collabData.organization_id
-            if (mounted) setIsCoTeacher(true)
+            // FIX: Use role to determine co-teacher, not mere presence in table
+            if (collabData.role !== 'admin' && collabData.role !== 'owner') {
+              if (mounted) setIsCoTeacher(true)
+            }
           }
         }
 
         const resolvedOrgId = orgId || user.id
         if (mounted) setOrganizationId(resolvedOrgId)
 
-        // Load kids using the resolved orgId
         await loadKids(resolvedOrgId)
-        if (mounted) setLoading(false) 
+        if (mounted) setLoading(false)
 
         const { data: collabData } = await supabase
           .from('family_collaborators')
@@ -279,7 +285,7 @@ function DashboardContent() {
   }, [selectedLesson])
 
   const hasFeature = (feature: string) => checkFeature(userTier, feature)
-  const canAddChild = () => !isCoTeacher && kids.length < getChildLimit(userTier) // co-teachers cannot add children
+  const canAddChild = () => !isCoTeacher && kids.length < getChildLimit(userTier)
   const selectedKidData = kids.find(k => k.id === selectedKid) || null
   const selectedKidLessons = selectedKid ? (lessonsByKid[selectedKid] || []) : []
   const complianceBtnClass = (complianceHealthScore ?? 0) >= 80
@@ -505,7 +511,7 @@ function DashboardContent() {
 
       {/* MAIN CONTENT */}
       <div className="max-w-7xl mx-auto px-3 sm:px-6 py-4 space-y-4">
-      <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap">
           <div className="relative group">
             <span className="text-xs font-bold text-gray-400 uppercase tracking-wide cursor-default">Kids</span>
             <div className="absolute left-0 top-6 z-50 hidden group-hover:block bg-gray-800 text-white text-xs rounded-lg px-3 py-2 whitespace-nowrap shadow-lg">
@@ -513,25 +519,26 @@ function DashboardContent() {
               <div className="absolute -top-1 left-3 w-2 h-2 bg-gray-800 rotate-45" />
             </div>
           </div>
-            {kids.map((kid) => (
-              <button key={kid.id} onClick={() => setSelectedKid(kid.id)} title={kid.displayname}
-                className={`w-9 h-9 rounded-full overflow-hidden border-2 transition-all flex-shrink-0 ${selectedKid === kid.id ? 'border-purple-500 shadow-md ring-2 ring-purple-200' : 'border-gray-200 hover:border-purple-300'}`}
-              >
-                {kid.photo_url ? (
-                  <img src={kid.photo_url} alt={kid.displayname} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-violet-400 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
-                    {kid.displayname.charAt(0).toUpperCase()}
-                  </div>
-                )}
-              </button>
-            ))}
-            {canAddChild() && (
-              <button onClick={() => { setEditingKid(null); setShowProfileForm(true) }} title="Add a child"
-                className="w-9 h-9 rounded-full border-2 border-dashed border-gray-300 hover:border-purple-400 flex items-center justify-center text-gray-400 hover:text-purple-500 transition-all text-lg font-light"
-              >+</button>
-            )}
-          </div>
+          {kids.map((kid) => (
+            <button key={kid.id} onClick={() => setSelectedKid(kid.id)} title={kid.displayname}
+              className={`w-9 h-9 rounded-full overflow-hidden border-2 transition-all flex-shrink-0 ${selectedKid === kid.id ? 'border-purple-500 shadow-md ring-2 ring-purple-200' : 'border-gray-200 hover:border-purple-300'}`}
+            >
+              {kid.photo_url ? (
+                <img src={kid.photo_url} alt={kid.displayname} className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-violet-400 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
+                  {kid.displayname.charAt(0).toUpperCase()}
+                </div>
+              )}
+            </button>
+          ))}
+          {canAddChild() && (
+            <button onClick={() => { setEditingKid(null); setShowProfileForm(true) }} title="Add a child"
+              className="w-9 h-9 rounded-full border-2 border-dashed border-gray-300 hover:border-purple-400 flex items-center justify-center text-gray-400 hover:text-purple-500 transition-all text-lg font-light"
+            >+</button>
+          )}
+        </div>
+
         <AttendanceReminder
           onTakeAttendance={() => { router.push('/admin'); setTimeout(() => { window.dispatchEvent(new Event('openAttendance')) }, 500) }}
           kids={kids}
@@ -541,7 +548,6 @@ function DashboardContent() {
         {kids.length === 0 ? (
           <div className="bg-white rounded-lg shadow p-12 text-center">
             <div className="text-6xl mb-4">👋</div>
-            {/* FIX: Role-aware welcome message and empty state */}
             {isCoTeacher ? (
               <>
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome to HomeschoolReady!</h2>

@@ -99,7 +99,8 @@ interface KidScheduleStatus {
 // ─── Onboarding Steps ─────────────────────────────────────────────────────────
 
 const ONBOARDING_STEPS = [
-  { id: 1, icon: '👧', title: 'Add Your Child', desc: 'Create a profile so everything is personalized.', completedLabel: 'Profile created!' },
+  // FIX: Added href so the "Go →" button renders for new admins with no kids yet
+  { id: 1, icon: '👧', title: 'Add Your Child', desc: 'Create a profile so everything is personalized.', completedLabel: 'Profile created!', href: '/calendar' },
   { id: 2, icon: '📚', title: 'Add Your First Lesson', desc: 'Create a lesson or import from your curriculum.', completedLabel: 'First lesson added!', href: '/lessons' },
   { id: 3, icon: '⚡', title: 'Schedule Your Lessons', desc: 'Use the Bulk Scheduler to assign dates to lessons.', completedLabel: 'All lessons scheduled!', href: '/admin?tab=bulk-schedule' },
   { id: 4, icon: '📅', title: 'View Your Teaching Day', desc: "See what you're teaching at a glance.", completedLabel: "You're ready to teach!", href: '/calendar' },
@@ -141,7 +142,6 @@ function OnboardingChecklist({
 
   return (
     <div style={css.checklistCard}>
-      {/* Header */}
       <div style={css.checklistHeader}>
         <div style={css.checklistHeaderLeft}>
           <span style={{ fontSize: 22 }}>🚀</span>
@@ -162,7 +162,6 @@ function OnboardingChecklist({
         </div>
       </div>
 
-      {/* Progress bar */}
       <div style={css.progressTrack}>
         <div style={{
           ...css.progressFill,
@@ -173,7 +172,6 @@ function OnboardingChecklist({
         }} />
       </div>
 
-      {/* Steps */}
       {!collapsed && (
         <div style={css.checklistSteps}>
           {ONBOARDING_STEPS.map((step) => {
@@ -310,6 +308,7 @@ function DashboardContent() {
   const [kidScheduleStatuses, setKidScheduleStatuses] = useState<KidScheduleStatus[]>([])
   const [calendarVisited, setCalendarVisited] = useState(false)
   const [isCollaborator, setIsCollaborator] = useState(false)
+
   const visibleNavCards = NAV_CARDS.map(card => {
     if (card.id === 'collaborate' && isCollaborator) {
       return {
@@ -342,7 +341,7 @@ function DashboardContent() {
         setOrganizationId(orgId)
         setParentName(collaboration.name || user.email?.split('@')[0] || '')
 
-        // Load the family's kids using org_id
+        // Load the family's kids using organization_id
         const { data: kidsData } = await supabase
           .from('kids')
           .select('*')
@@ -351,22 +350,34 @@ function DashboardContent() {
 
         setKids(kidsData || [])
       } else {
-        // Admin — original flow
+        // FIX: Admin — resolve org from user_organizations first, NOT from kids table.
+        // The old pattern queried kids by user_id and fell back to user.id as orgId,
+        // which broke the Add Child flow for new admins who have no kids yet.
+        const { data: orgMembership } = await supabase
+          .from('user_organizations')
+          .select('organization_id')
+          .eq('user_id', user.id)
+          .limit(1)
+          .maybeSingle()
+
+        orgId = orgMembership?.organization_id || user.id
+        setOrganizationId(orgId)
+
+        // FIX: Query kids by organization_id, not user_id
         const { data: kidsData } = await supabase
           .from('kids')
           .select('*')
-          .eq('user_id', user.id)
+          .eq('organization_id', orgId)
           .order('created_at', { ascending: false })
 
         if (kidsData?.length) {
           setKids(kidsData)
-          orgId = kidsData[0].organization_id || user.id
-          setOrganizationId(orgId)
 
+          // FIX: Use organization_id for lessons count, not user_id
           const { count: totalCount } = await supabase
             .from('lessons')
             .select('id', { count: 'exact', head: true })
-            .eq('user_id', user.id)
+            .eq('organization_id', orgId)
           setHasLessons((totalCount ?? 0) > 0)
 
           const statuses: KidScheduleStatus[] = await Promise.all(
@@ -391,9 +402,6 @@ function DashboardContent() {
             })
           )
           setKidScheduleStatuses(statuses.filter(s => s.total > 0))
-        } else {
-          orgId = user.id
-          setOrganizationId(orgId)
         }
 
         const { data: profile } = await supabase
@@ -457,7 +465,7 @@ function DashboardContent() {
           <>
             <div style={css.sectionLabel}>WHERE WOULD YOU LIKE TO GO?</div>
             <div style={css.grid}>
-            {visibleNavCards.map(card => <NavCard key={card.id} card={card} />)}
+              {visibleNavCards.map(card => <NavCard key={card.id} card={card} />)}
             </div>
           </>
         )}
