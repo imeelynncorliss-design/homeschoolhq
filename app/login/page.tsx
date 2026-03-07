@@ -50,8 +50,8 @@ export default function LoginPage() {
       if (collaboration) {
         router.push('/dashboard')
       } else {
-        // No org at all — send to join flow
-        router.push('/join')
+        // No org at all — send onboarding - co-teahcer will have org-id
+        router.push('/onboarding')
       }
       }
       router.refresh()

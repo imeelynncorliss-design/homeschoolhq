@@ -120,8 +120,9 @@ function SignupContent() {
       // Step 3: New parent path — no invite code
       if (data.session) {
         // Session live — go straight to dashboard
+        // Session live — go to onboarding
         setSuccess(true)
-        setTimeout(() => router.push('/dashboard'), 1500)
+        setTimeout(() => router.push('/onboarding'), 1500)
       } else {
         // Email confirmation required
         setSuccess(true)
@@ -190,7 +191,7 @@ function SignupContent() {
           {!hasInviteCode && !parentNeedsConfirmation && (
             <>
               <h2 className="text-2xl font-black text-gray-900 mb-2">Account Created!</h2>
-              <p className="text-gray-600">Redirecting to your dashboard…</p>
+              <p className="text-gray-600">Setting up your school…</p>
             </>
           )}
 

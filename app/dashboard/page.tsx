@@ -8,6 +8,7 @@ import DevTierToggle from '@/components/DevTierToggle'
 import HelpWidget from '../../components/HelpWidget'
 import StatsBar from '@/src/components/dashboard/StatsBar'
 import { type UserTier, getTierForTesting, getChildLimit } from '@/lib/tierTesting'
+import { getOrganizationId } from '@/src/lib/getOrganizationId'
 
 // ─── Nav Card Data ────────────────────────────────────────────────────────────
 
@@ -206,6 +207,24 @@ function OnboardingChecklist({
                   <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 2 }}>
                     {isDone ? step.completedLabel : step.desc}
                   </div>
+                  {isDone && step.id === 1 && (
+                    <button
+                      onClick={() => router.push('/calendar?addChild=true')}
+                      style={{
+                        marginTop: 6,
+                        background: 'none',
+                        border: 'none',
+                        color: '#7c3aed',
+                        fontSize: 12,
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        padding: 0,
+                      }}
+                    >
+                      ＋ Add another child →
+                      
+                    </button>
+                  )}
 
                   {isStep3 && isCurrent && kidScheduleStatuses.length > 0 && (
                     <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -350,17 +369,10 @@ function DashboardContent() {
 
         setKids(kidsData || [])
       } else {
-        // FIX: Admin — resolve org from user_organizations first, NOT from kids table.
-        // The old pattern queried kids by user_id and fell back to user.id as orgId,
-        // which broke the Add Child flow for new admins who have no kids yet.
-        const { data: orgMembership } = await supabase
-          .from('user_organizations')
-          .select('organization_id')
-          .eq('user_id', user.id)
-          .limit(1)
-          .maybeSingle()
-
-        orgId = orgMembership?.organization_id || user.id
+        // Admin path — REPLACE the old orgMembership lookup with:
+        const { orgId: resolvedOrgId } = await getOrganizationId(user.id)
+        if (!resolvedOrgId) { router.push('/onboarding'); return }
+        orgId = resolvedOrgId
         setOrganizationId(orgId)
 
         // FIX: Query kids by organization_id, not user_id

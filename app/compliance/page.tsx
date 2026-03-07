@@ -18,6 +18,7 @@ import { useStateComplianceTemplates } from '@/src/hooks/useStateComplianceTempl
 import { useComplianceSettings } from '@/src/hooks/useComplianceSettings'      
 import { generateComplianceReport } from '@/src/utils/generateComplianceReport'
 import { useAppHeader } from '@/components/layout/AppHeader'
+import { getOrganizationId } from '@/src/lib/getOrganizationId'
 
 interface Kid {
   id: string
@@ -115,36 +116,10 @@ export default function CompliancePage() {
         return
       }
 
-      let orgId: string | null = null
-
-      // First try: user_profiles table
-      const { data: profile } = await supabase
-        .from('user_profiles')
-        .select('organization_id')
-        .eq('user_id', user.id)
-        .maybeSingle()
-      
-      if (profile?.organization_id) {
-        orgId = profile.organization_id
-      } else {
-        // Second try: kids table
-        const { data: kid } = await supabase
-          .from('kids')
-          .select('organization_id')
-          .eq('user_id', user.id)
-          .limit(1)
-          .maybeSingle()
-
-        if (kid?.organization_id) {
-          orgId = kid.organization_id
-        } else {
-          // Last resort: use user.id as org
-          orgId = user.id
-        }
-      }
+      const { orgId } = await getOrganizationId(user.id)
 
       if (!orgId) {
-        setLoading(false)
+        router.push('/onboarding')
         return
       }
 

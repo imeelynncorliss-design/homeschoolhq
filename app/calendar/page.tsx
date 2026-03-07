@@ -4,7 +4,6 @@ import { useEffect, useState, Suspense } from 'react'
 import { supabase } from '@/src/lib/supabase'
 import { useRouter, useSearchParams } from 'next/navigation'
 import CurriculumImporter from '@/components/CurriculumImporter'
-import ChildPhotoUpload from '@/components/ChildPhotoUpload'
 import LessonCalendar from '@/components/LessonCalendar'
 import AllChildrenList from '@/components/AllChildrenList'
 import KidQuickPanel from '@/components/KidQuickPanel'
@@ -12,7 +11,6 @@ import KidProfileForm from '@/components/KidProfileForm'
 import CalendarFilters from '@/components/CalendarFilters'
 import DevTierToggle from '@/components/DevTierToggle'
 import { formatLessonDescription } from '@/lib/formatLessonDescription'
-import { ReactNode } from 'react'
 import PersonalizedAssessmentCreator from '@/components/PersonalizedAssessmentCreator'
 import { DEFAULT_HOLIDAYS_2025_2026 } from '@/app/utils/holidayUtils'
 import AssessmentTaking from '@/components/AssessmentTaking'
@@ -20,15 +18,12 @@ import AutoScheduleModal from '@/components/AutoScheduleModal'
 import HelpWidget from '../../components/HelpWidget'
 import PastAssessmentsViewer from '@/components/PastAssessmentsViewer'
 import AttendanceReminder from '@/components/AttendanceReminder'
-import AttendanceTracker from '@/components/AttendanceTracker'
-import ParentProfileManager from '@/components/ParentProfileManager'
 import AuthGuard from '@/components/AuthGuard'
-import ComplianceWizard from '@/components/ComplianceWizard'
 import { type UserTier, hasFeature as checkFeature, getTierForTesting, getChildLimit, getUpgradeMessage, syncBetaTier } from '@/lib/tierTesting'
-import UserMenu from '@/src/components/UserMenu'
 import { CANONICAL_SUBJECTS } from '@/src/constants/subjects'
 import StatsBar from "@/src/components/dashboard/StatsBar"
 import { useAppHeader } from '@/components/layout/AppHeader'
+import { getOrganizationId } from '@/src/lib/getOrganizationId'
 
 const DURATION_UNITS = ['minutes', 'days', 'weeks'] as const
 type DurationUnit = typeof DURATION_UNITS[number]
@@ -123,7 +118,7 @@ function DashboardContent() {
 
   const loadKids = async (orgId?: string | null) => {
     if (!user && !orgId) return
-    const resolvedOrgId = orgId || organizationId
+    const resolvedOrgId = orgId ?? organizationId
     if (!resolvedOrgId) return
 
     const { data, error } = await supabase
@@ -141,7 +136,8 @@ function DashboardContent() {
 
   const loadAllLessons = async (orgId?: string | null) => {
     if (!user) return
-    const resolvedOrgId = orgId || organizationId || user.id
+    const resolvedOrgId = orgId ?? organizationId
+    if (!resolvedOrgId) return
 
     const { data: lessonsData, error: lessonsError } = await supabase
       .from('lessons')
@@ -187,6 +183,24 @@ function DashboardContent() {
   useEffect(() => { getUser() }, [])
   useEffect(() => { if (kids.length > 0) loadAllLessons() }, [kids])
   useEffect(() => { if (user) checkUserTier() }, [user])
+  useEffect(() => {
+    if (searchParams.get('addChild') === 'true' && user) {
+      setEditingKid(null)
+      setShowProfileForm(true)
+    }
+  }, [user])
+
+  useEffect(() => {
+    const editKidId = searchParams.get('editKid')
+    if (editKidId && kids.length > 0) {
+      const kid = kids.find(k => k.id === editKidId)
+      if (kid) {
+        setSelectedKid(kid.id)
+        setEditingKid(kid)
+        setShowProfileForm(true)
+      }
+    }
+  }, [kids])
 
   useEffect(() => {
     if (!kids.length || !schoolYearSettings || !allLessons.length) return
@@ -205,40 +219,12 @@ function DashboardContent() {
         // FIX: Resolve org from user_organizations first (works for both admins and co-teachers).
         // The old approach queried kids by user_id and fell back to family_collaborators only
         // when no kids were found — causing new admins to get isCoTeacher=true and orgId=user.id.
-        const { data: orgMembership } = await supabase
-          .from('user_organizations')
-          .select('organization_id, role')
-          .eq('user_id', user.id)
-          .limit(1)
-          .maybeSingle()
-
-        let orgId = orgMembership?.organization_id || null
-
-        // FIX: Determine co-teacher from explicit role field, not absence of kids
-        if (orgMembership && orgMembership.role !== 'admin' && orgMembership.role !== 'owner') {
-          if (mounted) setIsCoTeacher(true)
+        const { orgId: resolvedOrgId, isCoTeacher: coTeacher } = await getOrganizationId(user.id)
+        if (!resolvedOrgId || !mounted) { setLoading(false); return }
+        if (mounted) {
+          setIsCoTeacher(coTeacher)
+          setOrganizationId(resolvedOrgId)
         }
-
-        // FALLBACK: family_collaborators for users not yet in user_organizations
-        if (!orgId) {
-          const { data: collabData } = await supabase
-            .from('family_collaborators')
-            .select('organization_id, role')
-            .eq('user_id', user.id)
-            .limit(1)
-            .maybeSingle()
-
-          if (collabData) {
-            orgId = collabData.organization_id
-            // FIX: Use role to determine co-teacher, not mere presence in table
-            if (collabData.role !== 'admin' && collabData.role !== 'owner') {
-              if (mounted) setIsCoTeacher(true)
-            }
-          }
-        }
-
-        const resolvedOrgId = orgId || user.id
-        if (mounted) setOrganizationId(resolvedOrgId)
 
         await loadKids(resolvedOrgId)
         if (mounted) setLoading(false)
@@ -462,7 +448,8 @@ function DashboardContent() {
 
   const copyLessonToChild = async () => {
     if (!copyTargetChildId || !selectedLesson) return
-    const orgId = organizationId || user.id
+    const orgId = organizationId
+    if (!orgId) return
     const targetChild = kids.find(k => k.id === copyTargetChildId)
     if (!targetChild) return
     const { error } = await supabase.from('lessons').insert([{
@@ -542,10 +529,10 @@ function DashboardContent() {
         <AttendanceReminder
           onTakeAttendance={() => { router.push('/admin'); setTimeout(() => { window.dispatchEvent(new Event('openAttendance')) }, 500) }}
           kids={kids}
-          organizationId={organizationId ?? user.id}
+          organizationId={organizationId ?? ''}
         />
 
-        {kids.length === 0 ? (
+      {organizationId && kids.length === 0 ? (
           <div className="bg-white rounded-lg shadow p-12 text-center">
             <div className="text-6xl mb-4">👋</div>
             {isCoTeacher ? (
@@ -556,9 +543,9 @@ function DashboardContent() {
             ) : (
               <>
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome to HomeschoolReady!</h2>
-                <p className="text-gray-600 mb-6">Let's get started by adding your first child.</p>
+                <p className="text-gray-600 mb-6">Let's get started by adding your child.</p>
                 <button onClick={() => { setEditingKid(null); setShowProfileForm(true) }} className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium shadow-lg">
-                  + Add Your First Child
+                  + Add Your Child
                 </button>
               </>
             )}
@@ -650,7 +637,7 @@ function DashboardContent() {
                 onLessonClick={(lesson, child) => { setSelectedLesson(lesson); setSelectedLessonChild(child); startEditLesson(lesson); setShowLessonEditModal(true) }}
                 onStatusChange={handleStatusChange}
                 userId={user.id}
-                organizationId={organizationId ?? user.id}
+                organizationId={organizationId ?? ''}
                 onEditLesson={(lesson) => { setSelectedLesson(lesson); setSelectedLessonChild(kids.find(k => k.id === lesson.kid_id) || null); startEditLesson(lesson); setShowLessonEditModal(true) }}
               />
             ) : (
@@ -685,15 +672,14 @@ function DashboardContent() {
           kid={editingKid || undefined}
           onSave={async (data) => {
             try {
-              const orgId = organizationId ?? user.id
+              const orgId = organizationId
+              if (!orgId) return
               if (data.id) {
                 const updateData: any = {
                   user_id: user.id, organization_id: orgId,
                   firstname: data.firstname, lastname: data.lastname,
                   displayname: data.displayname || data.firstname, age: data.age, grade: data.grade,
-                  learning_style: data.learning_style, pace_of_learning: data.pace_of_learning,
-                  environmental_needs: data.environmental_needs, current_hook: data.current_hook,
-                  todays_vibe: data.todays_vibe, current_focus: data.current_focus
+                  learning_style: data.learning_style, current_hook: data.current_hook,
                 }
                 if (data.photoFile) {
                   const fileExt = data.photoFile.name.split('.').pop()
@@ -706,18 +692,12 @@ function DashboardContent() {
                 }
                 const { error: updateError } = await supabase.from('kids').update(updateData).eq('id', data.id)
                 if (updateError) { alert('Error updating child: ' + updateError.message); return }
-                if (data.subject_proficiencies?.length > 0) {
-                  await supabase.from('subject_proficiency').delete().eq('kid_id', data.id)
-                  await supabase.from('subject_proficiency').insert(data.subject_proficiencies.map((sp: any) => ({ kid_id: data.id, subject: sp.subject, proficiency: sp.proficiency, notes: sp.notes || '' })))
-                }
               } else {
                 const { data: newKid, error } = await supabase.from('kids').insert([{
                   user_id: user.id, organization_id: orgId,
                   firstname: data.firstname, lastname: data.lastname,
                   displayname: data.displayname || data.firstname, age: data.age, grade: data.grade,
-                  learning_style: data.learning_style, pace_of_learning: data.pace_of_learning,
-                  environmental_needs: data.environmental_needs, current_hook: data.current_hook,
-                  todays_vibe: data.todays_vibe, current_focus: data.current_focus
+                  learning_style: data.learning_style, current_hook: data.current_hook,
                 }]).select()
                 if (error || !newKid || newKid.length === 0) { alert('Error creating child. Please try again.'); return }
                 const newKidId = newKid[0].id
@@ -729,9 +709,6 @@ function DashboardContent() {
                     const { data: { publicUrl } } = supabase.storage.from('child-photos').getPublicUrl(fileName)
                     await supabase.from('kids').update({ photo_url: publicUrl }).eq('id', newKidId)
                   }
-                }
-                if (data.subject_proficiencies?.length > 0) {
-                  await supabase.from('subject_proficiency').insert(data.subject_proficiencies.map((sp: any) => ({ kid_id: newKidId, subject: sp.subject, proficiency: sp.proficiency, notes: sp.notes || '' })))
                 }
               }
               await loadKids()

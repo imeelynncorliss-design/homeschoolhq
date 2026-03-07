@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { createBrowserClient } from '@supabase/ssr'
 import AssessmentStandardsManager from '@/components/AssessmentStandardsManager'
 import StandardsImporter from '@/components/StandardsImporter'
@@ -58,6 +59,7 @@ type MonthGroup = {
 
 export default function AssessmentsPage() {
   useAppHeader({ title: '📝 Assessments & Standards', backHref: '/admin' })
+  const router = useRouter()
   const [currentView, setCurrentView] = useState<'results' | 'standards'>('results')
   const [assessments, setAssessments] = useState<AssessmentWithDetails[]>([])
   const [loading, setLoading] = useState(true)
@@ -91,6 +93,8 @@ export default function AssessmentsPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
       const { orgId } = await getOrganizationId(user.id)
+      if (!orgId) { router.push('/onboarding'); return }
+
       setOrganizationId(orgId)
     }
 

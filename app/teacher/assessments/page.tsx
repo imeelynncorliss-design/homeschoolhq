@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/src/lib/supabase';
 import { useRouter } from 'next/navigation';
+import { getOrganizationId } from '@/src/lib/getOrganizationId'
 
 interface StandardProgress {
   id: string;
@@ -57,11 +58,16 @@ export default function TeacherAssessmentsPage() {
         return; 
       }
 
-      const { data: settings } = await supabase.from('school_year_settings').select('organization_id').eq('user_id', user.id).maybeSingle();
-      setOrganizationId(settings?.organization_id || user.id);
-
-      const { data: kidsData } = await supabase.from('kids').select('id, displayname').order('displayname');
-      if (kidsData) setKids(kidsData);
+      const { orgId } = await getOrganizationId(user.id)
+      if (!orgId) { router.push('/onboarding'); return }
+      setOrganizationId(orgId)
+      
+      const { data: kidsData } = await supabase
+        .from('kids')
+        .select('id, displayname')
+        .eq('organization_id', orgId)
+        .order('displayname')
+      if (kidsData) setKids(kidsData)
     } catch (error) {
       console.error('Error loading initial data:', error);
     }

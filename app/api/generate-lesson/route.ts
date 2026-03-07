@@ -21,7 +21,7 @@ export async function POST(request: Request) {
     // Fetch kid profile for personalization
     const { data: kid, error: kidError } = await supabase
       .from('kids')
-      .select('displayname, age, grade, learning_style, pace_of_learning, environmental_needs, current_hook, todays_vibe, current_focus')
+      .select('displayname, age, grade, learning_style, current_hook, current_focus')
       .eq('id', childId)
       .single();
 
@@ -36,10 +36,8 @@ export async function POST(request: Request) {
 Name: ${kid.displayname}
 Age: ${kid.age || 'Not specified'}
 Grade Level: ${gradeLevel || kid.grade || 'Not specified'}
-Learning Style: ${learningStyle || kid.learning_style || 'Not specified'}
-Pace of Learning: ${kid.pace_of_learning || 'Average'}
-Current Hook (Interest): ${kid.current_hook || 'None specified'}
-Today's Vibe (Mood/Energy): ${kid.todays_vibe || 'Balanced'}
+Learning Style: ${learningStyle || kid.learning_style || 'Not specified'}${(learningStyle || kid.learning_style || '').includes(',') ? ' (multimodal learner — blend these styles)' : ''}
+Current Interests / Hook: ${kid.current_hook || 'None specified'}
 Current Focus: ${kid.current_focus || 'General learning'}
 
 **LESSON REQUIREMENTS:**
@@ -79,11 +77,10 @@ For EACH variation, include:
 7. Assessment ideas
 
 **PERSONALIZATION:**
-- Adapt content to ${kid.displayname}'s learning style (${learningStyle || kid.learning_style})
-- Design hands-on, tactile activities using the materials provided
-- Consider their current interest: ${kid.current_hook || 'general topics'}
-- Match their energy level: ${kid.todays_vibe || 'balanced'}
+- Adapt content to ${kid.displayname}'s learning style: ${learningStyle || kid.learning_style || 'flexible'}. If multiple styles are listed, blend approaches across activities rather than picking just one.
+- Weave their current interests into examples and activities: ${kid.current_hook || 'general topics'}
 - Align with their current focus: ${kid.current_focus || 'broad learning goals'}
+- Design activities that match the learning style(s) above — e.g. Visual learners benefit from diagrams and color; Aural from discussion and audio; Read/Write from notes and text; Kinesthetic from hands-on building and movement
 
 Return ONLY valid JSON with this exact structure:
 {
@@ -152,7 +149,6 @@ CRITICAL: Return ONLY the JSON object. No markdown formatting, no backticks, no 
       personalizedFor: {
         learningStyle: learningStyle || kid.learning_style,
         currentHook: kid.current_hook,
-        pace: kid.pace_of_learning
       }
     });
 

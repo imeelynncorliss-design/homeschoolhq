@@ -28,18 +28,25 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  // Protect dashboard routes
+  // Protect dashboard routes — redirect to login if not authenticated
   if (request.nextUrl.pathname.startsWith('/dashboard') && !user) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  // Redirect logged-in users away from auth pages (EXCEPT reset-password and invite signups)
-if (user && !request.nextUrl.pathname.startsWith('/reset-password')) {
-  const hasInviteCode = request.nextUrl.searchParams.get('invite')
-  if (!hasInviteCode && (request.nextUrl.pathname === '/login' || request.nextUrl.pathname === '/signup')) {
-    return NextResponse.redirect(new URL('/dashboard', request.url))
+  // Protect onboarding routes — redirect to login if not authenticated
+  if (request.nextUrl.pathname.startsWith('/onboarding') && !user) {
+    return NextResponse.redirect(new URL('/login', request.url))
   }
-}
+
+  // Redirect logged-in users away from auth pages
+  // Exception: reset-password and invite signups bypass this
+  if (user && !request.nextUrl.pathname.startsWith('/reset-password')) {
+    const hasInviteCode = request.nextUrl.searchParams.get('invite')
+    if (!hasInviteCode && (request.nextUrl.pathname === '/login' || request.nextUrl.pathname === '/signup')) {
+      // Send to onboarding — it will redirect to dashboard if already complete
+      return NextResponse.redirect(new URL('/onboarding', request.url))
+    }
+  }
 
   return response
 }
@@ -47,6 +54,8 @@ if (user && !request.nextUrl.pathname.startsWith('/reset-password')) {
 export const config = {
   matcher: [
     '/dashboard/:path*',
+    '/onboarding/:path*',
+    '/onboarding',
     '/co-teachers/:path*',
     '/co-teachers',
     '/api/invites/:path*',

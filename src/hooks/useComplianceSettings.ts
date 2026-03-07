@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/src/lib/supabase'
+import { getOrganizationId } from '@/src/lib/getOrganizationId'
 
 export interface ComplianceSettings {
   id: string
@@ -46,39 +47,20 @@ export function useComplianceSettings(): UseComplianceSettingsReturn {
       setError(null)
   
       // Get current user - handle auth session missing
-      let user = null
-      try {
-        const { data: { user: authUser } } = await supabase.auth.getUser()
-        user = authUser
-      } catch (authError) {
-        console.log('No auth session, using dev mode')
-        // Auth failed - use dev mode
-      }
-  
-      // Get organization ID from user
-      let organizationId: string
+      const { data: { user } } = await supabase.auth.getUser()
   
       if (!user) {
-        // Dev mode - use hardcoded org ID
-        organizationId = 'd52497c0-42a9-49b7-ba3b-849bffa27fc4'
-      } else {
-        // Try to get org from organization_members table
-        const { data: orgData, error: orgError } = await supabase
-          .from('organization_members')
-          .select('organization_id')
-          .eq('user_id', user.id)
-          .maybeSingle()
-  
-        if (orgError) {
-          console.warn('Error fetching org membership:', orgError)
-          // Fallback to user.id as org ID
-          organizationId = user.id
-        } else if (orgData) {
-          organizationId = orgData.organization_id
-        } else {
-          // No org membership found, use user.id
-          organizationId = user.id
-        }
+        setSettings(null)
+        setLoading(false)
+        return
+      }
+      
+      const { orgId: organizationId } = await getOrganizationId(user.id)
+      
+      if (!organizationId) {
+        setSettings(null)
+        setLoading(false)
+        return
       }
 
       // Fetch compliance settings

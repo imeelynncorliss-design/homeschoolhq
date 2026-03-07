@@ -13,6 +13,7 @@ import { type UserTier, getTierForTesting, hasFeature as checkFeature, getUpgrad
 import CurriculumImporter from '@/components/CurriculumImporter'
 import { formatLessonDescription } from '@/lib/formatLessonDescription'
 import { DEFAULT_HOLIDAYS_2025_2026 } from '@/app/utils/holidayUtils'
+import { getOrganizationId } from '@/src/lib/getOrganizationId'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -111,8 +112,8 @@ function LessonsContent() {
   // ── Data loading ────────────────────────────────────────────────────────────
 
   const loadData = async (userId: string, orgId?: string | null) => {
-    const resolvedOrgId = orgId || organizationId || userId
-
+    const resolvedOrgId = orgId ?? organizationId
+    if (!resolvedOrgId) return
     // FIX: Query kids by organization_id so co-teachers see the same kids
     const { data: kidsData } = await supabase
       .from('kids')
@@ -150,32 +151,9 @@ function LessonsContent() {
       setUser(user)
       setUserTier(getTierForTesting())
 
-      // Load org ID from kids table
-      const { data: kidData } = await supabase
-        .from('kids')
-        .select('organization_id')
-        .eq('user_id', user.id)
-        .limit(1)
-        .maybeSingle()
-
-      // FIX: If no kids found under user_id, check family_collaborators (co-teacher path)
-      let orgId = kidData?.organization_id || null
-
-      if (!orgId) {
-        const { data: collabData } = await supabase
-          .from('family_collaborators')
-          .select('organization_id, role')
-          .eq('user_id', user.id)
-          .limit(1)
-          .maybeSingle()
-
-        if (collabData) {
-          orgId = collabData.organization_id
-          setIsCoTeacher(true)
-        }
-      }
-
-      const resolvedOrgId = orgId || user.id
+      const { orgId: resolvedOrgId, isCoTeacher: coTeacher } = await getOrganizationId(user.id)
+      if (!resolvedOrgId) { router.push('/onboarding'); return }
+      setIsCoTeacher(coTeacher)
       setOrganizationId(resolvedOrgId)
 
       const { data: collabData } = await supabase
@@ -215,7 +193,8 @@ function LessonsContent() {
     if (!selectedKidForLesson) return
     setAddingLesson(true)
 
-    const orgId = organizationId || user.id
+    const orgId = organizationId
+    if (!orgId) return
     const durationInMinutes = convertDurationToMinutes(lessonDurationValue, lessonDurationUnit)
     const resolvedSubject = lessonSubjectSelect === '__custom__' ? lessonSubjectCustom : lessonSubjectSelect
 

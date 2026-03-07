@@ -1,469 +1,411 @@
-// KidProfileForm.tsx - Comprehensive profile form with 4 tabs
 'use client'
 
-import { useState, useEffect } from 'react'
-import SubjectPacingManager from './SubjectPacingManager'
-import { supabase } from '@/src/lib/supabase'
+import { useState, useRef } from 'react'
 
-interface SubjectProficiency {
+// ── Constants ─────────────────────────────────────────────────────────────────
+
+const GRADES = [
+  'Pre-K', 'Kindergarten', '1st', '2nd', '3rd', '4th', '5th',
+  '6th', '7th', '8th', '9th', '10th', '11th', '12th',
+]
+
+const LEARNING_STYLES = [
+  { value: 'visual',      label: '🎨 Visual',      desc: 'Learns through images, diagrams, and color' },
+  { value: 'aural',       label: '👂 Aural',        desc: 'Learns through listening, discussion, and audio' },
+  { value: 'read_write',  label: '📝 Read / Write', desc: 'Learns through reading, note-taking, and text' },
+  { value: 'kinesthetic', label: '🤲 Kinesthetic',  desc: 'Learns through doing, building, and moving' },
+]
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+interface KidData {
   id?: string
-  subject: string
-  proficiency: 'needs_time' | 'standard' | 'mastery'  // Updated from 'emerging' | 'proficient' | 'mastery'
-  notes: string
+  firstname?: string
+  lastname?: string
+  displayname?: string
+  age?: number | null
+  grade?: string
+  photo_url?: string
+  learning_style?: string
+  current_hook?: string
+  photoFile?: File
 }
 
 interface KidProfileFormProps {
-  kid?: {
-    id?: string
-    displayname?: string
-    firstname?: string
-    lastname?: string
-    age?: number
-    grade?: string
-    photo_url?: string
-    learning_style?: string
-    current_hook?: string
-    environmental_needs?: string
-    pace_of_learning?: string
-    todays_vibe?: string
-    current_focus?: string
-  }
-  onSave: (data: any) => Promise<void>
+  kid?: KidData
+  onSave: (data: KidData & { photoFile?: File }) => Promise<void>
   onCancel: () => void
 }
 
+// ── Component ─────────────────────────────────────────────────────────────────
+
 export default function KidProfileForm({ kid, onSave, onCancel }: KidProfileFormProps) {
-  const [activeTab, setActiveTab] = useState<'core' | 'learning' | 'pacing' | 'profile'>('core')
+  const isEditing = !!kid?.id
+  const [activeTab, setActiveTab] = useState<'core' | 'learning'>('core')
   const [saving, setSaving] = useState(false)
 
   // Core Info
-  const [firstname, setFirstname] = useState(kid?.firstname || '')
-  const [lastname, setLastname] = useState(kid?.lastname || '')
-  const [displayname, setDisplayname] = useState(kid?.displayname || '')
-  const [age, setAge] = useState(kid?.age?.toString() || '')
-  const [grade, setGrade] = useState(kid?.grade || '')
-  const [photoFile, setPhotoFile] = useState<File | null>(null)
-  const [photoPreview, setPhotoPreview] = useState<string | null>(kid?.photo_url || null)
+  const [firstname, setFirstname]       = useState(kid?.firstname || '')
+  const [lastname, setLastname]         = useState(kid?.lastname || '')
+  const [displayname, setDisplayname]   = useState(kid?.displayname || '')
+  const [age, setAge]                   = useState(kid?.age?.toString() || '')
+  const [grade, setGrade]               = useState(kid?.grade || '')
+  const [photoFile, setPhotoFile]       = useState<File | null>(null)
+  const [photoPreview, setPhotoPreview] = useState(kid?.photo_url || '')
+  const fileInputRef                    = useRef<HTMLInputElement>(null)
 
-  // Learning Style
-  const [learningStyle, setLearningStyle] = useState(kid?.learning_style || '')
-  const [paceOfLearning, setPaceOfLearning] = useState(kid?.pace_of_learning || '')
-  const [environmentalNeeds, setEnvironmentalNeeds] = useState(kid?.environmental_needs || '')
-
-  // Subject Pacing
-  const [subjectProficiencies, setSubjectProficiencies] = useState<SubjectProficiency[]>([])
-  const [loadingSubjects, setLoadingSubjects] = useState(false)
-
-  // Profile
+  // How They Learn
+  const [learningStyles, setLearningStyles] = useState<string[]>(
+    kid?.learning_style ? kid.learning_style.split(',').map((s: string) => s.trim()) : []
+  )
   const [currentHook, setCurrentHook] = useState(kid?.current_hook || '')
-  const [todaysVibe, setTodaysVibe] = useState(kid?.todays_vibe || '')
-  const [currentFocus, setCurrentFocus] = useState(kid?.current_focus || '')
 
-  // Load existing subject proficiencies if editing
-  useEffect(() => {
-    if (kid?.id) {
-      loadSubjectProficiencies()
-    }
-  }, [kid?.id])
-
-  const loadSubjectProficiencies = async () => {
-    if (!kid?.id) return
-    
-    setLoadingSubjects(true)
-    const { data, error } = await supabase
-      .from('subject_proficiency')
-      .select('*')
-      .eq('kid_id', kid.id)
-      .order('subject')
-
-    if (data && !error) {
-      setSubjectProficiencies(data)
-    }
-    setLoadingSubjects(false)
+  const toggleStyle = (value: string) => {
+    setLearningStyles(prev =>
+      prev.includes(value) ? prev.filter(s => s !== value) : [...prev, value]
+    )
   }
 
-  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // ── Photo handler ─────────────────────────────────────────────────────────
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        alert('File too large. Maximum size is 5MB.')
-        return
-      }
-      setPhotoFile(file)
-      setPhotoPreview(URL.createObjectURL(file))
-    }
+    if (!file) return
+    setPhotoFile(file)
+    const reader = new FileReader()
+    reader.onload = ev => setPhotoPreview(ev.target?.result as string)
+    reader.readAsDataURL(file)
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setSaving(true)
+  // ── Validation ────────────────────────────────────────────────────────────
+  const coreComplete     = firstname.trim().length > 0
+  const learningComplete = learningStyles.length > 0
+  const canSave          = coreComplete && learningComplete
 
+  const tabStatus = {
+    core:     coreComplete,
+    learning: learningComplete,
+  }
+
+  // ── Save ──────────────────────────────────────────────────────────────────
+  const handleSave = async () => {
+    if (!canSave || saving) return
+    setSaving(true)
     try {
       await onSave({
         id: kid?.id,
-        firstname,
-        lastname,
-        displayname: displayname || `${firstname} ${lastname}`.trim() || firstname,
+        firstname: firstname.trim(),
+        lastname: lastname.trim(),
+        displayname: displayname.trim() || firstname.trim(),
         age: age ? parseInt(age) : null,
-        grade,
-        photoFile,
-        learning_style: learningStyle,
-        current_hook: currentHook,
-        environmental_needs: environmentalNeeds,
-        pace_of_learning: paceOfLearning,
-        todays_vibe: todaysVibe,
-        current_focus: currentFocus,
-        subject_proficiencies: subjectProficiencies
+        grade: grade || null,
+        learning_style: learningStyles.length > 0 ? learningStyles.join(', ') : null,
+        current_hook: currentHook.trim() || null,
+        photoFile: photoFile || undefined,
       })
-    } catch (error) {
-      console.error('Error saving profile:', error)
-      alert('Failed to save profile. Please try again.')
     } finally {
       setSaving(false)
     }
   }
 
+  // ── Tabs ──────────────────────────────────────────────────────────────────
+  const TABS = [
+    { id: 'core' as const,     label: 'Core Info',       done: tabStatus.core },
+    { id: 'learning' as const, label: 'How They Learn',  done: tabStatus.learning },
+  ]
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl max-w-3xl w-full max-h-[90vh] overflow-hidden shadow-2xl">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[92vh] flex flex-col overflow-hidden">
+
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-6">
-          <div className="flex justify-between items-center">
+        <div className="bg-gradient-to-r from-purple-700 to-pink-500 px-6 py-5 flex-shrink-0">
+          <div className="flex justify-between items-start">
             <div>
-              <h2 className="text-2xl font-bold">
-                {kid?.id ? 'Edit Student Profile' : 'Add New Student'}
+              <h2 className="text-xl font-black text-white">
+                {isEditing ? 'Edit Student Profile' : 'Add Your Child'}
               </h2>
-              <p className="text-blue-100 text-sm mt-1">
-                {kid?.id ? `${kid.displayname || kid.firstname}` : 'Create a personalized learning profile'}
-              </p>
+              {isEditing && kid?.displayname && (
+                <p className="text-purple-200 text-sm mt-0.5">{kid.displayname}</p>
+              )}
             </div>
             <button
               onClick={onCancel}
-              className="text-white hover:bg-white/20 rounded-lg p-2 transition-colors"
+              className="text-white hover:text-purple-200 text-2xl font-light leading-none mt-0.5"
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
+              ×
             </button>
+          </div>
+
+          {/* Tab bar */}
+          <div className="flex gap-1 mt-4">
+            {TABS.map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+                  activeTab === tab.id
+                    ? 'bg-white text-purple-700'
+                    : 'text-white text-opacity-80 hover:bg-white hover:bg-opacity-20'
+                }`}
+              >
+                {tab.done && activeTab !== tab.id && (
+                  <span className="text-yellow-300 text-xs">✓</span>
+                )}
+                {tab.label}
+              </button>
+            ))}
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="border-b border-gray-200">
-          <div className="flex">
-            <button
-              onClick={() => setActiveTab('core')}
-              className={`flex-1 px-4 py-3 font-medium transition-colors text-sm ${
-                activeTab === 'core'
-                  ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-              }`}
-            >
-              Core Info
-            </button>
-            <button
-              onClick={() => setActiveTab('learning')}
-              className={`flex-1 px-4 py-3 font-medium transition-colors text-sm ${
-                activeTab === 'learning'
-                  ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-              }`}
-            >
-              How They Learn
-            </button>
-            <button
-              onClick={() => setActiveTab('pacing')}
-              className={`flex-1 px-4 py-3 font-medium transition-colors text-sm ${
-                activeTab === 'pacing'
-                  ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-              }`}
-            >
-              Subject Pacing
-            </button>
-            <button
-              onClick={() => setActiveTab('profile')}
-              className={`flex-1 px-4 py-3 font-medium transition-colors text-sm ${
-                activeTab === 'profile'
-                  ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-              }`}
-            >
-              Current Focus
-            </button>
-          </div>
-        </div>
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-5">
 
-        {/* Form Content */}
-        <form onSubmit={handleSubmit} className="overflow-y-auto max-h-[calc(90vh-240px)]">
-          <div className="p-6">
-            {/* CORE INFO TAB */}
-            {activeTab === 'core' && (
-              <div className="space-y-6">
-                {/* Photo Upload */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-3">
-                    Student Photo
-                  </label>
+          {/* ── Core Info Tab ────────────────────────────────────────────── */}
+          {activeTab === 'core' && (
+            <>
+              {/* Photo */}
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">
+                  Student Photo
+                </label>
+                <div className="flex items-center gap-4">
                   {photoPreview ? (
-                    <div className="flex items-center gap-4">
-                      <img 
-                        src={photoPreview} 
+                    <div className="relative">
+                      <img
+                        src={photoPreview}
                         alt="Preview"
-                        className="w-24 h-24 rounded-full object-cover ring-4 ring-blue-100"
+                        className="w-20 h-20 rounded-full object-cover border-4 border-purple-100"
                       />
                       <button
-                        type="button"
-                        onClick={() => {
-                          setPhotoFile(null)
-                          setPhotoPreview(null)
-                        }}
-                        className="text-sm text-red-600 hover:text-red-700 font-medium"
+                        onClick={() => { setPhotoPreview(''); setPhotoFile(null) }}
+                        className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 text-white rounded-full text-xs font-bold flex items-center justify-center"
                       >
-                        Remove Photo
+                        ×
                       </button>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-3">
-                      <label className="cursor-pointer bg-blue-50 hover:bg-blue-100 border-2 border-blue-300 border-dashed rounded-lg p-4 text-center transition-colors">
-                        <svg className="w-8 h-8 mx-auto text-blue-600 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                        <p className="text-sm text-blue-600 font-medium">Upload Photo</p>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handlePhotoSelect}
-                          className="hidden"
-                        />
-                      </label>
-                    </div>
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="w-20 h-20 rounded-full border-2 border-dashed border-blue-300 flex flex-col items-center justify-center text-blue-500 hover:bg-blue-50 transition-colors"
+                    >
+                      <span className="text-2xl">🖼</span>
+                      <span className="text-xs font-semibold mt-1">Upload</span>
+                    </button>
+                  )}
+                  {!photoPreview && (
+                    <p className="text-xs text-gray-400 leading-relaxed">
+                      Upload a photo to personalize<br />the app for your child.
+                    </p>
                   )}
                 </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handlePhotoChange}
+                  className="hidden"
+                />
+              </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-900 mb-2">
-                      First Name *
-                    </label>
-                    <input
-                      type="text"
-                      value={firstname}
-                      onChange={(e) => setFirstname(e.target.value)}
-                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900"
-                      placeholder="First name"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-900 mb-2">
-                      Last Name
-                    </label>
-                    <input
-                      type="text"
-                      value={lastname}
-                      onChange={(e) => setLastname(e.target.value)}
-                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900"
-                      placeholder="Last name"
-                    />
-                  </div>
-                </div>
-
+              {/* First + Last Name */}
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-2">
-                    Display Name (optional)
+                  <label className="block text-sm font-bold text-gray-700 mb-1">
+                    First Name <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
-                    value={displayname}
-                    onChange={(e) => setDisplayname(e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900"
-                    placeholder="Nickname or preferred name (defaults to first name)"
+                    value={firstname}
+                    onChange={e => setFirstname(e.target.value)}
+                    placeholder="e.g. Emma"
+                    className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-xl text-gray-900 focus:border-purple-500 focus:outline-none text-sm"
+                    autoFocus
                   />
-                  <p className="text-xs text-gray-600 mt-1">
-                    Leave blank to use first name: {firstname || 'First Name'}
-                  </p>
                 </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-900 mb-2">
-                      Age
-                    </label>
-                    <input
-                      type="number"
-                      value={age}
-                      onChange={(e) => setAge(e.target.value)}
-                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900"
-                      placeholder="Age"
-                      min="1"
-                      max="25"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-900 mb-2">
-                      Grade
-                    </label>
-                    <input
-                      type="text"
-                      value={grade}
-                      onChange={(e) => setGrade(e.target.value)}
-                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900"
-                      placeholder="K, 1, 2, etc."
-                    />
-                  </div>
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">Last Name</label>
+                  <input
+                    type="text"
+                    value={lastname}
+                    onChange={e => setLastname(e.target.value)}
+                    placeholder="Last name"
+                    className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-xl text-gray-900 focus:border-purple-500 focus:outline-none text-sm"
+                  />
                 </div>
               </div>
-            )}
 
-            {/* LEARNING STYLE TAB */}
-            {activeTab === 'learning' && (
-              <div className="space-y-6">
-                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-                  <p className="text-sm text-purple-900">
-                    <span className="font-semibold">💡 Premium Feature:</span> This information will power personalized AI lesson generation and recommendations.
+              {/* Display Name */}
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">
+                  Display Name{' '}
+                  <span className="font-normal text-gray-400">(optional)</span>
+                </label>
+                <input
+                  type="text"
+                  value={displayname}
+                  onChange={e => setDisplayname(e.target.value)}
+                  placeholder={`e.g. ${firstname || 'Em'}, Bug, Buddy...`}
+                  className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-xl text-gray-900 focus:border-purple-500 focus:outline-none text-sm"
+                />
+                {firstname && (
+                  <p className="text-xs text-gray-400 mt-1">
+                    Leave blank to use first name: {firstname}
                   </p>
-                </div>
+                )}
+              </div>
 
+              {/* Age + Grade */}
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-2">
-                    Learning Style
-                  </label>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">Age</label>
+                  <input
+                    type="number"
+                    value={age}
+                    onChange={e => setAge(e.target.value)}
+                    placeholder="e.g. 9"
+                    min="3"
+                    max="18"
+                    className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-xl text-gray-900 focus:border-purple-500 focus:outline-none text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">Grade</label>
                   <select
-                    value={learningStyle}
-                    onChange={(e) => setLearningStyle(e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900"
+                    value={grade}
+                    onChange={e => setGrade(e.target.value)}
+                    className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-xl text-gray-900 focus:border-purple-500 focus:outline-none text-sm"
                   >
-                    <option value="">Select learning style...</option>
-                    <option value="visual">Visual (learns best by seeing)</option>
-                    <option value="auditory">Auditory (learns best by hearing)</option>
-                    <option value="kinesthetic">Kinesthetic (learns best by doing)</option>
-                    <option value="reading_writing">Reading/Writing (learns best through text)</option>
-                    <option value="mixed">Mixed (combination of styles)</option>
+                    <option value="">Select grade...</option>
+                    {GRADES.map(g => <option key={g} value={g}>{g}</option>)}
                   </select>
                 </div>
+              </div>
 
-                <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-2">
-                    Pace of Learning
-                  </label>
-                  <select
-                    value={paceOfLearning}
-                    onChange={(e) => setPaceOfLearning(e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900"
+              {/* Next tab nudge */}
+              {coreComplete && (
+                <button
+                  onClick={() => setActiveTab('learning')}
+                  className="w-full py-3 bg-gradient-to-r from-purple-600 to-pink-500 text-white rounded-xl font-bold text-sm hover:opacity-90 transition-all"
+                >
+                  Next: How They Learn →
+                </button>
+              )}
+            </>
+          )}
+
+          {/* ── How They Learn Tab ───────────────────────────────────────── */}
+          {activeTab === 'learning' && (
+            <>
+              {/* Premium callout */}
+              <div className="bg-purple-50 border border-purple-200 rounded-xl p-3 flex gap-2 items-start">
+                <span className="text-base flex-shrink-0">💡</span>
+                <p className="text-xs text-purple-700 leading-relaxed">
+                  <strong>This powers Copilot lesson generation.</strong> The more accurate this is,
+                  the more personalized every generated lesson will be.
+                </p>
+              </div>
+
+              {/* Learning Style — multi-select */}
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">
+                  How does {displayname || firstname || 'your child'} learn best?{' '}
+                  <span className="text-red-500">*</span>
+                </label>
+                <p className="text-xs text-gray-400 mb-3">
+                  Select all that apply — Copilot uses this to structure every lesson it generates
+                </p>
+                <div className="grid grid-cols-1 gap-2">
+                  {LEARNING_STYLES.map(style => {
+                    const selected = learningStyles.includes(style.value)
+                    return (
+                      <button
+                        key={style.value}
+                        type="button"
+                        onClick={() => toggleStyle(style.value)}
+                        className={`flex items-center gap-3 px-4 py-3 rounded-xl border-2 text-left transition-all ${
+                          selected
+                            ? 'border-purple-500 bg-purple-50'
+                            : 'border-gray-200 bg-white hover:border-purple-300'
+                        }`}
+                      >
+                        <div className={`w-5 h-5 rounded flex items-center justify-center border-2 flex-shrink-0 transition-all ${
+                          selected ? 'bg-purple-600 border-purple-600' : 'bg-white border-gray-300'
+                        }`}>
+                          {selected && <span className="text-white text-xs font-black">✓</span>}
+                        </div>
+                        <div className="flex-1">
+                          <p className={`text-sm font-bold ${selected ? 'text-purple-700' : 'text-gray-800'}`}>
+                            {style.label}
+                          </p>
+                          <p className="text-xs text-gray-400 mt-0.5">{style.desc}</p>
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+                {learningStyles.length > 1 && (
+                  <p className="text-xs text-purple-600 font-semibold mt-2">
+                    ✓ Multimodal learner — Copilot will blend these styles
+                  </p>
+                )}
+              </div>
+
+              {/* Current Hook */}
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">
+                  What are they into right now?{' '}
+                  <span className="font-normal text-gray-400">(optional)</span>
+                </label>
+                <p className="text-xs text-gray-400 mb-2">
+                  Copilot weaves their current interests into lessons to make them more engaging —
+                  update this as their obsessions change
+                </p>
+                <input
+                  type="text"
+                  value={currentHook}
+                  onChange={e => setCurrentHook(e.target.value)}
+                  placeholder="e.g. Minecraft, Dinosaurs, Drawing animals, Space..."
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-gray-900 focus:border-purple-500 focus:outline-none text-sm"
+                />
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex-shrink-0 border-t border-gray-100 px-6 py-4 flex gap-3 bg-gray-50">
+          <button
+            onClick={onCancel}
+            className="px-5 py-2.5 border-2 border-gray-200 text-gray-600 rounded-xl font-bold text-sm hover:bg-gray-100 transition-all"
+          >
+            Cancel
+          </button>
+
+          {!canSave && (
+            <div className="flex-1 flex items-center">
+              <p className="text-xs text-gray-400">
+                {!coreComplete && 'Add a first name to continue.'}
+                {coreComplete && !learningComplete && (
+                  <button
+                    onClick={() => setActiveTab('learning')}
+                    className="text-purple-600 font-semibold hover:underline"
                   >
-                    <option value="">Select pace...</option>
-                    <option value="foundational">Foundational(master basics before advancing)</option>
-                    <option value="standard">Standard (steady, consistent progress)</option>
-                    <option value="adaptive">Adaptive (pace adjusts by subject or interest)</option>
-                    <option value="accelerated">Accelerated (moves quickly, grasps concepts fast)</option>
-                  </select>
-                </div>
+                    Select a learning style to save →
+                  </button>
+                )}
+              </p>
+            </div>
+          )}
 
-                <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-2">
-                    Environmental Needs
-                  </label>
-                  <textarea
-                    value={environmentalNeeds}
-                    onChange={(e) => setEnvironmentalNeeds(e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900"
-                    rows={4}
-                    placeholder="e.g., Needs quiet space, works best in morning, prefers background music, needs movement breaks..."
-                  />
-                </div>
-              </div>
-            )}
+          <button
+            onClick={handleSave}
+            disabled={!canSave || saving}
+            className="flex-1 py-2.5 bg-gradient-to-r from-purple-600 to-pink-500 text-white rounded-xl font-bold text-sm hover:opacity-90 disabled:opacity-40 transition-all"
+          >
+            {saving ? 'Saving...' : isEditing ? 'Save Changes' : 'Add Child'}
+          </button>
+        </div>
 
-            {/* SUBJECT PACING TAB */}
-            {activeTab === 'pacing' && (
-              <SubjectPacingManager
-                kidId={kid?.id}
-                initialSubjects={subjectProficiencies}
-                onChange={setSubjectProficiencies}
-              />
-            )}
-
-            {/* CURRENT FOCUS TAB */}
-            {activeTab === 'profile' && (
-              <div className="space-y-6">
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                  <p className="text-sm text-yellow-900">
-                    <span className="font-semibold">🎯 Current Context:</span> Track what's happening now to personalize their learning experience.
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-2">
-                    The "Hook": What are they loving right now? 🌟
-                  </label>
-                  <input
-                    type="text"
-                    value={currentHook}
-                    onChange={(e) => setCurrentHook(e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900"
-                    placeholder="e.g., Dinosaurs, Minecraft, Drawing animals, Space..."
-                  />
-                  <p className="text-xs text-gray-600 mt-1">
-                    Use their current interests to make lessons more engaging
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-2">
-                    Today's Vibe 😊
-                  </label>
-                  <input
-                    type="text"
-                    value={todaysVibe}
-                    onChange={(e) => setTodaysVibe(e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900"
-                    placeholder="e.g., Energetic 🎉, Focused 🎯, Tired 😴, Creative ✨"
-                  />
-                  <p className="text-xs text-gray-600 mt-1">
-                    Update daily to reflect their mood and energy
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-2">
-                    Current Academic Focus
-                  </label>
-                  <input
-                    type="text"
-                    value={currentFocus}
-                    onChange={(e) => setCurrentFocus(e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900"
-                    placeholder="e.g., Mastering Addition, Learning to Read, Fractions..."
-                  />
-                  <p className="text-xs text-gray-600 mt-1">
-                    What skill or concept are they working on right now?
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Footer Buttons */}
-          <div className="border-t border-gray-200 p-6 bg-gray-50 flex gap-3 justify-end">
-            <button
-              type="button"
-              onClick={onCancel}
-              className="px-6 py-3 border-2 border-gray-300 text-gray-900 rounded-lg hover:bg-gray-100 font-medium transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={saving || !firstname}
-             className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-bold shadow-lg transition-colors"
-            >
-              {saving ? 'Saving...' : kid?.id ? 'Save Changes' : 'Add Student'}
-            </button>
-          </div>
-        </form>
       </div>
     </div>
   )

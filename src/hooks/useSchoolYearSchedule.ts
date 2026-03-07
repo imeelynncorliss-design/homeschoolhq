@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/src/lib/supabase';
+import { getOrganizationId } from '@/src/lib/getOrganizationId'
+
 
 interface SchoolYearConfig {
   school_year_start: string;
@@ -39,20 +41,21 @@ export function useSchoolYearSchedule(): UseSchoolYearScheduleReturn {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user || !mounted) return;
 
-        // Load school year config
+        const { orgId } = await getOrganizationId(user.id)
+        if (!orgId || !mounted) return;
+        
         const { data: configData, error: configError } = await supabase
           .from('school_year_settings')
           .select('*')
-          .eq('user_id', user.id)
+          .eq('organization_id', orgId)
           .maybeSingle();
-
+        
         if (configError) throw configError;
-
+        
         if (configData && mounted) {
           setConfig(configData as SchoolYearConfig);
-
+        
           // Load vacation periods
-          const orgId = configData.organization_id || user.id;
           const { data: vacations, error: vacationError } = await supabase
             .from('vacation_periods')
             .select('*')
