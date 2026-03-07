@@ -22,8 +22,8 @@ import AuthGuard from '@/components/AuthGuard'
 import { type UserTier, hasFeature as checkFeature, getTierForTesting, getChildLimit, getUpgradeMessage, syncBetaTier } from '@/lib/tierTesting'
 import { CANONICAL_SUBJECTS } from '@/src/constants/subjects'
 import StatsBar from "@/src/components/dashboard/StatsBar"
-import { useAppHeader } from '@/components/layout/AppHeader'
 import { getOrganizationId } from '@/src/lib/getOrganizationId'
+import { useAppHeader } from '@/components/layout/AppHeader'
 
 const DURATION_UNITS = ['minutes', 'days', 'weeks'] as const
 type DurationUnit = typeof DURATION_UNITS[number]
@@ -44,6 +44,7 @@ const convertDurationToMinutes = (value: number, unit: DurationUnit): number => 
 
 function DashboardContent() {
   const searchParams = useSearchParams()
+  useAppHeader({ title: '📅 Calendar', backHref: '/dashboard' })
   const [showImporter, setShowImporter] = useState(false)
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
@@ -114,7 +115,6 @@ function DashboardContent() {
   })
 
   const router = useRouter()
-  useAppHeader({ title: '📅 Calendar', backHref: '/dashboard' })
 
   const loadKids = async (orgId?: string | null) => {
     if (!user && !orgId) return
@@ -181,7 +181,6 @@ function DashboardContent() {
   }
 
   useEffect(() => { getUser() }, [])
-  useEffect(() => { if (kids.length > 0) loadAllLessons() }, [kids])
   useEffect(() => { if (user) checkUserTier() }, [user])
   useEffect(() => {
     if (searchParams.get('addChild') === 'true' && user) {
@@ -223,11 +222,58 @@ function DashboardContent() {
         if (!resolvedOrgId || !mounted) { setLoading(false); return }
         if (mounted) {
           setIsCoTeacher(coTeacher)
-          setOrganizationId(resolvedOrgId)
+          // organizationId set below with kids — prevents welcome screen flash
         }
 
-        await loadKids(resolvedOrgId)
-        if (mounted) setLoading(false)
+        // Fetch kids
+        const { data: kidsData, error: kidsError } = await supabase
+          .from('kids')
+          .select('*')
+          .eq('organization_id', resolvedOrgId)
+          .order('created_at', { ascending: false })
+
+        if (kidsError) console.error('Error loading kids:', kidsError.message)
+
+        // Fetch all lesson-related data in parallel — no setState calls yet
+        let lessonsData: any[] = []
+        let lessonsByKidMap: { [kidId: string]: any[] } = {}
+        let socialData: any[] = []
+        let enrollData: any[] = []
+        let attendData: any[] = []
+
+        if (kidsData && kidsData.length > 0) {
+          const [lessonsResult, eventsResult, enrollResult, attendResult] = await Promise.all([
+            supabase.from('lessons').select('*').eq('organization_id', resolvedOrgId).order('lesson_date', { ascending: false }),
+            supabase.from('social_events').select('*').or(`is_public.eq.true,created_by.eq.${user.id}`).order('event_date', { ascending: false }),
+            supabase.from('class_enrollments').select('*, coop_classes(*)').eq('user_id', user.id),
+            supabase.from('daily_attendance').select('*').eq('organization_id', resolvedOrgId).order('attendance_date', { ascending: false }),
+          ])
+
+          if (lessonsResult.data) {
+            lessonsData = lessonsResult.data
+            lessonsResult.data.forEach((lesson: any) => {
+              if (!lessonsByKidMap[lesson.kid_id]) lessonsByKidMap[lesson.kid_id] = []
+              lessonsByKidMap[lesson.kid_id].push(lesson)
+            })
+          }
+          if (eventsResult.data) socialData = eventsResult.data
+          if (enrollResult.data) enrollData = enrollResult.data
+          if (attendResult.data) attendData = attendResult.data
+        }
+
+        // Set organizationId + kids + loading together — condition
+        // `organizationId && kids.length === 0` can never be true on first render
+        if (mounted) {
+          setOrganizationId(resolvedOrgId)
+          setKids(kidsData || [])
+          if (kidsData && kidsData.length > 0 && !selectedKid) setSelectedKid(kidsData[0].id)
+          setLoading(false)
+        }
+
+        // Load lessons in background — no await, won't block UI
+        if (kidsData && kidsData.length > 0) {
+          loadAllLessons(resolvedOrgId)
+        }
 
         const { data: collabData } = await supabase
           .from('family_collaborators')
@@ -494,11 +540,12 @@ function DashboardContent() {
   if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>
 
   return (
-    <div className="min-h-screen bg-gray-50 overflow-x-hidden">
+    <div className="min-h-screen overflow-x-hidden" style={{ background: 'linear-gradient(160deg, #f5f3ff 0%, #ede9fe 40%, #fce7f3 100%)' }}>
 
       {/* MAIN CONTENT */}
       <div className="max-w-7xl mx-auto px-3 sm:px-6 py-4 space-y-4">
-        <div className="flex items-center gap-2 flex-wrap">
+      <div className="flex items-center justify-between gap-2 flex-wrap bg-white bg-opacity-60 backdrop-blur-sm rounded-xl px-4 py-2 border border-purple-100 shadow-sm">
+          <div className="flex items-center gap-2 flex-wrap">
           <div className="relative group">
             <span className="text-xs font-bold text-gray-400 uppercase tracking-wide cursor-default">Kids</span>
             <div className="absolute left-0 top-6 z-50 hidden group-hover:block bg-gray-800 text-white text-xs rounded-lg px-3 py-2 whitespace-nowrap shadow-lg">
@@ -524,10 +571,32 @@ function DashboardContent() {
               className="w-9 h-9 rounded-full border-2 border-dashed border-gray-300 hover:border-purple-400 flex items-center justify-center text-gray-400 hover:text-purple-500 transition-all text-lg font-light"
             >+</button>
           )}
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <button
+              onClick={() => setShowAutoSchedule(true)}
+              className="px-3 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold transition-colors"
+            >📅 Auto-Schedule</button>
+            {hasFeature('curriculum_import') ? (
+              <button
+                onClick={() => setShowImporter(true)}
+                className="px-3 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold transition-colors"
+              >📥 Import</button>
+            ) : (
+              <button
+                onClick={() => { alert(getUpgradeMessage('curriculum_import')); router.push('/pricing') }}
+                className="px-3 py-1.5 text-xs bg-gray-200 text-gray-500 rounded-lg cursor-not-allowed font-semibold"
+              >📥 Import 🔒</button>
+            )}
+            <button
+              onClick={() => router.push('/lessons')}
+              className="px-3 py-1.5 text-xs bg-purple-50 text-purple-700 border border-purple-200 rounded-lg hover:bg-purple-100 font-semibold transition-colors"
+            >📚 All Lessons</button>
+          </div>
         </div>
 
         <AttendanceReminder
-          onTakeAttendance={() => { router.push('/admin'); setTimeout(() => { window.dispatchEvent(new Event('openAttendance')) }, 500) }}
+          onTakeAttendance={() => router.push('/attendance')}
           kids={kids}
           organizationId={organizationId ?? ''}
         />
@@ -565,58 +634,10 @@ function DashboardContent() {
               />
             )}
 
-            {/* ── Action Bar ────────────────────────────────────────────────── */}
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm px-4 py-3 flex items-center gap-3 flex-wrap">
-              <button
-                onClick={() => setShowAutoSchedule(true)}
-                className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
-              >
-                📅 Auto-Schedule
-              </button>
-
-              {hasFeature('curriculum_import') ? (
-                <button
-                  onClick={() => setShowImporter(true)}
-                  className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
-                >
-                  📥 Import
-                </button>
-              ) : (
-                <button
-                  onClick={() => { alert(getUpgradeMessage('curriculum_import')); router.push('/pricing') }}
-                  className="px-4 py-2 text-sm bg-gray-200 text-gray-500 rounded-lg cursor-not-allowed font-medium"
-                >
-                  📥 Import 🔒
-                </button>
-              )}
-
-              <div className="w-px h-7 bg-gray-200 mx-1" />
-
-              <div className="relative group">
-                <button
-                  onClick={() => router.push('/admin?tab=school-year')}
-                  className={`px-4 py-2 text-sm rounded-lg border font-medium transition-colors ${complianceBtnClass}`}
-                >
-                  📋 Compliance
-                  {(complianceHealthScore ?? 0) < 80 && (
-                    <span className="ml-1.5 text-xs font-bold">{complianceHealthScore ?? 0}%</span>
-                  )}
-                </button>
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block bg-gray-800 text-white text-xs rounded-lg px-3 py-2 whitespace-nowrap shadow-lg z-50">
-                  % of completed lessons vs. your {schoolYearSettings?.annual_goal_value || 180}-day annual goal
-                  <div className="absolute top-full left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-800 rotate-45" />
-                </div>
-              </div>
-
-              <button
-                onClick={() => router.push('/lessons')}
-                className="ml-auto px-4 py-2 text-sm bg-purple-50 text-purple-700 border border-purple-200 rounded-lg hover:bg-purple-100 font-medium transition-colors"
-              >
-                📚 All Lessons
-              </button>
+            <div style={{ background: 'rgba(255,255,255,0.55)', borderRadius: 12, backdropFilter: 'blur(8px)', border: '1px solid rgba(196,181,253,0.3)' }}>
+              <StatsBar organizationId={organizationId} />
             </div>
-
-            <StatsBar organizationId={organizationId} />
+      
 
             {viewMode === 'calendar' && (
               <CalendarFilters

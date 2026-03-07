@@ -398,7 +398,7 @@ export default function AppHeader() {
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M19 12H5M12 5l-7 7 7 7" />
                   </svg>
-                  Back
+                  Dashboard
                 </button>
               )}
               {title && <span style={s.pageTitle}>{title}</span>}

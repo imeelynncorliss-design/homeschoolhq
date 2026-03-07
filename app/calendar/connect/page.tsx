@@ -184,21 +184,18 @@ function CalendarConnectContent() {
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-6">
       {/* Header with Back Button */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Work Calendar Integration</h1>
-          <p className="text-gray-600 mt-2">
-            Connect your Google Calendar or Outlook to automatically detect conflicts
-            with your homeschool schedule
-          </p>
-        </div>
-        
+      <div>
         <button
           onClick={() => router.push('/dashboard')}
-          className="px-6 py-3 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition-colors flex items-center gap-2 font-medium"
+          className="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition-colors flex items-center gap-2 font-medium text-sm mb-4"
         >
-          ← Back to Dashboard
+          ← Dashboard
         </button>
+        <h1 className="text-3xl font-bold">Work Calendar Integration</h1>
+        <p className="text-gray-600 mt-2">
+          Connect your Google Calendar or Outlook to automatically detect conflicts
+          with your homeschool schedule
+        </p>
       </div>
   
       {/* Alerts */}

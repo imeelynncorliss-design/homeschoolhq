@@ -10,6 +10,7 @@ import StatsBar from '@/src/components/dashboard/StatsBar'
 import { type UserTier, getTierForTesting, getChildLimit } from '@/lib/tierTesting'
 import { getOrganizationId } from '@/src/lib/getOrganizationId'
 
+
 // ─── Nav Card Data ────────────────────────────────────────────────────────────
 
 const NAV_CARDS = [
@@ -22,9 +23,9 @@ const NAV_CARDS = [
     border: '#ede9fe',
     dotColor: '#7c3aed',
     items: [
-      { label: 'Calendar', icon: '📅', href: '/calendar' },
-      { label: 'Lessons', icon: '📚', href: '/lessons' },
-      { label: 'Attendance', icon: '✅', href: '/admin?tab=attendance' },
+      { label: 'Calendar',          icon: '📅', href: '/calendar'          },
+      { label: 'Lessons',           icon: '📚', href: '/lessons'           },
+      { label: 'Attendance',        icon: '✅', href: '/attendance'        },
       { label: 'Teaching Schedule', icon: '👩‍🏫', href: '/teaching-schedule' },
     ],
   },
@@ -37,10 +38,10 @@ const NAV_CARDS = [
     border: '#e0f2fe',
     dotColor: '#0ea5e9',
     items: [
-      { label: 'Progress Tracking', icon: '📈', href: '/admin?tab=progress' },
-      { label: 'Assessments & Standards', icon: '📊', href: '/admin/assessments' },
-      { label: 'Courses', icon: '🎓', href: '/courses' },
-      { label: 'Transcripts', icon: '📄', href: '/transcript' },
+      { label: 'Progress Tracking',       icon: '📈', href: '/progress'    },
+      { label: 'Assessments & Standards', icon: '📊', href: '/assessments' },
+      { label: 'Courses',                 icon: '🎓', href: '/courses'     },
+      { label: 'Transcripts',             icon: '📄', href: '/transcript' },
     ],
   },
   {
@@ -52,25 +53,9 @@ const NAV_CARDS = [
     border: '#fce7f3',
     dotColor: '#ec4899',
     items: [
-      { label: 'Control Center (All Tools)', icon: '⚙️', href: '/admin' },
-      { label: 'Planning Mode', icon: '🎨', href: '/planning' },
-      { label: 'School Year & Compliance', icon: '⚖️', href: '/admin?tab=school-year' },
-      { label: 'Vacation Planner', icon: '🌴', href: '/admin?tab=vacation' },
-      { label: 'Bulk Scheduler', icon: '⚡', href: '/admin?tab=bulk-schedule' },
-    ],
-  },
-  {
-    id: 'collaborate',
-    icon: '🤝',
-    title: 'Collaborate',
-    gradient: 'linear-gradient(135deg, #10b981, #34d399)',
-    shadow: 'rgba(16,185,129,0.22)',
-    border: '#d1fae5',
-    dotColor: '#10b981',
-    items: [
-      { label: 'Social Hub', icon: '💬', href: '/social' },
-      { label: 'Work Calendar', icon: '🗓️', href: '/calendar/connect' },
-      { label: 'Manage Co-Teachers', icon: '👩‍🏫', href: '/co-teachers' },
+      { label: 'School Year & Compliance', icon: '⚖️', href: '/school-year'  },
+      { label: 'Vacation Planner',         icon: '🌴', href: '/vacation'     },
+      { label: 'Bulk Scheduler',           icon: '⚡', href: '/bulk-schedule' },
     ],
   },
   {
@@ -82,8 +67,9 @@ const NAV_CARDS = [
     border: '#fef3c7',
     dotColor: '#f59e0b',
     items: [
-      { label: 'Materials', icon: '🗂️', href: '/materials' },
-      { label: 'Curriculum Import', icon: '⬆️', href: '/lessons' },
+      { label: 'Homeschool Library', icon: '💡', href: '/resources'          },
+      { label: 'Materials',          icon: '🗂️', href: '/materials'          },
+      { label: 'Curriculum Import',  icon: '⬆️', href: '/curriculum/import'  },
     ],
   },
 ]
@@ -100,11 +86,10 @@ interface KidScheduleStatus {
 // ─── Onboarding Steps ─────────────────────────────────────────────────────────
 
 const ONBOARDING_STEPS = [
-  // FIX: Added href so the "Go →" button renders for new admins with no kids yet
-  { id: 1, icon: '👧', title: 'Add Your Child', desc: 'Create a profile so everything is personalized.', completedLabel: 'Profile created!', href: '/calendar' },
-  { id: 2, icon: '📚', title: 'Add Your First Lesson', desc: 'Create a lesson or import from your curriculum.', completedLabel: 'First lesson added!', href: '/lessons' },
-  { id: 3, icon: '⚡', title: 'Schedule Your Lessons', desc: 'Use the Bulk Scheduler to assign dates to lessons.', completedLabel: 'All lessons scheduled!', href: '/admin?tab=bulk-schedule' },
-  { id: 4, icon: '📅', title: 'View Your Teaching Day', desc: "See what you're teaching at a glance.", completedLabel: "You're ready to teach!", href: '/calendar' },
+  { id: 1, icon: '👧', title: 'Add Your Child',        desc: 'Create a profile so everything is personalized.',          completedLabel: 'Profile created!',       href: '/calendar'      },
+  { id: 2, icon: '📚', title: 'Add Your First Lesson', desc: 'Create a lesson or import from your curriculum.',          completedLabel: 'First lesson added!',    href: '/lessons'       },
+  { id: 3, icon: '⚡', title: 'Schedule Your Lessons', desc: 'Use the Bulk Scheduler to assign dates to lessons.',       completedLabel: 'All lessons scheduled!', href: '/bulk-schedule' },
+  { id: 4, icon: '📅', title: 'View Your Teaching Day',desc: "See what you're teaching at a glance.",                    completedLabel: "You're ready to teach!", href: '/calendar'      },
 ]
 
 // ─── Onboarding Checklist ─────────────────────────────────────────────────────

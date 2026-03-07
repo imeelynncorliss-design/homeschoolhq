@@ -173,8 +173,8 @@ export default function PlanningModeDashboard() {
     <div className="max-w-7xl mx-auto p-6 bg-gray-50 min-h-screen text-gray-900">
       {/* Mini Header */}
       <div className="flex justify-between items-center mb-4">
-        <button onClick={() => router.push('/admin')} className="text-gray-400 text-xs font-bold uppercase tracking-widest hover:text-white transition-all">
-          〈 Back to Admin
+      <button onClick={() => router.push('/dashboard')} className="text-gray-400 text-xs font-bold uppercase tracking-widest hover:text-gray-900 transition-all">
+          ← Dashboard
         </button>
         <div className="text-[10px] text-gray-600 uppercase tracking-widest bg-gray-200/50 px-3 py-1 rounded-full border border-gray-300">
           Cloud Sync: {lastSynced}

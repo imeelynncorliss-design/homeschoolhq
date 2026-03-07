@@ -442,7 +442,7 @@ function LessonsContent() {
               padding: '6px 14px', cursor: 'pointer',
             }}
           >
-            ← Home
+            ← Dashboard
           </button>
           <h1 style={{ color: '#fff', fontWeight: 900, fontSize: 18, margin: 0 }}>
             📚 Lessons

@@ -134,13 +134,13 @@ function HowToContent() {
           <h2 style={{ fontSize: 15, fontWeight: 800, color: '#111827', marginBottom: 16 }}>Quick Links</h2>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
             {[
-              { label: '📅 Calendar', href: '/calendar' },
-              { label: '📖 Lessons', href: '/lessons' },
-              { label: '⚙️ Control Center', href: '/admin' },
-              { label: '✅ Compliance', href: '/compliance' },
-              { label: '📊 Assessments', href: '/admin/assessments' },
-              { label: '📄 Transcripts', href: '/transcript' },
-              { label: '👩‍🏫 Co-Teachers', href: '/co-teachers' },
+             { label: '📅 Calendar',      href: '/calendar'      },
+             { label: '📖 Lessons',       href: '/lessons'        },
+             { label: '⚖️ Compliance',    href: '/school-year'    },
+             { label: '📊 Assessments',   href: '/assessments'    },
+             { label: '📄 Transcripts',   href: '/transcripts'    },
+             { label: '👩‍🏫 Co-Teachers',  href: '/co-teachers'    },
+             { label: '⚡ Bulk Scheduler', href: '/bulk-schedule'  },
             ].map(link => (
               <button
                 key={link.href}

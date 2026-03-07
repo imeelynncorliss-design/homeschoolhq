@@ -1,162 +1,274 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { supabase } from '@/src/lib/supabase'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 import GradeBook from '@/components/GradeBook'
 import TranscriptSettings from '@/components/TranscriptSettings'
 import TranscriptGenerator from '@/components/TranscriptGenerator'
 import AuthGuard from '@/components/AuthGuard'
-import { getOrganizationId } from '@/src/lib/getOrganizationId' 
-import { useAppHeader } from '@/components/layout/AppHeader'
+import { getOrganizationId } from '@/src/lib/getOrganizationId'
+import { pageShell, colors } from '@/src/lib/designTokens'
 
-function TranscriptContent() {
+// ─── Page Content ─────────────────────────────────────────────────────────────
+
+function TranscriptsContent() {
   const router = useRouter()
-  useAppHeader({ title: '📄 Transcript', backHref: '/dashboard' })
-  const [user, setUser] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
+  const [user, setUser]           = useState<any>(null)
+  const [loading, setLoading]     = useState(true)
   const [activeTab, setActiveTab] = useState('gradebook')
-  const [kids, setKids] = useState<any[]>([])
+  const [kids, setKids]           = useState<any[]>([])
   const [selectedKid, setSelectedKid] = useState<string | null>(null)
-  const [isCoTeacher, setIsCoTeacher] = useState(false) // NEW
-
-  // FIX: Use getOrganizationId utility to support co-teachers
-  const loadKids = async (userId: string) => {
-    const { orgId, isCoTeacher } = await getOrganizationId(userId)
-    setIsCoTeacher(isCoTeacher)
-
-    const { data } = await supabase
-      .from('kids')
-      .select('*')
-      .eq('organization_id', orgId) // was .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-
-    if (data && data.length > 0) {
-      setKids(data)
-      setSelectedKid(data[0].id)
-    }
-  }
-
-  const checkUser = async () => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      router.push('/')
-      return
-    }
-    setUser(user)
-    await loadKids(user.id)
-    setLoading(false)
-  }
 
   useEffect(() => {
-    checkUser()
+    const init = async () => {
+      // ── Auth ────────────────────────────────────────────────────────────
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { router.push('/'); return }
+
+      // ── Co-teacher guard — transcripts is admin-only ───────────────────
+      const { data: collaboration } = await supabase
+        .from('family_collaborators')
+        .select('organization_id')
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+      if (collaboration) { router.push('/dashboard'); return }
+
+      // ── Resolve org ─────────────────────────────────────────────────────
+      const { orgId } = await getOrganizationId(user.id)
+      if (!orgId) { router.push('/onboarding'); return }
+
+      // ── Load kids ────────────────────────────────────────────────────────
+      const { data: kidsData } = await supabase
+        .from('kids')
+        .select('*')
+        .eq('organization_id', orgId)
+        .order('created_at', { ascending: false })
+
+      setUser(user)
+      if (kidsData && kidsData.length > 0) {
+        setKids(kidsData)
+        setSelectedKid(kidsData[0].id)
+      }
+      setLoading(false)
+    }
+
+    init()
   }, [])
 
   const tabs = [
     { id: 'gradebook', label: '📊 Grade Book', description: 'Grades' },
-    { id: 'settings', label: '⚙️ Settings', description: 'Info' },
-    { id: 'generate', label: '📄 Generate', description: 'PDF' }
+    { id: 'settings',  label: '⚙️ Settings',   description: 'Info'   },
+    { id: 'generate',  label: '📄 Generate',    description: 'PDF'    },
   ]
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-2xl font-bold text-gray-900">Loading Transcripts...</div>
-      </div>
-    )
-  }
+  if (loading) return (
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: colors.pageBackground }}>
+      <div style={{ color: colors.purple, fontWeight: 700, fontSize: 16 }}>Loading...</div>
+    </div>
+  )
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div style={css.root}>
 
-      <div className="max-w-6xl mx-auto p-8 -mt-8">
+      {/* ── Header ───────────────────────────────────────────────────────────── */}
+      <header style={css.topBar}>
+        <div style={css.topBarLeft}>
+          <div style={css.logo}>
+            <span style={css.logoMain}>Homeschool</span>
+            <span style={css.logoAccent}>Ready</span>
+          </div>
+          <div style={css.pageTitle}>📄 Transcripts</div>
+        </div>
+        <div style={css.topBarRight}>
+          <button style={css.headerBtn} onClick={() => router.push('/calendar')}>
+            📅 Calendar
+          </button>
+          <button style={css.headerBtn} onClick={() => router.push('/dashboard')}>
+            ← Dashboard
+          </button>
+        </div>
+      </header>
 
-        <div className="mb-6 bg-indigo-50 border border-indigo-100 rounded-xl px-5 py-4 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <span className="text-xl">📚</span>
-            <p className="text-sm text-indigo-900">
+      {/* ── Main ─────────────────────────────────────────────────────────────── */}
+      <main style={css.main}>
+        <div style={css.sectionLabel}>CREATE OFFICIAL TRANSCRIPTS WITH GPA CALCULATIONS</div>
+
+        {/* Courses callout banner */}
+        <div style={css.banner}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 20 }}>📚</span>
+            <p style={{ fontSize: 13, color: colors.purpleDark, margin: 0 }}>
               <strong>Need to add or manage courses?</strong> Courses now have their own dedicated section.
             </p>
           </div>
-          <button
-            onClick={() => router.push('/courses')}
-            className="shrink-0 px-4 py-2 bg-indigo-600 text-white text-sm font-bold rounded-lg hover:bg-indigo-700 transition-colors"
-          >
+          <button style={css.bannerBtn} onClick={() => router.push('/courses')}>
             Go to Courses →
           </button>
         </div>
 
-        {/* FIX: Role-aware empty state */}
+        {/* Empty state */}
         {kids.length === 0 ? (
-          <div className="bg-white rounded-2xl shadow-xl p-12 text-center">
-            <div className="text-5xl mb-4">🤷‍♀️</div>
-            <h2 className="text-xl font-bold text-gray-900 mb-2">No students found</h2>
-            <p className="text-gray-600 mb-6">
-              {isCoTeacher
-                ? "No students have been added to this account yet. Check back once the account admin has set things up."
-                : "Add a child to your account before creating courses."}
+          <div style={css.emptyCard}>
+            <div style={{ fontSize: 48, marginBottom: 12 }}>🤷‍♀️</div>
+            <h2 style={{ fontSize: 18, fontWeight: 800, color: colors.textPrimary, marginBottom: 8 }}>No students found</h2>
+            <p style={{ fontSize: 13, color: colors.textSecondary, marginBottom: 20 }}>
+              Add a child to your account before creating transcripts.
             </p>
-            {!isCoTeacher && (
-              <button
-                onClick={() => router.push('/dashboard')}
-                className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium"
-              >
-                Go to Dashboard
-              </button>
-            )}
+            <button style={css.emptyBtn} onClick={() => router.push('/dashboard')}>
+              Go to Dashboard
+            </button>
           </div>
         ) : (
           <>
-            <div className="mb-8 bg-white p-6 rounded-2xl shadow-sm border flex items-center gap-6">
-              <div>
-                <label className="block text-[10px] font-black text-slate-500 uppercase mb-1 tracking-widest">
-                  Active Student
-                </label>
-                <select
-                  value={selectedKid || ''}
-                  onChange={(e) => setSelectedKid(e.target.value)}
-                  className="px-4 py-2 bg-white border-2 border-slate-200 rounded-xl font-black text-slate-500 outline-none focus:border-purple-600 transition-all cursor-pointer min-w-[200px]"
-                >
-                  {kids.map((kid) => (
-                    <option key={kid.id} value={kid.id}>{kid.displayname || kid.firstname}</option>
-                  ))}
-                </select>
-              </div>
+            {/* Kid selector */}
+            <div style={css.kidSelector}>
+              <label style={{ fontSize: 10, fontWeight: 800, color: colors.textMuted, letterSpacing: 1, textTransform: 'uppercase' as const, display: 'block', marginBottom: 6 }}>
+                Active Student
+              </label>
+              <select
+                value={selectedKid || ''}
+                onChange={(e) => setSelectedKid(e.target.value)}
+                style={css.kidSelect}
+              >
+                {kids.map((kid) => (
+                  <option key={kid.id} value={kid.id}>{kid.displayname || kid.firstname}</option>
+                ))}
+              </select>
             </div>
 
-            <div className="mb-6 flex gap-2">
+            {/* Tabs */}
+            <div style={css.tabRow}>
               {tabs.map(tab => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`px-6 py-4 rounded-xl font-bold transition-all ${
-                    activeTab === tab.id ? 'bg-white text-blue-600 shadow-md transform -translate-y-1' : 'text-gray-500'
-                  }`}
+                  style={{
+                    ...css.tab,
+                    background: activeTab === tab.id ? colors.white : 'transparent',
+                    color: activeTab === tab.id ? colors.purple : colors.textMuted,
+                    boxShadow: activeTab === tab.id ? '0 2px 8px rgba(124,58,237,0.12)' : 'none',
+                    transform: activeTab === tab.id ? 'translateY(-2px)' : 'none',
+                  }}
                 >
                   {tab.label}
                 </button>
               ))}
             </div>
 
-            <div className="bg-white rounded-2xl shadow-xl p-8 min-h-[500px]">
-              {activeTab === 'gradebook' && selectedKid && user && <GradeBook kidId={selectedKid} userId={user.id} />}
-              {activeTab === 'settings' && selectedKid && user && <TranscriptSettings kidId={selectedKid} userId={user.id} />}
-              {activeTab === 'generate' && selectedKid && user && (
-                <TranscriptGenerator kidId={selectedKid} userId={user.id} kidData={kids.find(k => k.id === selectedKid)} />
-              )}
+            {/* Tab content */}
+            <div style={css.tabContent}>
+              {activeTab === 'gradebook' && selectedKid && user &&
+                <GradeBook kidId={selectedKid} userId={user.id} />}
+              {activeTab === 'settings' && selectedKid && user &&
+                <TranscriptSettings kidId={selectedKid} userId={user.id} />}
+              {activeTab === 'generate' && selectedKid && user &&
+                <TranscriptGenerator kidId={selectedKid} userId={user.id} kidData={kids.find(k => k.id === selectedKid)} />}
             </div>
           </>
         )}
-      </div>
+      </main>
+
     </div>
   )
 }
 
-export default function TranscriptPage() {
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
+export default function TranscriptsPage() {
   return (
     <AuthGuard>
-      <TranscriptContent />
+      <Suspense fallback={<div>Loading...</div>}>
+        <TranscriptsContent />
+      </Suspense>
     </AuthGuard>
   )
+}
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
+const css: Record<string, React.CSSProperties> = {
+  ...pageShell,
+  banner: {
+    background: '#eef2ff',
+    border: '1px solid #c7d2fe',
+    borderRadius: 12,
+    padding: '14px 20px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 16,
+    marginBottom: 20,
+  },
+  bannerBtn: {
+    flexShrink: 0,
+    padding: '8px 16px',
+    background: '#4f46e5',
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: 700,
+    borderRadius: 8,
+    border: 'none',
+    cursor: 'pointer',
+  },
+  emptyCard: {
+    background: colors.white,
+    borderRadius: 16,
+    padding: '48px 24px',
+    textAlign: 'center' as const,
+    boxShadow: '0 4px 16px rgba(124,58,237,0.08)',
+  },
+  emptyBtn: {
+    padding: '10px 24px',
+    background: colors.purple,
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: 700,
+    borderRadius: 8,
+    border: 'none',
+    cursor: 'pointer',
+  },
+  kidSelector: {
+    background: colors.white,
+    borderRadius: 14,
+    padding: '16px 20px',
+    marginBottom: 20,
+    boxShadow: '0 2px 8px rgba(124,58,237,0.06)',
+    border: `1px solid ${colors.purpleBorder}`,
+  },
+  kidSelect: {
+    padding: '8px 16px',
+    background: colors.white,
+    border: `2px solid ${colors.gray200}`,
+    borderRadius: 10,
+    fontWeight: 800,
+    color: colors.textSecondary,
+    outline: 'none',
+    cursor: 'pointer',
+    minWidth: 200,
+    fontSize: 13,
+  },
+  tabRow: {
+    display: 'flex',
+    gap: 8,
+    marginBottom: 16,
+  },
+  tab: {
+    padding: '12px 24px',
+    borderRadius: 10,
+    fontWeight: 700,
+    fontSize: 13,
+    border: 'none',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+  },
+  tabContent: {
+    background: colors.white,
+    borderRadius: 14,
+    padding: '32px',
+    minHeight: 500,
+    boxShadow: '0 4px 16px rgba(124,58,237,0.08)',
+    border: `1px solid ${colors.purpleBorder}`,
+  },
 }
