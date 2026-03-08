@@ -109,8 +109,8 @@ function DashboardContent() {
   const [manualAttendance, setManualAttendance] = useState<any[]>([])
   const [calendarFilters, setCalendarFilters] = useState({
     showLessons: true,
-    showSocialEvents: true,
-    showCoopClasses: true,
+    //showSocialEvents: false,
+    //showCoopClasses: false,
     showManualAttendance: true
   })
 

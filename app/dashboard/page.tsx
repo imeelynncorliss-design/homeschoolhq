@@ -437,10 +437,6 @@ function DashboardContent() {
             Welcome, <strong>{parentName || user?.email?.split('@')[0]}</strong> 👋
           </div>
         </div>
-        <div style={css.topBarRight}>
-          <button style={css.howToBtn} onClick={() => router.push('/calendar')}>💡 How To</button>
-          <button style={css.logoutBtn} onClick={handleLogout}>Logout</button>
-        </div>
       </header>
 
       {!isCollaborator && <StatsBar organizationId={organizationId} />}
