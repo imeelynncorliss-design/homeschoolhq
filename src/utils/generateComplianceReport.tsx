@@ -40,42 +40,16 @@ interface GenerateReportOptions {
   parentName?: string
 }
 
-/**
- * Generates and downloads a compliance report PDF
- * 
- * @param options - The data needed to generate the report
- * @returns Promise that resolves when download starts
- * 
- * @example
- * ```tsx
- * const handleExportReport = async () => {
- *   try {
- *     await generateComplianceReport({
- *       complianceData,
- *       settings,
- *       familyHealthScore,
- *       organizationName: 'Smith Family',
- *       parentName: 'John Smith'
- *     })
- *     alert('Report downloaded successfully!')
- *   } catch (error) {
- *     console.error('Failed to generate report:', error)
- *     alert('Failed to generate report. Please try again.')
- *   }
- * }
- * ```
- */
 export async function generateComplianceReport(options: GenerateReportOptions): Promise<void> {
   const {
     complianceData,
     settings,
     familyHealthScore,
-    organizationName = 'HomeschoolHQ Family',
-    parentName = 'Parent'
+    organizationName = 'HomeschoolReady Family',
+    parentName = 'Parent',
   } = options
 
   try {
-    // Generate the PDF document
     const blob = await pdf(
       <ComplianceReportPDF
         complianceData={complianceData}
@@ -86,21 +60,16 @@ export async function generateComplianceReport(options: GenerateReportOptions): 
       />
     ).toBlob()
 
-    // Create download link
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
-    
-    // Generate filename with date
+
     const dateStr = new Date().toISOString().split('T')[0]
     const stateCode = settings.state_code || 'Custom'
     link.download = `Compliance_Report_${stateCode}_${dateStr}.pdf`
-    
-    // Trigger download
+
     document.body.appendChild(link)
     link.click()
-    
-    // Cleanup
     document.body.removeChild(link)
     URL.revokeObjectURL(url)
   } catch (error) {
@@ -109,19 +78,13 @@ export async function generateComplianceReport(options: GenerateReportOptions): 
   }
 }
 
-/**
- * Generates and returns the PDF as a blob (for uploading to storage, etc.)
- * 
- * @param options - The data needed to generate the report
- * @returns Promise that resolves with the PDF blob
- */
 export async function generateComplianceReportBlob(options: GenerateReportOptions): Promise<Blob> {
   const {
     complianceData,
     settings,
     familyHealthScore,
-    organizationName = 'HomeschoolHQ Family',
-    parentName = 'Parent'
+    organizationName = 'HomeschoolReady Family',
+    parentName = 'Parent',
   } = options
 
   try {

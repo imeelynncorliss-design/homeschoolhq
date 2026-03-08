@@ -118,6 +118,21 @@ const COMPLIANCE_TERMS = [
   },
 ]
 
+// ─── Guides Data ─────────────────────────────────────────────────────────────
+
+const DESCHOOLING_TASKS = [
+  { id: 'd1', phase: 'Week 1', title: 'Disable the Alarm', desc: 'Let the natural sleep cycle dictate the start of the day. Observe when focus peaks.' },
+  { id: 'd2', phase: 'Week 1', title: 'The "Boredom" Audit', desc: 'Watch what they do when screens are off. This is their natural curiosity surfacing.' },
+  { id: 'd3', phase: 'Week 2', title: 'Mid-Day Micro-Adventure', desc: 'Take a 20-minute walk or lunch-break park visit with zero "educational" goals.' },
+  { id: 'd4', phase: 'Week 3', title: 'Work-Sync Trial', desc: 'Practice a 30-minute block where you work and they engage in an "Independent Quest" like LEGOs.' },
+]
+
+const PORTFOLIO_TASKS = [
+  { id: 'p1', phase: 'Samples', title: 'The "Before" Snapshot', desc: 'Save one piece of work from their last month in traditional school for future comparison.' },
+  { id: 'p2', phase: 'Compliance', title: 'Attendance Log', desc: 'Start a simple calendar. Mark days where learning happened — museum visits count!' },
+  { id: 'p3', phase: 'Memory', title: 'Photo of the Week', desc: 'Snap a photo of a project, a messy science experiment, or a focused reading moment.' },
+]
+
 // ─── Gradient helpers ─────────────────────────────────────────────────────────
 
 const G = {
@@ -367,12 +382,313 @@ function ComplianceTab() {
   )
 }
 
+// ─── Guides Tab ───────────────────────────────────────────────────────────────
+
+function GuidesTab() {
+  const [activeGuide, setActiveGuide] = useState<'deschooling' | 'portfolio'>('deschooling')
+  const [completedItems, setCompletedItems] = useState<string[]>([])
+  const [showPhilosophy, setShowPhilosophy] = useState(false)
+  const [showHoursGuide, setShowHoursGuide] = useState(false)
+
+  const toggleItem = (id: string) => {
+    setCompletedItems(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id])
+  }
+
+  const handleStartTracking = () => {
+    setShowHoursGuide(false)
+    setActiveGuide('portfolio')
+  }
+
+  const tasks = activeGuide === 'deschooling' ? DESCHOOLING_TASKS : PORTFOLIO_TASKS
+  const prefix = activeGuide === 'deschooling' ? 'd' : 'p'
+  const done = completedItems.filter(id => id.startsWith(prefix)).length
+  const progress = tasks.length > 0 ? Math.round((done / tasks.length) * 100) : 0
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 24, alignItems: 'start' }}>
+
+      {/* Left — tasks */}
+      <div>
+        {/* Guide toggle */}
+        <div style={{ display: 'flex', gap: 8, background: 'rgba(237,233,254,0.5)', padding: 6, borderRadius: 16, width: 'fit-content', marginBottom: 20, border: '1px solid #ede9fe' }}>
+          {[
+            { id: 'deschooling' as const, label: '🌱 Deschooling Guide' },
+            { id: 'portfolio' as const,   label: '📋 Portfolio Tracker' },
+          ].map(g => (
+            <button
+              key={g.id}
+              onClick={() => setActiveGuide(g.id)}
+              style={{
+                padding: '9px 20px', borderRadius: 12, cursor: 'pointer', border: 'none',
+                fontSize: 13, fontWeight: 700, transition: 'all 0.15s',
+                background: activeGuide === g.id ? '#fff' : 'transparent',
+                color: activeGuide === g.id ? '#4f46e5' : '#9ca3af',
+                boxShadow: activeGuide === g.id ? '0 2px 8px rgba(0,0,0,0.08)' : 'none',
+              }}
+            >
+              {g.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Intro blurb — swaps with active guide */}
+        {activeGuide === 'deschooling' ? (
+          <div style={{ background: '#f5f3ff', borderRadius: 14, padding: '16px 20px', border: '1px solid #ede9fe', marginBottom: 16 }}>
+            <div style={{ fontSize: 14, fontWeight: 800, color: '#1e1b4b', marginBottom: 6 }}>🌱 What is deschooling?</div>
+            <p style={{ fontSize: 13, color: '#4b5563', lineHeight: 1.7, margin: '0 0 10px' }}>
+              Deschooling is the intentional transition period between traditional school and homeschooling. It's not a break from learning — it's a reset. Children (and parents) need time to shed the habits and expectations of institutional school before a new rhythm can take hold.
+            </p>
+            <a
+              href="https://hslda.org/post/deschooling-making-the-switch-from-traditional-school-to-homeschooling"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ fontSize: 12, fontWeight: 700, color: '#7c3aed', textDecoration: 'none' }}
+            >
+              Read HSLDA's guide to deschooling →
+            </a>
+          </div>
+        ) : (
+          <div style={{ background: '#f0fdf4', borderRadius: 14, padding: '16px 20px', border: '1px solid #d1fae5', marginBottom: 16 }}>
+            <div style={{ fontSize: 14, fontWeight: 800, color: '#14532d', marginBottom: 6 }}>📋 What is a portfolio?</div>
+            <p style={{ fontSize: 13, color: '#4b5563', lineHeight: 1.7, margin: 0 }}>
+              A homeschool portfolio is an organized collection of your child's work — attendance records, photos, projects, and samples that document learning over time. Many states accept a portfolio as proof of compliance, and it doubles as a meaningful keepsake. Start simple: a folder, a calendar, and a few photos go a long way.
+            </p>
+          </div>
+        )}
+
+        {/* Progress card */}
+        <div style={{ background: '#fff', borderRadius: 16, padding: '18px 20px', border: '1px solid #e5e7eb', marginBottom: 16, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <span style={{ fontSize: 11, fontWeight: 800, color: '#9ca3af', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Step-by-Step Progress</span>
+            <span style={{ fontSize: 20, fontWeight: 900, color: '#7c3aed' }}>{progress}%</span>
+          </div>
+          <div style={{ background: '#f3f4f6', borderRadius: 99, height: 10, overflow: 'hidden' }}>
+            <div style={{
+              height: '100%', borderRadius: 99, transition: 'width 0.6s ease',
+              width: `${progress}%`,
+              background: G.full,
+            }} />
+          </div>
+        </div>
+
+        {/* Task cards */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {tasks.map(task => {
+            const isDone = completedItems.includes(task.id)
+            return (
+              <div
+                key={task.id}
+                onClick={() => toggleItem(task.id)}
+                style={{
+                  background: isDone ? '#f9fafb' : '#fff',
+                  borderRadius: 16, padding: '18px 20px',
+                  border: '1px solid #e5e7eb',
+                  display: 'flex', alignItems: 'center', gap: 16,
+                  cursor: 'pointer', transition: 'all 0.15s',
+                  opacity: isDone ? 0.7 : 1,
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                }}
+              >
+                {/* Checkbox */}
+                <div style={{
+                  width: 24, height: 24, borderRadius: 8, flexShrink: 0,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: isDone ? '#10b981' : 'transparent',
+                  border: isDone ? 'none' : '2px solid #d1d5db',
+                  transition: 'all 0.15s',
+                  fontSize: 13, color: '#fff', fontWeight: 800,
+                }}>
+                  {isDone ? '✓' : ''}
+                </div>
+
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 10, fontWeight: 800, color: '#7c3aed', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: 3 }}>
+                    {task.phase}
+                  </div>
+                  <div style={{
+                    fontSize: 15, fontWeight: 700, color: '#111827', marginBottom: 4,
+                    textDecoration: isDone ? 'line-through' : 'none',
+                  }}>
+                    {task.title}
+                  </div>
+                  <div style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.6 }}>{task.desc}</div>
+                </div>
+
+                <span style={{ fontSize: 16, color: '#d1d5db', flexShrink: 0 }}>›</span>
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Deschooling → Portfolio CTA */}
+        {activeGuide === 'deschooling' && (
+          <div style={{
+            marginTop: 20, background: '#fff', borderRadius: 16, padding: '20px 24px',
+            border: '1px solid #e5e7eb', boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16,
+          }}>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 800, color: '#111827', marginBottom: 4 }}>
+                Ready to start tracking?
+              </div>
+              <div style={{ fontSize: 13, color: '#6b7280' }}>
+                Once deschooling feels natural, begin recording your progress.
+              </div>
+            </div>
+            <button
+              onClick={() => setActiveGuide('portfolio')}
+              style={{
+                background: G.full, border: 'none', borderRadius: 10, color: '#fff',
+                fontSize: 13, fontWeight: 700, padding: '10px 20px', cursor: 'pointer',
+                whiteSpace: 'nowrap', boxShadow: '0 4px 12px rgba(124,58,237,0.3)',
+                flexShrink: 0,
+              }}
+            >
+              Start Recording Progress →
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Right — sidebar */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+        {/* Golden Rule card */}
+        <div style={{
+          background: '#1e1b4b', borderRadius: 24, padding: 28, color: '#fff',
+          boxShadow: '0 8px 32px rgba(30,27,75,0.25)', position: 'relative', overflow: 'hidden',
+        }}>
+          <div style={{
+            position: 'absolute', top: -20, right: -20, width: 100, height: 100,
+            background: 'rgba(99,102,241,0.2)', borderRadius: '50%', filter: 'blur(20px)',
+          }} />
+          <div style={{ fontSize: 28, marginBottom: 16 }}>💡</div>
+          <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 10, letterSpacing: -0.3 }}>The Golden Rule</div>
+          <p style={{ fontSize: 13, color: 'rgba(199,210,254,0.85)', lineHeight: 1.7, marginBottom: 20 }}>
+            For every year your child was in traditional school, allow <strong style={{ color: '#fff' }}>one month</strong> of deschooling before pushing academic rigor.
+          </p>
+          <button
+            onClick={() => setShowPhilosophy(true)}
+            style={{
+              width: '100%', padding: '10px 0', background: 'rgba(255,255,255,0.1)',
+              border: '1px solid rgba(255,255,255,0.2)', borderRadius: 12,
+              fontSize: 12, fontWeight: 700, color: '#fff', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+            }}
+          >
+            Read Philosophy Guide ›
+          </button>
+        </div>
+
+        {/* Quick Resources */}
+        <div style={{ background: '#fff', borderRadius: 20, padding: '20px 18px', border: '1px solid #e5e7eb', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+          <div style={{ fontSize: 13, fontWeight: 800, color: '#111827', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
+            📄 Quick Resources
+          </div>
+          {[
+            { icon: '📋', label: 'State Legal Maps', sub: 'Via HSLDA.org', bg: '#ede9fe', href: 'https://hslda.org/legal' },
+            { icon: '⏱️', label: 'What Counts as "Hours"?', sub: 'Tracking Guide', bg: '#f5f3ff', href: null },
+          ].map(r => {
+            const inner = (
+              <div key={r.label} style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '10px 12px', borderRadius: 12, cursor: 'pointer',
+                transition: 'background 0.12s', marginBottom: 6,
+              }}
+                onClick={r.href ? undefined : () => setShowHoursGuide(true)}
+                onMouseEnter={e => (e.currentTarget.style.background = '#f5f3ff')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 10, background: r.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>
+                    {r.icon}
+                  </div>
+                  <div>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: '#374151', display: 'block' }}>{r.label}</span>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: '#9ca3af', letterSpacing: '0.05em', textTransform: 'uppercase' }}>{r.sub}</span>
+                  </div>
+                </div>
+                <span style={{ fontSize: 14, color: '#d1d5db' }}>›</span>
+              </div>
+            )
+            return r.href ? (
+              <a key={r.label} href={r.href} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
+                {inner}
+              </a>
+            ) : inner
+          })}
+        </div>
+
+
+      </div>
+
+      {/* ── Philosophy Modal ── */}
+      {showPhilosophy && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,14,46,0.6)', backdropFilter: 'blur(4px)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div style={{ background: '#fff', borderRadius: 28, width: '100%', maxWidth: 560, maxHeight: '80vh', overflowY: 'auto', padding: 36, boxShadow: '0 24px 64px rgba(0,0,0,0.18)', position: 'relative' }}>
+            <button onClick={() => setShowPhilosophy(false)} style={{ position: 'absolute', top: 20, right: 20, background: 'none', border: 'none', fontSize: 18, color: '#9ca3af', cursor: 'pointer' }}>✕</button>
+            <h2 style={{ fontSize: 26, fontWeight: 800, color: '#1e1b4b', marginBottom: 20 }}>Deschooling Philosophy</h2>
+            <div style={{ color: '#4b5563', lineHeight: 1.8, fontSize: 14 }}>
+              <p style={{ fontWeight: 700, color: '#6366f1', fontStyle: 'italic', marginBottom: 16 }}>"The first step to homeschooling isn't teaching; it's unlearning."</p>
+              <p style={{ marginBottom: 16 }}>For working parents, the instinct is to immediately fill the child's time. However, jumping straight into a rigid curriculum can lead to burnout.</p>
+              <p style={{ fontWeight: 700, color: '#111827', marginBottom: 10 }}>Why the 1-month-per-year rule?</p>
+              <ul style={{ paddingLeft: 20, marginBottom: 16 }}>
+                <li style={{ marginBottom: 8 }}><strong>Reclaiming Curiosity:</strong> Help them find their own "inner engine."</li>
+                <li style={{ marginBottom: 8 }}><strong>Stress Reduction:</strong> Shed the anxiety of bells and rigid schedules.</li>
+                <li style={{ marginBottom: 8 }}><strong>Relationship Building:</strong> Use this time to bond before you become "Teacher."</li>
+              </ul>
+            </div>
+            <button onClick={() => setShowPhilosophy(false)} style={{ marginTop: 12, width: '100%', padding: '14px 0', background: '#6366f1', color: '#fff', fontWeight: 700, fontSize: 15, borderRadius: 16, border: 'none', cursor: 'pointer' }}>
+              Got it, let's reset
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Hours Guide Modal ── */}
+      {showHoursGuide && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,14,46,0.6)', backdropFilter: 'blur(4px)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div style={{ background: '#fff', borderRadius: 28, width: '100%', maxWidth: 560, maxHeight: '80vh', overflowY: 'auto', padding: 36, boxShadow: '0 24px 64px rgba(0,0,0,0.18)', position: 'relative' }}>
+            <button onClick={() => setShowHoursGuide(false)} style={{ position: 'absolute', top: 20, right: 20, background: 'none', border: 'none', fontSize: 18, color: '#9ca3af', cursor: 'pointer' }}>✕</button>
+            <h2 style={{ fontSize: 26, fontWeight: 800, color: '#1e1b4b', marginBottom: 20 }}>What Counts as "School"?</h2>
+            <div style={{ color: '#4b5563', lineHeight: 1.8, fontSize: 14 }}>
+              <p style={{ marginBottom: 16, color: '#6b7280', fontSize: 15 }}>
+                One of the biggest hurdles for new homeschoolers is the <strong style={{ color: '#1e1b4b' }}>"Desk Trap."</strong> You do not need to sit at a desk for 6 hours a day.
+              </p>
+              <div style={{ background: '#eef2ff', borderRadius: 16, padding: 20, border: '1px solid #e0e7ff', marginBottom: 16 }}>
+                <p style={{ fontWeight: 700, color: '#3730a3', marginBottom: 14 }}>The "Everyday" Education List:</p>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  {[
+                    { emoji: '🎨', label: 'Art', sub: 'Drawing, visiting a gallery, messy play.' },
+                    { emoji: '🍳', label: 'Life Skills', sub: 'Cooking, laundry, gardening.' },
+                    { emoji: '🎧', label: 'Audio', sub: 'Podcasts or audiobooks on the go.' },
+                    { emoji: '🌲', label: 'PE/Science', sub: 'Nature walks or park play.' },
+                  ].map(item => (
+                    <div key={item.label} style={{ background: '#fff', borderRadius: 12, padding: '12px 14px', display: 'flex', gap: 10, border: '1px solid #e0e7ff' }}>
+                      <span style={{ fontSize: 20 }}>{item.emoji}</span>
+                      <div>
+                        <span style={{ fontWeight: 700, color: '#374151', fontSize: 13, display: 'block' }}>{item.label}</span>
+                        <span style={{ color: '#6b7280', fontSize: 12 }}>{item.sub}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <p style={{ fontSize: 12, color: '#9ca3af', fontStyle: 'italic' }}>In most states, "educational activity" is broadly defined. If they are engaged and learning, it counts!</p>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Resources Content ────────────────────────────────────────────────────────
 
 function ResourcesContent() {
   const router = useRouter()
   useAppHeader({ title: '💡 Resources', backHref: '/dashboard' })
-  const [activeTab, setActiveTab] = useState<'styles' | 'curriculum' | 'compliance'>('styles')
+  const [activeTab, setActiveTab] = useState<'styles' | 'curriculum' | 'compliance' | 'guides'>('styles')
   const [curriculumStyle, setCurriculumStyle] = useState('charlotte')
   const [userStyle, setUserStyle] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -412,6 +728,7 @@ function ResourcesContent() {
     { id: 'styles' as const,     icon: '🎨', label: 'Teaching Styles'   },
     { id: 'curriculum' as const, icon: '📚', label: 'Curriculum'         },
     { id: 'compliance' as const, icon: '✅', label: 'Compliance Basics'  },
+    { id: 'guides' as const,     icon: '🌱', label: 'Guides'             },
   ]
 
   const handleViewCurriculum = (styleId: string) => {
@@ -431,7 +748,7 @@ function ResourcesContent() {
   return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(160deg, #f5f3ff 0%, #ede9fe 40%, #fce7f3 100%)', fontFamily: 'var(--font-dm-sans), sans-serif' }}>
 
-      <div style={{ maxWidth: 860, margin: '0 auto', padding: '24px 24px 48px' }}>
+      <div style={{ maxWidth: activeTab === 'guides' ? 1060 : 860, margin: '0 auto', padding: '24px 24px 48px' }}>
 
         {/* Page title row */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
@@ -483,6 +800,9 @@ function ResourcesContent() {
         )}
         {activeTab === 'compliance' && (
           <ComplianceTab />
+        )}
+        {activeTab === 'guides' && (
+          <GuidesTab />
         )}
       </div>
     </div>

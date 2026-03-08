@@ -50,7 +50,7 @@ export default function StatsBar({ organizationId }: StatsBarProps) {
       value: loading ? "—" : `${annualPct}%`,
       sub: loading ? "loading..." : `${annualDays} of ${annualRequired} days`,
       alert: false,
-      href: "/admin?tab=progress",
+      href: "/progress",
       cta: "Track progress →",
     },
     {
@@ -60,7 +60,7 @@ export default function StatsBar({ organizationId }: StatsBarProps) {
       value: loading ? "—" : `${weekDays}`,
       sub: loading ? "loading..." : weekDays === 1 ? "day logged" : "days logged",
       alert: false,
-      href: "/admin?tab=attendance",
+      href: "/attendance",
       cta: "Log attendance →",
     },
     {
@@ -74,7 +74,7 @@ export default function StatsBar({ organizationId }: StatsBarProps) {
         ? `${complianceState} · ${complianceAlert ? "needs attention" : "on track"}`
         : "set up compliance →",
       alert: complianceAlert,
-      href: "/admin?tab=school-year",
+      href: "/school-year",
       cta: complianceAlert ? "Fix now →" : "View details →",
     },
   ];

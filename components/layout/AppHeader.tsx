@@ -7,6 +7,7 @@ import {
 import type { ReactNode, CSSProperties } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/src/lib/supabase'
+import { gradients } from '@/src/lib/designTokens'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -44,6 +45,17 @@ interface FeedbackModalProps {
 interface KidAvatarProps {
   kid: Kid
   size?: number
+}
+
+interface CopilotPanelProps {
+  onClose: () => void
+  organizationId?: string
+}
+
+interface CopilotMessage {
+  role: 'user' | 'assistant'
+  content: string
+  timestamp: string
 }
 
 type Phase = 'form' | 'submitting' | 'success' | 'error'
@@ -157,7 +169,7 @@ function FeedbackModal({ onClose, userId, orgId }: FeedbackModalProps) {
           scale: 0.75,
           logging: false,
           ignoreElements: (el: Element) => el.id === 'hr-header-root',
-        })
+        } as any)
         const blob = await new Promise<Blob | null>(res =>
           canvas.toBlob(res, 'image/jpeg', 0.7)
         )
@@ -288,20 +300,12 @@ function KidAvatar({ kid, size = 30 }: KidAvatarProps) {
     <div
       title={kid.displayname}
       style={{
-        width: size,
-        height: size,
-        borderRadius: '50%',
+        width: size, height: size, borderRadius: '50%',
         background: kid.avatar_url ? 'transparent' : '#818cf8',
         border: '2px solid rgba(255,255,255,0.4)',
-        overflow: 'hidden',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontSize: size * 0.4,
-        color: '#fff',
-        fontWeight: 700,
-        flexShrink: 0,
-        cursor: 'default',
+        overflow: 'hidden', display: 'flex', alignItems: 'center',
+        justifyContent: 'center', fontSize: size * 0.4,
+        color: '#fff', fontWeight: 700, flexShrink: 0, cursor: 'default',
       }}
     >
       {kid.avatar_url
@@ -312,7 +316,139 @@ function KidAvatar({ kid, size = 30 }: KidAvatarProps) {
   )
 }
 
-// ─── Main Header ─────────────────────────────────────────────────────────────
+// ─── Copilot Panel ────────────────────────────────────────────────────────────
+
+function CopilotPanel({ onClose, organizationId }: CopilotPanelProps) {
+  const [messages, setMessages] = useState<CopilotMessage[]>([
+    {
+      role: 'assistant',
+      content: "Hi! I'm your HomeschoolReady Copilot. I can help you with lesson planning, scheduling, compliance tracking, and more. What can I help you with today?",
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    },
+  ])
+  const [input, setInput] = useState('')
+  const [loading, setLoading] = useState(false)
+  const bottomRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
+
+  const send = async () => {
+    const text = input.trim()
+    if (!text || loading) return
+
+    const userMsg: CopilotMessage = {
+      role: 'user',
+      content: text,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    }
+    setMessages(prev => [...prev, userMsg])
+    setInput('')
+    setLoading(true)
+
+    try {
+      const response = await fetch('/api/help-chat', {// leaving in case we need it https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: [
+            ...messages.map(m => ({ role: m.role, content: m.content })),
+            { role: 'user', content: text },
+          ],
+        }),
+      })
+
+      const data = await response.json()
+      const reply = data.response || 'Sorry, I had trouble responding. Please try again.'
+
+      setMessages(prev => [
+        ...prev,
+        {
+          role: 'assistant',
+          content: reply,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        },
+      ])
+    } catch {
+      setMessages(prev => [
+        ...prev,
+        {
+          role: 'assistant',
+          content: 'Something went wrong. Please try again.',
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        },
+      ])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div style={cp.overlay} onClick={onClose}>
+      <div style={cp.drawer} onClick={e => e.stopPropagation()}>
+        {/* Header */}
+        <div style={cp.head}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <img
+              src="/schoolhouse-helper.png"
+              alt="Copilot"
+              style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover' }}
+            />
+            <div>
+              <div style={cp.headTitle}>HomeschoolReady Copilot</div>
+              <div style={cp.headSub}>Powered by Claude AI</div>
+            </div>
+          </div>
+          <button style={cp.closeBtn} onClick={onClose}>×</button>
+        </div>
+
+        {/* Messages */}
+        <div style={cp.messages}>
+          {messages.map((msg, i) => (
+            <div key={i} style={{
+              display: 'flex', flexDirection: 'column',
+              alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start',
+              marginBottom: 12,
+            }}>
+              <div style={msg.role === 'user' ? cp.userBubble : cp.aiBubble}>
+                {msg.content}
+              </div>
+              <div style={cp.timestamp}>{msg.timestamp}</div>
+            </div>
+          ))}
+          {loading && (
+            <div style={{ display: 'flex', alignItems: 'flex-start', marginBottom: 12 }}>
+              <div style={{ ...cp.aiBubble, color: '#9ca3af', letterSpacing: 3 }}>●●●</div>
+            </div>
+          )}
+          <div ref={bottomRef} />
+        </div>
+
+        {/* Input */}
+        <div style={cp.inputRow}>
+          <input
+            style={cp.input}
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && send()}
+            placeholder="Ask a question..."
+            disabled={loading}
+          />
+          <button
+            style={{ ...cp.sendBtn, opacity: (!input.trim() || loading) ? 0.45 : 1 }}
+            onClick={send}
+            disabled={!input.trim() || loading}
+          >
+            ↑
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Main Header ──────────────────────────────────────────────────────────────
 
 export default function AppHeader() {
   const { title, backHref } = useContext(HeaderCtx)
@@ -325,6 +461,7 @@ export default function AppHeader() {
   const [kids, setKids] = useState<Kid[]>([])
   const [showFeedback, setShowFeedback] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
+  const [showCopilot, setShowCopilot] = useState(false)
   const userMenuRef = useRef<HTMLDivElement>(null)
 
   const betaEnabled = process.env.NEXT_PUBLIC_BETA_FEEDBACK_ENABLED === 'true'
@@ -418,6 +555,18 @@ export default function AppHeader() {
 
         {/* Right */}
         <div style={s.right}>
+          {/* Copilot — always visible for authenticated users */}
+          {userId && (
+           <button className="hr-btn hr-copilot-btn" onClick={() => setShowCopilot(true)}>
+           <img 
+             src="/schoolhouse-helper.png" 
+             alt="Copilot" 
+             style={{ width: 20, height: 20, borderRadius: 4, objectFit: 'cover' }} 
+           />
+           <span>Copilot</span>
+         </button>
+          )}
+
           {betaEnabled && userId && orgId && (
             <button className="hr-btn hr-feedback-btn" onClick={() => setShowFeedback(true)}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -464,11 +613,15 @@ export default function AppHeader() {
       {showFeedback && userId && orgId && (
         <FeedbackModal onClose={() => setShowFeedback(false)} userId={userId} orgId={orgId} />
       )}
+
+      {showCopilot && (
+        <CopilotPanel onClose={() => setShowCopilot(false)} organizationId={orgId ?? undefined} />
+      )}
     </>
   )
 }
 
-// ─── Styles ──────────────────────────────────────────────────────────────────
+// ─── Styles ───────────────────────────────────────────────────────────────────
 
 const s: Record<string, CSSProperties> = {
   header: {
@@ -553,6 +706,64 @@ const s: Record<string, CSSProperties> = {
   successText: { fontSize: 14, color: '#6b7280', lineHeight: 1.6, maxWidth: 280, margin: 0, fontFamily: 'Georgia, serif' },
 }
 
+// ─── Copilot Panel Styles ─────────────────────────────────────────────────────
+
+const cp: Record<string, CSSProperties> = {
+  overlay: {
+    position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.3)',
+    zIndex: 200, display: 'flex', justifyContent: 'flex-end',
+  },
+  drawer: {
+    width: 380, maxWidth: '95vw', height: '100vh',
+    background: '#fff', display: 'flex', flexDirection: 'column',
+    boxShadow: '-4px 0 24px rgba(0,0,0,0.15)',
+  },
+  head: {
+    background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #a855f7 100%)',
+    padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+  },
+  avatar: {
+    width: 36, height: 36, borderRadius: '50%',
+    background: 'rgba(255,255,255,0.2)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18,
+  },
+  headTitle: { color: '#fff', fontWeight: 700, fontSize: 14, fontFamily: 'system-ui, sans-serif' },
+  headSub: { color: 'rgba(255,255,255,0.7)', fontSize: 11, marginTop: 1, fontFamily: 'system-ui, sans-serif' },
+  closeBtn: {
+    background: 'rgba(255,255,255,0.15)', border: 'none',
+    borderRadius: 6, color: '#fff', fontSize: 18, cursor: 'pointer', padding: '4px 8px',
+  },
+  messages: { flex: 1, overflowY: 'auto', padding: '16px 16px 8px' },
+  aiBubble: {
+    background: '#f3f4f6', borderRadius: '4px 14px 14px 14px',
+    padding: '10px 14px', fontSize: 13.5, color: '#111827',
+    maxWidth: '85%', lineHeight: 1.5, whiteSpace: 'pre-wrap',
+    fontFamily: 'system-ui, sans-serif',
+  },
+  userBubble: {
+    background: 'linear-gradient(135deg, #7c3aed, #a855f7)',
+    borderRadius: '14px 4px 14px 14px',
+    padding: '10px 14px', fontSize: 13.5, color: '#fff',
+    maxWidth: '85%', lineHeight: 1.5, fontFamily: 'system-ui, sans-serif',
+  },
+  timestamp: { fontSize: 10, color: '#9ca3af', marginTop: 3, marginLeft: 2, marginRight: 2, fontFamily: 'system-ui, sans-serif' },
+  inputRow: {
+    padding: '12px 16px', borderTop: '1px solid #e5e7eb',
+    display: 'flex', gap: 8, alignItems: 'center',
+  },
+  input: {
+    flex: 1, border: '1.5px solid #e5e7eb', borderRadius: 10,
+    padding: '9px 14px', fontSize: 13.5, outline: 'none',
+    color: '#111827', fontFamily: 'system-ui, sans-serif',
+  },
+  sendBtn: {
+    width: 36, height: 36, borderRadius: '50%',
+    background: 'linear-gradient(135deg, #7c3aed, #a855f7)',
+    border: 'none', color: '#fff', fontSize: 16, fontWeight: 700,
+    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+  },
+}
+
 const HEADER_STYLES = `
   .hr-btn {
     display: flex; align-items: center; gap: 6px;
@@ -569,4 +780,6 @@ const HEADER_STYLES = `
   .hr-btn:hover { background: rgba(255,255,255,0.22); color: #fff; }
   .hr-feedback-btn { border-color: rgba(255,255,255,0.4); background: rgba(255,255,255,0.18); }
   .hr-feedback-btn:hover { background: rgba(255,255,255,0.28); }
+  .hr-copilot-btn { border-color: rgba(255,255,255,0.5); background: rgba(255,255,255,0.22); font-weight: 700; }
+  .hr-copilot-btn:hover { background: rgba(255,255,255,0.32); color: #fff; }
 `

@@ -14,6 +14,7 @@ import CurriculumImporter from '@/components/CurriculumImporter'
 import { formatLessonDescription } from '@/lib/formatLessonDescription'
 import { DEFAULT_HOLIDAYS_2025_2026 } from '@/app/utils/holidayUtils'
 import { getOrganizationId } from '@/src/lib/getOrganizationId'
+import GenerateAssessmentModal from '@/components/GenerateAssessmentModal'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -100,6 +101,10 @@ function LessonsContent() {
 
   // Generate Lessons modal state
   const [showGenerator, setShowGenerator] = useState(false)
+
+  //Generate Assessment
+  const [showAssessmentGenerator, setShowAssessmentGenerator] = useState(false)
+  const [assessmentLesson, setAssessmentLesson] = useState<Lesson | null>(null)
 
   // Past assessments viewer state
   const [showPastAssessments, setShowPastAssessments] = useState(false)
@@ -400,6 +405,11 @@ function LessonsContent() {
     await loadData(user.id, organizationId)
   }
 
+  const handleGenerateAssessment = (lesson: Lesson) => {
+    setAssessmentLesson(lesson)
+    setShowAssessmentGenerator(true)
+  }
+
   const handleViewPastAssessments = (kidId: string, kidName: string) => {
     setPastAssessmentsKidId(kidId)
     setPastAssessmentsKidName(kidName)
@@ -546,6 +556,7 @@ function LessonsContent() {
             onEditLesson={handleEditLesson}
             onDeleteLesson={handleDeleteLesson}
             onCycleStatus={handleCycleStatus}
+            onGenerateAssessment={handleGenerateAssessment}
             onViewPastAssessments={handleViewPastAssessments}
             onRefresh={() => loadData(user.id, organizationId)}
           />
@@ -999,6 +1010,18 @@ function LessonsContent() {
           onImportComplete={() => {
             setShowImporter(false)
             loadData(user.id, organizationId)
+          }}
+        />
+      )}
+
+      {/* ── Generate Assessments  ───────────────────────────────────── */}
+      {showAssessmentGenerator && assessmentLesson && (
+        <GenerateAssessmentModal
+          lesson={assessmentLesson}
+          kids={kids}
+          onClose={() => {
+            setShowAssessmentGenerator(false)
+            setAssessmentLesson(null)
           }}
         />
       )}

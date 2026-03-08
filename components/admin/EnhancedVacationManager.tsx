@@ -50,10 +50,11 @@ export default function EnhancedVacationManager({ organizationId }: EnhancedVaca
 
       // Get active school year config
       const { data } = await supabase
-        .from('school_year_config')
+        .from('school_year_settings')
         .select('id')
         .eq('organization_id', organizationId)
-        .eq('active', true)
+        .order('created_at', { ascending: false })
+        .limit(1)
         .maybeSingle();
       
       if (data) setActiveConfigId(data.id);

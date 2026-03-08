@@ -6,9 +6,9 @@ const anthropic = new Anthropic({
 });
 
 // System prompt that gives Claude context about HomeschoolHQ
-const SYSTEM_PROMPT = `You are a helpful assistant for HomeschoolHQ, a curriculum-agnostic homeschool planning platform. You help parents navigate the platform and answer questions about its features.
+const SYSTEM_PROMPT = `You are a helpful assistant for HomeschoolReady, a curriculum-agnostic homeschool planning platform for primarily working parents. You help parents navigate the platform and answer questions about its features.
 
-## Key Features of HomeschoolHQ:
+## Key Features of HomeschoolReady:
 
 ### AI Lesson Generation
 Parents can use AI to generate customized lesson plans based on their curriculum, student's learning style, and educational goals.

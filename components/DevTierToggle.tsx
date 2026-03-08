@@ -27,6 +27,7 @@ export default function DevTierToggle() {
     PREMIUM: '👑'
   }
 
+  if (process.env.NEXT_PUBLIC_DEV_TOOLS !== 'true') return null
   return (
     <div className="fixed bottom-4 right-4 z-50">
       <button

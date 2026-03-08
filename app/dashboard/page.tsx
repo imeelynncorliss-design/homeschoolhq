@@ -5,7 +5,6 @@ import { supabase } from '@/src/lib/supabase'
 import { useRouter } from 'next/navigation'
 import AuthGuard from '@/components/AuthGuard'
 import DevTierToggle from '@/components/DevTierToggle'
-import HelpWidget from '../../components/HelpWidget'
 import StatsBar from '@/src/components/dashboard/StatsBar'
 import { type UserTier, getTierForTesting, getChildLimit } from '@/lib/tierTesting'
 import { getOrganizationId } from '@/src/lib/getOrganizationId'
@@ -39,7 +38,7 @@ const NAV_CARDS = [
     dotColor: '#0ea5e9',
     items: [
       { label: 'Progress Tracking',       icon: '📈', href: '/progress'    },
-      { label: 'Assessments & Standards', icon: '📊', href: '/assessments' },
+      { label: 'Assessment Results & Standards', icon: '📊', href: '/assessments' },
       { label: 'Courses',                 icon: '🎓', href: '/courses'     },
       { label: 'Transcripts',             icon: '📄', href: '/transcript' },
     ],
@@ -469,7 +468,6 @@ function DashboardContent() {
       </main>
 
       <DevTierToggle />
-      <HelpWidget />
     </div>
   )
 }

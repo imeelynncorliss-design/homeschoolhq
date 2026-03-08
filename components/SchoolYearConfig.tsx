@@ -2,19 +2,27 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '@/src/lib/supabase'
-import { Shield } from 'lucide-react'
+import { Shield, Download } from 'lucide-react'
+import { generateComplianceReport } from '@/src/utils/generateComplianceReport'
 
 interface SchoolYearConfigProps {
   userId: string
 }
 
+type LessonRow = {
+  id: string
+  kid_id: string
+  status: string
+  duration_minutes: number | null
+}
 export default function SchoolYearConfig({ userId }: SchoolYearConfigProps) {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [isExporting, setIsExporting] = useState(false)
   const [organizationId, setOrganizationId] = useState<string | null>(null)
   const [complianceScore, setComplianceScore] = useState<number | null>(null)
   const [completedCount, setCompletedCount] = useState<number>(0)
-  
+
   const [selectedState, setSelectedState] = useState<string>('')
   const [states, setStates] = useState<any[]>([])
   const [stateRequirements, setStateRequirements] = useState<any>(null)
@@ -23,15 +31,15 @@ export default function SchoolYearConfig({ userId }: SchoolYearConfigProps) {
     stateName: '',
     days: '',
     hours: '',
-    notes: ''
+    notes: '',
   })
-  
+
   const [config, setConfig] = useState({
     school_year_start: '',
     school_year_end: '',
     annual_goal_type: 'hours',
     annual_goal_value: 180,
-    weekly_goal_hours: 25
+    weekly_goal_hours: 25,
   })
 
   const ensureHttps = (url: string) => {
@@ -57,7 +65,6 @@ export default function SchoolYearConfig({ userId }: SchoolYearConfigProps) {
     }
   }, [stateRequirements])
 
-  // Recompute score when config changes (e.g. after save)
   useEffect(() => {
     if (config.annual_goal_value > 0 && completedCount >= 0) {
       setComplianceScore(Math.min(100, Math.round((completedCount / config.annual_goal_value) * 100)))
@@ -74,9 +81,9 @@ export default function SchoolYearConfig({ userId }: SchoolYearConfigProps) {
     const { data: lessons } = await supabase
       .from('lessons')
       .select('id, status')
-      .eq('user_id', userId)
+      .eq('organization_id', organizationId)
     if (lessons) {
-      const completed = lessons.filter(l => l.status === 'completed').length
+    const completed = lessons.filter((l: { status: string }) => l.status === 'completed').length
       setCompletedCount(completed)
     }
   }
@@ -100,7 +107,7 @@ export default function SchoolYearConfig({ userId }: SchoolYearConfigProps) {
         school_year_end: data.school_year_end || '',
         annual_goal_type: data.annual_goal_type || 'hours',
         annual_goal_value: data.annual_goal_value || 180,
-        weekly_goal_hours: data.weekly_goal_hours || 25
+        weekly_goal_hours: data.weekly_goal_hours || 25,
       })
       if (data.selected_state) { setSelectedState(data.selected_state); setShowCustomFields(data.selected_state === 'CUSTOM') }
       if (data.custom_required_days || data.custom_required_hours || data.custom_compliance_notes || data.custom_state_name) {
@@ -122,7 +129,7 @@ export default function SchoolYearConfig({ userId }: SchoolYearConfigProps) {
       custom_required_hours: showCustomFields && customCompliance.hours ? parseInt(customCompliance.hours) : null,
       custom_compliance_notes: showCustomFields ? customCompliance.notes : null,
       organization_id: organizationId,
-      user_id: userId
+      user_id: userId,
     }
     let result
     if (existing) {
@@ -135,6 +142,95 @@ export default function SchoolYearConfig({ userId }: SchoolYearConfigProps) {
     else { alert('Settings saved successfully!'); loadConfig() }
   }
 
+  // ── PDF Export ──────────────────────────────────────────────────────────────
+
+  const handleExportReport = async () => {
+    if (!organizationId) return
+    setIsExporting(true)
+    try {
+      // Fetch kids
+      const { data: kidsData } = await supabase
+        .from('kids')
+        .select('id, displayname, firstname, lastname, photo_url, grade, age')
+        .eq('organization_id', organizationId)
+
+      if (!kidsData || kidsData.length === 0) {
+        alert('No students found. Add a child before generating a report.')
+        return
+      }
+
+      // Fetch attendance days
+      const { data: attendanceData } = await supabase
+        .from('daily_attendance')
+        .select('id, kid_id')
+        .eq('organization_id', organizationId)
+        .in('status', ['full_day', 'half_day'])
+
+      const attendanceDays = attendanceData?.length ?? 0
+
+      // Fetch lessons
+      const kidIds = kidsData.map((k: { id: string }) => k.id)
+      const { data: allLessons } = await supabase
+        .from('lessons')
+        .select('id, kid_id, status, duration_minutes')
+        .in('kid_id', kidIds)
+
+      const requiredDays = config.annual_goal_value
+      const requiredHours = config.annual_goal_type === 'hours' ? config.annual_goal_value : 0
+
+      // Build per-kid compliance data
+      const complianceData = kidsData.map((kid: { id: string; displayname: string; firstname: string; lastname: string; photo_url?: string; grade?: string; age?: number }) => {
+        const kidLessons = (allLessons ?? []).filter((l: { kid_id: string; status: string; duration_minutes: number | null }) => l.kid_id === kid.id)
+        const completedMinutes = kidLessons
+        .filter((l: { status: string; duration_minutes: number | null }) => l.status === 'completed')
+        .reduce((sum: number, l: { duration_minutes: number | null }) => sum + (l.duration_minutes ?? 0), 0)
+        const totalHours = Math.round((completedMinutes / 60) * 10) / 10
+        const totalDays = attendanceDays
+
+        const daysScore = requiredDays > 0 ? Math.min(100, Math.round((totalDays / requiredDays) * 100)) : 100
+        const hoursScore = requiredHours > 0 ? Math.min(100, Math.round((totalHours / requiredHours) * 100)) : 100
+        const healthScore = requiredHours > 0
+          ? Math.round(daysScore * 0.6 + hoursScore * 0.4)
+          : daysScore
+
+        return {
+          kid,
+          totalHours,
+          totalDays,
+          healthScore,
+          requiredHours,
+          requiredDays,
+          hoursRemaining: Math.max(0, requiredHours - totalHours),
+          daysRemaining: Math.max(0, requiredDays - totalDays),
+          onTrack: healthScore >= 60,
+        }
+      })
+
+      const familyHealthScore = Math.round(
+        complianceData.reduce((sum: number, d: { healthScore: number }) => sum + d.healthScore, 0) / complianceData.length
+      )
+
+      await generateComplianceReport({
+        complianceData,
+        settings: {
+          state_code: selectedState || undefined,
+          school_year_start_date: config.school_year_start,
+          school_year_end_date: config.school_year_end,
+          required_annual_days: requiredDays,
+          required_annual_hours: requiredHours || undefined,
+        },
+        familyHealthScore,
+      })
+    } catch (err) {
+      console.error('Export failed:', err)
+      alert('Failed to generate report. Please try again.')
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
+  // ── Styles ──────────────────────────────────────────────────────────────────
+
   const scoreBannerStyle = complianceScore === null ? null
     : complianceScore >= 80 ? { bg: 'bg-green-50 border-green-200', text: 'text-green-800', badge: 'bg-green-100 text-green-700', icon: '✅' }
     : complianceScore >= 40 ? { bg: 'bg-amber-50 border-amber-200', text: 'text-amber-800', badge: 'bg-amber-100 text-amber-700', icon: '⚠️' }
@@ -142,9 +238,19 @@ export default function SchoolYearConfig({ userId }: SchoolYearConfigProps) {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">School Year Setup</h2>
-        <p className="text-gray-600">Configure your calendar, state compliance, and goals</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">School Year Setup</h2>
+          <p className="text-gray-600">Configure your calendar, state compliance, and goals</p>
+        </div>
+        <button
+          onClick={handleExportReport}
+          disabled={isExporting || !config.school_year_start}
+          className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-semibold disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors text-sm whitespace-nowrap"
+        >
+          <Download size={15} />
+          {isExporting ? 'Generating...' : 'Export PDF Report'}
+        </button>
       </div>
 
       {/* ── Progress Summary Banner ── */}
@@ -163,7 +269,7 @@ export default function SchoolYearConfig({ userId }: SchoolYearConfigProps) {
             </div>
           </div>
           <button
-            onClick={() => window.dispatchEvent(new CustomEvent('switchAdminTab', { detail: 'progress' }))}
+            onClick={() => window.location.href = '/progress'}
             className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${scoreBannerStyle.badge} border border-current border-opacity-20 hover:opacity-80 transition-opacity`}
           >
             View Full Progress →
@@ -194,17 +300,17 @@ export default function SchoolYearConfig({ userId }: SchoolYearConfigProps) {
         </div>
         <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded text-sm">
           <p className="text-gray-700">
-            💡 <strong>Why select your state?</strong> Each state has different homeschool requirements. 
+            💡 <strong>Why select your state?</strong> Each state has different homeschool requirements.
             We'll show you what's legally required and help you track compliance throughout the year.
           </p>
           <p className="text-gray-700 mt-2">
-            We currently have detailed requirements for 10 states. If your state isn't listed, 
+            We currently have detailed requirements for 10 states. If your state isn't listed,
             select "Custom / Other State" to enter your own requirements.
           </p>
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Your State</label>
-          <select 
+          <select
             value={selectedState}
             onChange={(e) => { setSelectedState(e.target.value); setShowCustomFields(e.target.value === 'CUSTOM') }}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
@@ -242,7 +348,7 @@ export default function SchoolYearConfig({ userId }: SchoolYearConfigProps) {
             </div>
           </div>
         )}
-        
+
         {selectedState && stateRequirements && (
           <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
             <p className="text-sm font-medium text-gray-900">{stateRequirements.state_name} requirements:</p>
