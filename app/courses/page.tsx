@@ -55,7 +55,7 @@ function CoursesContent() {
   return (
     <div className="min-h-screen bg-gray-50">
 
-      <div className="max-w-6xl mx-auto p-8 -mt-8">
+    <div className="max-w-6xl mx-auto px-4 py-6 md:px-8">
         {/* FIX: Role-aware empty state */}
         {kids.length === 0 ? (
           <div className="bg-white rounded-2xl shadow p-12 text-center">
@@ -74,7 +74,7 @@ function CoursesContent() {
           </div>
         ) : (
           <>
-            <div className="mb-8 bg-white p-6 rounded-2xl shadow-sm border flex items-center gap-6">
+            <div className="mb-8 bg-white p-4 md:p-6 rounded-2xl shadow-sm border flex flex-col sm:flex-row items-start sm:items-center gap-4">
               <div>
                 <label className="block text-xs font-black text-slate-500 uppercase mb-1 tracking-widest">Active Student</label>
                 <select
@@ -92,7 +92,7 @@ function CoursesContent() {
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl shadow-xl p-8 min-h-[500px]">
+            <div className="bg-white rounded-2xl shadow-xl p-4 md:p-8 min-h-[500px]">
               {selectedKid && user && <CourseManager kidId={selectedKid} userId={user.id} />}
             </div>
           </>

@@ -278,14 +278,14 @@ export default function EnhancedVacationManager({ organizationId }: EnhancedVaca
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-950">Vacation & Break Schedule</h2>
           <p className="text-gray-600 mt-1">
             Plan your breaks and see how they impact your schedule
           </p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row gap-3">
           <button
             onClick={refreshHolidays}
             disabled={refreshingHolidays || !activeConfigId || !currentUserId}

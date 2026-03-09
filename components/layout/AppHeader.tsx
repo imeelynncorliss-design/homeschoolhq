@@ -535,7 +535,7 @@ export default function AppHeader() {
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M19 12H5M12 5l-7 7 7 7" />
                   </svg>
-                  Dashboard
+                  <span className="hr-back-label">Dashboard</span>
                 </button>
               )}
               {title && <span style={s.pageTitle}>{title}</span>}
@@ -564,7 +564,7 @@ export default function AppHeader() {
                 alt="Copilot"
                 style={{ width: 20, height: 20, borderRadius: 4, objectFit: 'cover' }}
               />
-              <span>Copilot</span>
+              <span className="hr-copilot-label">Copilot</span>
             </button>
           )}
 
@@ -831,5 +831,14 @@ const HEADER_STYLES = `
   @media (max-width: 640px) {
     .hr-desktop-only { display: none  !important; }
     .hr-mobile-only  { display: flex  !important; }
+
+    /* Back button: hide "Dashboard" text, keep arrow */
+    .hr-back-label { display: none; }
+
+    /* Copilot button: hide text label, keep icon */
+    .hr-copilot-label { display: none; }
+
+    /* Tighten button padding on mobile */
+    .hr-btn { padding: 5px 8px; }
   }
 `

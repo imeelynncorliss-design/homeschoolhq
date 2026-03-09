@@ -9,6 +9,7 @@ import TranscriptGenerator from '@/components/TranscriptGenerator'
 import AuthGuard from '@/components/AuthGuard'
 import { getOrganizationId } from '@/src/lib/getOrganizationId'
 import { pageShell, colors } from '@/src/lib/designTokens'
+import { useAppHeader } from '@/components/layout/AppHeader'
 
 // ─── Page Content ─────────────────────────────────────────────────────────────
 
@@ -69,23 +70,27 @@ function TranscriptsContent() {
     </div>
   )
 
+  useAppHeader({ title: '📄 Transcripts', backHref: '/dashboard' })
+
   return (
     <div style={css.root}>
 
-      {/* ── Header ───────────────────────────────────────────────────────────── */}
-      <header style={css.topBar}>
-      <div style={css.topBarLeft}>
-          <button style={css.headerBtn} onClick={() => router.push('/dashboard')}>
-            ← Dashboard
-          </button>
-          <div style={css.pageTitle}>  📄 Transcripts </div>
-        </div>
-        <div style={css.topBarRight}>
-          <button style={css.headerBtn} onClick={() => router.push('/calendar')}>
-            📅 Calendar
-          </button>
-        </div>
-      </header>
+<div style={css.banner}>
+  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+    <span style={{ fontSize: 20 }}>📚</span>
+    <p style={{ fontSize: 13, color: colors.purpleDark, margin: 0 }}>
+      <strong>Need to add or manage courses?</strong> Courses now have their own dedicated section.
+    </p>
+  </div>
+  <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+    <button style={css.bannerBtn} onClick={() => router.push('/calendar')}>
+      📅 Calendar
+    </button>
+    <button style={css.bannerBtn} onClick={() => router.push('/courses')}>
+      Go to Courses →
+    </button>
+  </div>
+</div>
 
       {/* ── Main ─────────────────────────────────────────────────────────────── */}
       <main style={css.main}>
@@ -249,6 +254,9 @@ const css: Record<string, React.CSSProperties> = {
     display: 'flex',
     gap: 8,
     marginBottom: 16,
+    overflowX: 'auto' as const,
+    WebkitOverflowScrolling: 'touch' as any,
+    paddingBottom: 4,
   },
   tab: {
     padding: '12px 24px',
@@ -262,7 +270,7 @@ const css: Record<string, React.CSSProperties> = {
   tabContent: {
     background: colors.white,
     borderRadius: 14,
-    padding: '32px',
+    padding: '16px',
     minHeight: 500,
     boxShadow: '0 4px 16px rgba(124,58,237,0.08)',
     border: `1px solid ${colors.purpleBorder}`,

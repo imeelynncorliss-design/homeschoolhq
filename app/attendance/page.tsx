@@ -6,24 +6,27 @@ import { useRouter } from 'next/navigation'
 import AuthGuard from '@/components/AuthGuard'
 import AttendanceTracker from '@/components/AttendanceTracker'
 import { getOrganizationId } from '@/src/lib/getOrganizationId'
-import { pageShell, colors, gradients, typography } from '@/src/lib/designTokens'
+import { useAppHeader } from '@/components/layout/AppHeader'
+import { pageShell, colors } from '@/src/lib/designTokens'
 
 // ─── Page Content ─────────────────────────────────────────────────────────────
 
 function AttendanceContent() {
   const router = useRouter()
-  const [user, setUser]               = useState<any>(null)
+  const [user, setUser]                     = useState<any>(null)
   const [organizationId, setOrganizationId] = useState<string | null>(null)
-  const [kids, setKids]               = useState<any[]>([])
-  const [loading, setLoading]         = useState(true)
+  const [kids, setKids]                     = useState<any[]>([])
+  const [loading, setLoading]               = useState(true)
+
+  // Wire AppHeader — sets the back arrow + page title in the global nav
+  useAppHeader({ title: '📋 Attendance', backHref: '/dashboard' })
 
   useEffect(() => {
     const init = async () => {
-      // ── Auth ──────────────────────────────────────────────────────────────
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/'); return }
 
-      // ── Co-teacher guard — attendance is admin-only ────────────────────
+      // Co-teacher guard — attendance is admin-only
       const { data: collaboration } = await supabase
         .from('family_collaborators')
         .select('organization_id')
@@ -32,11 +35,9 @@ function AttendanceContent() {
 
       if (collaboration) { router.push('/dashboard'); return }
 
-      // ── Resolve org ───────────────────────────────────────────────────────
       const { orgId } = await getOrganizationId(user.id)
       if (!orgId) { router.push('/onboarding'); return }
 
-      // ── Load kids ─────────────────────────────────────────────────────────
       const { data: kidsData } = await supabase
         .from('kids')
         .select('*')
@@ -60,22 +61,6 @@ function AttendanceContent() {
 
   return (
     <div style={css.root}>
-
-      {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <header style={css.topBar}>
-      <div style={css.topBarLeft}>
-          <button style={css.headerBtn} onClick={() => router.push('/dashboard')}>
-            ← Dashboard
-          </button>
-          <div style={css.pageTitle}>📋 Attendance</div>
-        </div>
-        <div style={css.topBarRight}>
-          <button style={css.headerBtn} onClick={() => router.push('/calendar')}>
-            📅 Calendar
-          </button>
-        </div>
-      </header>
-      {/* ── Main ───────────────────────────────────────────────────────────── */}
       <main style={css.main}>
         <div style={css.sectionLabel}>TRACK YOUR SCHOOL DAYS & HOURS</div>
 
@@ -83,6 +68,13 @@ function AttendanceContent() {
           <div style={css.cardHead}>
             <span style={{ fontSize: 20 }}>📋</span>
             <span style={css.cardTitle}>Attendance Tracker</span>
+            {/* Calendar shortcut — useful on mobile where AppHeader has no room for it */}
+            <button
+              onClick={() => router.push('/calendar')}
+              style={css.calBtn}
+            >
+              📅 Calendar
+            </button>
           </div>
           <div style={css.cardBody}>
             {organizationId && (
@@ -95,7 +87,6 @@ function AttendanceContent() {
           </div>
         </div>
       </main>
-
     </div>
   )
 }
@@ -118,5 +109,17 @@ const css: Record<string, React.CSSProperties> = {
   ...pageShell,
   cardBody: {
     padding: '24px',
+  },
+  // Calendar shortcut button inside the card header
+  calBtn: {
+    marginLeft: 'auto',
+    background: 'linear-gradient(135deg, #7c3aed, #a855f7)',
+    color: '#fff',
+    border: 'none',
+    borderRadius: 8,
+    padding: '6px 14px',
+    fontSize: 12,
+    fontWeight: 700,
+    cursor: 'pointer',
   },
 }
