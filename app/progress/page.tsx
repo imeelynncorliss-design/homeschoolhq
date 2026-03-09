@@ -13,6 +13,7 @@ import { pageShell, colors } from '@/src/lib/designTokens'
 function ProgressContent() {
   const router = useRouter()
   const [user, setUser]       = useState<any>(null)
+  const [organizationId, setOrganizationId] = useState<string>('')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -35,6 +36,7 @@ function ProgressContent() {
       if (!orgId) { router.push('/onboarding'); return }
 
       setUser(user)
+      setOrganizationId(orgId)
       setLoading(false)
     }
 
@@ -75,7 +77,7 @@ function ProgressContent() {
             <span style={css.cardTitle}>Progress Tracking</span>
           </div>
           <div style={css.cardBody}>
-            <ProgressDashboard userId={user.id} />
+          <ProgressDashboard userId={user.id} organizationId={organizationId} />
           </div>
         </div>
       </main>

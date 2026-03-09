@@ -10,6 +10,7 @@ import ComplianceChecker from './ComplianceChecker'
 import AttendanceGoals from './AttendanceGoals'
 import PDFExport from './PDFExport'
 import DayDetails from './DayDetails'
+import ResolveAttendanceModal from './ResolveAttendanceModal'
 
 
 interface AttendanceTrackerProps {
@@ -87,7 +88,7 @@ export default function AttendanceTracker({ kids, organizationId, userId }: Atte
   const [monthGroups, setMonthGroups] = useState<MonthGroup[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [showMarkModal, setShowMarkModal] = useState(false)
-  const [markingDate, setMarkingDate] = useState<string>(new Date().toISOString().split('T')[0])
+  const [markingDate, setMarkingDate] = useState<string>(new Date().toLocaleDateString('en-CA'))
   const [viewMode, setViewMode] = useState<ViewMode>('list')
   const [activeTab, setActiveTab] = useState<TabMode>('overview')
   const [calendarYear, setCalendarYear] = useState(new Date().getFullYear())
@@ -100,6 +101,10 @@ export default function AttendanceTracker({ kids, organizationId, userId }: Atte
   const [organizationName, setOrganizationName] = useState<string>('My Homeschool')
   const [schoolYear, setSchoolYear] = useState<string>('2025-2026')
   const [requiredDays, setRequiredDays] = useState(180)
+  const [schoolYearStart, setSchoolYearStart] = useState<string>('')
+  const [schoolYearEnd, setSchoolYearEnd] = useState<string>('')
+  const [resolveDate, setResolveDate] = useState<string | null>(null)
+  const [resolveAttendance, setResolveAttendance] = useState<ManualAttendance | null>(null)
 
   // NEW: Activity filters
   const [filters, setFilters] = useState({
@@ -156,25 +161,26 @@ useEffect(() => {
         const { data: { session } } = await supabase.auth.getSession()
         
         if (!session) {
-          console.log('⚠️ No auth session yet, skipping state fetch')
           setLoadingState(false)
           return
         }
         
         const { data, error } = await supabase
         .from('school_year_settings')
-        .select('selected_state, custom_state_name')
+        .select('selected_state, custom_state_name, school_year_start, school_year_end')
         .eq('organization_id', organizationId)
         .single()
 
       if (error) {
         if (error.code === 'PGRST116') {
           // No settings record yet — perfectly normal for new orgs
-          console.log('No school year settings found yet for this org')
         } else {
           console.error('🚨 Supabase error:', error)
         }
       }
+        if (data?.school_year_start) setSchoolYearStart(data.school_year_start)
+        if (data?.school_year_end)   setSchoolYearEnd(data.school_year_end)
+        
         if (data?.selected_state) {
           
           if (data.selected_state === 'CUSTOM') {
@@ -217,7 +223,7 @@ useEffect(() => {
   }
 
   function checkTodaysAttendance() {
-    const today = new Date().toISOString().split('T')[0]
+    const today = new Date().toLocaleDateString('en-CA')
     const todayAttendance = manualAttendance.some(a => a.attendance_date === today)
     setAttendanceMarkedToday(todayAttendance)
   }
@@ -231,11 +237,21 @@ useEffect(() => {
     setLoading(true)
     try {
       // Load lessons
-      const { data: lessonsData, error: lessonsError } = await supabase
-        .from('lessons')
-        .select('*')
-        .not('lesson_date', 'is', null)
-        .order('lesson_date', { ascending: false })
+      const { data: kidsData } = await supabase
+  .from('kids')
+  .select('id')
+  .eq('organization_id', organizationId)
+
+  const kidIds = (kidsData || []).map((k: any) => k.id)
+
+  const { data: lessonsData, error: lessonsError } = kidIds.length > 0
+  ? await supabase
+      .from('lessons')
+      .select('*')
+      .in('kid_id', kidIds)
+      .not('lesson_date', 'is', null)
+      .order('lesson_date', { ascending: false })
+  : { data: [], error: null }
 
       if (lessonsError) throw lessonsError
 
@@ -338,7 +354,7 @@ useEffect(() => {
       let current = new Date(yearStart)
       while (current <= yearEnd) {
         if (current.getDay() === dayOfWeek) {
-          allDates.add(current.toISOString().split('T')[0])
+          allDates.add(current.toLocaleDateString('en-CA'))
         }
         current.setDate(current.getDate() + 1)
       }
@@ -405,7 +421,7 @@ useEffect(() => {
     if (searchTerm) {
       filtered = filtered.filter(d => 
         d.date.includes(searchTerm) ||
-        new Date(d.date).toLocaleDateString().includes(searchTerm)
+        new Date(d.date + 'T12:00:00').toLocaleDateString()
       )
     }
 
@@ -439,6 +455,54 @@ useEffect(() => {
 
     setMonthGroups(monthGroupsArray)
   }
+
+  // Reconciliation discrepancies
+  const discrepancies = useMemo(() => {
+    const result: {
+      date: string
+      type: 'hours_mismatch' | 'no_school_with_lessons' | 'attendance_no_lessons' | 'outside_school_year'
+      attendanceHours?: number
+      lessonHours?: number
+      attendanceStatus?: string
+      lessonCount?: number
+    }[] = []
+
+    const lessonHoursByDate = new Map<string, { hours: number; count: number }>()
+    lessons.forEach(l => {
+      if (selectedKid !== 'all' && l.kid_id !== selectedKid) return
+      const existing = lessonHoursByDate.get(l.lesson_date) || { hours: 0, count: 0 }
+      lessonHoursByDate.set(l.lesson_date, {
+        hours: existing.hours + (l.duration_minutes || 0) / 60,
+        count: existing.count + 1
+      })
+    })
+
+    manualAttendance.forEach(a => {
+      if (selectedKid !== 'all' && a.kid_id !== null && a.kid_id !== selectedKid) return
+
+      const lessonData = lessonHoursByDate.get(a.attendance_date)
+      const lessonHours = lessonData?.hours || 0
+      const lessonCount = lessonData?.count || 0
+
+      if (a.status === 'no_school' && lessonCount > 0) {
+        result.push({ date: a.attendance_date, type: 'no_school_with_lessons', attendanceStatus: a.status, lessonHours, lessonCount })
+        return
+      }
+      if (a.status !== 'no_school' && lessonCount === 0) {
+        result.push({ date: a.attendance_date, type: 'attendance_no_lessons', attendanceHours: a.hours, attendanceStatus: a.status, lessonCount: 0 })
+      }
+      if (a.status !== 'no_school' && lessonCount > 0 && Math.abs(a.hours - lessonHours) > 1) {
+        result.push({ date: a.attendance_date, type: 'hours_mismatch', attendanceHours: a.hours, lessonHours, lessonCount })
+      }
+      if (schoolYearStart && schoolYearEnd && a.status !== 'no_school') {
+        if (a.attendance_date < schoolYearStart || a.attendance_date > schoolYearEnd) {
+          result.push({ date: a.attendance_date, type: 'outside_school_year', attendanceHours: a.hours, attendanceStatus: a.status })
+        }
+      }
+    })
+
+    return result.sort((a, b) => b.date.localeCompare(a.date))
+  }, [lessons, manualAttendance, selectedKid, schoolYearStart, schoolYearEnd])
 
   // Generate suggestions for reconciliation
   const suggestions = useMemo((): SuggestedDay[] => {
@@ -518,7 +582,7 @@ useEffect(() => {
       let current = new Date(startDate)
       while (current <= endDate) {
         if (current.getDay() === dayOfWeek) {
-          allDates.add(current.toISOString().split('T')[0])
+          allDates.add(current.toLocaleDateString('en-CA'))
         }
         current.setDate(current.getDate() + 1)
       }
@@ -563,7 +627,7 @@ useEffect(() => {
 
       const dayDate = new Date(date)
       const isCurrentMonth = dayDate.getMonth() === calendarMonth && dayDate.getFullYear() === calendarYear
-      const isToday = date === new Date().toISOString().split('T')[0]
+      const isToday = date === new Date().toLocaleDateString('en-CA')
 
       return {
         date,
@@ -600,7 +664,6 @@ useEffect(() => {
 
   async function markAttendance(date: string, status: 'full_day' | 'half_day' | 'no_school', hours: number, notes: string, kidId: string | null) {
     try {
-      console.log('🎯 Marking attendance:', { date, status, hours, notes, kidId, organizationId });
       
       const existing = manualAttendance.find(a => 
         a.attendance_date === date && 
@@ -608,7 +671,6 @@ useEffect(() => {
       );
   
       if (existing) {
-        console.log('📝 Updating existing record:', existing.id);
         const { data, error } = await supabase
           .from('daily_attendance')
           .update({
@@ -620,10 +682,8 @@ useEffect(() => {
           .eq('id', existing.id)
           .select();
   
-        console.log('✅ Update result:', { data, error });
         if (error) throw error;
       } else {
-        console.log('➕ Creating new record');
         const { data, error } = await supabase
           .from('daily_attendance')
           .insert({
@@ -637,7 +697,6 @@ useEffect(() => {
           })
           .select();
   
-        console.log('✅ Insert result:', { data, error });
         if (error) throw error;
       }
   
@@ -749,7 +808,7 @@ useEffect(() => {
       ) : (
         <button
           onClick={() => {
-            setMarkingDate(new Date().toISOString().split('T')[0])
+            setMarkingDate(new Date().toLocaleDateString('en-CA'))
             setShowMarkModal(true)
           }}
           className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
@@ -864,12 +923,24 @@ useEffect(() => {
           {activeTab === 'overview' && (
             <div className="space-y-6">
               {/* Reconciliation Panel */}
-              {suggestions.length > 0 && (
+              {(suggestions.length > 0 || discrepancies.length > 0) && (
                 <ReconciliationPanel
                   suggestions={suggestions}
+                  discrepancies={discrepancies}
                   onBulkConfirm={bulkConfirmAttendance}
                   onDismissSuggestion={dismissSuggestion}
                   onDismissAll={dismissAllSuggestions}
+                  onFixDate={(date) => {
+                    const discrepancy = discrepancies.find(d => d.date === date)
+                    if (discrepancy?.type === 'attendance_no_lessons') {
+                      const att = manualAttendance.find(a => a.attendance_date === date)
+                      setResolveDate(date)
+                      setResolveAttendance(att || null)
+                    } else {
+                      setMarkingDate(date)
+                      setShowMarkModal(true)
+                    }
+                  }}
                 />
               )}
 
@@ -1130,9 +1201,26 @@ useEffect(() => {
     organizationId={organizationId}
   />
 )}
+{resolveDate && resolveAttendance && (
+  <ResolveAttendanceModal
+    date={resolveDate}
+    attendanceHours={resolveAttendance.hours}
+    attendanceStatus={resolveAttendance.status}
+    onDelete={async (date) => {
+      await deleteAttendance(resolveAttendance.id)
+      setResolveDate(null)
+      setResolveAttendance(null)
+    }}
+    onClose={() => {
+      setResolveDate(null)
+      setResolveAttendance(null)
+    }}
+  />
+)}
     </div>
   )
 }
+
 // Mark Attendance Modal Component
 interface MarkAttendanceModalProps {
   date: string

@@ -4,8 +4,6 @@
 interface CalendarFiltersProps {
   filters: {
     showLessons: boolean
-    showSocialEvents: boolean
-    showCoopClasses: boolean
     showManualAttendance: boolean
   }
   onChange: (filters: any) => void
@@ -29,8 +27,6 @@ export default function CalendarFilters({ filters, onChange, counts }: CalendarF
     const newState = !allEnabled
     onChange({
       showLessons: newState,
-      showSocialEvents: newState,
-      showCoopClasses: newState,
       showManualAttendance: newState
     })
   }
@@ -44,24 +40,6 @@ export default function CalendarFilters({ filters, onChange, counts }: CalendarF
       activeClasses: 'bg-blue-50 border-blue-400 text-blue-700',
       inactiveClasses: 'bg-white border-gray-200 text-gray-400 hover:border-blue-300',
       count: counts?.lessons || 0
-    },
-    {
-      key: 'showSocialEvents' as const,
-      label: 'Social Events',
-      icon: '🎉',
-      dotColor: 'bg-purple-500',
-      activeClasses: 'bg-purple-50 border-purple-400 text-purple-700',
-      inactiveClasses: 'bg-white border-gray-200 text-gray-400 hover:border-purple-300',
-      count: counts?.socialEvents || 0
-    },
-    {
-      key: 'showCoopClasses' as const,
-      label: 'Co-op Classes',
-      icon: '🏫',
-      dotColor: 'bg-green-500',
-      activeClasses: 'bg-green-50 border-green-400 text-green-700',
-      inactiveClasses: 'bg-white border-gray-200 text-gray-400 hover:border-green-300',
-      count: counts?.coopClasses || 0
     },
     {
       key: 'showManualAttendance' as const,

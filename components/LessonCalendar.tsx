@@ -41,8 +41,8 @@ interface LessonCalendarProps {
   manualAttendance: any[]
   filters: {
     showLessons: boolean
-    showSocialEvents: boolean
-    showCoopClasses: boolean
+    showSocialEvents?: boolean
+    showCoopClasses?: boolean
     showManualAttendance: boolean
   }
   onLessonClick: (lesson: Lesson, child: Child) => void
@@ -103,7 +103,7 @@ export default function LessonCalendar({
         .select('note_date')
         .eq('user_id', user.id)
       if (data) {
-        setDatesWithNotes(new Set(data.map(note => note.note_date)))
+        setDatesWithNotes(new Set(data.map((note: { note_date: string }) => note.note_date)))
       }
     }
   }

@@ -74,19 +74,15 @@ function TranscriptsContent() {
 
       {/* ── Header ───────────────────────────────────────────────────────────── */}
       <header style={css.topBar}>
-        <div style={css.topBarLeft}>
-          <div style={css.logo}>
-            <span style={css.logoMain}>Homeschool</span>
-            <span style={css.logoAccent}>Ready</span>
-          </div>
-          <div style={css.pageTitle}>📄 Transcripts</div>
+      <div style={css.topBarLeft}>
+          <button style={css.headerBtn} onClick={() => router.push('/dashboard')}>
+            ← Dashboard
+          </button>
+          <div style={css.pageTitle}>  📄 Transcripts </div>
         </div>
         <div style={css.topBarRight}>
           <button style={css.headerBtn} onClick={() => router.push('/calendar')}>
             📅 Calendar
-          </button>
-          <button style={css.headerBtn} onClick={() => router.push('/dashboard')}>
-            ← Dashboard
           </button>
         </div>
       </header>

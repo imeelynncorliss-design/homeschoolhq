@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { parseLocalDate } from '@/src/lib/utils'
 
 interface SuggestedDay {
   date: string
@@ -10,49 +11,78 @@ interface SuggestedDay {
   suggestedHours: number
 }
 
+interface DiscrepancyDay {
+  date: string
+  type: 'hours_mismatch' | 'no_school_with_lessons' | 'attendance_no_lessons' | 'outside_school_year'
+  attendanceHours?: number
+  lessonHours?: number
+  attendanceStatus?: string
+  lessonCount?: number
+}
+
 interface ReconciliationPanelProps {
   suggestions: SuggestedDay[]
+  discrepancies?: DiscrepancyDay[]
   onBulkConfirm: (dates: string[], status: 'full_day' | 'half_day', hours: number) => Promise<void>
   onDismissSuggestion: (date: string) => void
   onDismissAll: () => void
+  onFixDate: (date: string) => void
 }
 
-export default function ReconciliationPanel({ 
-  suggestions, 
-  onBulkConfirm, 
+const DISCREPANCY_LABELS: Record<DiscrepancyDay['type'], { icon: string; label: string; description: (d: DiscrepancyDay) => string }> = {
+  hours_mismatch: {
+    icon: '⚠️',
+    label: 'Hours mismatch',
+    description: (d) => `Attendance logged ${d.attendanceHours?.toFixed(1)}h but lessons show ${d.lessonHours?.toFixed(1)}h`
+  },
+  no_school_with_lessons: {
+    icon: '🚫',
+    label: 'Marked no school — but lessons exist',
+    description: (d) => `${d.lessonCount} lesson${d.lessonCount !== 1 ? 's' : ''} were logged on this day`
+  },
+  attendance_no_lessons: {
+    icon: '📭',
+    label: 'Attendance logged — no lessons',
+    description: (d) => `${d.attendanceHours?.toFixed(1)}h of attendance recorded but no lessons found`
+  },
+  outside_school_year: {
+    icon: '📅',
+    label: 'Outside school year',
+    description: () => `This confirmed day falls outside your configured school year dates`
+  }
+}
+
+const MAX_VISIBLE = 5
+
+export default function ReconciliationPanel({
+  suggestions,
+  discrepancies = [],
+  onBulkConfirm,
   onDismissSuggestion,
-  onDismissAll 
+  onDismissAll,
+  onFixDate
 }: ReconciliationPanelProps) {
   const [selectedDates, setSelectedDates] = useState<Set<string>>(new Set())
   const [bulkStatus, setBulkStatus] = useState<'full_day' | 'half_day'>('full_day')
   const [bulkHours, setBulkHours] = useState(4)
   const [processing, setProcessing] = useState(false)
+  const [showAllSuggestions, setShowAllSuggestions] = useState(false)
+  const [showAllDiscrepancies, setShowAllDiscrepancies] = useState(false)
 
-  if (suggestions.length === 0) {
-    return null
-  }
+  const visibleSuggestions = showAllSuggestions ? suggestions : suggestions.slice(0, MAX_VISIBLE)
+  const visibleDiscrepancies = showAllDiscrepancies ? discrepancies : discrepancies.slice(0, MAX_VISIBLE)
 
   function toggleDate(date: string) {
-    const newSelected = new Set(selectedDates)
-    if (newSelected.has(date)) {
-      newSelected.delete(date)
-    } else {
-      newSelected.add(date)
-    }
-    setSelectedDates(newSelected)
+    const next = new Set(selectedDates)
+    next.has(date) ? next.delete(date) : next.add(date)
+    setSelectedDates(next)
   }
 
-  function selectAll() {
-    setSelectedDates(new Set(suggestions.map(s => s.date)))
-  }
-
-  function deselectAll() {
-    setSelectedDates(new Set())
-  }
+  function selectAll() { setSelectedDates(new Set(suggestions.map(s => s.date))) }
+  function deselectAll() { setSelectedDates(new Set()) }
 
   async function handleBulkConfirm() {
     if (selectedDates.size === 0) return
-
     setProcessing(true)
     try {
       await onBulkConfirm(Array.from(selectedDates), bulkStatus, bulkHours)
@@ -65,50 +95,40 @@ export default function ReconciliationPanel({
     }
   }
 
-  return (
-    <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4 mb-6">
-      <div className="flex items-start justify-between mb-3">
-        <div>
-          <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-            <span className="text-2xl">💡</span>
-            Suggested School Days
-          </h3>
-          <p className="text-sm text-gray-700 mt-1">
-            These days have lessons but no attendance marked. Confirm them as school days?
-          </p>
-        </div>
-        <button
-          onClick={onDismissAll}
-          className="text-gray-500 hover:text-gray-700 text-sm"
-        >
-          Dismiss All
-        </button>
-      </div>
+  if (suggestions.length === 0 && discrepancies.length === 0) return null
 
-      {/* Bulk Actions */}
-      <div className="bg-white rounded-lg p-3 mb-3">
-        <div className="flex items-center gap-3 flex-wrap">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={selectAll}
-              className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-            >
-              Select All
-            </button>
-            <span className="text-gray-300">|</span>
-            <button
-              onClick={deselectAll}
-              className="text-sm text-gray-600 hover:text-gray-800"
-            >
-              Deselect All
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+
+      {/* ── Suggested School Days ─────────────────────────────── */}
+      {suggestions.length > 0 && (
+        <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
+          <div className="flex items-start justify-between mb-3">
+            <div>
+              <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                <span>💡</span> Suggested School Days
+                <span className="text-sm font-normal text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">
+                  {suggestions.length}
+                </span>
+              </h3>
+              <p className="text-sm text-gray-700 mt-1">
+                These days have lessons logged but no attendance record. Confirm them to count toward compliance.
+              </p>
+            </div>
+            <button onClick={onDismissAll} className="text-gray-500 hover:text-gray-700 text-sm whitespace-nowrap ml-4">
+              Dismiss All
             </button>
           </div>
 
-          {selectedDates.size > 0 && (
-            <>
-              <div className="h-4 w-px bg-gray-300"></div>
-              
-              <div className="flex items-center gap-2">
+          {/* Bulk action bar */}
+          <div className="bg-white rounded-lg p-3 mb-3 flex items-center gap-3 flex-wrap">
+            <button onClick={selectAll} className="text-sm text-blue-600 hover:text-blue-800 font-medium">Select All</button>
+            <span className="text-gray-300">|</span>
+            <button onClick={deselectAll} className="text-sm text-gray-600 hover:text-gray-800">Deselect All</button>
+
+            {selectedDates.size > 0 && (
+              <>
+                <div className="h-4 w-px bg-gray-300" />
                 <span className="text-sm text-gray-900">Mark as:</span>
                 <select
                   value={bulkStatus}
@@ -118,113 +138,159 @@ export default function ReconciliationPanel({
                   <option value="full_day">Full Day</option>
                   <option value="half_day">Half Day</option>
                 </select>
-              </div>
-
-              <div className="flex items-center gap-2">
                 <span className="text-sm text-gray-700">Hours:</span>
                 <input
                   type="number"
                   value={bulkHours}
                   onChange={(e) => setBulkHours(parseFloat(e.target.value))}
-                  step="0.5"
-                  min="0"
-                  max="12"
+                  step="0.5" min="0" max="12"
                   className="w-16 text-sm px-2 py-1 border border-gray-300 rounded text-gray-900"
                 />
-              </div>
+                <button
+                  onClick={handleBulkConfirm}
+                  disabled={processing}
+                  className="px-4 py-1.5 bg-blue-600 text-white rounded text-sm font-medium hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed"
+                >
+                  {processing ? 'Confirming...' : `Confirm ${selectedDates.size} Day${selectedDates.size !== 1 ? 's' : ''}`}
+                </button>
+              </>
+            )}
+          </div>
 
-              <button
-                onClick={handleBulkConfirm}
-                disabled={processing}
-                className="px-4 py-1.5 bg-blue-600 text-white rounded text-sm font-medium hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed"
+          {/* Suggestions list — capped at MAX_VISIBLE */}
+          <div className="space-y-2">
+            {visibleSuggestions.map((s) => (
+              <div
+                key={s.date}
+                onClick={() => toggleDate(s.date)}
+                className={`bg-white rounded-lg p-3 border-2 transition-all cursor-pointer ${
+                  selectedDates.has(s.date) ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-300'
+                }`}
               >
-                {processing ? 'Confirming...' : `Confirm ${selectedDates.size} Day${selectedDates.size !== 1 ? 's' : ''}`}
-              </button>
-            </>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      checked={selectedDates.has(s.date)}
+                      onChange={() => toggleDate(s.date)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="w-4 h-4 text-blue-600 rounded cursor-pointer"
+                    />
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-gray-900 text-sm">
+                          {new Date(s.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+                        </span>
+                        <span className="px-2 py-0.5 text-xs font-medium rounded bg-blue-100 text-blue-800">
+                          {s.suggestedStatus === 'full_day' ? 'Full Day' : 'Half Day'}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        {s.lessonCount} lesson{s.lessonCount !== 1 ? 's' : ''} · {s.lessonHours.toFixed(1)}h · Suggested: {s.suggestedHours}h
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onDismissSuggestion(s.date) }}
+                    className="text-xs text-gray-400 hover:text-gray-600 ml-2"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Show more / less toggle */}
+          {suggestions.length > MAX_VISIBLE && (
+            <button
+              onClick={() => setShowAllSuggestions(v => !v)}
+              className="mt-3 w-full text-sm text-blue-600 hover:text-blue-800 font-medium py-1 border border-blue-200 rounded-lg bg-white"
+            >
+              {showAllSuggestions
+                ? `Show less ▲`
+                : `Show ${suggestions.length - MAX_VISIBLE} more ▼`}
+            </button>
+          )}
+
+          {/* Summary */}
+          {selectedDates.size > 0 && (
+            <div className="mt-3 pt-3 border-t border-blue-200 text-sm text-gray-700">
+              <span className="font-semibold">{selectedDates.size}</span> day{selectedDates.size !== 1 ? 's' : ''} selected ·{' '}
+              ~<span className="font-semibold">{(selectedDates.size * bulkHours).toFixed(1)}</span>h will be added
+            </div>
           )}
         </div>
-      </div>
+      )}
 
-      {/* Suggestions List */}
-      <div className="space-y-2 max-h-96 overflow-y-auto">
-        {suggestions.map((suggestion) => (
-          <div
-            key={suggestion.date}
-            className={`
-              bg-white rounded-lg p-3 border-2 transition-all cursor-pointer
-              ${selectedDates.has(suggestion.date) 
-                ? 'border-blue-500 bg-blue-50' 
-                : 'border-gray-200 hover:border-blue-300'
-              }
-            `}
-            onClick={() => toggleDate(suggestion.date)}
-          >
-            <div className="flex items-start justify-between">
-              <div className="flex items-start gap-3 flex-1">
-                {/* Checkbox */}
-                <div className="pt-1">
-                  <input
-                    type="checkbox"
-                    checked={selectedDates.has(suggestion.date)}
-                    onChange={() => toggleDate(suggestion.date)}
-                    className="w-4 h-4 text-blue-600 rounded cursor-pointer"
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                </div>
-
-                {/* Date Info */}
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <p className="font-semibold text-gray-900">
-                      {new Date(suggestion.date).toLocaleDateString('en-US', {
-                        weekday: 'short',
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric'
-                      })}
-                    </p>
-                    <span className="px-2 py-0.5 text-xs font-medium rounded bg-blue-100 text-blue-800">
-                      {suggestion.suggestedStatus === 'full_day' ? 'Full Day' : 'Half Day'}
-                    </span>
-                  </div>
-                  
-                  <div className="mt-1 text-sm text-gray-600">
-                    {suggestion.lessonCount} lesson{suggestion.lessonCount !== 1 ? 's' : ''} • 
-                    {' '}{suggestion.lessonHours.toFixed(1)} hours of lessons
-                  </div>
-                  
-                  <div className="mt-1 text-xs text-gray-500">
-                    Suggested: {suggestion.suggestedHours} hours
-                  </div>
-                </div>
-              </div>
-
-              {/* Individual Actions */}
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    onDismissSuggestion(suggestion.date)
-                  }}
-                  className="text-xs text-gray-500 hover:text-gray-700"
-                >
-                  Dismiss
-                </button>
-              </div>
-            </div>
+      {/* ── Reconciliation Panel ──────────────────────────────── */}
+      {discrepancies.length > 0 && (
+        <div className="bg-amber-50 border-2 border-amber-200 rounded-lg p-4">
+          <div className="mb-3">
+            <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+              <span>🔍</span> Reconciliation Panel
+              <span className="text-sm font-normal text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
+                {discrepancies.length} issue{discrepancies.length !== 1 ? 's' : ''}
+              </span>
+            </h3>
+            <p className="text-sm text-gray-700 mt-1">
+              These attendance records have data conflicts that may affect your compliance numbers. Review each one.
+            </p>
           </div>
-        ))}
-      </div>
 
-      {/* Summary */}
-      {selectedDates.size > 0 && (
-        <div className="mt-3 pt-3 border-t border-blue-200">
-          <p className="text-sm text-gray-700">
-            <span className="font-semibold">{selectedDates.size}</span> day{selectedDates.size !== 1 ? 's' : ''} selected • 
-            {' '}Will add approximately <span className="font-semibold">{(selectedDates.size * bulkHours).toFixed(1)}</span> hours to your attendance
-          </p>
+          <div className="space-y-2">
+            {visibleDiscrepancies.map((d) => {
+              const meta = DISCREPANCY_LABELS[d.type]
+              return (
+                <div key={`${d.date}-${d.type}`} className="bg-white rounded-lg p-3 border-2 border-amber-200">
+                  <div className="flex items-start gap-3">
+                    <span className="text-lg mt-0.5">{meta.icon}</span>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-semibold text-gray-900 text-sm">
+                          {parseLocalDate(d.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+                        </span>
+                        <span className="px-2 py-0.5 text-xs font-medium rounded bg-amber-100 text-amber-800">
+                          {meta.label}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">{meta.description(d)}</p>
+                    </div>
+                    {d.type === 'outside_school_year' ? (
+                      <a
+                        href="/school-year"
+                        className="text-xs text-amber-700 hover:text-amber-900 font-medium whitespace-nowrap underline"
+                      >
+                        Fix →
+                      </a>
+                    ) : (
+                      <button
+                        onClick={() => onFixDate(d.date)}
+                        className="text-xs text-amber-700 hover:text-amber-900 font-medium whitespace-nowrap underline"
+                      >
+                        Fix →
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Show more / less toggle */}
+          {discrepancies.length > MAX_VISIBLE && (
+            <button
+              onClick={() => setShowAllDiscrepancies(v => !v)}
+              className="mt-3 w-full text-sm text-amber-700 hover:text-amber-900 font-medium py-1 border border-amber-200 rounded-lg bg-white"
+            >
+              {showAllDiscrepancies
+                ? `Show less ▲`
+                : `Show ${discrepancies.length - MAX_VISIBLE} more ▼`}
+            </button>
+          )}
         </div>
       )}
+
     </div>
   )
 }

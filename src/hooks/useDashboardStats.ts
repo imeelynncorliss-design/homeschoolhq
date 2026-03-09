@@ -93,44 +93,58 @@ export function useDashboardStats(organizationId: string | null): DashboardStats
 
       const todayCount = todayLessons?.length ?? 0;
       const todayDone =
-        todayLessons?.filter((l) => l.status === "completed").length ?? 0;
+      todayLessons?.filter((l: { id: string; status: string }) => l.status === "completed").length ?? 0;
 
       // ── 2. ANNUAL GOAL (school days logged vs required) ───────────────────
-      // Pull required days from school_year_config (active record)
       const { data: configData, error: configErr } = await supabase
-      .from("school_year_settings")
-      .select("annual_goal_value, school_year_start, school_year_end")
-      .eq("organization_id", organizationId)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+        .from("school_year_settings")
+        .select("annual_goal_value")
+        .eq("organization_id", organizationId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
       if (configErr) throw configErr;
 
       const annualRequired = configData?.annual_goal_value ?? 180;
-      const yearStart = configData?.school_year_start ?? null;
-      const yearEnd = configData?.school_year_end ?? null;
 
-      // Count distinct attended days in the current school year.
-      // daily_attendance uses status = 'full_day' | 'half_day' (not a boolean).
-      let attendanceQuery = supabase
+      // Confirmed days from daily_attendance (no date range filter — count all logged days)
+      const { data: attendanceData, error: attendErr } = await supabase
         .from("daily_attendance")
         .select("attendance_date")
         .eq("organization_id", organizationId)
         .in("status", ["full_day", "half_day"]);
 
-      if (yearStart) attendanceQuery = attendanceQuery.gte("attendance_date", yearStart);
-      if (yearEnd)   attendanceQuery = attendanceQuery.lte("attendance_date", yearEnd);
-
-      const { data: attendanceData, error: attendErr } = await attendanceQuery;
       if (attendErr) throw attendErr;
 
-      // De-duplicate by date — a family logs once per day, but some records
-      // have a kid_id (per-child rows) alongside org-level rows, so dedup is essential.
-      const uniqueDays = new Set(
-        (attendanceData ?? []).map((r) => r.attendance_date)
+      const confirmedDates = new Set(
+        (attendanceData ?? []).map((r: { attendance_date: string }) => r.attendance_date)
       );
-      const annualDays = uniqueDays.size;
+
+      // Lesson-inferred days — dates with lessons but no attendance record
+      const { data: kidsData } = await supabase
+        .from("kids")
+        .select("id")
+        .eq("organization_id", organizationId);
+
+      const kidIds = (kidsData ?? []).map((k: any) => k.id);
+
+      let lessonDates = new Set<string>();
+      if (kidIds.length > 0) {
+        const { data: lessonData } = await supabase
+          .from("lessons")
+          .select("lesson_date")
+          .in("kid_id", kidIds)
+          .not("lesson_date", "is", null);
+
+        lessonDates = new Set(
+          (lessonData ?? [])
+            .map((l: any) => l.lesson_date)
+            .filter((d: string) => !confirmedDates.has(d))
+        );
+      }
+
+      const annualDays = confirmedDates.size + lessonDates.size;
       const annualPct = Math.min(
         100,
         Math.round((annualDays / annualRequired) * 100)
@@ -165,8 +179,8 @@ export function useDashboardStats(organizationId: string | null): DashboardStats
 
       // Merge both sources — a day only counts once regardless of source
       const weekUnique = new Set([
-        ...(weekData ?? []).map((r) => r.attendance_date),
-        ...(coopWeekData ?? []).map((r) => r.attendance_date),
+        ...(weekData ?? []).map((r: { attendance_date: string }) => r.attendance_date),
+        ...(coopWeekData ?? []).map((r: { attendance_date: string }) => r.attendance_date),
       ]);
       const weekDays = weekUnique.size;
 
@@ -191,6 +205,8 @@ export function useDashboardStats(organizationId: string | null): DashboardStats
         100,
         Math.round((annualDays / compRequired) * 100)
       );
+      // annualDays now includes both confirmed + lesson-inferred days,
+      // consistent with AttendanceTracker and ProgressDashboard
       const complianceAlert = compliancePct < 50;
 
       // ── SET STATE ─────────────────────────────────────────────────────────

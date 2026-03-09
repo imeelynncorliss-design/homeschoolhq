@@ -44,9 +44,10 @@ type LessonGeneratorProps = {
   kids: Child[];
   userId: string;
   onClose: () => void;
+  initialDate?: string;
 };
 
-export default function LessonGenerator({ kids, userId, onClose }: LessonGeneratorProps) {
+export default function LessonGenerator({ kids, userId, onClose, initialDate }: LessonGeneratorProps) {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -91,7 +92,7 @@ export default function LessonGenerator({ kids, userId, onClose }: LessonGenerat
     subject: '',
     courseId: '',
     duration: 30,
-    startDate: new Date().toISOString().split('T')[0],
+    startDate: initialDate || new Date().toISOString().split('T')[0],
     learningObjectives: '',
     materials: '',
     learningStyle: '',
@@ -142,7 +143,7 @@ export default function LessonGenerator({ kids, userId, onClose }: LessonGenerat
 
       if (lessonSubjects) {
         const unique = [...new Set(lessonSubjects.map((d: any) => d.subject).filter(Boolean))] as string[];
-        setExistingSubjects(unique.filter(s => !CANONICAL_SUBJECTS.includes(s)));
+        setExistingSubjects(unique.filter((s: string) => !([...CANONICAL_SUBJECTS] as string[]).includes(s)));
       }
       }
       } catch (err) {

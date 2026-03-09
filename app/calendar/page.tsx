@@ -634,9 +634,9 @@ function DashboardContent() {
               />
             )}
 
-            <div style={{ background: 'rgba(255,255,255,0.55)', borderRadius: 12, backdropFilter: 'blur(8px)', border: '1px solid rgba(196,181,253,0.3)' }}>
-              <StatsBar organizationId={organizationId} />
-            </div>
+        <div style={{ background: 'rgba(255,255,255,0.55)', borderRadius: 12, backdropFilter: 'blur(8px)', border: '1px solid rgba(196,181,253,0.3)', overflow: 'hidden' }}>
+          <StatsBar organizationId={organizationId} />
+        </div>
       
 
             {viewMode === 'calendar' && (

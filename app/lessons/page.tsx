@@ -8,6 +8,7 @@ import AllChildrenList from '@/components/AllChildrenList'
 import PastAssessmentsViewer from '@/components/PastAssessmentsViewer'
 import LessonGenerator from '@/components/LessonGenerator'
 import DevTierToggle from '@/components/DevTierToggle'
+import PastUnstartedLessonsBanner from '@/components/PastUnstartedLessonsBanner'
 import { CANONICAL_SUBJECTS } from '@/src/constants/subjects'
 import { type UserTier, getTierForTesting, hasFeature as checkFeature, getUpgradeMessage } from '@/lib/tierTesting'
 import CurriculumImporter from '@/components/CurriculumImporter'
@@ -176,6 +177,16 @@ function LessonsContent() {
 
       await loadData(user.id, resolvedOrgId)
       setLoading(false)
+    // Read ?date= param and pre-fill Add Lesson form
+    const params = new URLSearchParams(window.location.search)
+    const dateParam = params.get('date')
+    console.log('RAW dateParam from URL:', dateParam)
+    if (dateParam) {
+      const localDate = new Date(dateParam + 'T12:00:00').toISOString().split('T')[0]
+      console.log('localDate after conversion:', localDate)
+      setLessonDate(localDate)
+      setShowLessonForm(true)
+    }
     }
     init()
   }, [])
@@ -417,6 +428,17 @@ function LessonsContent() {
   }
 
   const hasFeature = (feature: string) => checkFeature(userTier, feature)
+  const today = new Date(new Date().toLocaleDateString('en-CA') + 'T12:00:00').toISOString().split('T')[0]
+  const pastUnstartedLessons = Object.values(lessonsByKid).flat()
+  .filter(l => l.lesson_date !== null && l.lesson_date < today && l.status === 'not_started')
+  .map(l => ({
+    id: l.id,
+    title: l.title,
+    subject: l.subject,
+    lesson_date: l.lesson_date!,
+    kid_id: l.kid_id,
+    kid_name: kids.find(k => k.id === l.kid_id)?.displayname
+  }))
 
   // ── Render ──────────────────────────────────────────────────────────────────
 
@@ -521,6 +543,21 @@ function LessonsContent() {
 
       {/* ── Main ──────────────────────────────────────────────────────── */}
       <main style={{ maxWidth: 900, margin: '0 auto', padding: '28px 24px 64px' }}>
+      <PastUnstartedLessonsBanner
+        lessons={pastUnstartedLessons}
+        onMarkCompleted={async (ids) => {
+          await Promise.all(ids.map(id =>
+            supabase.from('lessons').update({ status: 'completed', completed_at: new Date().toISOString() }).eq('id', id)
+          ))
+          await loadData(user.id, organizationId)
+        }}
+        onDelete={async (ids) => {
+          await Promise.all(ids.map(id =>
+            supabase.from('lessons').delete().eq('id', id)
+          ))
+          await loadData(user.id, organizationId)
+        }}
+      />
         {kids.length === 0 ? (
           <div style={{
             background: '#fff', borderRadius: 14,
@@ -707,7 +744,7 @@ function LessonsContent() {
                     checked={!!lessonDate}
                     onChange={(e) => {
                       if (!e.target.checked) setLessonDate('')
-                      else setLessonDate(new Date().toISOString().split('T')[0])
+                      else setLessonDate(new Date().toLocaleDateString('en-CA'))  // ← local date
                     }}
                     className="rounded"
                   />
@@ -897,7 +934,7 @@ function LessonsContent() {
                     checked={!!editLessonDate}
                     onChange={(e) => {
                       if (!e.target.checked) setEditLessonDate('')
-                      else setEditLessonDate(new Date().toISOString().split('T')[0])
+                        else setEditLessonDate(new Date().toLocaleDateString('en-CA'))
                     }}
                     className="rounded"
                   />
@@ -998,6 +1035,7 @@ function LessonsContent() {
         <LessonGenerator
           kids={kids}
           userId={user.id}
+          initialDate={lessonDate || undefined}
           onClose={() => { setShowGenerator(false); loadData(user.id, organizationId) }}
         />
       )}
