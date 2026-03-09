@@ -37,10 +37,10 @@ const NAV_CARDS = [
     border: '#e0f2fe',
     dotColor: '#0ea5e9',
     items: [
-      { label: 'Progress Tracking',       icon: '📈', href: '/progress'    },
+      { label: 'Progress Tracking',             icon: '📈', href: '/progress'    },
       { label: 'Assessment Results & Standards', icon: '📊', href: '/assessments' },
-      { label: 'Courses',                 icon: '🎓', href: '/courses'     },
-      { label: 'Transcripts',             icon: '📄', href: '/transcript' },
+      { label: 'Courses',                        icon: '🎓', href: '/courses'     },
+      { label: 'Transcripts',                    icon: '📄', href: '/transcript'  },
     ],
   },
   {
@@ -66,9 +66,9 @@ const NAV_CARDS = [
     border: '#fef3c7',
     dotColor: '#f59e0b',
     items: [
-      { label: 'Homeschool Library', icon: '💡', href: '/resources'          },
-      { label: 'Materials',          icon: '🗂️', href: '/materials'          },
-      { label: 'Curriculum Import',  icon: '⬆️', href: '/curriculum/import'  },
+      { label: 'Homeschool Library', icon: '💡', href: '/resources'         },
+      { label: 'Materials',          icon: '🗂️', href: '/materials'         },
+      { label: 'Curriculum Import',  icon: '⬆️', href: '/curriculum/import' },
     ],
   },
 ]
@@ -85,10 +85,10 @@ interface KidScheduleStatus {
 // ─── Onboarding Steps ─────────────────────────────────────────────────────────
 
 const ONBOARDING_STEPS = [
-  { id: 1, icon: '👧', title: 'Add Your Child',        desc: 'Create a profile so everything is personalized.',          completedLabel: 'Profile created!',       href: '/calendar'      },
-  { id: 2, icon: '📚', title: 'Add Your First Lesson', desc: 'Create a lesson or import from your curriculum.',          completedLabel: 'First lesson added!',    href: '/lessons'       },
-  { id: 3, icon: '⚡', title: 'Schedule Your Lessons', desc: 'Use the Bulk Scheduler to assign dates to lessons.',       completedLabel: 'All lessons scheduled!', href: '/bulk-schedule' },
-  { id: 4, icon: '📅', title: 'View Your Teaching Day',desc: "See what you're teaching at a glance.",                    completedLabel: "You're ready to teach!", href: '/calendar'      },
+  { id: 1, icon: '👧', title: 'Add Your Child',        desc: 'Create a profile so everything is personalized.',    completedLabel: 'Profile created!',       href: '/calendar'      },
+  { id: 2, icon: '📚', title: 'Add Your First Lesson', desc: 'Create a lesson or import from your curriculum.',    completedLabel: 'First lesson added!',    href: '/lessons'       },
+  { id: 3, icon: '⚡', title: 'Schedule Your Lessons', desc: 'Use the Bulk Scheduler to assign dates to lessons.', completedLabel: 'All lessons scheduled!', href: '/bulk-schedule' },
+  { id: 4, icon: '📅', title: 'View Your Teaching Day', desc: "See what you're teaching at a glance.",             completedLabel: "You're ready to teach!", href: '/calendar'      },
 ]
 
 // ─── Onboarding Checklist ─────────────────────────────────────────────────────
@@ -191,22 +191,13 @@ function OnboardingChecklist({
                   <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 2 }}>
                     {isDone ? step.completedLabel : step.desc}
                   </div>
+
                   {isDone && step.id === 1 && (
                     <button
                       onClick={() => router.push('/calendar?addChild=true')}
-                      style={{
-                        marginTop: 6,
-                        background: 'none',
-                        border: 'none',
-                        color: '#7c3aed',
-                        fontSize: 12,
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        padding: 0,
-                      }}
+                      style={{ marginTop: 6, background: 'none', border: 'none', color: '#7c3aed', fontSize: 12, fontWeight: 700, cursor: 'pointer', padding: 0 }}
                     >
                       ＋ Add another child →
-                      
                     </button>
                   )}
 
@@ -226,9 +217,7 @@ function OnboardingChecklist({
                             <span>{done ? '✓' : '⚠️'}</span>
                             <span style={{ fontWeight: 700 }}>{kid.name}</span>
                             <span style={{ color: '#6b7280' }}>
-                              {done
-                                ? 'all scheduled'
-                                : `${kid.unscheduled} lesson${kid.unscheduled !== 1 ? 's' : ''} still need dates`}
+                              {done ? 'all scheduled' : `${kid.unscheduled} lesson${kid.unscheduled !== 1 ? 's' : ''} still need dates`}
                             </span>
                           </div>
                         )
@@ -314,10 +303,7 @@ function DashboardContent() {
 
   const visibleNavCards = NAV_CARDS.map(card => {
     if (card.id === 'collaborate' && isCollaborator) {
-      return {
-        ...card,
-        items: card.items.filter(item => item.label !== 'Manage Co-Teachers')
-      }
+      return { ...card, items: card.items.filter(item => item.label !== 'Manage Co-Teachers') }
     }
     return card
   })
@@ -328,7 +314,6 @@ function DashboardContent() {
       if (!user) { router.push('/'); return }
       setUser(user)
 
-      // Check if user is a co-teacher/collaborator first
       const { data: collaboration } = await supabase
         .from('family_collaborators')
         .select('organization_id, role, name')
@@ -338,13 +323,11 @@ function DashboardContent() {
       let orgId: string
 
       if (collaboration) {
-        // Co-teacher — use the family's org
         setIsCollaborator(true)
         orgId = collaboration.organization_id
         setOrganizationId(orgId)
         setParentName(collaboration.name || user.email?.split('@')[0] || '')
 
-        // Load the family's kids using organization_id
         const { data: kidsData } = await supabase
           .from('kids')
           .select('*')
@@ -353,13 +336,11 @@ function DashboardContent() {
 
         setKids(kidsData || [])
       } else {
-        // Admin path — REPLACE the old orgMembership lookup with:
         const { orgId: resolvedOrgId } = await getOrganizationId(user.id)
         if (!resolvedOrgId) { router.push('/onboarding'); return }
         orgId = resolvedOrgId
         setOrganizationId(orgId)
 
-        // FIX: Query kids by organization_id, not user_id
         const { data: kidsData } = await supabase
           .from('kids')
           .select('*')
@@ -369,7 +350,6 @@ function DashboardContent() {
         if (kidsData?.length) {
           setKids(kidsData)
 
-          // FIX: Use organization_id for lessons count, not user_id
           const { count: totalCount } = await supabase
             .from('lessons')
             .select('id', { count: 'exact', head: true })
@@ -389,12 +369,7 @@ function DashboardContent() {
                 .eq('kid_id', kid.id)
                 .is('lesson_date', null)
 
-              return {
-                id: kid.id,
-                name: kid.displayname,
-                total: total ?? 0,
-                unscheduled: unscheduled ?? 0,
-              }
+              return { id: kid.id, name: kid.displayname, total: total ?? 0, unscheduled: unscheduled ?? 0 }
             })
           )
           setKidScheduleStatuses(statuses.filter(s => s.total > 0))
@@ -414,11 +389,6 @@ function DashboardContent() {
     getUser()
   }, [])
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut()
-    router.push('/')
-  }
-
   if (loading) return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f5f3ff' }}>
       <div style={{ color: '#7c3aed', fontWeight: 700, fontSize: 16 }}>Loading...</div>
@@ -426,45 +396,59 @@ function DashboardContent() {
   )
 
   return (
-    <div style={css.root}>
-      <header style={css.topBar}>
-        <div style={css.topBarLeft}>
-          <div style={css.logo}>
-            <span style={css.logoMain}>Homeschool</span>
-            <span style={css.logoAccent}>Ready</span>
-          </div>
-          <div style={css.welcomeMsg}>
-            Welcome, <strong>{parentName || user?.email?.split('@')[0]}</strong> 👋
-          </div>
+    <>
+      {/* Inject responsive grid styles — can't do media queries in inline styles */}
+      <style>{`
+        .dashboard-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 16px;
+        }
+        @media (max-width: 768px) {
+          .dashboard-grid {
+            grid-template-columns: repeat(2, 1fr);
+          }
+        }
+        @media (max-width: 480px) {
+          .dashboard-grid {
+            grid-template-columns: 1fr;
+          }
+        }
+      `}</style>
+
+      <div style={css.root}>
+        {/* Welcome bar — replaces the old duplicate header */}
+        <div style={css.welcomeBar}>
+          <span style={css.welcomeMsg}>
+            Welcome back, <strong>{parentName || user?.email?.split('@')[0]}</strong> 👋
+          </span>
         </div>
-      </header>
 
-      {!isCollaborator && <StatsBar organizationId={organizationId} />}
+        {!isCollaborator && <StatsBar organizationId={organizationId} />}
 
-      <main style={css.main}>
-        {/* Only show onboarding for admins */}
-        {!isCollaborator && (
-          <OnboardingChecklist
-            hasKids={kids.length > 0}
-            hasLessons={hasLessons}
-            kidScheduleStatuses={kidScheduleStatuses}
-            calendarVisited={calendarVisited}
-          />
-        )}
+        <main style={css.main}>
+          {!isCollaborator && (
+            <OnboardingChecklist
+              hasKids={kids.length > 0}
+              hasLessons={hasLessons}
+              kidScheduleStatuses={kidScheduleStatuses}
+              calendarVisited={calendarVisited}
+            />
+          )}
 
-        {/* Co-teachers always see nav cards; admins only see them after adding a kid */}
-        {(isCollaborator || kids.length > 0) && (
-          <>
-            <div style={css.sectionLabel}>WHERE WOULD YOU LIKE TO GO?</div>
-            <div style={css.grid}>
-              {visibleNavCards.map(card => <NavCard key={card.id} card={card} />)}
-            </div>
-          </>
-        )}
-      </main>
+          {(isCollaborator || kids.length > 0) && (
+            <>
+              <div style={css.sectionLabel}>WHERE WOULD YOU LIKE TO GO?</div>
+              <div className="dashboard-grid">
+                {visibleNavCards.map(card => <NavCard key={card.id} card={card} />)}
+              </div>
+            </>
+          )}
+        </main>
 
-      <DevTierToggle />
-    </div>
+        <DevTierToggle />
+      </div>
+    </>
   )
 }
 
@@ -484,30 +468,18 @@ export default function DashboardPage() {
 
 const css: Record<string, React.CSSProperties> = {
   root: { fontFamily: 'var(--font-dm-sans), var(--font-nunito), sans-serif', background: '#f5f3ff', minHeight: '100vh' },
-  topBar: {
-    background: 'linear-gradient(135deg, #5b21b6 0%, #7c3aed 45%, #a855f7 75%, #ec4899 100%)',
-    padding: '0 24px', height: 58, display: 'flex', alignItems: 'center',
-    justifyContent: 'space-between', gap: 16, position: 'sticky', top: 0, zIndex: 50,
+
+  // Slim welcome bar replaces the old duplicate header
+  welcomeBar: {
+    background: 'rgba(124,58,237,0.06)',
+    borderBottom: '1px solid #ede9fe',
+    padding: '10px 24px',
   },
-  topBarLeft: { display: 'flex', alignItems: 'center', gap: 16, flex: 1 },
-  logo: { display: 'flex', alignItems: 'baseline', gap: 1 },
-  logoMain: { color: '#fff', fontWeight: 900, fontSize: 17, letterSpacing: -0.3 },
-  logoAccent: { color: '#fbbf24', fontWeight: 900, fontSize: 17 },
-  welcomeMsg: { color: 'rgba(255,255,255,0.85)', fontSize: 13.5 },
-  topBarRight: { display: 'flex', alignItems: 'center', gap: 10 },
-  howToBtn: {
-    background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)',
-    borderRadius: 8, color: '#fff', fontSize: 12.5, fontWeight: 600,
-    padding: '6px 14px', cursor: 'pointer',
-  },
-  logoutBtn: {
-    background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)',
-    borderRadius: 8, color: '#fff', fontSize: 12.5, fontWeight: 600,
-    padding: '6px 14px', cursor: 'pointer',
-  },
-  main: { maxWidth: 1100, margin: '0 auto', padding: '24px 24px 48px' },
+  welcomeMsg: { color: '#5b21b6', fontSize: 13.5 },
+
+  main: { maxWidth: 1100, margin: '0 auto', padding: '24px 16px 48px' },
   sectionLabel: { fontSize: 11, fontWeight: 800, color: '#9ca3af', letterSpacing: 1, marginBottom: 14, marginTop: 8 },
-  grid: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 },
+  // grid class is handled by <style> tag above for responsive breakpoints
   card: { background: '#fff', borderRadius: 14, border: '1.5px solid', overflow: 'hidden', transition: 'all 0.22s cubic-bezier(0.4,0,0.2,1)', cursor: 'pointer' },
   cardHead: { padding: '13px 16px', display: 'flex', alignItems: 'center', gap: 10 },
   cardTitle: { color: '#fff', fontWeight: 900, fontSize: 15, flex: 1, letterSpacing: 0.1 },

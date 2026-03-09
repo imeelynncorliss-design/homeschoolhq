@@ -348,7 +348,7 @@ function CopilotPanel({ onClose, organizationId }: CopilotPanelProps) {
     setLoading(true)
 
     try {
-      const response = await fetch('/api/help-chat', {// leaving in case we need it https://api.anthropic.com/v1/messages', {
+      const response = await fetch('/api/help-chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -390,7 +390,7 @@ function CopilotPanel({ onClose, organizationId }: CopilotPanelProps) {
         {/* Header */}
         <div style={cp.head}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <img
+            <img
               src="/schoolhouse-helper.png"
               alt="Copilot"
               style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover' }}
@@ -543,9 +543,9 @@ export default function AppHeader() {
           )}
         </div>
 
-        {/* Center: kids */}
+        {/* Center: kids — hidden on mobile */}
         {kids.length > 0 && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+          <div className="hr-desktop-only" style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
             {kids.slice(0, 5).map(k => <KidAvatar key={k.id} kid={k} />)}
             {kids.length > 5 && (
               <div style={s.kidOverflow}>+{kids.length - 5}</div>
@@ -555,20 +555,22 @@ export default function AppHeader() {
 
         {/* Right */}
         <div style={s.right}>
-          {/* Copilot — always visible for authenticated users */}
+
+          {/* Copilot — always visible on all screen sizes */}
           {userId && (
-           <button className="hr-btn hr-copilot-btn" onClick={() => setShowCopilot(true)}>
-           <img 
-             src="/schoolhouse-helper.png" 
-             alt="Copilot" 
-             style={{ width: 20, height: 20, borderRadius: 4, objectFit: 'cover' }} 
-           />
-           <span>Copilot</span>
-         </button>
+            <button className="hr-btn hr-copilot-btn" onClick={() => setShowCopilot(true)}>
+              <img
+                src="/schoolhouse-helper.png"
+                alt="Copilot"
+                style={{ width: 20, height: 20, borderRadius: 4, objectFit: 'cover' }}
+              />
+              <span>Copilot</span>
+            </button>
           )}
 
+          {/* Desktop-only: Feedback */}
           {betaEnabled && userId && orgId && (
-            <button className="hr-btn hr-feedback-btn" onClick={() => setShowFeedback(true)}>
+            <button className="hr-btn hr-feedback-btn hr-desktop-only" onClick={() => setShowFeedback(true)}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
               </svg>
@@ -576,7 +578,8 @@ export default function AppHeader() {
             </button>
           )}
 
-          <button className="hr-btn" onClick={() => router.push('/how-to')}>
+          {/* Desktop-only: How To */}
+          <button className="hr-btn hr-desktop-only" onClick={() => router.push('/how-to')}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10" />
               <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01" />
@@ -584,8 +587,9 @@ export default function AppHeader() {
             <span>How To</span>
           </button>
 
+          {/* Desktop-only: User menu */}
           {userId && (
-            <div style={{ position: 'relative' }} ref={userMenuRef}>
+            <div className="hr-desktop-only" style={{ position: 'relative' }} ref={userMenuRef}>
               <button className="hr-btn" onClick={() => setShowUserMenu(v => !v)}>
                 <div style={s.userAvatar}>{displayName[0]?.toUpperCase() || '?'}</div>
                 <span>{displayName}</span>
@@ -604,6 +608,43 @@ export default function AppHeader() {
                     Log out
                   </button>
                 </div>
+              )}
+            </div>
+          )}
+
+          {/* Mobile-only: hamburger that collapses Feedback + How To + User */}
+          {userId && (
+            <div className="hr-mobile-only" style={{ position: 'relative' }} ref={userMenuRef}>
+              <button className="hr-btn" onClick={() => setShowUserMenu(v => !v)} aria-label="Menu">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                  <path d="M3 12h18M3 6h18M3 18h18" />
+                </svg>
+              </button>
+
+              {showUserMenu && (
+                <>
+                  <div
+                    style={{ position: 'fixed', inset: 0, zIndex: 150 }}
+                    onClick={() => setShowUserMenu(false)}
+                  />
+                  <div style={{ ...s.userMenu, zIndex: 200, minWidth: 200 }}>
+                    <div style={s.userMenuEmail}>{email}</div>
+                    {betaEnabled && orgId && (
+                      <button style={s.menuItem} onClick={() => { setShowUserMenu(false); setShowFeedback(true) }}>
+                        💬 Feedback
+                      </button>
+                    )}
+                    <button style={s.menuItem} onClick={() => { setShowUserMenu(false); router.push('/how-to') }}>
+                      ❓ How To
+                    </button>
+                    <button style={s.menuItem} onClick={() => { setShowUserMenu(false); router.push('/settings') }}>
+                      ⚙️ Settings
+                    </button>
+                    <button style={{ ...s.menuItem, color: '#ef4444' }} onClick={handleLogout}>
+                      🚪 Log out
+                    </button>
+                  </div>
+                </>
               )}
             </div>
           )}
@@ -782,4 +823,13 @@ const HEADER_STYLES = `
   .hr-feedback-btn:hover { background: rgba(255,255,255,0.28); }
   .hr-copilot-btn { border-color: rgba(255,255,255,0.5); background: rgba(255,255,255,0.22); font-weight: 700; }
   .hr-copilot-btn:hover { background: rgba(255,255,255,0.32); color: #fff; }
+
+  /* Responsive visibility helpers */
+  .hr-desktop-only { display: flex !important; }
+  .hr-mobile-only  { display: none  !important; }
+
+  @media (max-width: 640px) {
+    .hr-desktop-only { display: none  !important; }
+    .hr-mobile-only  { display: flex  !important; }
+  }
 `

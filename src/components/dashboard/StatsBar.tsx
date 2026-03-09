@@ -7,6 +7,7 @@
  *   <StatsBar organizationId={organizationId} />
  */
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useDashboardStats } from "@/src/hooks/useDashboardStats";
 
@@ -17,21 +18,13 @@ interface StatsBarProps {
 export default function StatsBar({ organizationId }: StatsBarProps) {
   const router = useRouter();
   const {
-    todayCount,
-    todayDone,
-    annualPct,
-    annualDays,
-    annualRequired,
+    todayCount, todayDone,
+    annualPct, annualDays, annualRequired,
     weekDays,
-    compliancePct,
-    complianceState,
-    complianceAlert,
-    loading,
-    error,
-    refetch,
+    compliancePct, complianceState, complianceAlert,
+    loading, error, refetch,
   } = useDashboardStats(organizationId);
 
-  // Build the 4 stat tiles from live data
   const stats = [
     {
       id: "today",
@@ -81,15 +74,37 @@ export default function StatsBar({ organizationId }: StatsBarProps) {
 
   return (
     <>
+      <style>{`
+        .stats-bar {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          background: #fff;
+          border-bottom: 1px solid #ede9fe;
+          box-shadow: 0 2px 8px rgba(124,58,237,0.07);
+        }
+        @media (max-width: 640px) {
+          .stats-bar {
+            grid-template-columns: repeat(2, 1fr);
+          }
+          /* Remove right border on even cells (right column) */
+          .stats-bar .stat-cell:nth-child(2n) {
+            border-right: none;
+          }
+          /* Add bottom border between rows */
+          .stats-bar .stat-cell:nth-child(-n+2) {
+            border-bottom: 1px solid #f3f4f6;
+          }
+        }
+      `}</style>
+
       {error && (
         <div style={css.errorBanner}>
           ⚠️ Could not load stats.{" "}
-          <button onClick={refetch} style={css.retryBtn}>
-            Retry
-          </button>
+          <button onClick={refetch} style={css.retryBtn}>Retry</button>
         </div>
       )}
-      <div style={css.statsBar}>
+
+      <div className="stats-bar">
         {stats.map((stat, i) => (
           <StatCell
             key={stat.id}
@@ -105,8 +120,6 @@ export default function StatsBar({ organizationId }: StatsBarProps) {
 }
 
 // ─── Stat Cell ────────────────────────────────────────────────────────────────
-
-import { useState } from "react";
 
 interface Stat {
   id: string;
@@ -134,22 +147,20 @@ function StatCell({
 
   return (
     <div
+      className="stat-cell"
       style={{
         ...css.statCell,
         ...(stat.alert ? css.statCellAlert : {}),
         ...(hovered ? (stat.alert ? css.statCellAlertHover : css.statCellHover) : {}),
+        // On desktop, remove right border on last item only
+        // On mobile the CSS class handles it
         ...(isLast ? { borderRight: "none" } : {}),
       }}
       onClick={onClick}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      <div
-        style={{
-          ...css.iconWrap,
-          background: stat.alert ? "#fef3c7" : "#f5f3ff",
-        }}
-      >
+      <div style={{ ...css.iconWrap, background: stat.alert ? "#fef3c7" : "#f5f3ff" }}>
         <span style={css.icon}>{stat.icon}</span>
       </div>
 
@@ -158,12 +169,7 @@ function StatCell({
         {loading ? (
           <div style={css.skeleton} />
         ) : (
-          <div
-            style={{
-              ...css.value,
-              ...(stat.alert ? css.valueAlert : {}),
-            }}
-          >
+          <div style={{ ...css.value, ...(stat.alert ? css.valueAlert : {}) }}>
             {stat.value}
           </div>
         )}
@@ -171,12 +177,7 @@ function StatCell({
       </div>
 
       {hovered && !loading && (
-        <div
-          style={{
-            ...css.cta,
-            ...(stat.alert ? css.ctaAlert : {}),
-          }}
-        >
+        <div style={{ ...css.cta, ...(stat.alert ? css.ctaAlert : {}) }}>
           {stat.cta}
         </div>
       )}
@@ -187,13 +188,6 @@ function StatCell({
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const css: Record<string, React.CSSProperties> = {
-  statsBar: {
-    display: "grid",
-    gridTemplateColumns: "repeat(4, 1fr)",
-    background: "#fff",
-    borderBottom: "1px solid #ede9fe",
-    boxShadow: "0 2px 8px rgba(124,58,237,0.07)",
-  },
   errorBanner: {
     background: "#fef2f2",
     borderBottom: "1px solid #fecaca",
@@ -218,60 +212,46 @@ const css: Record<string, React.CSSProperties> = {
     display: "flex",
     alignItems: "center",
     gap: 12,
-    padding: "14px 20px",
+    padding: "14px 16px",
     borderRight: "1px solid #f3f4f6",
     cursor: "pointer",
     transition: "background 0.15s ease",
     position: "relative",
     userSelect: "none",
   },
-  statCellHover: {
-    background: "#faf5ff",
-  },
-  statCellAlert: {
-    background: "#fffbeb",
-    borderRight: "1px solid #fef3c7",
-  },
-  statCellAlertHover: {
-    background: "#fef3c7",
-  },
+  statCellHover: { background: "#faf5ff" },
+  statCellAlert: { background: "#fffbeb", borderRight: "1px solid #fef3c7" },
+  statCellAlertHover: { background: "#fef3c7" },
   iconWrap: {
-    width: 40,
-    height: 40,
+    width: 36,
+    height: 36,
     borderRadius: 10,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
-    fontSize: 20,
+    fontSize: 18,
     transition: "background 0.15s ease",
   },
-  icon: {
-    lineHeight: 1,
-  },
-  body: {
-    flex: 1,
-    minWidth: 0,
-  },
+  icon: { lineHeight: 1 },
+  body: { flex: 1, minWidth: 0 },
   label: {
-    fontSize: 10.5,
+    fontSize: 10,
     fontWeight: 700,
     color: "#9ca3af",
     textTransform: "uppercase" as const,
     letterSpacing: 0.8,
   },
   value: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: 900,
     color: "#111827",
     lineHeight: 1.15,
     marginTop: 1,
   },
-  valueAlert: {
-    color: "#d97706",
-  },
+  valueAlert: { color: "#d97706" },
   sub: {
-    fontSize: 11,
+    fontSize: 10,
     color: "#9ca3af",
     marginTop: 2,
     whiteSpace: "nowrap" as const,
@@ -287,12 +267,10 @@ const css: Record<string, React.CSSProperties> = {
     color: "#7c3aed",
     whiteSpace: "nowrap" as const,
   },
-  ctaAlert: {
-    color: "#d97706",
-  },
+  ctaAlert: { color: "#d97706" },
   skeleton: {
-    height: 24,
-    width: 60,
+    height: 22,
+    width: 52,
     borderRadius: 6,
     background: "linear-gradient(90deg, #f3f4f6 25%, #e9eaeb 50%, #f3f4f6 75%)",
     backgroundSize: "200% 100%",
