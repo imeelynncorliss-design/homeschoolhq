@@ -59,7 +59,7 @@ export default function ResolveAttendanceModal({
               {statusLabel} · {attendanceHours}h recorded · No lessons found
             </p>
             <p className="text-xs text-amber-600 mt-2">
-              Does this look right? If you taught lessons that day, add them by using the "+Add Lessons" or "Generate Lessons" buttons so your records are complete.
+              Does this look right? If you taught lessons that day, add them by clicking the "📚 Add lessons for this day" button so your records are complete.
               If this was logged by mistake, you can delete it.
             </p>
           </div>
