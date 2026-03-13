@@ -15,11 +15,11 @@ export default function PricingPage() {
           <h1 className="text-5xl font-black text-gray-900 mb-4">Choose Your Plan</h1>
           <p className="text-xl text-gray-600 mb-2">Start free, upgrade anytime</p>
           <p className="text-sm text-gray-500">
-            Plans at $5, $7.50, and $10/month — each step unlocks more power for your homeschool
+            Plans at $5, $7.50, and $10/month — each step adds AI power and compliance depth
           </p>
         </div>
 
-        {/* Pricing Cards — driven by TIER_DISPLAY in tierTesting.ts */}
+        {/* Pricing Cards */}
         <div className="grid lg:grid-cols-4 md:grid-cols-2 gap-6 mb-12">
           {TIER_ORDER.map((tierKey) => {
             const tier = TIER_DISPLAY[tierKey]
@@ -48,7 +48,7 @@ export default function PricingPage() {
                     </div>
                     {tier.monthlyEquiv && (
                       <p className="text-sm text-gray-500 mt-1">
-                        Billed annually • {tier.monthlyEquiv}
+                        Billed annually · {tier.monthlyEquiv}
                       </p>
                     )}
                   </div>
@@ -76,7 +76,7 @@ export default function PricingPage() {
           })}
         </div>
 
-        {/* Feature Comparison Table — driven by PRICING_COMPARISON_ROWS in tierTesting.ts */}
+        {/* Feature Comparison Table */}
         <div className="bg-white rounded-2xl shadow-lg p-8">
           <h3 className="text-2xl font-black text-gray-900 mb-6 text-center">Feature Comparison</h3>
 
@@ -138,32 +138,46 @@ export default function PricingPage() {
 
           <div className="space-y-4 max-w-3xl mx-auto">
             <div className="border-b border-gray-200 pb-4">
+              <h4 className="font-bold text-gray-900 mb-2">Do I need a credit card to get started?</h4>
+              <p className="text-sm text-gray-600">
+                No. The Free plan is free forever — no credit card required. You only need payment
+                information when you choose to upgrade.
+              </p>
+            </div>
+
+            <div className="border-b border-gray-200 pb-4">
               <h4 className="font-bold text-gray-900 mb-2">Can I switch plans anytime?</h4>
               <p className="text-sm text-gray-600">
-                Yes! Upgrades take effect immediately, and downgrades take effect at the end of your billing period.
+                Yes. Upgrades take effect immediately. Downgrades take effect at the end of your
+                current billing period and your data is never deleted.
               </p>
             </div>
 
             <div className="border-b border-gray-200 pb-4">
-              <h4 className="font-bold text-gray-900 mb-2">How does pricing compare to other homeschool planners?</h4>
+              <h4 className="font-bold text-gray-900 mb-2">How does HomeschoolReady compare to other planners?</h4>
               <p className="text-sm text-gray-600">
-                Homeschool Planet charges $84.95/year for a single tier. HomeschoolReady's Essential
-                tier is just $60/year, and our Pro tier ($90/year) adds AI lesson generation,
-                co-teacher collaboration, and state compliance automation that no competitor offers.
+                Homeschool Planet charges $84.95/year for a single tier with no AI generation.
+                HomeschoolReady Essential is just $60/year, and Pro at $90/year adds unlimited AI
+                lesson generation, state compliance automation, and co-teacher collaboration —
+                features no competitor currently offers.
               </p>
             </div>
 
             <div className="border-b border-gray-200 pb-4">
-              <h4 className="font-bold text-gray-900 mb-2">Is there a money-back guarantee?</h4>
+              <h4 className="font-bold text-gray-900 mb-2">What states are supported for compliance tracking?</h4>
               <p className="text-sm text-gray-600">
-                Yes! All paid plans include a 14-day money-back guarantee, no questions asked.
+                HomeschoolReady currently supports 10 states at beta launch: NC, TX, FL, GA, NY,
+                PA, VA, OH, TN, and CA. Additional states will be added based on user demand.
               </p>
             </div>
 
             <div>
-              <h4 className="font-bold text-gray-900 mb-2">Can I try Pro features before committing?</h4>
+              <h4 className="font-bold text-gray-900 mb-2">What is the Schoolhouse Helper Copilot?</h4>
               <p className="text-sm text-gray-600">
-                Absolutely! We offer a free 14-day trial when you upgrade to Pro or Premium.
+                Schoolhouse Helper is HomeschoolReady's AI assistant, available from every page in
+                the app. On Free and Essential plans it answers general questions. On Pro and
+                Premium it can generate full lessons and activities, personalized to your teaching
+                style and your children's grade levels.
               </p>
             </div>
           </div>

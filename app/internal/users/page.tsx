@@ -132,8 +132,8 @@ export default function UserManagementPage() {
                       >
                         <option value="FREE">Free</option>
                         <option value="ESSENTIAL">Essential ($60/yr)</option>
-                        <option value="PRO">Pro ($99/yr)</option>
-                        <option value="PREMIUM">Premium ($149/yr)</option>
+                        <option value="PRO">Pro ($90/yr)</option>
+                        <option value="PREMIUM">Premium ($120/yr)</option>
                       </select>
                     </td>
                   </tr>
