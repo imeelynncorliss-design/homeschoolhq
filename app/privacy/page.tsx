@@ -2,6 +2,7 @@
 
 export default function PrivacyPage() {
   return (
+    <div style={{ minHeight: '100vh', backgroundColor: '#ffffff', color: '#1a1a2e' }}>
     <div style={{
       maxWidth: 720, margin: '0 auto', padding: '48px 24px 80px',
       fontFamily: "'Nunito', sans-serif", color: '#1a1a2e', lineHeight: 1.7,
@@ -76,6 +77,7 @@ export default function PrivacyPage() {
         <h2 style={{ fontSize: 18, fontWeight: 800, marginBottom: 12 }}>10. Contact</h2>
         <p>Privacy questions? Email us at <a href="mailto:privacy@homeschoolready.com" style={{ color: '#7c3aed', fontWeight: 700 }}>privacy@homeschoolready.com</a>.</p>
       </section>
+    </div>
     </div>
   )
 }
