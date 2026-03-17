@@ -30,31 +30,32 @@ export default function LoginPage() {
         return
       }
 
-      // Check user_organizations first (admins)
-      const { data: membership } = await supabase
-      .from('user_organizations')
-      .select('role')
-      .eq('user_id', data.user.id)
-      .maybeSingle()
+      // 1. Org owner path
+      const { data: ownedOrg } = await supabase
+        .from('organizations')
+        .select('id')
+        .eq('user_id', data.user.id)
+        .maybeSingle()
 
-      if (membership) {
-      router.push('/dashboard')
-      } else {
-      // Check if they're a co-teacher/collaborator
-      const { data: collaboration } = await supabase
-        .from('family_collaborators')
+      if (ownedOrg) {
+        router.push('/dashboard')
+        return
+      }
+
+      // 2. Co-teacher / aide path
+      const { data: membership } = await supabase
+        .from('user_organizations')
         .select('role')
         .eq('user_id', data.user.id)
         .maybeSingle()
 
-      if (collaboration) {
+      if (membership) {
         router.push('/dashboard')
-      } else {
-        // No org at all — send onboarding - co-teahcer will have org-id
-        router.push('/onboarding')
+        return
       }
-      }
-      router.refresh()
+
+      // 3. No org — send to onboarding
+      router.push('/agree')
     } catch (err) {
       setError('An error occurred. Please try again.')
     } finally {

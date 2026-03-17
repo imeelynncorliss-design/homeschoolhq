@@ -35,8 +35,8 @@ function ResetPasswordForm() {
       return
     }
 
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters')
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters')
       setLoading(false)
       return
     }
@@ -125,7 +125,7 @@ function ResetPasswordForm() {
               className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-600 focus:outline-none transition-colors text-gray-900 font-medium placeholder:text-gray-400"
               placeholder="••••••••"
             />
-            <p className="text-xs text-gray-500 mt-1">At least 6 characters</p>
+            <p className="text-xs text-gray-500 mt-1">At least 8 characters</p>
           </div>
 
           <div>

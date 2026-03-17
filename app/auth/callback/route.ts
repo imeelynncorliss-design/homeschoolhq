@@ -72,32 +72,41 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${origin}${next}`);
   }
 
-  // Check org membership to determine where to send this user
+  // 1. Check if user owns an organization (parent/admin path)
+  const { data: ownedOrg } = await supabase
+    .from('organizations')
+    .select('id')
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  if (ownedOrg) {
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('onboarding_completed_at')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    const destination = profile?.onboarding_completed_at ? '/dashboard' : '/agree';
+    return NextResponse.redirect(`${origin}${destination}`);
+  }
+
+  // 2. Check co-teacher / aide membership
   const { data: membership } = await supabase
     .from('user_organizations')
     .select('role')
     .eq('user_id', user.id)
     .maybeSingle();
 
-  if (!membership) {
-    return NextResponse.redirect(`${origin}/join`);
-  }
-
-  switch (membership.role) {
-    case 'admin': {
-      const { data: profile } = await supabase
-        .from('user_profiles')
-        .select('onboarding_completed_at')
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      const destination = profile?.onboarding_completed_at ? '/dashboard' : '/onboarding';
-      return NextResponse.redirect(`${origin}${destination}`);
+  if (membership) {
+    switch (membership.role) {
+      case 'co_teacher':
+      case 'aide':
+        return NextResponse.redirect(`${origin}/teaching-schedule`);
+      default:
+        return NextResponse.redirect(`${origin}/dashboard`);
     }
-    case 'co_teacher':
-    case 'aide':
-      return NextResponse.redirect(`${origin}/teaching-schedule`);
-    default:
-      return NextResponse.redirect(`${origin}/dashboard`);
   }
+
+  // 3. No org at all — new parent, start onboarding
+  return NextResponse.redirect(`${origin}/agree`);
 }
