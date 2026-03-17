@@ -50,6 +50,9 @@ interface KidAvatarProps {
 interface CopilotPanelProps {
   onClose: () => void
   organizationId?: string
+  userId?: string
+  userName?: string
+  userState?: string | null
 }
 
 interface CopilotMessage {
@@ -361,11 +364,15 @@ function KidAvatar({ kid, size = 30 }: KidAvatarProps) {
 
 // ─── Copilot Panel ────────────────────────────────────────────────────────────
 
-function CopilotPanel({ onClose, organizationId }: CopilotPanelProps) {
+function CopilotPanel({ onClose, organizationId, userId, userName, userState }: CopilotPanelProps) {
+  const greeting = userName
+    ? `Hi ${userName}! I'm Scout, your HomeschoolReady co-pilot 🐦 I'm here to keep you on course — lesson planning, scheduling, compliance, and whatever else comes up. What can I help you with today?`
+    : "Hi! I'm Scout, your HomeschoolReady co-pilot 🐦 I'm here to keep you on course — lesson planning, scheduling, compliance, and whatever else comes up. What can I help you with today?"
+
   const [messages, setMessages] = useState<CopilotMessage[]>([
     {
       role: 'assistant',
-      content: "Hi! I'm Scout, your HomeschoolReady co-pilot 🐦 I'm here to keep you on course — lesson planning, scheduling, compliance, and whatever else comes up. What can I help you with today?",
+      content: greeting,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     },
   ])
@@ -399,6 +406,9 @@ function CopilotPanel({ onClose, organizationId }: CopilotPanelProps) {
             ...messages.map(m => ({ role: m.role, content: m.content })),
             { role: 'user', content: text },
           ],
+          userId,
+          userName,
+          userState,
         }),
       })
 
@@ -522,6 +532,7 @@ export default function AppHeader() {
   const [userId, setUserId] = useState<string | null>(null)
   const [orgId, setOrgId] = useState<string | null>(null)
   const [displayName, setDisplayName] = useState('')
+  const [userState, setUserState] = useState<string | null>(null)
   const [email, setEmail] = useState('')
   const [kids, setKids] = useState<Kid[]>([])
   const [showFeedback, setShowFeedback] = useState(false)
@@ -544,6 +555,26 @@ export default function AppHeader() {
         'there'
       )
 
+      // Check org owner path first
+      const { data: ownedOrg } = await supabase
+        .from('organizations')
+        .select('id, state')
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+      if (ownedOrg) {
+        setOrgId(ownedOrg.id)
+        if (ownedOrg.state) setUserState(ownedOrg.state)
+        const { data: kidsData } = await supabase
+          .from('kids')
+          .select('id, displayname, avatar_url')
+          .eq('organization_id', ownedOrg.id)
+          .order('displayname')
+        setKids((kidsData as Kid[]) || [])
+        return
+      }
+
+      // Co-teacher / aide path
       const { data: orgData } = await supabase
         .from('user_organizations')
         .select('organization_id')
@@ -552,6 +583,12 @@ export default function AppHeader() {
 
       if (orgData) {
         setOrgId(orgData.organization_id)
+        const { data: orgInfo } = await supabase
+          .from('organizations')
+          .select('state')
+          .eq('id', orgData.organization_id)
+          .maybeSingle()
+        if (orgInfo?.state) setUserState(orgInfo.state)
         const { data: kidsData } = await supabase
           .from('kids')
           .select('id, displayname, avatar_url')
@@ -744,7 +781,13 @@ export default function AppHeader() {
       )}
 
       {showCopilot && (
-        <CopilotPanel onClose={() => setShowCopilot(false)} organizationId={orgId ?? undefined} />
+        <CopilotPanel
+          onClose={() => setShowCopilot(false)}
+          organizationId={orgId ?? undefined}
+          userId={userId ?? undefined}
+          userName={displayName || undefined}
+          userState={userState}
+        />
       )}
     </>
   )
