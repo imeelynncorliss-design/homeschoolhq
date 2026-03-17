@@ -111,11 +111,11 @@ export const TIER_INFO: Record<UserTier, { name: string; priceYearly: string; pr
 
 // ── AI generation limits ──────────────────────────────────────────────────────
 
-export const AI_LIMITS: Record<UserTier, { lessons: number | 'unlimited'; activities: number | 'unlimited' }> = {
-  FREE:      { lessons: 10,          activities: 5 },
-  ESSENTIAL: { lessons: 25,          activities: 15 },
-  PRO:       { lessons: 'unlimited', activities: 'unlimited' },
-  PREMIUM:   { lessons: 'unlimited', activities: 'unlimited' },
+export const AI_LIMITS: Record<UserTier, { lessons: number | 'unlimited'; activities: number | 'unlimited'; scout: number | 'unlimited' }> = {
+  FREE:      { lessons: 10,          activities: 5,           scout: 20 },
+  ESSENTIAL: { lessons: 25,          activities: 15,          scout: 50 },
+  PRO:       { lessons: 'unlimited', activities: 'unlimited', scout: 'unlimited' },
+  PREMIUM:   { lessons: 'unlimited', activities: 'unlimited', scout: 'unlimited' },
 }
 
 // ── TIER_DISPLAY — drives the /pricing page UI ────────────────────────────────

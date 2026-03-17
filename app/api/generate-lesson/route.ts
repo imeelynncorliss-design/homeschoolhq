@@ -2,6 +2,7 @@
 
 import { generateText } from 'ai';
 import { getModel } from '@/lib/ai';
+import { checkAndIncrementUsage } from '@/lib/aiUsage';
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 
@@ -18,11 +19,19 @@ export async function POST(request: Request) {
     )
 
     const formData = await request.json();
-    const { childId, subject, gradeLevel, duration, topic } = formData;
+    const { userId, childId, subject, gradeLevel, duration, topic } = formData;
     console.log('generate-lesson: childId=', childId, 'subject=', subject)
 
     if (!childId) {
       return NextResponse.json({ error: 'Missing childId', details: 'No student selected' }, { status: 400 })
+    }
+
+    // Usage guardrail — enforce monthly tier limits
+    if (userId) {
+      const usage = await checkAndIncrementUsage(userId, 'lessons')
+      if (!usage.allowed) {
+        return NextResponse.json({ error: usage.error }, { status: 429 })
+      }
     }
 
     // Fetch kid profile for personalization

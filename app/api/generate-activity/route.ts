@@ -1,5 +1,6 @@
 import { generateText } from 'ai'
 import { getModel } from '@/lib/ai'
+import { checkAndIncrementUsage } from '@/lib/aiUsage'
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 
@@ -10,7 +11,15 @@ export async function POST(request: Request) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    const { kidId, subject, topic, vibe } = await request.json()
+    const { userId, kidId, subject, topic, vibe } = await request.json()
+
+    // Usage guardrail — enforce monthly tier limits
+    if (userId) {
+      const usage = await checkAndIncrementUsage(userId, 'activities')
+      if (!usage.allowed) {
+        return NextResponse.json({ error: usage.error }, { status: 429 })
+      }
+    }
 
     // Fetch kid profile
     const { data: kid } = await supabase

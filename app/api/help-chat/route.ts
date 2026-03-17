@@ -1,5 +1,6 @@
 import { generateText } from 'ai';
 import { getModel } from '@/lib/ai';
+import { checkAndIncrementUsage } from '@/lib/aiUsage';
 import { NextRequest, NextResponse } from 'next/server';
 
 const SYSTEM_PROMPT = `You are Scout, a helpful assistant for HomeschoolHQ, a curriculum-agnostic homeschool planning platform for primarily working parents. You help parents navigate the platform and answer questions about its features.
@@ -35,7 +36,15 @@ Keep responses friendly, practical, and focused on helping parents succeed with 
 
 export async function POST(request: NextRequest) {
   try {
-    const { messages } = await request.json();
+    const { messages, userId } = await request.json();
+
+    // Usage guardrail — enforce monthly tier limits
+    if (userId) {
+      const usage = await checkAndIncrementUsage(userId, 'scout')
+      if (!usage.allowed) {
+        return NextResponse.json({ error: usage.error }, { status: 429 })
+      }
+    }
 
     const { text } = await generateText({
       model: getModel(),
