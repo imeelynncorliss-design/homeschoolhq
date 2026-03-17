@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, DM_Sans, Nunito } from "next/font/google";
 import "./globals.css";
+import AppShell from "@/components/AppShell";
 
 const dmSans = DM_Sans({
   subsets: ["latin"],
@@ -37,9 +38,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} ${dmSans.variable} ${nunito.variable} antialiased`}>
-        <main style={{ minHeight: "100vh" }}>
-          {children}
-        </main>
+        <AppShell>
+          <main style={{ minHeight: "100vh" }}>
+            {children}
+          </main>
+        </AppShell>
       </body>
     </html>
   );
