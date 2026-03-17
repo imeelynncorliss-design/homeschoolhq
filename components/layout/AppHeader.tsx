@@ -5,7 +5,7 @@ import {
   useCallback, useRef,
 } from 'react'
 import type { ReactNode, CSSProperties } from 'react'
-import { useRouter, usePathname } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { supabase } from '@/src/lib/supabase'
 import { gradients } from '@/src/lib/designTokens'
 
@@ -515,19 +515,10 @@ function CopilotPanel({ onClose, organizationId, userId, userName, userState }: 
 
 // ─── Main Header ──────────────────────────────────────────────────────────────
 
-const NAV_ITEMS = [
-  { label: 'Lessons',    href: '/subjects',    emoji: '📚' },
-  { label: 'Calendar',   href: '/calendar',    emoji: '📅' },
-  { label: 'Attendance', href: '/attendance',  emoji: '✅' },
-  { label: 'Compliance', href: '/compliance',  emoji: '📋' },
-  { label: 'Transcript', href: '/transcript',  emoji: '🎓' },
-  { label: 'Resources',  href: '/resources',   emoji: '🔗' },
-]
 
 export default function AppHeader() {
   const { title, backHref } = useContext(HeaderCtx)
   const router = useRouter()
-  const pathname = usePathname()
 
   const [userId, setUserId] = useState<string | null>(null)
   const [orgId, setOrgId] = useState<string | null>(null)
@@ -652,24 +643,6 @@ export default function AppHeader() {
           )}
         </div>
 
-        {/* Center: page nav — desktop only */}
-        {userId && (
-          <div className="hr-desktop-only" style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-            {NAV_ITEMS.map(item => {
-              const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
-              return (
-                <button
-                  key={item.href}
-                  onClick={() => router.push(item.href)}
-                  className={isActive ? 'hr-nav-btn hr-nav-active' : 'hr-nav-btn'}
-                >
-                  <span>{item.emoji}</span>
-                  <span>{item.label}</span>
-                </button>
-              )
-            })}
-          </div>
-        )}
 
         {/* Right */}
         <div style={s.right}>
@@ -743,17 +716,6 @@ export default function AppHeader() {
         />
         <div style={{ ...s.userMenu, zIndex: 200, minWidth: 200 }}>
                     <div style={s.userMenuEmail}>{email}</div>
-                    {NAV_ITEMS.map(item => {
-                      const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
-                      return (
-                        <button key={item.href}
-                          style={{ ...s.menuItem, fontWeight: isActive ? 800 : 400, color: isActive ? '#4f46e5' : '#374151', background: isActive ? '#f0f0ff' : 'none' }}
-                          onClick={() => { setShowMobileMenu(false); router.push(item.href) }}>
-                          {item.emoji} {item.label}
-                        </button>
-                      )
-                    })}
-                    <div style={{ height: 1, background: '#f3f4f6', margin: '4px 0' }} />
                     {betaEnabled && orgId && (
                       <button style={s.menuItem} onClick={() => { setShowUserMenu(false); setShowFeedback(true) }}>
                         💬 Feedback
