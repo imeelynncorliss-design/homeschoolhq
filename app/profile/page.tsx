@@ -55,7 +55,6 @@ interface Kid {
   id: string
   displayname: string
   grade?: string | null
-  grade_level?: string | null
   subjects: string[]
 }
 
@@ -157,7 +156,7 @@ function ProfileContent() {
           .eq('organization_id', orgId)
           .maybeSingle(),
         supabase.from('kids')
-          .select('id, displayname, grade, grade_level')
+          .select('id, displayname, grade')
           .eq('organization_id', orgId)
           .order('displayname'),
         supabase.from('user_organizations')
@@ -212,7 +211,7 @@ function ProfileContent() {
           subsByKid[row.kid_id].add(row.subject)
         }
 
-        setKids(kidsData.map((k: { id: string; displayname: string; grade?: string; grade_level?: string }) => ({
+        setKids(kidsData.map((k: { id: string; displayname: string; grade?: string }) => ({
           ...k,
           subjects: subsByKid[k.id] ? Array.from(subsByKid[k.id]).slice(0, 5) : [],
         })))
@@ -408,7 +407,7 @@ function ProfileContent() {
         }}>
           {kids.map((kid, idx) => {
             const color = KID_COLORS[idx % KID_COLORS.length]
-            const grade = kid.grade_level || kid.grade
+            const grade = kid.grade
             const subjectLine = kid.subjects.join(', ')
             const subtitle = [grade, subjectLine].filter(Boolean).join(' · ')
             return (
