@@ -19,8 +19,6 @@ export const CANONICAL_SUBJECTS = [
     "Physical Education",
     "Health",
     "Foreign Language",
-    "Spanish",
-    "French",
     "Bible / Religious Studies",
     "Computer Science",
     "Life Skills",

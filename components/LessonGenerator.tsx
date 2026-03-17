@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { supabase } from '@/src/lib/supabase';
 import { CANONICAL_SUBJECTS } from '@/src/constants/subjects'
 
@@ -10,15 +9,6 @@ type Child = {
   displayname: string;
   grade?: string;
   learning_style?: string;
-};
-
-type Material = {
-  id: string;
-  name: string;
-  material_type: string;
-  quantity?: number;
-  notes?: string;
-  url?: string;
 };
 
 type Course = {
@@ -33,11 +23,12 @@ type LessonVariation = {
   title: string;
   approach: string;
   description?: string;
-  materials: string[];
   activities: Array<{ name: string; duration: string; description: string }>;
-  assessment: string;
-  extensions: string[];
+  materials: string[];
   learningObjectives?: string[];
+  assessmentIdeas?: string[];
+  overview?: string;
+  extensions?: string[];
 };
 
 type LessonGeneratorProps = {
@@ -45,120 +36,95 @@ type LessonGeneratorProps = {
   userId: string;
   onClose: () => void;
   initialDate?: string;
+  initialKidId?: string;
+  initialSubject?: string;
 };
 
-export default function LessonGenerator({ kids, userId, onClose, initialDate }: LessonGeneratorProps) {
-  const router = useRouter();
+export default function LessonGenerator({ kids, userId, onClose, initialDate, initialKidId, initialSubject }: LessonGeneratorProps) {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [variations, setVariations] = useState<LessonVariation[]>([]);
   const [selectedVariation, setSelectedVariation] = useState<LessonVariation | null>(null);
-
-  // Materials state
-  const [availableMaterials, setAvailableMaterials] = useState<Material[]>([]);
-  const [selectedMaterialIds, setSelectedMaterialIds] = useState<Set<string>>(new Set());
-  const [loadingMaterials, setLoadingMaterials] = useState(false);
-  const [showAddMaterialModal, setShowAddMaterialModal] = useState(false);
-  const [materialSearchQuery, setMaterialSearchQuery] = useState('');
-  const [editingLearningStyle, setEditingLearningStyle] = useState(false);
-  const [organizationId, setOrganizationId] = useState<string | null>(null);
-
-  //Collaborator state
-  const [collaborators, setCollaborators] = useState<{id: string, user_id: string, name: string, email: string}[]>([])
-  const [assignedTo, setAssignedTo] = useState('')
+  // Collaborator state
+  const [collaborators, setCollaborators] = useState<{id: string, user_id: string, name: string, email: string}[]>([]);
+  const [assignedTo, setAssignedTo] = useState('');
 
   // Course state
   const [availableCourses, setAvailableCourses] = useState<Course[]>([]);
   const [loadingCourses, setLoadingCourses] = useState(false);
 
   // Subject dropdown state
-  const [subjectSelect, setSubjectSelect] = useState('');
-  const [subjectCustom, setSubjectCustom] = useState('');
-  const [existingSubjects, setExistingSubjects] = useState<string[]>([]);
-
-  // Quick add material form
-  const [newMaterialName, setNewMaterialName] = useState('');
-  const [newMaterialType, setNewMaterialType] = useState('physical');
-  const [newMaterialQuantity, setNewMaterialQuantity] = useState(1);
-  const [newMaterialNotes, setNewMaterialNotes] = useState('');
-  const [newMaterialUrl, setNewMaterialUrl] = useState('');
-  const [addingMaterial, setAddingMaterial] = useState(false);
-
-  // Form data — courseId is optional
-  const [formData, setFormData] = useState({
-    childId: '',
-    childName: '',
-    gradeLevel: '',
-    subject: '',
-    courseId: '',
-    duration: 30,
-    startDate: initialDate || new Date().toISOString().split('T')[0],
-    learningObjectives: '',
-    materials: '',
-    learningStyle: '',
-    surpriseMe: false
+  const [subjectSelect, setSubjectSelect] = useState(() => {
+    if (!initialSubject) return ''
+    return ([...CANONICAL_SUBJECTS] as string[]).includes(initialSubject) ? initialSubject : '__custom__'
   });
+  const [subjectCustom, setSubjectCustom] = useState(() =>
+    initialSubject && !([...CANONICAL_SUBJECTS] as string[]).includes(initialSubject) ? initialSubject : ''
+  );
+  const [existingSubjects, setExistingSubjects] = useState<string[]>([]);
 
   // Adapt modal
   const [showAdaptModal, setShowAdaptModal] = useState(false);
   const [adaptTargetChildId, setAdaptTargetChildId] = useState('');
 
-  // ── Fetch org ID and existing custom subjects ────────────────────────────
+  // Form data
+  const initialKid = initialKidId ? kids.find(k => k.id === initialKidId) : undefined
+  const [formData, setFormData] = useState({
+    childId: initialKidId || '',
+    childName: initialKid?.displayname || '',
+    gradeLevel: initialKid?.grade || '',
+    subject: initialSubject || '',
+    courseId: '',
+    duration: 30,
+    startDate: initialDate || new Date().toISOString().split('T')[0],
+  });
+
+  // ── Fetch org ID and existing custom subjects ──────────────────────────────
   useEffect(() => {
     const fetchOrgAndSubjects = async () => {
       if (!userId) return;
       try {
-      const { data: kid } = await supabase
-      .from('kids')
-      .select('organization_id')
-      .eq('user_id', userId)
-      .limit(1)
-      .maybeSingle();
+        const { data: kid } = await supabase
+          .from('kids')
+          .select('organization_id')
+          .eq('user_id', userId)
+          .limit(1)
+          .maybeSingle();
 
-      // Co-teacher fallback — if no kids found under user_id, check family_collaborators
-      let orgId = kid?.organization_id || null
-      if (!orgId) {
-      const { data: collab } = await supabase
-        .from('family_collaborators')
-        .select('organization_id')
-        .eq('user_id', userId)
-        .limit(1)
-        .maybeSingle()
-      orgId = collab?.organization_id || null
-      }
+        let orgId = kid?.organization_id || null;
+        if (!orgId) {
+          const { data: collab } = await supabase
+            .from('family_collaborators')
+            .select('organization_id')
+            .eq('user_id', userId)
+            .limit(1)
+            .maybeSingle();
+          orgId = collab?.organization_id || null;
+        }
 
-      if (orgId) {
-      setOrganizationId(orgId);
+        if (orgId) {
+          const { data: collabData } = await supabase
+            .from('family_collaborators')
+            .select('id, user_id, name, email')
+            .eq('organization_id', orgId);
+          if (collabData) setCollaborators(collabData);
 
-      const { data: collabData } = await supabase
-        .from('family_collaborators')
-        .select('id, user_id, name, email')
-        .eq('organization_id', orgId)
-      if (collabData) setCollaborators(collabData)
+          const { data: lessonSubjects } = await supabase
+            .from('lessons')
+            .select('subject')
+            .eq('organization_id', orgId);
 
-      const { data: lessonSubjects } = await supabase
-        .from('lessons')
-        .select('subject')
-        .eq('organization_id', orgId);
-
-      if (lessonSubjects) {
-        const unique = [...new Set(lessonSubjects.map((d: any) => d.subject).filter(Boolean))] as string[];
-        setExistingSubjects(unique.filter((s: string) => !([...CANONICAL_SUBJECTS] as string[]).includes(s)));
-      }
-      }
+          if (lessonSubjects) {
+            const unique = [...new Set(lessonSubjects.map((d: any) => d.subject).filter(Boolean))] as string[];
+            setExistingSubjects(unique.filter((s: string) => !([...CANONICAL_SUBJECTS] as string[]).includes(s)));
+          }
+        }
       } catch (err) {
         console.error('Error fetching org/subjects:', err);
       }
     };
     fetchOrgAndSubjects();
   }, [userId]);
-
-  // Trigger material fetch once org ID is resolved
-  useEffect(() => {
-    if (organizationId) {
-      fetchMaterials();
-    }
-  }, [organizationId]);
 
   // Fetch matching courses whenever child + subject both have values
   useEffect(() => {
@@ -174,7 +140,7 @@ export default function LessonGenerator({ kids, userId, onClose, initialDate }: 
   const resolveSubject = () =>
     subjectSelect === '__custom__' ? subjectCustom.trim() : subjectSelect;
 
-  // ── Course fetching ──────────────────────────────────────────────────────
+  // ── Course fetching ────────────────────────────────────────────────────────
   const fetchCoursesForChildAndSubject = async (kidId: string, subject: string) => {
     setLoadingCourses(true);
     try {
@@ -186,11 +152,8 @@ export default function LessonGenerator({ kids, userId, onClose, initialDate }: 
         .in('status', ['planned', 'in_progress'])
         .order('course_name');
 
-      if (error) {
-        console.error('Error fetching courses:', error);
-      } else {
+      if (!error) {
         setAvailableCourses(data || []);
-        // Clear course selection if previous selection no longer matches
         setFormData(prev => ({ ...prev, courseId: '' }));
       }
     } catch (err) {
@@ -200,88 +163,7 @@ export default function LessonGenerator({ kids, userId, onClose, initialDate }: 
     }
   };
 
-  // ── Materials ────────────────────────────────────────────────────────────
-  const fetchMaterials = async () => {
-    if (!organizationId) return;
-    setLoadingMaterials(true);
-    try {
-      const { data, error } = await supabase
-        .from('materials')
-        .select('*')
-        .eq('organization_id', organizationId)
-        .order('name');
-
-      if (error) {
-        console.error('Error fetching materials:', error);
-      } else if (data) {
-        setAvailableMaterials(data);
-        setSelectedMaterialIds(new Set(data.map((m: Material) => m.id)));
-        setFormData(prev => ({ ...prev, materials: data.map((m: Material) => m.name).join(', ') }));
-      }
-    } catch (err) {
-      console.error('Unexpected error fetching materials:', err);
-    } finally {
-      setLoadingMaterials(false);
-    }
-  };
-
-  const toggleMaterialSelection = (materialId: string) => {
-    const newSelection = new Set(selectedMaterialIds);
-    if (newSelection.has(materialId)) newSelection.delete(materialId);
-    else newSelection.add(materialId);
-    setSelectedMaterialIds(newSelection);
-    setFormData(prev => ({
-      ...prev,
-      materials: availableMaterials.filter(m => newSelection.has(m.id)).map(m => m.name).join(', ')
-    }));
-  };
-
-  const clearAllMaterials = () => {
-    setSelectedMaterialIds(new Set());
-    setFormData(prev => ({ ...prev, materials: '' }));
-  };
-
-  const quickAddMaterial = async () => {
-    if (!newMaterialName.trim()) { alert('Please enter a material name'); return; }
-    if (!organizationId) { alert('Organization ID not found. Please try refreshing.'); return; }
-
-    setAddingMaterial(true);
-    try {
-      const { data, error } = await supabase
-        .from('materials')
-        .insert([{
-          organization_id: organizationId,
-          name: newMaterialName.trim(),
-          material_type: newMaterialType,
-          quantity: newMaterialQuantity,
-          notes: newMaterialNotes.trim() || null,
-          url: newMaterialUrl.trim() || null
-        }])
-        .select()
-        .single();
-
-      if (error) {
-        alert('Failed to add material: ' + error.message);
-      } else if (data) {
-        setAvailableMaterials(prev => [...prev, data]);
-        setSelectedMaterialIds(prev => new Set([...prev, data.id]));
-        const updatedMaterials = [...availableMaterials, data]
-          .filter(m => selectedMaterialIds.has(m.id) || m.id === data.id)
-          .map(m => m.name).join(', ');
-        setFormData(prev => ({ ...prev, materials: updatedMaterials }));
-        setNewMaterialName(''); setNewMaterialType('physical');
-        setNewMaterialQuantity(1); setNewMaterialNotes('');
-        setNewMaterialUrl(''); setShowAddMaterialModal(false);
-        alert('✅ Material added successfully!');
-      }
-    } catch (err) {
-      alert('Failed to add material. Please try again.');
-    } finally {
-      setAddingMaterial(false);
-    }
-  };
-
-  // ── Handlers ─────────────────────────────────────────────────────────────
+  // ── Handlers ──────────────────────────────────────────────────────────────
   const handleChildSelect = (childId: string) => {
     const child = kids.find(c => c.id === childId);
     if (child) {
@@ -290,35 +172,29 @@ export default function LessonGenerator({ kids, userId, onClose, initialDate }: 
         childId,
         childName: child.displayname,
         gradeLevel: child.grade || '',
-        learningStyle: child.learning_style || '',
-        courseId: ''
+        courseId: '',
       });
-      setEditingLearningStyle(false);
     }
   };
 
-  const handleContinueClick = () => {
+  const generateLessons = async () => {
     const resolved = resolveSubject();
     if (!resolved) { alert('Please select or enter a subject'); return; }
     setFormData(prev => ({ ...prev, subject: resolved }));
-    setStep(2);
-  };
 
-  const generateLessons = async () => {
     setLoading(true);
     setStep(2);
     try {
-      const selectedPhysicalMaterials = availableMaterials
-        .filter(m => selectedMaterialIds.has(m.id) && m.material_type === 'physical')
-        .map(m => m.name).join(', ');
-
       const response = await fetch('/api/generate-lesson', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...formData, subject: resolveSubject(), materials: selectedPhysicalMaterials })
+        body: JSON.stringify({ ...formData, subject: resolved }),
       });
 
-      if (!response.ok) throw new Error('Failed to generate lessons');
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.details || errData.error || `Server error ${response.status}`);
+      }
       const data = await response.json();
       setVariations(data.variations || []);
       setStep(3);
@@ -344,37 +220,29 @@ export default function LessonGenerator({ kids, userId, onClose, initialDate }: 
         subject: formData.subject,
         title: variation.title,
         description: JSON.stringify(variation),
+        lesson_source: 'scout',
         lesson_date: formData.startDate,
         duration_minutes: Number(formData.duration) || 30,
         status: 'not_started',
         organization_id: kid.organization_id,
-        assigned_to_user_id: assignedTo || null
+        assigned_to_user_id: assignedTo || null,
       };
 
-      // Only include course_id if user selected one
-      if (formData.courseId) {
-        lessonPayload.course_id = formData.courseId;
-      }
+      if (formData.courseId) lessonPayload.course_id = formData.courseId;
 
-      const { error } = await supabase
-        .from('lessons')
-        .insert([lessonPayload])
-        .select()
-        .single();
+      const { error } = await supabase.from('lessons').insert([lessonPayload]).select().single();
 
       if (error) {
         alert(`❌ Failed to save lesson: ${error.message}`);
       } else {
         const formattedDate = new Date(formData.startDate + 'T12:00:00').toLocaleDateString('en-US', {
-          weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+          weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
         });
         const courseNote = formData.courseId
           ? `\n📚 Added to: ${availableCourses.find(c => c.id === formData.courseId)?.course_name || 'course'}`
           : '';
-        
+        setSelectedVariation(variation);
         alert(`✅ Lesson scheduled!\n\n"${variation.title}" scheduled for ${kid.displayname} on ${formattedDate}.${courseNote}`);
-        onClose();
-        setTimeout(() => { window.location.href = '/dashboard'; }, 300);
       }
     } catch (error: any) {
       alert(`❌ Failed to save lesson: ${error.message}`);
@@ -395,11 +263,10 @@ export default function LessonGenerator({ kids, userId, onClose, initialDate }: 
         subject: formData.subject,
         title: selectedVariation.title,
         description: JSON.stringify(selectedVariation),
+        lesson_source: 'scout',
         lesson_date: formData.startDate,
         duration_minutes: formData.duration,
-        status: 'not_started'
-        // Note: adapted lessons are not auto-assigned to a course
-        // as the target child may have a different course structure
+        status: 'not_started',
       }]).select();
 
       if (error) { alert(`Failed to adapt lesson: ${error.message}`); }
@@ -407,19 +274,22 @@ export default function LessonGenerator({ kids, userId, onClose, initialDate }: 
         alert(`Lesson adapted for ${targetChild.displayname}!`);
         setShowAdaptModal(false);
         setAdaptTargetChildId('');
-        router.refresh();
+        onClose();
       }
     } catch (err) { alert('Failed to adapt lesson. Please try again.'); }
   };
 
-  // ── Render ───────────────────────────────────────────────────────────────
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto p-6">
 
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">📚 Lesson Generator</h2>
+          <div className="flex items-center gap-3">
+            <img src="/Cardinal_Mascot.png" alt="Scout" style={{ width: 40, height: 40, objectFit: 'contain' }} />
+            <h2 className="text-2xl font-bold text-gray-900">Generate a Lesson</h2>
+          </div>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-700 text-2xl leading-none">✕</button>
         </div>
 
@@ -429,13 +299,13 @@ export default function LessonGenerator({ kids, userId, onClose, initialDate }: 
 
             {/* Child */}
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">Select Child</label>
+              <label className="block text-sm font-medium text-gray-900 mb-2">Select Student</label>
               <select
                 value={formData.childId}
                 onChange={(e) => handleChildSelect(e.target.value)}
                 className="w-full border rounded-lg px-3 py-2 text-gray-900"
               >
-                <option value="">Choose a child...</option>
+                <option value="">Choose a student…</option>
                 {kids.map(child => (
                   <option key={child.id} value={child.id}>
                     {child.displayname}{child.grade ? ` (${child.grade})` : ''}
@@ -452,14 +322,12 @@ export default function LessonGenerator({ kids, userId, onClose, initialDate }: 
                 onChange={(e) => setSubjectSelect(e.target.value)}
                 className="w-full border rounded-lg px-3 py-2 text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
-                <option value="">Choose a subject...</option>
-
+                <option value="">Choose a subject…</option>
                 <optgroup label="Standard Subjects">
                   {CANONICAL_SUBJECTS.map(s => (
                     <option key={s} value={s}>{s}</option>
                   ))}
                 </optgroup>
-
                 {existingSubjects.length > 0 && (
                   <optgroup label="Your Custom Subjects">
                     {existingSubjects.map(s => (
@@ -467,8 +335,7 @@ export default function LessonGenerator({ kids, userId, onClose, initialDate }: 
                     ))}
                   </optgroup>
                 )}
-
-                <option value="__custom__">✏️ Add a new custom subject...</option>
+                <option value="__custom__">✏️ Add a new custom subject…</option>
               </select>
 
               {subjectSelect === '__custom__' && (
@@ -482,7 +349,7 @@ export default function LessonGenerator({ kids, userId, onClose, initialDate }: 
                     autoFocus
                   />
                   <p className="text-xs text-gray-500 mt-1">
-                    💡 Use title case (e.g., "Latin" not "latin") so lessons group correctly in reports and dropdowns.
+                    💡 Use title case (e.g., "Latin" not "latin") so lessons group correctly.
                   </p>
                 </div>
               )}
@@ -494,18 +361,13 @@ export default function LessonGenerator({ kids, userId, onClose, initialDate }: 
                 <label className="block text-sm font-medium text-gray-900 mb-2">
                   Add to Course <span className="text-gray-400 font-normal">(optional)</span>
                 </label>
-
                 {loadingCourses ? (
-                  <div className="border rounded-lg px-3 py-2 text-sm text-gray-500">
-                    Loading courses...
-                  </div>
+                  <div className="border rounded-lg px-3 py-2 text-sm text-gray-500">Loading courses…</div>
                 ) : availableCourses.length === 0 ? (
                   <div className="border border-dashed border-gray-200 rounded-lg px-3 py-3 bg-gray-50">
                     <p className="text-sm text-gray-500">
-                      No active {resolveSubject()} courses found for {formData.childName}.{' '}
-                      <a href="/transcript" className="text-blue-600 hover:underline">
-                        Create a course
-                      </a>{' '}
+                      No active {resolveSubject()} courses for {formData.childName}.{' '}
+                      <a href="/transcript" className="text-blue-600 hover:underline">Create a course</a>{' '}
                       to link lessons to transcripts.
                     </p>
                   </div>
@@ -526,11 +388,6 @@ export default function LessonGenerator({ kids, userId, onClose, initialDate }: 
                     {formData.courseId && (
                       <p className="text-xs text-green-700 mt-1">
                         ✓ This lesson will count toward the {availableCourses.find(c => c.id === formData.courseId)?.course_name} transcript
-                      </p>
-                    )}
-                    {!formData.courseId && (
-                      <p className="text-xs text-gray-500 mt-1">
-                        Linking a lesson to a course connects it to the transcript automatically.
                       </p>
                     )}
                   </>
@@ -554,27 +411,27 @@ export default function LessonGenerator({ kids, userId, onClose, initialDate }: 
               </div>
             </div>
 
+            {/* Assign To (collaborators only) */}
+            {collaborators.length > 0 && (
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2">
+                  Assign To <span className="text-gray-400 font-normal">(optional)</span>
+                </label>
+                <select
+                  value={assignedTo}
+                  onChange={(e) => setAssignedTo(e.target.value)}
+                  className="w-full border rounded-lg px-3 py-2 text-gray-900"
+                >
+                  <option value="">Me (primary teacher)</option>
+                  {collaborators.map(c => (
+                    <option key={c.id} value={c.user_id}>{c.name || c.email}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             {/* Date */}
             <div>
-            {collaborators.length > 0 && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-900 mb-2">
-                    Assign To <span className="text-gray-400 font-normal">(optional)</span>
-                  </label>
-                  <select
-                    value={assignedTo}
-                    onChange={(e) => setAssignedTo(e.target.value)}
-                    className="w-full border rounded-lg px-3 py-2 text-gray-900"
-                  >
-                    <option value="">Me (primary teacher)</option>
-                    {collaborators.map(c => (
-                      <option key={c.id} value={c.user_id}>
-                        {c.name || c.email}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
               <label className="block text-sm font-medium text-gray-900 mb-2">Schedule For</label>
               <input
                 type="date"
@@ -585,147 +442,16 @@ export default function LessonGenerator({ kids, userId, onClose, initialDate }: 
             </div>
 
             <button
-              onClick={handleContinueClick}
+              onClick={generateLessons}
               disabled={
                 !formData.childId ||
                 !subjectSelect ||
                 (subjectSelect === '__custom__' && !subjectCustom.trim())
               }
-              className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed"
+              className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed font-semibold"
             >
-              Continue
+              ✨ Generate Lesson Plans
             </button>
-          </div>
-        )}
-
-        {/* ── Step 2: Details ── */}
-        {step === 2 && !loading && (
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 mb-4">
-              <input
-                type="checkbox" id="surpriseMe"
-                checked={formData.surpriseMe}
-                onChange={(e) => setFormData({ ...formData, surpriseMe: e.target.checked })}
-                className="w-4 h-4"
-              />
-              <label htmlFor="surpriseMe" className="text-sm font-medium text-gray-900">Just surprise me! (Skip details)</label>
-            </div>
-
-            {!formData.surpriseMe && (
-              <details open className="border rounded-lg p-4">
-                <summary className="font-medium cursor-pointer mb-4 text-gray-900">Advanced Options (Optional)</summary>
-                <div className="space-y-4">
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-900 mb-2">Learning Objectives</label>
-                    <textarea
-                      value={formData.learningObjectives}
-                      onChange={(e) => setFormData({ ...formData, learningObjectives: e.target.value })}
-                      placeholder="What should they learn from this lesson?"
-                      className="w-full border rounded-lg px-3 py-2 text-gray-900" rows={3}
-                    />
-                  </div>
-
-                  <div>
-                    <div className="flex justify-between items-center mb-2">
-                      <label className="block text-sm font-medium text-gray-900">
-                        Physical Materials ({availableMaterials.filter(m => m.material_type === 'physical').length} available)
-                      </label>
-                      {availableMaterials.filter(m => m.material_type === 'physical').length > 0 && (
-                        <div className="flex gap-2">
-                          <button type="button" onClick={() => {
-                            const physicalIds = new Set(availableMaterials.filter(m => m.material_type === 'physical').map(m => m.id));
-                            setSelectedMaterialIds(physicalIds);
-                            setFormData(prev => ({ ...prev, materials: availableMaterials.filter(m => m.material_type === 'physical').map(m => m.name).join(', ') }));
-                          }} className="text-xs text-blue-600 hover:text-blue-800 font-medium">Select All</button>
-                          <button type="button" onClick={clearAllMaterials} className="text-xs text-gray-600 hover:text-gray-800 font-medium">Clear All</button>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="mb-3 bg-blue-50 border border-blue-200 rounded-lg p-3">
-                      <p className="text-xs text-blue-900"><strong>🧩 Select physical materials</strong> you have on hand. AI will create hands-on lessons using these specific items.</p>
-                    </div>
-
-                    {loadingMaterials ? (
-                      <div className="border border-gray-200 rounded-lg p-4 text-center"><p className="text-sm text-gray-600">Loading your materials...</p></div>
-                    ) : availableMaterials.filter(m => m.material_type === 'physical').length === 0 ? (
-                      <div className="border border-gray-200 rounded-lg p-6 text-center">
-                        <p className="text-sm text-gray-600 mb-3">No physical materials in your list yet.</p>
-                        <button type="button" onClick={() => setShowAddMaterialModal(true)} className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium">+ Add Your First Material</button>
-                      </div>
-                    ) : (
-                      <div className="border border-gray-200 rounded-lg bg-gray-50">
-                        {availableMaterials.filter(m => m.material_type === 'physical').length > 5 && (
-                          <div className="p-3 border-b border-gray-200 bg-white">
-                            <input type="text" value={materialSearchQuery} onChange={(e) => setMaterialSearchQuery(e.target.value)} placeholder="🔍 Search materials..." className="w-full px-3 py-2 border border-gray-300 rounded text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
-                          </div>
-                        )}
-                        <div className="p-3 grid grid-cols-2 gap-2 max-h-64 overflow-y-auto">
-                          {availableMaterials.filter(m => m.material_type === 'physical').filter(m => materialSearchQuery === '' || m.name.toLowerCase().includes(materialSearchQuery.toLowerCase())).map(material => (
-                            <label key={material.id} className={`flex items-start gap-2 p-3 rounded-lg cursor-pointer transition-colors ${selectedMaterialIds.has(material.id) ? 'bg-green-100 border-2 border-green-400 shadow-sm' : 'bg-white border-2 border-transparent hover:border-gray-300'}`}>
-                              <input type="checkbox" checked={selectedMaterialIds.has(material.id)} onChange={() => toggleMaterialSelection(material.id)} className="mt-0.5" />
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-gray-900 truncate">{material.name}</p>
-                                {material.quantity && <p className="text-xs text-gray-500">Qty: {material.quantity}</p>}
-                              </div>
-                            </label>
-                          ))}
-                        </div>
-                        <div className="p-3 border-t border-gray-200 bg-white text-center">
-                          <button type="button" onClick={() => setShowAddMaterialModal(true)} className="text-sm text-indigo-600 hover:text-indigo-800 font-medium">+ Need to add a material?</button>
-                        </div>
-                      </div>
-                    )}
-
-                    <p className="text-xs text-gray-500 mt-3">
-                      ✨ AI will generate lessons using your physical materials ({availableMaterials.filter(m => m.material_type === 'physical' && selectedMaterialIds.has(m.id)).length} selected) and {formData.childName || 'your student'}'s learning style{formData.learningStyle && ` (${formData.learningStyle})`}.
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-900 mb-2">{formData.childName}'s Learning Style</label>
-                    {formData.learningStyle && !editingLearningStyle ? (
-                      <div className="border border-green-200 bg-green-50 rounded-lg p-3">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span className="text-green-600 text-lg">✓</span>
-                            <div>
-                              <p className="text-sm font-semibold text-gray-900 capitalize">{formData.learningStyle.replace('-', ' / ')}</p>
-                              <p className="text-xs text-gray-600">From student profile</p>
-                            </div>
-                          </div>
-                          <button type="button" onClick={() => setEditingLearningStyle(true)} className="text-xs px-3 py-1 bg-white border border-gray-300 rounded hover:bg-gray-50 text-gray-700">Edit</button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        <select value={formData.learningStyle} onChange={(e) => setFormData({ ...formData, learningStyle: e.target.value })} className="w-full border rounded-lg px-3 py-2 text-gray-900">
-                          <option value="">Any approach...</option>
-                          <option value="hands-on">Hands-on / Kinesthetic</option>
-                          <option value="visual">Visual / Creative</option>
-                          <option value="discussion">Discussion-based</option>
-                          <option value="independent">Independent / Self-paced</option>
-                        </select>
-                        {editingLearningStyle && (
-                          <div className="flex gap-2">
-                            <button type="button" onClick={() => setEditingLearningStyle(false)} className="flex-1 text-xs px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700">✓ Save</button>
-                            <button type="button" onClick={() => { setEditingLearningStyle(false); const child = kids.find(k => k.id === formData.childId); if (child?.learning_style) setFormData(prev => ({ ...prev, learningStyle: child.learning_style || '' })); }} className="flex-1 text-xs px-3 py-1 border border-gray-300 rounded hover:bg-gray-50 text-gray-700">Cancel</button>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </details>
-            )}
-
-            <div className="flex gap-2">
-              <button onClick={() => setStep(1)} className="flex-1 border border-gray-300 py-3 rounded-lg hover:bg-gray-50 text-gray-900">Back</button>
-              <button onClick={generateLessons} disabled={loading} className="flex-1 bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 disabled:bg-blue-400">
-                {loading ? 'Generating...' : 'Generate Lessons'}
-              </button>
-            </div>
           </div>
         )}
 
@@ -735,24 +461,24 @@ export default function LessonGenerator({ kids, userId, onClose, initialDate }: 
             <div className="relative">
               <div className="w-20 h-20 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
               <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-12 h-12 bg-blue-100 rounded-full animate-pulse"></div>
+                <img src="/Cardinal_Mascot.png" alt="Scout" style={{ width: 44, height: 44, objectFit: 'contain' }} />
               </div>
             </div>
             <div className="mt-8 text-center space-y-3">
-              <h3 className="text-2xl font-bold text-gray-900">✨ Creating Personalized Lessons</h3>
+              <h3 className="text-2xl font-bold text-gray-900">✨ Scout is planning your lesson</h3>
               <p className="text-gray-600 max-w-md">
-                HomeschoolReady Assistant is generating 3 unique lesson variations tailored to{' '}
-                <span className="font-semibold text-blue-600">{formData.childName || 'your student'}</span>'s learning style...
+                Generating 3 lesson plan variations tailored to{' '}
+                <span className="font-semibold text-blue-600">{formData.childName || 'your student'}</span>…
               </p>
               <div className="mt-6 space-y-2 text-sm text-gray-500">
-                {['Analyzing student profile', 'Designing activities and materials', 'Creating learning objectives'].map(label => (
+                {['Reviewing student profile', 'Designing lesson structure', 'Writing objectives & assessment'].map(label => (
                   <div key={label} className="flex items-center justify-center gap-2">
                     <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                     <span>{label}</span>
                   </div>
                 ))}
               </div>
-              <p className="text-xs text-gray-400 mt-6 italic">This usually takes 15-20 seconds...</p>
+              <p className="text-xs text-gray-400 mt-6 italic">This usually takes 15–20 seconds…</p>
             </div>
           </div>
         )}
@@ -761,7 +487,6 @@ export default function LessonGenerator({ kids, userId, onClose, initialDate }: 
         {step === 3 && variations.length > 0 && (
           <div className="space-y-4">
 
-            {/* Course reminder if one was selected */}
             {formData.courseId && (
               <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-2 flex items-center gap-2">
                 <span className="text-green-600 text-sm font-medium">📚</span>
@@ -771,7 +496,7 @@ export default function LessonGenerator({ kids, userId, onClose, initialDate }: 
               </div>
             )}
 
-            <p className="text-gray-600 mb-4">Choose the lesson that works best for {formData.childName}:</p>
+            <p className="text-gray-600 mb-4">Choose the lesson plan that works best for {formData.childName}:</p>
 
             <div className="grid md:grid-cols-3 gap-4">
               {variations.map((variation, index) => (
@@ -781,28 +506,22 @@ export default function LessonGenerator({ kids, userId, onClose, initialDate }: 
                     <p className="text-sm text-gray-600">{variation.description || variation.approach}</p>
                   </div>
                   <div className="p-4 space-y-4 max-h-96 overflow-y-auto">
-                    <div>
-                      <h4 className="font-semibold text-sm text-gray-900 mb-2">📦 Materials:</h4>
-                      <ul className="text-sm text-gray-600 space-y-1">
-                        {variation.materials.map((m, i) => (
-                          <li key={i} className="flex items-start gap-2"><span className="text-green-600 mt-0.5">✓</span><span>{m}</span></li>
-                        ))}
-                      </ul>
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-sm text-gray-900 mb-2">🎯 Activities ({variation.activities.length}):</h4>
-                      <div className="space-y-2">
-                        {variation.activities.map((activity, i) => (
-                          <div key={i} className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                            <div className="flex items-start justify-between gap-2 mb-1">
-                              <p className="font-medium text-sm text-gray-900">{activity.name}</p>
-                              <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full whitespace-nowrap">{activity.duration}</span>
+                    {variation.activities?.length > 0 && (
+                      <div>
+                        <h4 className="font-semibold text-sm text-gray-900 mb-2">📋 Lesson Steps ({variation.activities.length}):</h4>
+                        <div className="space-y-2">
+                          {variation.activities.map((activity, i) => (
+                            <div key={i} className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                              <div className="flex items-start justify-between gap-2 mb-1">
+                                <p className="font-medium text-sm text-gray-900">{activity.name}</p>
+                                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full whitespace-nowrap">{activity.duration}</span>
+                              </div>
+                              <p className="text-xs text-gray-600">{activity.description}</p>
                             </div>
-                            <p className="text-xs text-gray-600">{activity.description}</p>
-                          </div>
-                        ))}
+                          ))}
+                        </div>
                       </div>
-                    </div>
+                    )}
                     {variation.learningObjectives && variation.learningObjectives.length > 0 && (
                       <div>
                         <h4 className="font-semibold text-sm text-gray-900 mb-2">🎓 Learning Objectives:</h4>
@@ -815,8 +534,12 @@ export default function LessonGenerator({ kids, userId, onClose, initialDate }: 
                     )}
                   </div>
                   <div className="p-4 bg-gray-50 border-t">
-                    <button onClick={() => saveLesson(variation)} disabled={loading} className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 disabled:bg-blue-400 font-semibold transition-colors">
-                      {loading ? 'Saving...' : 'Schedule This Lesson'}
+                    <button
+                      onClick={() => saveLesson(variation)}
+                      disabled={loading}
+                      className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 disabled:bg-blue-400 font-semibold transition-colors"
+                    >
+                      {loading ? 'Saving…' : 'Schedule This Lesson'}
                     </button>
                   </div>
                 </div>
@@ -827,30 +550,13 @@ export default function LessonGenerator({ kids, userId, onClose, initialDate }: 
               <p className="text-sm text-gray-600 mb-3">Don't like these options?</p>
               <div className="flex gap-3">
                 <button onClick={generateLessons} disabled={loading} className="flex-1 bg-purple-600 text-white py-3 rounded-lg hover:bg-purple-700 disabled:bg-purple-400 font-medium">
-                  {loading ? '🔄 Regenerating...' : '🔄 Try Different Options'}
+                  {loading ? '🔄 Regenerating…' : '🔄 Try Different Options'}
                 </button>
-                <button onClick={() => setStep(2)} className="flex-1 border border-gray-300 py-3 rounded-lg hover:bg-gray-50 text-gray-900">← Change Settings</button>
+                <button onClick={() => setStep(1)} className="flex-1 border border-gray-300 py-3 rounded-lg hover:bg-gray-50 text-gray-900">← Change Settings</button>
               </div>
             </div>
 
             <button onClick={onClose} className="w-full border-2 border-gray-300 py-3 rounded-lg hover:bg-gray-50 text-gray-700 font-medium">Cancel & Close</button>
-          </div>
-        )}
-
-        {/* ── Success State ── */}
-        {selectedVariation && !showAdaptModal && (
-          <div className="text-center space-y-4">
-            <div className="text-green-600 text-5xl">✓</div>
-            <h3 className="text-xl font-bold text-gray-900">Lesson Saved!</h3>
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-left">
-              <p className="text-sm text-gray-600 mb-1">Added to {formData.childName}'s schedule:</p>
-              <p className="font-semibold text-gray-900">{selectedVariation.title}</p>
-              <p className="text-sm text-gray-600 mt-1">📅 {new Date(formData.startDate).toLocaleDateString()}</p>
-            </div>
-            <div className="space-y-2">
-              <button onClick={() => setShowAdaptModal(true)} className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700">📚 Use this lesson for another child</button>
-              <button onClick={onClose} className="w-full border border-gray-300 py-3 rounded-lg hover:bg-gray-50 text-gray-900">Done</button>
-            </div>
           </div>
         )}
 
@@ -859,13 +565,13 @@ export default function LessonGenerator({ kids, userId, onClose, initialDate }: 
           <div className="space-y-4">
             <div className="text-center mb-4">
               <div className="text-4xl mb-2">📚</div>
-              <h3 className="text-xl font-bold text-gray-900">Adapt Lesson for Another Child</h3>
-              <p className="text-sm text-gray-600 mt-2">"{selectedVariation.title}" will be copied to the selected child</p>
+              <h3 className="text-xl font-bold text-gray-900">Adapt Lesson for Another Student</h3>
+              <p className="text-sm text-gray-600 mt-2">"{selectedVariation.title}" will be copied to the selected student</p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">Select Child</label>
+              <label className="block text-sm font-medium text-gray-900 mb-2">Select Student</label>
               <select value={adaptTargetChildId} onChange={(e) => setAdaptTargetChildId(e.target.value)} className="w-full border rounded-lg px-3 py-2 text-gray-900">
-                <option value="">Choose a child...</option>
+                <option value="">Choose a student…</option>
                 {kids.filter(child => child.id !== formData.childId).map(child => (
                   <option key={child.id} value={child.id}>{child.displayname}{child.grade ? ` (${child.grade})` : ''}</option>
                 ))}
@@ -873,53 +579,15 @@ export default function LessonGenerator({ kids, userId, onClose, initialDate }: 
             </div>
             <div className="flex gap-2">
               <button onClick={saveAdaptedLesson} disabled={!adaptTargetChildId} className="flex-1 bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed">
-                Save for {adaptTargetChildId ? kids.find(c => c.id === adaptTargetChildId)?.displayname : 'Child'}
+                Save for {adaptTargetChildId ? kids.find(c => c.id === adaptTargetChildId)?.displayname : 'Student'}
               </button>
               <button onClick={() => { setShowAdaptModal(false); setAdaptTargetChildId(''); }} className="flex-1 border border-gray-300 py-3 rounded-lg hover:bg-gray-50 text-gray-900">Cancel</button>
             </div>
-            <button onClick={onClose} className="w-full text-sm text-gray-600 hover:text-gray-900">Close Generator</button>
+            <button onClick={onClose} className="w-full text-sm text-gray-600 hover:text-gray-900">Close</button>
           </div>
         )}
-      </div>
 
-      {/* ── Add Material Modal ── */}
-      {showAddMaterialModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[60] p-4">
-          <div className="bg-white rounded-lg max-w-md w-full shadow-2xl">
-            <div className="bg-gradient-to-r from-indigo-500 to-purple-600 px-6 py-4 rounded-t-lg">
-              <h3 className="text-xl font-bold text-white">🧩 Add Physical Material</h3>
-              <p className="text-white/90 text-sm mt-1">For use in AI-generated lessons</p>
-            </div>
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-900 mb-2">Material Name *</label>
-                <input type="text" value={newMaterialName} onChange={(e) => setNewMaterialName(e.target.value)} placeholder="e.g., Construction Paper, Play Dough, Math Manipulatives" className="w-full border rounded-lg px-3 py-2 text-gray-900" autoFocus />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-900 mb-2">Quantity (Optional)</label>
-                <input type="number" min="1" value={newMaterialQuantity} onChange={(e) => setNewMaterialQuantity(parseInt(e.target.value) || 1)} className="w-full border rounded-lg px-3 py-2 text-gray-900" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-900 mb-2">Notes (Optional)</label>
-                <textarea value={newMaterialNotes} onChange={(e) => setNewMaterialNotes(e.target.value)} placeholder="Any additional details..." rows={2} className="w-full border rounded-lg px-3 py-2 text-gray-900" />
-              </div>
-              <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                <p className="text-xs text-green-900 font-semibold">💡 This material will be saved to your Materials list and immediately available for lesson generation.</p>
-              </div>
-            </div>
-            <div className="bg-gray-50 border-t border-gray-200 px-6 py-4 flex gap-3 rounded-b-lg">
-              <button
-                onClick={() => { setShowAddMaterialModal(false); setNewMaterialName(''); setNewMaterialType('physical'); setNewMaterialQuantity(1); setNewMaterialNotes(''); setNewMaterialUrl(''); }}
-                disabled={addingMaterial}
-                className="flex-1 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 font-medium py-2 disabled:opacity-50"
-              >Cancel</button>
-              <button onClick={quickAddMaterial} disabled={addingMaterial || !newMaterialName.trim()} className="flex-1 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium py-2 disabled:bg-gray-300 disabled:cursor-not-allowed">
-                {addingMaterial ? 'Adding...' : 'Add Material'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      </div>
     </div>
   );
 }

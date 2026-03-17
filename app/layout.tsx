@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, DM_Sans, Nunito } from "next/font/google";
 import "./globals.css";
-import { AppHeaderProvider } from "@/components/layout/AppHeader";
-import AppHeader from "@/components/layout/AppHeader";
 
 const dmSans = DM_Sans({
   subsets: ["latin"],
@@ -39,12 +37,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} ${dmSans.variable} ${nunito.variable} antialiased`}>
-        <AppHeaderProvider>
-          <AppHeader />
-          <main style={{ minHeight: "calc(100vh - 56px)" }}>
-            {children}
-          </main>
-        </AppHeaderProvider>
+        <main style={{ minHeight: "100vh" }}>
+          {children}
+        </main>
       </body>
     </html>
   );

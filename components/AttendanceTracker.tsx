@@ -89,6 +89,7 @@ export default function AttendanceTracker({ kids, organizationId, userId }: Atte
   const [searchTerm, setSearchTerm] = useState('')
   const [showMarkModal, setShowMarkModal] = useState(false)
   const [markingDate, setMarkingDate] = useState<string>(new Date().toLocaleDateString('en-CA'))
+  const [markingDefaultHours, setMarkingDefaultHours] = useState<number | undefined>(undefined)
   const [viewMode, setViewMode] = useState<ViewMode>('list')
   const [activeTab, setActiveTab] = useState<TabMode>('overview')
   const [calendarYear, setCalendarYear] = useState(new Date().getFullYear())
@@ -819,7 +820,7 @@ useEffect(() => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="bg-white rounded-lg shadow p-4">
           <p className="text-sm text-gray-600 mb-1">School Days</p>
           <p className="text-3xl font-bold text-gray-900">{stats.totalDays}</p>
@@ -866,7 +867,7 @@ useEffect(() => {
           <div className="flex overflow-x-auto">
             <button
               onClick={() => setActiveTab('overview')}
-              className={`px-6 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+              className={`px-3 py-3 text-sm md:px-6 font-medium whitespace-nowrap border-b-2 transition-colors ${
                 activeTab === 'overview'
                   ? 'border-blue-600 text-blue-600'
                   : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
@@ -1117,14 +1118,28 @@ useEffect(() => {
                                     </div>
                                   </div>
 
-                                  {day.manualAttendance && (
+                                  <div className="flex items-center gap-1 ml-4 shrink-0">
                                     <button
-                                      onClick={() => deleteAttendance(day.manualAttendance!.id)}
-                                      className="ml-4 px-3 py-1 text-red-600 hover:bg-red-50 rounded text-sm"
+                                      onClick={() => {
+                                        setMarkingDate(day.date)
+                                        setMarkingDefaultHours(day.totalHours || undefined)
+                                        setShowMarkModal(true)
+                                      }}
+                                      className="px-2 py-1 text-blue-600 hover:bg-blue-50 rounded text-sm"
+                                      title="Edit hours for this day"
                                     >
-                                      Delete
+                                      ✏️
                                     </button>
-                                  )}
+                                    {day.manualAttendance && (
+                                      <button
+                                        onClick={() => deleteAttendance(day.manualAttendance!.id)}
+                                        className="px-2 py-1 text-red-600 hover:bg-red-50 rounded text-sm"
+                                        title="Remove manual attendance record"
+                                      >
+                                        🗑️
+                                      </button>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                             ))}
@@ -1187,8 +1202,12 @@ useEffect(() => {
           kids={kids}
           selectedKid={selectedKid}
           existingAttendance={manualAttendance.find(a => a.attendance_date === markingDate)}
+          defaultHours={markingDefaultHours}
+          organizationId={organizationId}
+          userId={userId}
+          supabaseClient={supabase}
           onSave={markAttendance}
-          onClose={() => setShowMarkModal(false)}
+          onClose={() => { setShowMarkModal(false); setMarkingDefaultHours(undefined) }}
         />
       )}
 
@@ -1227,27 +1246,109 @@ interface MarkAttendanceModalProps {
   kids: any[]
   selectedKid: string
   existingAttendance?: ManualAttendance
+  defaultHours?: number
+  organizationId: string
+  userId: string
+  supabaseClient: ReturnType<typeof createBrowserClient>
   onSave: (date: string, status: 'full_day' | 'half_day' | 'no_school', hours: number, notes: string, kidId: string | null) => void
   onClose: () => void
 }
 
-function MarkAttendanceModal({ date, kids, selectedKid, existingAttendance, onSave, onClose }: MarkAttendanceModalProps) {
+function MarkAttendanceModal({ date, kids, selectedKid, existingAttendance, defaultHours, organizationId, userId, supabaseClient, onSave, onClose }: MarkAttendanceModalProps) {
   const [status, setStatus] = useState<'full_day' | 'half_day' | 'no_school'>(existingAttendance?.status || 'full_day')
-  const [hours, setHours] = useState(existingAttendance?.hours || 4)
+  const [hours, setHours] = useState(existingAttendance?.hours ?? defaultHours ?? 4)
   const [notes, setNotes] = useState(existingAttendance?.notes || '')
   const [kidId, setKidId] = useState<string | null>(
     existingAttendance?.kid_id || (selectedKid !== 'all' ? selectedKid : null)
   )
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Portfolio uploads
+  const [pendingFiles, setPendingFiles]     = useState<File[]>([])
+  const [existingUploads, setExistingUploads] = useState<any[]>([])
+  const [uploading, setUploading]           = useState(false)
+  const [uploadError, setUploadError]       = useState<string | null>(null)
+
+  useEffect(() => {
+    // Load any existing uploads for this date
+    const loadUploads = async () => {
+      const query = supabaseClient
+        .from('portfolio_uploads')
+        .select('*')
+        .eq('organization_id', organizationId)
+        .eq('attendance_date', date)
+        .order('created_at', { ascending: true })
+      if (kidId) query.eq('kid_id', kidId)
+      const { data } = await query
+      setExistingUploads(data || [])
+    }
+    loadUploads()
+  }, [date, kidId])
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || [])
+    const oversized = files.filter(f => f.size > 10 * 1024 * 1024)
+    if (oversized.length > 0) {
+      setUploadError(`${oversized.map(f => f.name).join(', ')} exceeds the 10 MB limit.`)
+      return
+    }
+    setUploadError(null)
+    setPendingFiles(prev => [...prev, ...files].slice(0, 10))
+    e.target.value = ''
+  }
+
+  const removeFile = (index: number) =>
+    setPendingFiles(prev => prev.filter((_, i) => i !== index))
+
+  const deleteExisting = async (upload: any) => {
+    await supabaseClient.storage.from('portfolio-uploads').remove([upload.file_path])
+    await supabaseClient.from('portfolio_uploads').delete().eq('id', upload.id)
+    setExistingUploads(prev => prev.filter(u => u.id !== upload.id))
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setUploading(true)
+    setUploadError(null)
+
+    // Upload pending files before saving attendance
+    for (const file of pendingFiles) {
+      const ext  = file.name.split('.').pop()
+      const path = `${organizationId}/${kidId || 'all'}/${date}/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`
+      const { error: storageError } = await supabaseClient.storage
+        .from('portfolio-uploads')
+        .upload(path, file, { upsert: false })
+
+      if (storageError) {
+        setUploadError(`Failed to upload ${file.name}: ${storageError.message}`)
+        setUploading(false)
+        return
+      }
+
+      const { data: { publicUrl } } = supabaseClient.storage
+        .from('portfolio-uploads')
+        .getPublicUrl(path)
+
+      await supabaseClient.from('portfolio_uploads').insert({
+        organization_id: organizationId,
+        kid_id:          kidId || null,
+        attendance_date: date,
+        file_name:       file.name,
+        file_url:        publicUrl,
+        file_path:       path,
+        file_type:       file.type,
+        file_size:       file.size,
+        uploaded_by:     userId,
+      })
+    }
+
+    setUploading(false)
     onSave(date, status, hours, notes, kidId)
   }
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
-        <div className="p-6">
+      <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] flex flex-col">
+        <div className="p-6 overflow-y-auto flex-1">
           <h3 className="text-xl font-bold text-gray-900 mb-4">
             Mark Attendance for {new Date(date).toLocaleDateString()}
           </h3>
@@ -1341,6 +1442,79 @@ function MarkAttendanceModal({ date, kids, selectedKid, existingAttendance, onSa
               />
             </div>
 
+            {/* Portfolio Attachments */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                📎 Portfolio Attachments <span className="text-gray-400 font-normal">(optional)</span>
+              </label>
+              <p className="text-xs text-gray-400 mb-2">
+                Upload work samples, photos, or documents for this day's portfolio. Images and PDFs up to 10 MB each.
+              </p>
+
+              {/* Existing uploads */}
+              {existingUploads.length > 0 && (
+                <div className="mb-2 space-y-1">
+                  {existingUploads.map(upload => (
+                    <div key={upload.id} className="flex items-center justify-between bg-purple-50 rounded px-3 py-2 text-sm">
+                      <a
+                        href={upload.file_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-purple-700 font-medium truncate max-w-[220px] hover:underline"
+                      >
+                        📄 {upload.file_name}
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => deleteExisting(upload)}
+                        className="ml-2 text-red-400 hover:text-red-600 font-bold text-xs flex-shrink-0"
+                        title="Remove"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Pending files */}
+              {pendingFiles.length > 0 && (
+                <div className="mb-2 space-y-1">
+                  {pendingFiles.map((file, i) => (
+                    <div key={i} className="flex items-center justify-between bg-blue-50 rounded px-3 py-2 text-sm">
+                      <span className="text-blue-700 font-medium truncate max-w-[220px]">
+                        🆕 {file.name} <span className="text-blue-400 font-normal">({(file.size / 1024).toFixed(0)} KB)</span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => removeFile(i)}
+                        className="ml-2 text-red-400 hover:text-red-600 font-bold text-xs flex-shrink-0"
+                        title="Remove"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* File input */}
+              <label className="flex items-center justify-center gap-2 w-full px-3 py-2 border-2 border-dashed border-gray-300 rounded text-sm text-gray-500 hover:border-purple-400 hover:text-purple-600 cursor-pointer transition-colors">
+                <span>+ Add files</span>
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*,application/pdf,.doc,.docx"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
+              </label>
+
+              {uploadError && (
+                <p className="mt-2 text-xs text-red-500">{uploadError}</p>
+              )}
+            </div>
+
             {/* Buttons */}
             <div className="flex gap-3 pt-4">
               <button
@@ -1352,9 +1526,10 @@ function MarkAttendanceModal({ date, kids, selectedKid, existingAttendance, onSa
               </button>
               <button
                 type="submit"
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                disabled={uploading}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
               >
-                Save
+                {uploading ? 'Uploading…' : 'Save'}
               </button>
             </div>
           </form>

@@ -105,8 +105,15 @@ export default function ComplianceChecker({
     }).length
 
     const allMet = requirements.length > 0 ? requirementsMet === requirements.length : false
+
+    // Progress toward requirements (not binary met/not-met)
     const percentComplete = requirements.length > 0
-      ? Math.round((requirementsMet / requirements.length) * 100)
+      ? Math.round(
+          requirements.reduce((sum, r) => {
+            const pct = r.required > 0 ? Math.min(100, (r.actual / r.required) * 100) : 100
+            return sum + pct
+          }, 0) / requirements.length
+        )
       : 0
 
     // Build description

@@ -196,43 +196,110 @@ export default function CompliancePage() {
   const requiredDays = template?.required_days || settings?.required_annual_days || 0
   const requiredHours = template?.required_hours || settings?.required_annual_hours || 0
 
-  // Load compliance data for each kid
+  // Load compliance data for each kid — uses lessons + manual attendance (same logic as AttendanceTracker)
   useEffect(() => {
-    if (!settings || !kids.length || !organizationId) return
-
-    const currentSettings = settings
+    if (!kids.length || !organizationId) return
 
     async function loadComplianceData() {
+      // Resolve school year dates — always prefer school_year_settings (same source as AttendanceTracker)
+      const { data: sySettings } = await supabase
+        .from('school_year_settings')
+        .select('school_year_start, school_year_end')
+        .eq('organization_id', organizationId!)
+        .maybeSingle()
+
+      let startDate: string = sySettings?.school_year_start
+        || settings?.school_year_start_date
+        || null
+
+      let endDate: string = sySettings?.school_year_end
+        || settings?.school_year_end_date
+        || null
+
+      // Last resort: current school year Aug → Jun
+      if (!startDate || !endDate) {
+        const now = new Date()
+        const year = now.getMonth() >= 7 ? now.getFullYear() : now.getFullYear() - 1
+        startDate = `${year}-08-01`
+        endDate = `${year + 1}-06-30`
+      }
+
+
+
       const data: KidComplianceData[] = []
 
+      // Load org-wide manual attendance for the school year once
+      const { data: attendance } = await supabase
+        .from('daily_attendance')
+        .select('attendance_date, hours, status, kid_id')
+        .eq('organization_id', organizationId!)
+        .gte('attendance_date', startDate)
+        .lte('attendance_date', endDate)
+
+
+
       for (const kid of kids) {
-        const { data: hoursData } = await supabase
-          .rpc('calculate_compliance_hours', {
-            p_kid_id: kid.id,
-            p_organization_id: organizationId,
-            p_start_date: currentSettings.school_year_start_date,
-            p_end_date: currentSettings.school_year_end_date
-          })
+        // Lessons for this kid within school year
+        const { data: lessons } = await supabase
+          .from('lessons')
+          .select('lesson_date, duration_minutes')
+          .eq('kid_id', kid.id)
+          .gte('lesson_date', startDate)
+          .lte('lesson_date', endDate)
 
-        const { data: healthData } = await supabase
-          .rpc('get_compliance_health_score', {
-            p_kid_id: kid.id,
-            p_organization_id: organizationId,
-            p_start_date: currentSettings.school_year_start_date,
-            p_end_date: currentSettings.school_year_end_date
-          })
 
-        const totalHours = hoursData?.[0]?.total_hours || 0
-        const totalDays = hoursData?.[0]?.total_days || 0
-        const healthScore = healthData?.[0]?.health_score || 0
+        // Build set of all relevant dates
+        const allDates = new Set<string>()
+        lessons?.forEach((l: any) => allDates.add(l.lesson_date.substring(0, 10)))
+        attendance?.forEach((a: any) => allDates.add(a.attendance_date))
 
-        const hoursRemaining = Math.max(0, requiredHours - totalHours)
+        let totalDays = 0
+        let totalHours = 0
+
+        for (const date of allDates) {
+          const dayLessons = lessons?.filter((l: any) => l.lesson_date.substring(0, 10) === date) || []
+          const lessonHours = dayLessons.reduce((sum: number, l: any) => sum + (l.duration_minutes || 0), 0) / 60
+
+          // Manual attendance applies if kid-specific or org-wide (kid_id null)
+          const dayAtt = attendance?.find((a: any) =>
+            a.attendance_date === date &&
+            (a.kid_id === kid.id || a.kid_id === null)
+          )
+
+          let isSchoolDay = false
+          let dayHours = 0
+
+          if (dayAtt) {
+            isSchoolDay = dayAtt.status !== 'no_school'
+            dayHours = dayAtt.hours
+          } else if (lessonHours > 0) {
+            isSchoolDay = true
+            dayHours = lessonHours
+          }
+
+          if (isSchoolDay) {
+            totalDays++
+            totalHours += dayHours
+          }
+        }
+
+        const roundedHours = Math.round(totalHours * 10) / 10
+
+        const hoursRemaining = Math.max(0, Math.round((requiredHours - roundedHours) * 10) / 10)
         const daysRemaining = Math.max(0, requiredDays - totalDays)
+
+        // Health score = average progress toward each applicable requirement
+        const daysProgress = requiredDays > 0 ? Math.min(100, (totalDays / requiredDays) * 100) : null
+        const hoursProgress = requiredHours > 0 ? Math.min(100, (roundedHours / requiredHours) * 100) : null
+        const progressValues = [daysProgress, hoursProgress].filter(v => v !== null) as number[]
+        const healthScore = progressValues.length > 0
+          ? Math.round(progressValues.reduce((a, b) => a + b, 0) / progressValues.length)
+          : 0
         const onTrack = healthScore >= 75
 
         data.push({
           kid,
-          totalHours,
+          totalHours: roundedHours,
           totalDays,
           healthScore,
           requiredHours,
@@ -388,7 +455,18 @@ export default function CompliancePage() {
     : null
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
+    <div className="min-h-screen bg-gray-50" style={{ paddingBottom: 100 }}>
+      <div className="p-8">
+      <button onClick={() => router.push('/reports')} style={{
+        display: 'flex', alignItems: 'center', gap: 6,
+        background: 'rgba(255,255,255,0.72)', border: '1.5px solid rgba(124,58,237,0.15)',
+        borderRadius: 20, padding: '7px 16px 7px 12px',
+        fontSize: 13, fontWeight: 700, color: '#7c3aed',
+        cursor: 'pointer', fontFamily: "'Nunito', sans-serif",
+        margin: '0 0 16px',
+      }}>
+        ‹ Records
+      </button>
       <div className="max-w-7xl mx-auto">
 
         {/* View Mode Toggle */}
@@ -696,6 +774,38 @@ export default function CompliancePage() {
           </div>
         )}
       </div>
+      </div> {/* closes p-8 wrapper */}
+
+      {/* ── Bottom Nav ── */}
+      <nav style={{
+        position: 'fixed', bottom: 0, left: 0, right: 0,
+        background: 'rgba(255,255,255,0.94)',
+        backdropFilter: 'blur(16px)',
+        borderTop: '1px solid rgba(124,58,237,0.10)',
+        display: 'flex', zIndex: 100,
+        padding: '8px 0 12px',
+        boxShadow: '0 -4px 24px rgba(0,0,0,0.07)',
+      }}>
+        {[
+          { id: 'home',      label: 'Home',      icon: '🏠', href: '/dashboard' },
+          { id: 'plan',      label: 'Subjects',  icon: '📚', href: '/subjects'  },
+          { id: 'records',   label: 'Records',   icon: '📋', href: '/reports'   },
+          { id: 'resources', label: 'Resources', icon: '💡', href: '/resources' },
+          { id: 'profile',   label: 'Profile',   icon: '👤', href: '/profile'   },
+        ].map(item => (
+          <button key={item.id}
+            style={{
+              flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
+              background: 'none', border: 'none', cursor: 'pointer',
+              padding: '6px 0', fontFamily: "'Nunito', sans-serif", gap: 2,
+              color: '#9ca3af',
+            }}
+            onClick={() => router.push(item.href)}>
+            <span style={{ fontSize: 22, lineHeight: 1 }}>{item.icon}</span>
+            <span style={{ fontSize: 10, fontWeight: 500, marginTop: 2 }}>{item.label}</span>
+          </button>
+        ))}
+      </nav>
     </div>
   )
 }

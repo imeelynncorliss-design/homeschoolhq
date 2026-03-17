@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/src/lib/supabase'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 import CourseManager from '@/components/CourseManager'
 import AuthGuard from '@/components/AuthGuard'
 import { getOrganizationId } from '@/src/lib/getOrganizationId' 
@@ -53,7 +52,19 @@ function CoursesContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50" style={{ paddingBottom: 100 }}>
+
+      {/* ── Back link ── */}
+      <button onClick={() => router.push('/transcript')} style={{
+        display: 'flex', alignItems: 'center', gap: 6,
+        background: 'rgba(255,255,255,0.72)', border: '1.5px solid rgba(124,58,237,0.15)',
+        borderRadius: 20, padding: '7px 16px 7px 12px',
+        fontSize: 13, fontWeight: 700, color: '#7c3aed',
+        cursor: 'pointer', fontFamily: "'Nunito', sans-serif",
+        margin: '16px 20px 0',
+      }}>
+        ‹ Transcripts
+      </button>
 
     <div className="max-w-6xl mx-auto px-4 py-6 md:px-8">
         {/* FIX: Role-aware empty state */}
@@ -98,6 +109,38 @@ function CoursesContent() {
           </>
         )}
       </div>
+
+      {/* ── Bottom Nav ── */}
+      <nav style={{
+        position: 'fixed', bottom: 0, left: 0, right: 0,
+        background: 'rgba(255,255,255,0.94)',
+        backdropFilter: 'blur(16px)',
+        borderTop: '1px solid rgba(124,58,237,0.10)',
+        display: 'flex', zIndex: 100,
+        padding: '8px 0 12px',
+        boxShadow: '0 -4px 24px rgba(0,0,0,0.07)',
+      }}>
+        {[
+          { label: 'Home',      icon: '🏠', href: '/dashboard' },
+          { label: 'Subjects',  icon: '📚', href: '/subjects'  },
+          { label: 'Records',   icon: '📋', href: '/reports'   },
+          { label: 'Resources', icon: '💡', href: '/resources' },
+          { label: 'Profile',   icon: '👤', href: '/profile'   },
+        ].map(item => (
+          <button key={item.label}
+            style={{
+              flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
+              background: 'none', border: 'none', cursor: 'pointer',
+              padding: '6px 0', fontFamily: "'Nunito', sans-serif", gap: 2,
+              color: '#9ca3af',
+            }}
+            onClick={() => router.push(item.href)}>
+            <span style={{ fontSize: 22, lineHeight: 1 }}>{item.icon}</span>
+            <span style={{ fontSize: 10, fontWeight: 500, marginTop: 2 }}>{item.label}</span>
+          </button>
+        ))}
+      </nav>
+
     </div>
   )
 }

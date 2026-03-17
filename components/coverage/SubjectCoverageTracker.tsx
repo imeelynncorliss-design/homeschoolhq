@@ -1,9 +1,8 @@
 'use client'
 
-import React, { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useSubjectCoverage, useKids, useSchoolYearConfig } from '../../hooks/useSubjectCoverage'
 import { SubjectCoverageCard } from '@/components/coverage/SubjectCoverageCard'
-import { useRouter } from 'next/navigation'
 
 const ON_TRACK_PRESETS = [
   { label: 'Relaxed (50%)', value: 50 },
@@ -15,8 +14,6 @@ const ON_TRACK_PRESETS = [
 export function SubjectCoverageTracker() {
   const { kids, loading: kidsLoading } = useKids()
   const { config: schoolYearConfig, loading: configLoading } = useSchoolYearConfig()
-  const router = useRouter()
-
   const [selectedKidId, setSelectedKidId] = useState<string>('')
   const [startDate, setStartDate] = useState<string>('')
   const [endDate, setEndDate] = useState<string>('')
@@ -79,12 +76,6 @@ export function SubjectCoverageTracker() {
 
         {/* Header */}
         <div className="mb-6">
-          <button
-            onClick={() => router.push('/dashboard')}
-            className="flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-gray-700 mb-3"
-          >
-            ← Back to Dashboard
-          </button>
           <div className="flex items-center gap-2 mb-1">
             <span className="text-xs font-semibold uppercase tracking-widest text-violet-600 bg-violet-50 px-2 py-0.5 rounded-full">
               Pro Feature

@@ -10,7 +10,7 @@ import LessonGenerator from '@/components/LessonGenerator'
 import DevTierToggle from '@/components/DevTierToggle'
 import PastUnstartedLessonsBanner from '@/components/PastUnstartedLessonsBanner'
 import { CANONICAL_SUBJECTS } from '@/src/constants/subjects'
-import { type UserTier, getTierForTesting, hasFeature as checkFeature, getUpgradeMessage } from '@/lib/tierTesting'
+import { type UserTier, getTierForTesting, hasFeature as checkFeature } from '@/lib/tierTesting'
 import CurriculumImporter from '@/components/CurriculumImporter'
 import { formatLessonDescription } from '@/lib/formatLessonDescription'
 import { DEFAULT_HOLIDAYS_2025_2026 } from '@/app/utils/holidayUtils'
@@ -59,7 +59,8 @@ function LessonsContent() {
   const [collaborators, setCollaborators] = useState<{ id: string; user_id: string; name: string; email: string }[]>([])
   const [userTier, setUserTier] = useState<UserTier>('FREE')
   const [vacationPeriods, setVacationPeriods] = useState<any[]>([])
-  const [isCoTeacher, setIsCoTeacher] = useState(false)  // NEW
+  const [isCoTeacher, setIsCoTeacher] = useState(false)
+  const [stateCode, setStateCode] = useState<string | null>(null)
 
   // Add Lesson modal state
   const [showLessonForm, setShowLessonForm] = useState(false)
@@ -102,6 +103,10 @@ function LessonsContent() {
 
   // Generate Lessons modal state
   const [showGenerator, setShowGenerator] = useState(false)
+
+  // Per-kid Add Lesson choice sheet
+  const [showAddLessonSheet, setShowAddLessonSheet] = useState(false)
+  const [addLessonKidId, setAddLessonKidId] = useState<string>('')
 
   //Generate Assessment
   const [showAssessmentGenerator, setShowAssessmentGenerator] = useState(false)
@@ -174,6 +179,13 @@ function LessonsContent() {
         .select('*')
         .eq('organization_id', resolvedOrgId)
       if (vacations) setVacationPeriods(vacations)
+
+      const { data: schoolSettings } = await supabase
+        .from('school_year_settings')
+        .select('state_code')
+        .eq('organization_id', resolvedOrgId)
+        .maybeSingle()
+      if (schoolSettings?.state_code) setStateCode(schoolSettings.state_code)
 
       await loadData(user.id, resolvedOrgId)
       setLoading(false)
@@ -416,6 +428,14 @@ function LessonsContent() {
     await loadData(user.id, organizationId)
   }
 
+  const handleSetStatus = async (lessonId: string, status: 'not_started' | 'in_progress' | 'completed') => {
+    const updates: any = { status }
+    if (status === 'completed') updates.completed_at = new Date().toISOString()
+    if (status === 'not_started') updates.completed_at = null
+    await supabase.from('lessons').update(updates).eq('id', lessonId)
+    await loadData(user.id, organizationId)
+  }
+
   const handleGenerateAssessment = (lesson: Lesson) => {
     setAssessmentLesson(lesson)
     setShowAssessmentGenerator(true)
@@ -428,7 +448,8 @@ function LessonsContent() {
   }
 
   const hasFeature = (feature: string) => checkFeature(userTier, feature)
-  const today = new Date(new Date().toLocaleDateString('en-CA') + 'T12:00:00').toISOString().split('T')[0]
+  const now = new Date()
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
   const pastUnstartedLessons = Object.values(lessonsByKid).flat()
   .filter(l => l.lesson_date !== null && l.lesson_date < today && l.status === 'not_started')
   .map(l => ({
@@ -443,18 +464,19 @@ function LessonsContent() {
   // ── Render ──────────────────────────────────────────────────────────────────
 
   if (loading) return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f5f3ff' }}>
-      <div style={{ color: '#7c3aed', fontWeight: 700, fontSize: 16 }}>Loading lessons...</div>
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #c4b5fd 0%, #e879f9 18%, #f0abfc 36%, #fbcfe8 54%, #bae6fd 76%, #6ee7b7 100%)' }}>
+      <div style={{ color: '#7c3aed', fontWeight: 700, fontSize: 16, fontFamily: "'Nunito', sans-serif" }}>Loading lessons...</div>
     </div>
   )
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f5f3ff', fontFamily: 'var(--font-dm-sans), sans-serif' }}>
+    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #c4b5fd 0%, #e879f9 18%, #f0abfc 36%, #fbcfe8 54%, #bae6fd 76%, #6ee7b7 100%)', fontFamily: "'Nunito', sans-serif" }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');`}</style>
 
       {/* ── Header ────────────────────────────────────────────────────── */}
       <header style={{
         background: 'linear-gradient(135deg, #5b21b6 0%, #7c3aed 45%, #a855f7 75%, #ec4899 100%)',
-        padding: '0 24px',
+        padding: '0 16px',
         height: 58,
         display: 'flex',
         alignItems: 'center',
@@ -463,86 +485,39 @@ function LessonsContent() {
         top: 0,
         zIndex: 50,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <button
-            onClick={() => router.push('/dashboard')}
-            style={{
-              background: 'rgba(255,255,255,0.15)',
-              border: '1px solid rgba(255,255,255,0.25)',
-              borderRadius: 8, color: '#fff',
-              fontSize: 13, fontWeight: 600,
-              padding: '6px 14px', cursor: 'pointer',
-            }}
-          >
-            ← Dashboard
-          </button>
+        {/* Left: title */}
+        <div style={{ display: 'flex', alignItems: 'center' }}>
           <h1 style={{ color: '#fff', fontWeight: 900, fontSize: 18, margin: 0 }}>
             📚 Lessons
           </h1>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          {hasFeature('ai_generation') ? (
-            <button
-              onClick={() => setShowGenerator(true)}
-              style={{
-                background: 'rgba(255,255,255,0.15)',
-                border: '1px solid rgba(255,255,255,0.3)',
-                borderRadius: 8, color: '#fff',
-                fontSize: 13, fontWeight: 600,
-                padding: '6px 14px', cursor: 'pointer',
-              }}
-            >
-              ✨ Generate Lessons
-            </button>
-          ) : (
-            <button
-              onClick={() => { alert(getUpgradeMessage('ai_generation')); router.push('/pricing') }}
-              style={{
-                background: 'rgba(255,255,255,0.08)',
-                border: '1px solid rgba(255,255,255,0.15)',
-                borderRadius: 8, color: 'rgba(255,255,255,0.5)',
-                fontSize: 13, fontWeight: 600,
-                padding: '6px 14px', cursor: 'pointer',
-              }}
-            >
-              ✨ Generate Lessons 🔒
-            </button>
-          )}
 
-          <button
-            onClick={() => {
-              setSelectedKidForImport(kids[0] || null)
-              setShowImporter(true)
-            }}
-            style={{
-              background: 'rgba(255,255,255,0.15)',
-              border: '1px solid rgba(255,255,255,0.3)',
-              borderRadius: 8, color: '#fff',
-              fontSize: 13, fontWeight: 600,
-              padding: '6px 14px', cursor: 'pointer',
-            }}
-          >
-            ⬆️ Import Curriculum
-          </button>
-
-          <button
-            onClick={() => setShowLessonForm(true)}
-            style={{
-              background: 'rgba(255,255,255,0.15)',
-              border: '1px solid rgba(255,255,255,0.3)',
-              borderRadius: 8, color: '#fff',
-              fontSize: 13, fontWeight: 700,
-              padding: '6px 16px', cursor: 'pointer',
-            }}
-          >
-            + Add Lesson
-          </button>
-        </div>
       </header>
 
+      {/* ── View tabs ─────────────────────────────────────────────────── */}
+      <div style={{ display: 'flex', gap: 8, padding: '14px 20px 0', maxWidth: 900, margin: '0 auto' }}>
+        <button style={{
+          padding: '7px 18px', borderRadius: 20, border: 'none', cursor: 'default',
+          fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 13,
+          background: 'rgba(255,255,255,0.95)', color: '#7c3aed',
+          boxShadow: '0 1px 6px rgba(124,58,237,0.15)',
+        }}>
+          📚 Lessons
+        </button>
+        <button
+          onClick={() => router.push('/calendar')}
+          style={{
+            padding: '7px 18px', borderRadius: 20, border: '1.5px solid rgba(124,58,237,0.3)',
+            cursor: 'pointer', fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 13,
+            background: 'rgba(255,255,255,0.7)', color: '#7c3aed',
+          }}>
+          📅 Calendar
+        </button>
+      </div>
+
       {/* ── Main ──────────────────────────────────────────────────────── */}
-      <main style={{ maxWidth: 900, margin: '0 auto', padding: '28px 24px 64px' }}>
+      <main style={{ maxWidth: 900, margin: '0 auto', padding: '16px 24px 100px' }}>
       <PastUnstartedLessonsBanner
         lessons={pastUnstartedLessons}
         onMarkCompleted={async (ids) => {
@@ -556,6 +531,10 @@ function LessonsContent() {
             supabase.from('lessons').delete().eq('id', id)
           ))
           await loadData(user.id, organizationId)
+        }}
+        onViewLesson={(lessonId) => {
+          const lesson = allLessons.find(l => l.id === lessonId)
+          if (lesson) handleEditLesson(lesson)
         }}
       />
         {kids.length === 0 ? (
@@ -593,12 +572,107 @@ function LessonsContent() {
             onEditLesson={handleEditLesson}
             onDeleteLesson={handleDeleteLesson}
             onCycleStatus={handleCycleStatus}
+            onSetStatus={handleSetStatus}
             onGenerateAssessment={handleGenerateAssessment}
             onViewPastAssessments={handleViewPastAssessments}
             onRefresh={() => loadData(user.id, organizationId)}
+            organizationId={organizationId ?? undefined}
+            stateCode={stateCode}
+            onAddLesson={(kidId) => {
+              setAddLessonKidId(kidId)
+              setShowAddLessonSheet(true)
+            }}
           />
         )}
       </main>
+
+      {/* ── Add Lesson Choice Sheet ───────────────────────────────────── */}
+      {showAddLessonSheet && (() => {
+        const choiceKid = kids.find(k => k.id === addLessonKidId)
+        return (
+          <>
+            <div onClick={() => setShowAddLessonSheet(false)} style={{
+              position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 400,
+            }} />
+            <div style={{
+              position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 401,
+              background: '#fff', borderRadius: '24px 24px 0 0',
+              boxShadow: '0 -8px 40px rgba(0,0,0,0.2)',
+              fontFamily: "'Nunito', sans-serif",
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 0' }}>
+                <div style={{ width: 40, height: 4, borderRadius: 2, background: '#e5e7eb' }} />
+              </div>
+              <div style={{ padding: '16px 20px 40px' }}>
+                <div style={{ fontSize: 18, fontWeight: 900, color: '#1e1b4b', marginBottom: 4 }}>
+                  Add a Lesson {choiceKid ? `for ${choiceKid.displayname}` : ''}
+                </div>
+                <div style={{ fontSize: 13, color: '#6b7280', fontWeight: 600, marginBottom: 20 }}>
+                  How would you like to create this lesson?
+                </div>
+
+                {/* Write your own */}
+                <button
+                  onClick={() => {
+                    setSelectedKidForLesson(addLessonKidId)
+                    setShowAddLessonSheet(false)
+                    setShowLessonForm(true)
+                  }}
+                  style={{
+                    width: '100%', padding: '16px', borderRadius: 14,
+                    border: '1.5px solid #e5e7eb', background: '#f9fafb',
+                    textAlign: 'left' as const, cursor: 'pointer', marginBottom: 10,
+                    fontFamily: "'Nunito', sans-serif",
+                  }}>
+                  <div style={{ fontSize: 15, fontWeight: 800, color: '#1e1b4b', marginBottom: 3 }}>✏️ Write your own</div>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: '#6b7280' }}>Add a custom lesson with your own title and notes</div>
+                </button>
+
+                {/* Generate with Scout */}
+                <button
+                  onClick={() => {
+                    setShowAddLessonSheet(false)
+                    if (hasFeature('ai_generation')) {
+                      setShowGenerator(true)
+                    } else {
+                      router.push('/pricing')
+                    }
+                  }}
+                  style={{
+                    width: '100%', padding: '16px', borderRadius: 14,
+                    border: '1.5px solid #ede9fe', background: '#faf5ff',
+                    textAlign: 'left' as const, cursor: 'pointer', marginBottom: 10,
+                    fontFamily: "'Nunito', sans-serif",
+                  }}>
+                  <div style={{ fontSize: 15, fontWeight: 800, color: '#7c3aed', marginBottom: 3 }}>
+                    ✨ Generate with Scout{!hasFeature('ai_generation') ? ' 🔒' : ''}
+                  </div>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: '#6b7280' }}>
+                    {hasFeature('ai_generation') ? 'Let Scout create a lesson plan for you' : 'Upgrade to Pro to unlock AI generation'}
+                  </div>
+                </button>
+
+                {/* From curriculum */}
+                <button
+                  onClick={() => {
+                    setSelectedKidForImport(choiceKid || null)
+                    setShowAddLessonSheet(false)
+                    setShowImporter(true)
+                  }}
+                  style={{
+                    width: '100%', padding: '16px', borderRadius: 14,
+                    border: '1.5px solid #e5e7eb', background: '#f9fafb',
+                    textAlign: 'left' as const, cursor: 'pointer',
+                    fontFamily: "'Nunito', sans-serif",
+                  }}>
+                  <div style={{ fontSize: 15, fontWeight: 800, color: '#1e1b4b', marginBottom: 3 }}>📋 From curriculum</div>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: '#6b7280' }}>Import from your curriculum or a pre-planned lesson</div>
+                </button>
+              </div>
+            </div>
+          </>
+        )
+      })()}
 
       {/* ── Add Lesson Modal ──────────────────────────────────────────── */}
       {showLessonForm && (
@@ -1078,6 +1152,40 @@ function LessonsContent() {
       )}
 
       <DevTierToggle />
+
+      {/* ── Bottom Nav ────────────────────────────────────────────────── */}
+      <nav style={{
+        position: 'fixed', bottom: 0, left: 0, right: 0,
+        background: 'rgba(255,255,255,0.94)',
+        backdropFilter: 'blur(16px)',
+        borderTop: '1px solid rgba(124,58,237,0.10)',
+        display: 'flex', zIndex: 100,
+        padding: '8px 0 12px',
+        boxShadow: '0 -4px 24px rgba(0,0,0,0.07)',
+      }}>
+        {[
+          { id: 'home',      label: 'Home',      icon: '🏠', href: '/dashboard' },
+          { id: 'plan',      label: 'Subjects',  icon: '📚', href: '/subjects'  },
+          { id: 'records',   label: 'Records',   icon: '📋', href: '/reports'   },
+          { id: 'resources', label: 'Resources', icon: '💡', href: '/resources' },
+          { id: 'profile',   label: 'Profile',   icon: '👤', href: '/profile'   },
+        ].map(item => {
+          const isActive = false // Lessons is not a bottom-nav page; no item is highlighted
+          return (
+            <button key={item.id}
+              style={{
+                flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
+                background: 'none', border: 'none', cursor: 'pointer',
+                padding: '6px 0', fontFamily: "'Nunito', sans-serif", gap: 2,
+                color: isActive ? '#7c3aed' : '#9ca3af', position: 'relative',
+              }}
+              onClick={() => router.push(item.href)}>
+              <span style={{ fontSize: 22, lineHeight: 1 }}>{item.icon}</span>
+              <span style={{ fontSize: 10, fontWeight: 500, marginTop: 2 }}>{item.label}</span>
+            </button>
+          )
+        })}
+      </nav>
     </div>
   )
 }

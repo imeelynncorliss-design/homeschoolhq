@@ -172,9 +172,6 @@ export default function TeacherAssessmentsPage() {
       {/* 1. MATCHING PURPLE HEADER */}
       <div className="bg-gradient-to-r from-purple-800 to-indigo-900 pb-32 pt-12 px-8">
         <div className="max-w-7xl mx-auto">
-          <button onClick={() => router.push('/dashboard')} className="text-white/80 mb-2 block hover:text-white transition-colors text-sm font-bold">
-            ← Back to Dashboard
-          </button>
           <h1 className="text-4xl font-black text-white tracking-tight">Standards Tracking</h1>
           <p className="text-white/90 mt-2 font-semibold">Monitor academic progress and mastery across all subjects.</p>
         </div>

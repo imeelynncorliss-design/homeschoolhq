@@ -143,16 +143,6 @@ export default function UserManagementPage() {
           </table>
         </div>
 
-        {/* ── Back button ─────────────────────────────────────────────────── */}
-        <div className="mt-6">
-          <button
-            onClick={() => router.push('/dashboard')}
-            className="text-indigo-600 hover:text-indigo-700 font-bold"
-          >
-            ← Back to Dashboard
-          </button>
-        </div>
-
       </div>
     </div>
   )

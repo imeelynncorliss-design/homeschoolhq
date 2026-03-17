@@ -141,6 +141,45 @@ const LEARNING_STYLES = [
   { value: 'kinesthetic', label: '🤲 Kinesthetic' },
 ]
 
+// ── Learning Style Quiz ───────────────────────────────────────────────────────
+
+const LS_QUIZ = [
+  {
+    q: 'When your child is trying to learn something new, what do they do first?',
+    answers: [
+      { emoji: '🎨', text: 'Look for pictures, diagrams, or videos',         style: 'visual' },
+      { emoji: '👂', text: 'Ask someone to explain it out loud',              style: 'aural' },
+      { emoji: '📝', text: 'Read about it or look it up in a book',           style: 'read_write' },
+      { emoji: '🤲', text: 'Jump straight in and figure it out by doing',     style: 'kinesthetic' },
+    ],
+  },
+  {
+    q: "When your child tells you about something exciting, they usually…",
+    answers: [
+      { emoji: '🖼️', text: 'Draw it, show you a picture, or describe what it looks like', style: 'visual' },
+      { emoji: '🗣️', text: 'Talk about it non-stop with great enthusiasm',                 style: 'aural' },
+      { emoji: '📖', text: 'Bring you something they read or wrote about it',              style: 'read_write' },
+      { emoji: '🏃', text: 'Demonstrate it or bring you the actual thing',                 style: 'kinesthetic' },
+    ],
+  },
+  {
+    q: 'During free time, your child most often…',
+    answers: [
+      { emoji: '📺', text: 'Watches videos, draws, or flips through picture books', style: 'visual' },
+      { emoji: '🎵', text: 'Listens to music, podcasts, or chats with friends',     style: 'aural' },
+      { emoji: '📚', text: 'Reads, writes stories, or plays word games',            style: 'read_write' },
+      { emoji: '🧱', text: 'Builds, crafts, moves around, or explores outside',    style: 'kinesthetic' },
+    ],
+  },
+]
+
+const LS_STYLE_LABELS: Record<string, { label: string; emoji: string; desc: string }> = {
+  visual:      { label: 'Visual Learner',      emoji: '🎨', desc: "Learns best through images, diagrams, and demonstrations. Videos, charts, and colorful visuals stick best." },
+  aural:       { label: 'Aural Learner',        emoji: '👂', desc: "Learns best by listening and talking. Discussions, audiobooks, and read-alouds are highly effective." },
+  read_write:  { label: 'Read/Write Learner',   emoji: '📝', desc: "Learns best through reading and writing. Note-taking, written instructions, and books work great." },
+  kinesthetic: { label: 'Kinesthetic Learner',  emoji: '🤲', desc: "Learns best by doing. Hands-on projects, experiments, and real-world activities are the key." },
+}
+
 // ── Quiz Data ─────────────────────────────────────────────────────────────────
 
 type StyleScores = Partial<Record<string, number>>
@@ -300,7 +339,21 @@ function calculateStyle(answers: Record<number, StyleScores>): string {
 
 // ── Shared sub-components ─────────────────────────────────────────────────────
 
-const STEP_LABELS = ['Your School', 'Teaching Style', 'Curriculum', 'Your Child']
+const STEP_LABELS = ['Your School', 'Teaching Style', 'Curriculum', 'Your Child', 'Subjects']
+
+const ONBOARDING_SUBJECTS = [
+  { name: 'Mathematics',        emoji: '🔢', color: '#7c3aed' },
+  { name: 'Reading',            emoji: '📖', color: '#0d9488' },
+  { name: 'Language Arts',      emoji: '✏️', color: '#ec4899' },
+  { name: 'Science',            emoji: '🔬', color: '#3b82f6' },
+  { name: 'Social Studies',     emoji: '🌍', color: '#f59e0b' },
+  { name: 'History',            emoji: '🏛️', color: '#ef4444' },
+  { name: 'Art',                emoji: '🎨', color: '#8b5cf6' },
+  { name: 'Music',              emoji: '🎵', color: '#84cc16' },
+  { name: 'Physical Education', emoji: '⚽', color: '#06b6d4' },
+  { name: 'Bible',              emoji: '✝️', color: '#f97316' },
+]
+const DEFAULT_SUBJECTS = ['Mathematics', 'Reading', 'Language Arts', 'Science', 'Social Studies']
 
 function StepIndicator({ currentStep }: { currentStep: number }) {
   return (
@@ -862,9 +915,12 @@ function StatePicker({
 
 export default function OnboardingPage() {
   const router = useRouter()
-  const [user, setUser]         = useState<any>(null)
-  const [step, setStep]         = useState(1)
-  const [saving, setSaving]     = useState(false)
+  const [user, setUser]             = useState<any>(null)
+  const [step, setStep]             = useState(0)
+  const [saving, setSaving]         = useState(false)
+  const [ageConfirmed, setAgeConfirmed]   = useState(false)
+  const [tosConfirmed, setTosConfirmed]   = useState(false)
+  const [agreementSaving, setAgreementSaving] = useState(false)
   const [showSkipWarning, setShowSkipWarning] = useState(false)
 
   // Step 1 has two sub-steps: school name → state picker
@@ -896,6 +952,11 @@ export default function OnboardingPage() {
   const [learningStyles, setLearningStyles] = useState<string[]>([])
   const [currentHook, setCurrentHook]       = useState('')
 
+  // Learning style quiz
+  const [showLsQuiz, setShowLsQuiz]         = useState(false)
+  const [lsQuizStep, setLsQuizStep]         = useState(0)
+  const [lsQuizScores, setLsQuizScores]     = useState<Record<string, number>>({})
+
   const toggleStyle = (value: string) => {
     setLearningStyles(prev =>
       prev.includes(value) ? prev.filter(s => s !== value) : [...prev, value]
@@ -903,41 +964,93 @@ export default function OnboardingPage() {
   }
   const [kidId, setKidId]         = useState<string | null>(null)
 
+  // Step 5 — Subjects
+  const [selectedSubjects, setSelectedSubjects] = useState<string[]>(DEFAULT_SUBJECTS)
+  const [schoolDaysPerWeek, setSchoolDaysPerWeek] = useState<number | null>(5)
+  const [customSubjectInput, setCustomSubjectInput] = useState('')
+  const [subjectsSaving, setSubjectsSaving] = useState(false)
+
+  const toggleOnboardingSubject = (name: string) => {
+    setSelectedSubjects(prev =>
+      prev.includes(name) ? prev.filter(s => s !== name) : [...prev, name]
+    )
+  }
+
+  const saveSubjects = async () => {
+    if (!orgId || !kidId || selectedSubjects.length === 0) { setStep(6); return }
+    setSubjectsSaving(true)
+    const allSubjectData = ONBOARDING_SUBJECTS.reduce(
+      (acc, s) => { acc[s.name] = s; return acc },
+      {} as Record<string, { emoji: string; color: string }>
+    )
+    const rows = selectedSubjects.map(name => ({
+      organization_id: orgId,
+      kid_id: kidId,
+      name,
+      weekly_frequency: schoolDaysPerWeek,
+      color: allSubjectData[name]?.color || '#7c3aed',
+      emoji: allSubjectData[name]?.emoji || '📚',
+    }))
+    await supabase.from('subjects').insert(rows)
+    setSubjectsSaving(false)
+    setStep(6)
+  }
+
   useEffect(() => {
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/'); return }
 
+      // ── 1. Agreement gate — must agree before onboarding ──────────────────
+      const { data: agreement } = await supabase
+        .from('user_agreements')
+        .select('age_confirmed, tos_confirmed')
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+      if (!agreement || !agreement.age_confirmed || !agreement.tos_confirmed) {
+        router.replace('/agree')
+        return
+      }
+
+      // ── 2. Already completed onboarding → dashboard ────────────────────────
       const { data: profile } = await supabase
         .from('user_profiles').select('onboarding_completed_at')
         .eq('user_id', user.id).maybeSingle()
 
       if (profile?.onboarding_completed_at) { router.push('/dashboard'); return }
 
-      const { data: kids } = await supabase
-        .from('kids').select('id').eq('user_id', user.id).limit(1)
-
-      if (kids && kids.length > 0) {
-        await Promise.all([
-          supabase.from('user_profiles')
-            .update({ onboarding_completed_at: new Date().toISOString() })
-            .eq('user_id', user.id),
-          supabase.from('organizations')
-            .update({ onboarding_completed: true, updated_at: new Date().toISOString() })
-            .eq('user_id', user.id),
-        ])
-        router.push('/dashboard')
-        return
-      }
-      setUser(user)
-      // Resolve the real organizations.id — never use user.id as orgId
-        const { data: org } = await supabase
-        .from('organizations')
-        .select('id')
+      // ── 3. Has an existing org → treat as completed, redirect to dashboard ─
+      const { data: userOrg } = await supabase
+        .from('user_organizations')
+        .select('organization_id')
         .eq('user_id', user.id)
         .maybeSingle()
 
-        if (org) setOrgId(org.id)
+      if (userOrg?.organization_id) {
+        const { data: kids } = await supabase
+          .from('kids').select('id').eq('user_id', user.id).limit(1)
+
+        if (kids && kids.length > 0) {
+          await Promise.all([
+            supabase.from('user_profiles')
+              .update({ onboarding_completed_at: new Date().toISOString() })
+              .eq('user_id', user.id),
+            supabase.from('organizations')
+              .update({ onboarding_completed: true, updated_at: new Date().toISOString() })
+              .eq('user_id', user.id),
+          ])
+          router.push('/dashboard')
+          return
+        }
+
+        // Org exists but no kids yet — still in onboarding, rehydrate orgId
+        setOrgId(userOrg.organization_id)
+      }
+
+      // ── 4. Proceed with onboarding ─────────────────────────────────────────
+      setUser(user)
+      setStep(1)
             }
             getUser()
           }, [])
@@ -1053,6 +1166,127 @@ export default function OnboardingPage() {
   }
 
   if (!user) return null
+
+  // ── Step 0 — Agreements (full-page, no nav/progress bar) ──────────────────
+  if (step === 0) {
+    const canProceed = ageConfirmed && tosConfirmed
+
+    const handleAgree = async () => {
+      if (!canProceed || agreementSaving) return
+      setAgreementSaving(true)
+      await supabase.from('user_agreements').upsert({
+        user_id: user.id,
+        age_confirmed: true,
+        tos_confirmed: true,
+        agreed_at: new Date().toISOString(),
+      }, { onConflict: 'user_id' })
+      setAgreementSaving(false)
+      setStep(1)
+    }
+
+    return (
+      <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #ede9fe 0%, #fce7f3 50%, #dbeafe 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 16px', fontFamily: "'Nunito', sans-serif" }}>
+        <style>{`@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');`}</style>
+        <div style={{ background: '#fff', borderRadius: 28, boxShadow: '0 24px 64px rgba(124,58,237,0.12)', padding: '48px 40px', maxWidth: 520, width: '100%' }}>
+
+          {/* Logo */}
+          <div style={{ textAlign: 'center', marginBottom: 32 }}>
+            <div style={{ fontSize: 48, marginBottom: 12 }}>🏡</div>
+            <div style={{ marginBottom: 6 }}>
+              <span style={{ fontWeight: 900, fontSize: 22, color: '#4f46e5' }}>Homeschool</span>
+              <span style={{ fontWeight: 900, fontSize: 22, color: '#a855f7' }}>Ready</span>
+            </div>
+            <h1 style={{ fontSize: 20, fontWeight: 800, color: '#1e1b4b', margin: '0 0 8px' }}>
+              Before we get started
+            </h1>
+            <p style={{ fontSize: 14, color: '#6b7280', margin: 0, lineHeight: 1.6 }}>
+              Please confirm the following to continue.
+            </p>
+          </div>
+
+          {/* Checkboxes */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 32 }}>
+
+            {/* Age confirmation */}
+            <label style={{ display: 'flex', alignItems: 'flex-start', gap: 14, cursor: 'pointer', background: ageConfirmed ? '#f5f3ff' : '#f9fafb', border: `2px solid ${ageConfirmed ? '#7c3aed' : '#e5e7eb'}`, borderRadius: 14, padding: '16px 18px', transition: 'all 0.15s' }}>
+              <div
+                onClick={() => setAgeConfirmed(!ageConfirmed)}
+                style={{
+                  width: 22, height: 22, borderRadius: 6, flexShrink: 0, marginTop: 1,
+                  background: ageConfirmed ? '#7c3aed' : '#fff',
+                  border: `2px solid ${ageConfirmed ? '#7c3aed' : '#d1d5db'}`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 13, color: '#fff', fontWeight: 800, cursor: 'pointer',
+                  transition: 'all 0.15s',
+                }}
+              >
+                {ageConfirmed ? '✓' : ''}
+              </div>
+              <div onClick={() => setAgeConfirmed(!ageConfirmed)} style={{ flex: 1 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: '#111827', marginBottom: 3 }}>
+                  I am 18 years of age or older
+                </div>
+                <div style={{ fontSize: 12, color: '#9ca3af', lineHeight: 1.5 }}>
+                  HomeschoolReady is intended for adults managing a child's education. You must be at least 18 to create an account.
+                </div>
+              </div>
+            </label>
+
+            {/* ToS confirmation */}
+            <label style={{ display: 'flex', alignItems: 'flex-start', gap: 14, cursor: 'pointer', background: tosConfirmed ? '#f5f3ff' : '#f9fafb', border: `2px solid ${tosConfirmed ? '#7c3aed' : '#e5e7eb'}`, borderRadius: 14, padding: '16px 18px', transition: 'all 0.15s' }}>
+              <div
+                onClick={() => setTosConfirmed(!tosConfirmed)}
+                style={{
+                  width: 22, height: 22, borderRadius: 6, flexShrink: 0, marginTop: 1,
+                  background: tosConfirmed ? '#7c3aed' : '#fff',
+                  border: `2px solid ${tosConfirmed ? '#7c3aed' : '#d1d5db'}`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 13, color: '#fff', fontWeight: 800, cursor: 'pointer',
+                  transition: 'all 0.15s',
+                }}
+              >
+                {tosConfirmed ? '✓' : ''}
+              </div>
+              <div onClick={() => setTosConfirmed(!tosConfirmed)} style={{ flex: 1 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: '#111827', marginBottom: 3 }}>
+                  I agree to the Terms of Service & Privacy Policy
+                </div>
+                <div style={{ fontSize: 12, color: '#9ca3af', lineHeight: 1.5 }}>
+                  By continuing, you agree to our{' '}
+                  <a href="/terms" target="_blank" rel="noopener noreferrer" style={{ color: '#7c3aed', fontWeight: 700, textDecoration: 'none' }} onClick={e => e.stopPropagation()}>
+                    Terms of Service
+                  </a>{' '}and{' '}
+                  <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: '#7c3aed', fontWeight: 700, textDecoration: 'none' }} onClick={e => e.stopPropagation()}>
+                    Privacy Policy
+                  </a>.
+                </div>
+              </div>
+            </label>
+          </div>
+
+          {/* CTA */}
+          <button
+            onClick={handleAgree}
+            disabled={!canProceed || agreementSaving}
+            style={{
+              width: '100%', padding: '15px 0', borderRadius: 14, border: 'none',
+              background: canProceed ? 'linear-gradient(135deg, #4f46e5, #7c3aed)' : '#e5e7eb',
+              color: canProceed ? '#fff' : '#9ca3af',
+              fontSize: 15, fontWeight: 800, cursor: canProceed ? 'pointer' : 'not-allowed',
+              transition: 'all 0.15s', fontFamily: "'Nunito', sans-serif",
+              boxShadow: canProceed ? '0 4px 20px rgba(124,58,237,0.3)' : 'none',
+            }}
+          >
+            {agreementSaving ? 'Just a moment…' : 'Get Started →'}
+          </button>
+
+          <p style={{ textAlign: 'center', fontSize: 11, color: '#d1d5db', marginTop: 20, lineHeight: 1.5 }}>
+            Your agreement is recorded with a timestamp for your protection. We never sell or share your personal data.
+          </p>
+        </div>
+      </div>
+    )
+  }
 
   const isStatePicker = step === 1 && step1Sub === 'state'
 
@@ -1430,14 +1664,14 @@ export default function OnboardingPage() {
         </div>
       </div>
 
-      {/* Learning Style — multi-select, NEW */}
+      {/* Learning Style — multi-select */}
       <div>
         <label className="block text-sm font-bold text-gray-800 mb-1">
           How does {firstName.trim() || 'your child'} learn best?{' '}
           <span className="text-red-500">*</span>
         </label>
         <p className="text-xs text-purple-600 font-semibold mb-2">
-          ✨ Select all that apply — this powers Copilot lesson personalization
+          ✨ Select all that apply — this powers Scout lesson personalization
         </p>
         <div className="grid grid-cols-2 gap-2">
           {LEARNING_STYLES.map(style => {
@@ -1465,9 +1699,103 @@ export default function OnboardingPage() {
         </div>
         {learningStyles.length > 1 && (
           <p className="text-xs text-purple-600 font-semibold mt-2">
-            ✓ Multimodal learner — Copilot will blend these styles
+            ✓ Multimodal learner — Scout will blend these styles
           </p>
         )}
+
+        {/* Not sure? Quiz trigger */}
+        {!showLsQuiz && (
+          <button
+            type="button"
+            onClick={() => { setShowLsQuiz(true); setLsQuizStep(0); setLsQuizScores({}) }}
+            className="mt-3 text-xs text-purple-600 font-semibold hover:text-purple-800 underline underline-offset-2 transition-colors"
+          >
+            Not sure? Take a quick quiz to find out →
+          </button>
+        )}
+
+        {/* Learning style mini-quiz */}
+        {showLsQuiz && lsQuizStep < LS_QUIZ.length && (
+          <div className="mt-4 bg-purple-50 border-2 border-purple-200 rounded-2xl p-4">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-bold text-purple-600 uppercase tracking-wide">
+                Question {lsQuizStep + 1} of {LS_QUIZ.length}
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowLsQuiz(false)}
+                className="text-gray-400 hover:text-gray-600 text-lg leading-none font-bold"
+              >×</button>
+            </div>
+            <p className="text-sm font-bold text-gray-800 mb-3 leading-snug">
+              {LS_QUIZ[lsQuizStep].q}
+            </p>
+            <div className="space-y-2">
+              {LS_QUIZ[lsQuizStep].answers.map(a => (
+                <button
+                  key={a.style}
+                  type="button"
+                  onClick={() => {
+                    const newScores = { ...lsQuizScores, [a.style]: (lsQuizScores[a.style] || 0) + 1 }
+                    setLsQuizScores(newScores)
+                    if (lsQuizStep + 1 < LS_QUIZ.length) {
+                      setLsQuizStep(lsQuizStep + 1)
+                    } else {
+                      // Quiz complete — find top style(s) and auto-select
+                      const maxScore = Math.max(...Object.values(newScores))
+                      const topStyles = Object.entries(newScores)
+                        .filter(([, v]) => v === maxScore)
+                        .map(([k]) => k)
+                      topStyles.forEach(s => {
+                        if (!learningStyles.includes(s)) toggleStyle(s)
+                      })
+                      setLsQuizStep(LS_QUIZ.length) // advance to result screen
+                    }
+                  }}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 bg-white rounded-xl border border-gray-200 text-left text-sm font-semibold text-gray-700 hover:border-purple-400 hover:bg-purple-50 transition-all"
+                >
+                  <span className="text-base">{a.emoji}</span>
+                  {a.text}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Quiz result */}
+        {showLsQuiz && lsQuizStep >= LS_QUIZ.length && (() => {
+          const maxScore = Math.max(...Object.values(lsQuizScores))
+          const topStyles = Object.entries(lsQuizScores)
+            .filter(([, v]) => v === maxScore).map(([k]) => k)
+          return (
+            <div className="mt-4 bg-green-50 border-2 border-green-200 rounded-2xl p-4">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p className="text-sm font-black text-green-800 mb-1">
+                    {topStyles.length > 1 ? '🌟 Multimodal Learner!' : `${LS_STYLE_LABELS[topStyles[0]]?.emoji} ${LS_STYLE_LABELS[topStyles[0]]?.label}!`}
+                  </p>
+                  <p className="text-xs text-green-700 leading-relaxed">
+                    {topStyles.length > 1
+                      ? `${firstName.trim() || 'Your child'} blends multiple styles — we've selected them all for you.`
+                      : LS_STYLE_LABELS[topStyles[0]]?.desc}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { setShowLsQuiz(false) }}
+                  className="text-green-500 hover:text-green-700 text-lg leading-none font-bold flex-shrink-0"
+                >×</button>
+              </div>
+              <button
+                type="button"
+                onClick={() => { setShowLsQuiz(false); setLsQuizStep(0); setLsQuizScores({}) }}
+                className="mt-3 text-xs text-green-700 font-semibold underline underline-offset-2 hover:text-green-900"
+              >
+                Retake quiz
+              </button>
+            </div>
+          )
+        })()}
       </div>
 
       {/* Current Hook — NEW */}
@@ -1663,9 +1991,129 @@ export default function OnboardingPage() {
         })()}
 
         {/* ══════════════════════════════════════════════════════
-            STEP 5 — Completion / Summary
+            STEP 5 — Subjects
         ══════════════════════════════════════════════════════ */}
         {step === 5 && (
+          <div>
+            <div className="text-center mb-8">
+              <div className="text-6xl mb-4">📚</div>
+              <h1 className="text-4xl font-black text-gray-900 mb-3">What will you be teaching?</h1>
+              <p className="text-gray-500 text-base leading-relaxed">
+                We've pre-selected the most common subjects. Tap to deselect any you won't cover, or add your own.
+              </p>
+            </div>
+
+            {/* Subject chips */}
+            <div className="bg-white rounded-2xl shadow-sm p-5 mb-4">
+              <p className="text-xs font-bold uppercase tracking-widest text-purple-600 mb-4">Select subjects</p>
+              <div className="flex flex-wrap gap-2 mb-4">
+                {ONBOARDING_SUBJECTS.map(s => {
+                  const on = selectedSubjects.includes(s.name)
+                  return (
+                    <button
+                      key={s.name}
+                      onClick={() => toggleOnboardingSubject(s.name)}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-bold transition-all border-2"
+                      style={{
+                        borderColor: on ? s.color : '#e5e7eb',
+                        background: on ? s.color + '18' : '#f9fafb',
+                        color: on ? s.color : '#6b7280',
+                      }}
+                    >
+                      <span>{s.emoji}</span> {s.name}
+                      {on && <span className="ml-1 text-xs">✓</span>}
+                    </button>
+                  )
+                })}
+              </div>
+
+              {/* Custom subject */}
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={customSubjectInput}
+                  onChange={e => setCustomSubjectInput(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && customSubjectInput.trim()) {
+                      setSelectedSubjects(prev => [...prev, customSubjectInput.trim()])
+                      setCustomSubjectInput('')
+                    }
+                  }}
+                  placeholder="+ Add a custom subject..."
+                  className="flex-1 px-4 py-2.5 border-2 border-gray-200 rounded-xl text-sm text-gray-900 focus:border-purple-400 focus:outline-none"
+                />
+                <button
+                  onClick={() => {
+                    if (customSubjectInput.trim()) {
+                      setSelectedSubjects(prev => [...prev, customSubjectInput.trim()])
+                      setCustomSubjectInput('')
+                    }
+                  }}
+                  className="w-10 h-10 bg-purple-600 text-white rounded-xl font-black text-lg hover:bg-purple-700 transition-colors flex items-center justify-center"
+                >+</button>
+              </div>
+
+              {/* Custom subjects added */}
+              {selectedSubjects.filter(s => !ONBOARDING_SUBJECTS.find(o => o.name === s)).map(s => (
+                <div key={s} className="flex items-center justify-between mt-2 px-3 py-2 bg-purple-50 rounded-xl">
+                  <span className="text-sm font-semibold text-purple-700">📚 {s}</span>
+                  <button onClick={() => toggleOnboardingSubject(s)} className="text-pink-500 font-black text-base hover:text-pink-700">✕</button>
+                </div>
+              ))}
+            </div>
+
+            {/* School days per week */}
+            <div className="bg-white rounded-2xl shadow-sm p-5 mb-6">
+              <p className="text-xs font-bold uppercase tracking-widest text-purple-600 mb-1">How many days a week do you typically school?</p>
+              <p className="text-xs text-gray-400 mb-4">This sets the weekly target for all subjects — you can adjust each one individually later.</p>
+              <div className="flex gap-2 flex-wrap">
+                {[3, 4, 5].map(n => (
+                  <button
+                    key={n}
+                    onClick={() => setSchoolDaysPerWeek(schoolDaysPerWeek === n ? null : n)}
+                    className="flex flex-col items-center justify-center w-14 h-14 rounded-xl border-2 font-black text-sm transition-all"
+                    style={{
+                      borderColor: schoolDaysPerWeek === n ? '#7c3aed' : '#e5e7eb',
+                      background: schoolDaysPerWeek === n ? '#ede9fe' : '#f9fafb',
+                      color: schoolDaysPerWeek === n ? '#7c3aed' : '#374151',
+                    }}
+                  >
+                    <span className="text-base">{n}×</span>
+                    <span className="text-xs font-semibold opacity-60">/wk</span>
+                  </button>
+                ))}
+                <button
+                  onClick={() => setSchoolDaysPerWeek(null)}
+                  className="px-4 h-14 rounded-xl border-2 font-bold text-sm transition-all"
+                  style={{
+                    borderColor: schoolDaysPerWeek === null ? '#7c3aed' : '#e5e7eb',
+                    background: schoolDaysPerWeek === null ? '#ede9fe' : '#f9fafb',
+                    color: schoolDaysPerWeek === null ? '#7c3aed' : '#374151',
+                  }}
+                >Flexible</button>
+              </div>
+            </div>
+
+            <button
+              onClick={saveSubjects}
+              disabled={subjectsSaving || selectedSubjects.length === 0}
+              className="w-full py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-2xl font-bold text-base hover:opacity-90 disabled:opacity-40 transition-all mb-3"
+            >
+              {subjectsSaving ? 'Saving…' : `Save ${selectedSubjects.length} subject${selectedSubjects.length !== 1 ? 's' : ''} & continue →`}
+            </button>
+            <button
+              onClick={() => setStep(6)}
+              className="w-full py-3 text-sm text-gray-400 hover:text-gray-600 font-semibold transition-colors"
+            >
+              Skip for now — I'll set this up in the Subjects tab
+            </button>
+          </div>
+        )}
+
+        {/* ══════════════════════════════════════════════════════
+            STEP 6 — Completion / Summary
+        ══════════════════════════════════════════════════════ */}
+        {step === 6 && (
           <div>
             <div className="text-center mb-8">
               <div className="text-6xl mb-4">🎉</div>

@@ -15,12 +15,14 @@ type PastUnstartedLessonsBannerProps = {
   lessons: PastLesson[]
   onMarkCompleted: (ids: string[]) => Promise<void>
   onDelete: (ids: string[]) => Promise<void>
+  onViewLesson?: (lessonId: string) => void
 }
 
 export default function PastUnstartedLessonsBanner({
   lessons,
   onMarkCompleted,
   onDelete,
+  onViewLesson,
 }: PastUnstartedLessonsBannerProps) {
   const [expanded, setExpanded] = useState(false)
   const [dismissed, setDismissed] = useState(false)
@@ -193,7 +195,16 @@ export default function PastUnstartedLessonsBanner({
                     className="rounded shrink-0"
                   />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">{lesson.title}</p>
+                    {onViewLesson ? (
+                      <button
+                        onClick={() => onViewLesson(lesson.id)}
+                        className="text-sm font-medium text-gray-900 truncate block w-full text-left hover:text-purple-700 hover:underline"
+                      >
+                        {lesson.title}
+                      </button>
+                    ) : (
+                      <p className="text-sm font-medium text-gray-900 truncate">{lesson.title}</p>
+                    )}
                     <p className="text-xs text-gray-500">
                       {lesson.subject}
                       {lesson.kid_name ? ` · ${lesson.kid_name}` : ''}

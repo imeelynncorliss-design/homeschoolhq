@@ -1,14 +1,10 @@
+import { generateText } from 'ai';
+import { getModel } from '@/lib/ai';
 import { NextRequest, NextResponse } from 'next/server';
-import Anthropic from '@anthropic-ai/sdk';
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+const SYSTEM_PROMPT = `You are Scout, a helpful assistant for HomeschoolHQ, a curriculum-agnostic homeschool planning platform for primarily working parents. You help parents navigate the platform and answer questions about its features.
 
-// System prompt that gives Claude context about HomeschoolHQ
-const SYSTEM_PROMPT = `You are a helpful assistant for HomeschoolReady, a curriculum-agnostic homeschool planning platform for primarily working parents. You help parents navigate the platform and answer questions about its features.
-
-## Key Features of HomeschoolReady:
+## Key Features of HomeschoolHQ:
 
 ### AI Lesson Generation
 Parents can use AI to generate customized lesson plans based on their curriculum, student's learning style, and educational goals.
@@ -41,24 +37,17 @@ export async function POST(request: NextRequest) {
   try {
     const { messages } = await request.json();
 
-    // Convert messages to Anthropic format
-    const anthropicMessages = messages.map((msg: any) => ({
-      role: msg.role === 'assistant' ? 'assistant' : 'user',
-      content: msg.content,
-    }));
-
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1000,
+    const { text } = await generateText({
+      model: getModel(),
+      maxOutputTokens: 1000,
       system: SYSTEM_PROMPT,
-      messages: anthropicMessages,
+      messages: messages.map((msg: { role: string; content: string }) => ({
+        role: msg.role === 'assistant' ? 'assistant' : 'user',
+        content: msg.content,
+      })),
     });
 
-    const assistantMessage = response.content[0].type === 'text' 
-      ? response.content[0].text 
-      : 'I had trouble generating a response. Please try again.';
-
-    return NextResponse.json({ response: assistantMessage });
+    return NextResponse.json({ response: text });
   } catch (error) {
     console.error('Error in help chat:', error);
     return NextResponse.json(

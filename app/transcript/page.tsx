@@ -15,6 +15,7 @@ import { useAppHeader } from '@/components/layout/AppHeader'
 
 function TranscriptsContent() {
   const router = useRouter()
+  useAppHeader({ title: '📄 Transcripts', backHref: '/dashboard' })
   const [user, setUser]           = useState<any>(null)
   const [loading, setLoading]     = useState(true)
   const [activeTab, setActiveTab] = useState('gradebook')
@@ -69,31 +70,21 @@ function TranscriptsContent() {
       <div style={{ color: colors.purple, fontWeight: 700, fontSize: 16 }}>Loading...</div>
     </div>
   )
-
-  useAppHeader({ title: '📄 Transcripts', backHref: '/dashboard' })
-
   return (
     <div style={css.root}>
-
-<div style={css.banner}>
-  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-    <span style={{ fontSize: 20 }}>📚</span>
-    <p style={{ fontSize: 13, color: colors.purpleDark, margin: 0 }}>
-      <strong>Need to add or manage courses?</strong> Courses now have their own dedicated section.
-    </p>
-  </div>
-  <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-    <button style={css.bannerBtn} onClick={() => router.push('/calendar')}>
-      📅 Calendar
-    </button>
-    <button style={css.bannerBtn} onClick={() => router.push('/courses')}>
-      Go to Courses →
-    </button>
-  </div>
-</div>
+      <button onClick={() => router.push('/reports')} style={{
+        display: 'flex', alignItems: 'center', gap: 6,
+        background: 'rgba(255,255,255,0.72)', border: '1.5px solid rgba(124,58,237,0.15)',
+        borderRadius: 20, padding: '7px 16px 7px 12px',
+        fontSize: 13, fontWeight: 700, color: '#7c3aed',
+        cursor: 'pointer', fontFamily: "'Nunito', sans-serif",
+        margin: '16px 20px 0',
+      }}>
+        ‹ Records
+      </button>
 
       {/* ── Main ─────────────────────────────────────────────────────────────── */}
-      <main style={css.main}>
+      <main style={{ ...css.main, paddingBottom: 100 }}>
         <div style={css.sectionLabel}>CREATE OFFICIAL TRANSCRIPTS WITH GPA CALCULATIONS</div>
 
         {/* Courses callout banner */}
@@ -170,6 +161,37 @@ function TranscriptsContent() {
           </>
         )}
       </main>
+
+      {/* ── Bottom Nav ── */}
+      <nav style={{
+        position: 'fixed', bottom: 0, left: 0, right: 0,
+        background: 'rgba(255,255,255,0.94)',
+        backdropFilter: 'blur(16px)',
+        borderTop: '1px solid rgba(124,58,237,0.10)',
+        display: 'flex', zIndex: 100,
+        padding: '8px 0 12px',
+        boxShadow: '0 -4px 24px rgba(0,0,0,0.07)',
+      }}>
+        {[
+          { label: 'Home',      icon: '🏠', href: '/dashboard' },
+          { label: 'Subjects',  icon: '📚', href: '/subjects'  },
+          { label: 'Records',   icon: '📋', href: '/reports'   },
+          { label: 'Resources', icon: '💡', href: '/resources' },
+          { label: 'Profile',   icon: '👤', href: '/profile'   },
+        ].map(item => (
+          <button key={item.label}
+            style={{
+              flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
+              background: 'none', border: 'none', cursor: 'pointer',
+              padding: '6px 0', fontFamily: "'Nunito', sans-serif", gap: 2,
+              color: '#9ca3af',
+            }}
+            onClick={() => router.push(item.href)}>
+            <span style={{ fontSize: 22, lineHeight: 1 }}>{item.icon}</span>
+            <span style={{ fontSize: 10, fontWeight: 500, marginTop: 2 }}>{item.label}</span>
+          </button>
+        ))}
+      </nav>
 
     </div>
   )

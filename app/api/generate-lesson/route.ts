@@ -1,22 +1,29 @@
 // app/api/generate-lesson/route.ts
 
-import Anthropic from '@anthropic-ai/sdk';
+import { generateText } from 'ai';
+import { getModel } from '@/lib/ai';
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY!,
-});
-
 export async function POST(request: Request) {
   try {
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      console.error('Supabase env vars missing')
+      return NextResponse.json({ error: 'Database not configured', details: 'Supabase env vars missing' }, { status: 500 })
+    }
+
     const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
-    
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    )
+
     const formData = await request.json();
-    const { childId, subject, gradeLevel, duration, topic, focusAreas, learningStyle, additionalNotes, materials } = formData;
+    const { childId, subject, gradeLevel, duration, topic } = formData;
+    console.log('generate-lesson: childId=', childId, 'subject=', subject)
+
+    if (!childId) {
+      return NextResponse.json({ error: 'Missing childId', details: 'No student selected' }, { status: 400 })
+    }
 
     // Fetch kid profile for personalization
     const { data: kid, error: kidError } = await supabase
@@ -26,116 +33,84 @@ export async function POST(request: Request) {
       .single();
 
     if (kidError || !kid) {
-      return NextResponse.json({ error: 'Student profile not found' }, { status: 404 });
+      console.error('Kid fetch error:', kidError)
+      return NextResponse.json({ error: 'Student profile not found', details: kidError?.message }, { status: 404 });
     }
+    console.log('generate-lesson: fetched kid', kid.displayname)
 
-    // Build personalized prompt with CRITICAL materials requirement
-    const prompt = `You are an expert homeschool curriculum designer creating personalized lesson plans.
+    const prompt = `You are Scout, an expert homeschool curriculum designer. Create 3 structured lesson plan variations for a homeschool student.
 
 **STUDENT PROFILE:**
 Name: ${kid.displayname}
-Age: ${kid.age || 'Not specified'}
 Grade Level: ${gradeLevel || kid.grade || 'Not specified'}
-Learning Style: ${learningStyle || kid.learning_style || 'Not specified'}${(learningStyle || kid.learning_style || '').includes(',') ? ' (multimodal learner — blend these styles)' : ''}
-Current Interests / Hook: ${kid.current_hook || 'None specified'}
+Learning Style: ${kid.learning_style || 'Not specified'}
+Current Interests: ${kid.current_hook || 'None specified'}
 Current Focus: ${kid.current_focus || 'General learning'}
 
 **LESSON REQUIREMENTS:**
 Subject: ${subject}
 Topic: ${topic || 'General subject overview'}
 Duration: ${duration} minutes
-${focusAreas ? `Focus Areas: ${focusAreas}` : ''}
-${additionalNotes ? `Additional Notes: ${additionalNotes}` : ''}
-
-${materials ? `
-**🚨 CRITICAL MATERIALS REQUIREMENT 🚨**
-The parent has selected these SPECIFIC physical materials that MUST be used in the lesson:
-${materials}
-
-**MANDATORY INSTRUCTIONS FOR MATERIALS:**
-1. You MUST design activities around THESE EXACT MATERIALS listed above
-2. Each lesson variation MUST use at least 2-3 items from the materials list
-3. Do NOT suggest alternative materials the parent doesn't have
-4. Do NOT create lessons that would work "better" with different materials
-5. The materials listed in your response MUST come from the list above
-6. You may include common household items (water, paper, tape) as supplements, but the PRIMARY materials must be from the parent's list
-7. Get creative with how to use these specific materials for hands-on learning
-
-**VIOLATION OF THIS REQUIREMENT MAKES THE LESSON UNUSABLE - the parent specifically selected these materials and expects them to be used.**
-` : ''}
 
 **TASK:**
-Create 3 different lesson plan variations for this student. Each variation should have a different approach or emphasis while covering the same core content.
+Generate 3 lesson plan variations, each with a different instructional approach (e.g. direct instruction, Socratic discussion, project-based). Each variation should be a complete, standalone lesson plan — NOT a standalone activity.
 
-For EACH variation, include:
-1. A creative, engaging title
-2. Brief description (2-3 sentences) - mention which materials will be used
-3. Detailed lesson overview
-4. Activities (3-5 specific hands-on activities with timing that use the selected materials)
-5. Materials needed - LIST THE PARENT'S MATERIALS FIRST, then any common household supplements
-6. Learning objectives
-7. Assessment ideas
+Each lesson plan must include:
+1. A clear, engaging title
+2. A brief description (2–3 sentences) of the lesson approach
+3. A detailed lesson overview (what the teacher does, what the student does)
+4. Lesson steps — 3–5 sequenced instructional steps with timing (introduction, instruction, practice, wrap-up)
+5. Learning objectives (what the student will know or be able to do after)
+6. Assessment ideas (how the teacher can check for understanding)
 
 **PERSONALIZATION:**
-- Adapt content to ${kid.displayname}'s learning style: ${learningStyle || kid.learning_style || 'flexible'}. If multiple styles are listed, blend approaches across activities rather than picking just one.
-- Weave their current interests into examples and activities: ${kid.current_hook || 'general topics'}
+- Match ${kid.displayname}'s learning style: ${kid.learning_style || 'flexible'}
+- Connect to their interests: ${kid.current_hook || 'general topics'}
 - Align with their current focus: ${kid.current_focus || 'broad learning goals'}
-- Design activities that match the learning style(s) above — e.g. Visual learners benefit from diagrams and color; Aural from discussion and audio; Read/Write from notes and text; Kinesthetic from hands-on building and movement
 
-Return ONLY valid JSON with this exact structure:
+Return ONLY valid JSON:
 {
   "variations": [
     {
-      "title": "Engaging Lesson Title",
-      "description": "Brief 2-3 sentence overview mentioning which selected materials will be used",
-      "overview": "Detailed explanation of the lesson (2-3 paragraphs)",
+      "title": "Lesson Title",
+      "description": "2–3 sentence overview of the approach",
+      "overview": "Detailed explanation of the lesson (2–3 paragraphs)",
       "activities": [
         {
-          "name": "Activity name",
-          "duration": "15 minutes",
-          "description": "What the student will do with the specific materials"
+          "name": "Step name (e.g. Introduction, Direct Instruction, Guided Practice)",
+          "duration": "10 minutes",
+          "description": "What happens in this step"
         }
       ],
-      "materials": ["parent's material 1", "parent's material 2", "water", "paper towels"],
-      "learningObjectives": ["objective 1", "objective 2", "objective 3"],
+      "materials": ["textbook", "notebook", "pencil"],
+      "learningObjectives": ["objective 1", "objective 2"],
       "assessmentIdeas": ["assessment idea 1", "assessment idea 2"]
     }
   ]
 }
 
-CRITICAL: Return ONLY the JSON object. No markdown formatting, no backticks, no explanatory text before or after.`;
+CRITICAL: Return ONLY the JSON object. No markdown, no backticks, no text before or after.`;
 
-    console.log('Generating lessons for:', kid.displayname);
-    console.log('Using materials:', materials);
+    console.log('generate-lesson: calling Claude for', kid.displayname)
 
-    const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 8000,
-      messages: [
-        {
-          role: 'user',
-          content: prompt
-        }
-      ]
+    const { text } = await generateText({
+      model: getModel(),
+      maxOutputTokens: 8000,
+      prompt,
     });
-
-    const textContent = message.content.find((block) => block.type === 'text');
-    if (!textContent || textContent.type !== 'text') {
-      return NextResponse.json({ error: 'No response from AI' }, { status: 500 });
-    }
 
     // Parse the JSON response
     let lessonData;
     try {
       // Remove any markdown code fences if present
-      let cleanedText = textContent.text.trim();
+      let cleanedText = text.trim();
       cleanedText = cleanedText.replace(/^```json\n/, '').replace(/\n```$/, '');
       cleanedText = cleanedText.replace(/^```\n/, '').replace(/\n```$/, '');
-      
+
       lessonData = JSON.parse(cleanedText);
       } catch (parseError) {
-        console.error('Failed to parse AI response — likely truncated. Response length:', textContent.text.length)
-        return NextResponse.json({ 
+        console.error('Failed to parse AI response — likely truncated. Response length:', text.length)
+        return NextResponse.json({
           error: 'Lesson generation was cut off — try again or reduce the number of focus areas',
           details: 'Response too long for token limit'
         }, { status: 500 })
@@ -147,7 +122,7 @@ CRITICAL: Return ONLY the JSON object. No markdown formatting, no backticks, no 
       variations: lessonData.variations || [],
       childName: kid.displayname,
       personalizedFor: {
-        learningStyle: learningStyle || kid.learning_style,
+        learningStyle: kid.learning_style,
         currentHook: kid.current_hook,
       }
     });

@@ -5,7 +5,7 @@ import {
   useCallback, useRef,
 } from 'react'
 import type { ReactNode, CSSProperties } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { supabase } from '@/src/lib/supabase'
 import { gradients } from '@/src/lib/designTokens'
 
@@ -113,6 +113,49 @@ function featureKeyFromPath(pathname: string): string | null {
   const keys = Object.keys(FEATURE_MAP).sort((a, b) => b.length - a.length)
   const match = keys.find(k => pathname.startsWith(k))
   return match ? FEATURE_MAP[match] : null
+}
+
+// ─── Cardinal SVG Icon ────────────────────────────────────────────────────────
+// Inline so no image dependency. Swap for <img src="/cardinal.png"> once asset exists.
+
+function CardinalIcon({ size = 36 }: { size?: number }) {
+  return (
+    <svg
+      viewBox="0 0 100 100"
+      width={size}
+      height={size}
+      xmlns="http://www.w3.org/2000/svg"
+      aria-label="Cardinal"
+      style={{ flexShrink: 0 }}
+    >
+      {/* Body */}
+      <ellipse cx="50" cy="62" rx="22" ry="20" fill="#D92B2B" />
+      {/* Head */}
+      <circle cx="50" cy="38" r="16" fill="#D92B2B" />
+      {/* Crest */}
+      <polygon points="50,14 46,26 50,22 54,26" fill="#B01C1C" />
+      <polygon points="50,10 47,22 50,18 53,22" fill="#C62020" />
+      <polygon points="50,7  48,20 50,16 52,20" fill="#D92B2B" />
+      {/* Wing */}
+      <ellipse cx="38" cy="65" rx="10" ry="14" fill="#B01C1C" transform="rotate(-10 38 65)" />
+      {/* Face mask */}
+      <ellipse cx="50" cy="44" rx="11" ry="7" fill="#1a1a1a" />
+      {/* Eye */}
+      <circle cx="54" cy="41" r="3" fill="#1a1a1a" />
+      <circle cx="55" cy="40" r="1" fill="white" />
+      {/* Beak */}
+      <polygon points="60,45 72,43 60,50" fill="#F4A020" />
+      {/* Feet */}
+      <line x1="44" y1="80" x2="40" y2="90" stroke="#F4A020" strokeWidth="2.5" strokeLinecap="round" />
+      <line x1="40" y1="90" x2="36" y2="93" stroke="#F4A020" strokeWidth="2" strokeLinecap="round" />
+      <line x1="40" y1="90" x2="40" y2="95" stroke="#F4A020" strokeWidth="2" strokeLinecap="round" />
+      <line x1="40" y1="90" x2="44" y2="93" stroke="#F4A020" strokeWidth="2" strokeLinecap="round" />
+      <line x1="56" y1="80" x2="60" y2="90" stroke="#F4A020" strokeWidth="2.5" strokeLinecap="round" />
+      <line x1="60" y1="90" x2="56" y2="93" stroke="#F4A020" strokeWidth="2" strokeLinecap="round" />
+      <line x1="60" y1="90" x2="60" y2="95" stroke="#F4A020" strokeWidth="2" strokeLinecap="round" />
+      <line x1="60" y1="90" x2="64" y2="93" stroke="#F4A020" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  )
 }
 
 // ─── Star Rating ──────────────────────────────────────────────────────────────
@@ -322,7 +365,7 @@ function CopilotPanel({ onClose, organizationId }: CopilotPanelProps) {
   const [messages, setMessages] = useState<CopilotMessage[]>([
     {
       role: 'assistant',
-      content: "Hi! I'm your HomeschoolReady Copilot. I can help you with lesson planning, scheduling, compliance tracking, and more. What can I help you with today?",
+      content: "Hi! I'm Scout, your HomeschoolReady co-pilot 🐦 I'm here to keep you on course — lesson planning, scheduling, compliance, and whatever else comes up. What can I help you with today?",
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     },
   ])
@@ -387,17 +430,14 @@ function CopilotPanel({ onClose, organizationId }: CopilotPanelProps) {
   return (
     <div style={cp.overlay} onClick={onClose}>
       <div style={cp.drawer} onClick={e => e.stopPropagation()}>
+
         {/* Header */}
         <div style={cp.head}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <img
-              src="/schoolhouse-helper.png"
-              alt="Copilot"
-              style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover' }}
-            />
+            <img src="/Cardinal_Mascot.png" alt="Scout" style={{ width: 40, height: 40, objectFit: 'contain' }} />
             <div>
-              <div style={cp.headTitle}>HomeschoolReady Copilot</div>
-              <div style={cp.headSub}>Powered by Claude AI</div>
+              <div style={cp.headTitle}>Scout</div>
+              <div style={cp.headSub}>Your HomeschoolReady Co-pilot</div>
             </div>
           </div>
           <button style={cp.closeBtn} onClick={onClose}>×</button>
@@ -407,18 +447,32 @@ function CopilotPanel({ onClose, organizationId }: CopilotPanelProps) {
         <div style={cp.messages}>
           {messages.map((msg, i) => (
             <div key={i} style={{
-              display: 'flex', flexDirection: 'column',
+              display: 'flex',
+              flexDirection: 'column',
               alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start',
               marginBottom: 12,
             }}>
-              <div style={msg.role === 'user' ? cp.userBubble : cp.aiBubble}>
-                {msg.content}
+              {msg.role === 'assistant' && (
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 7 }}>
+                  <img src="/Cardinal_Mascot.png" alt="Scout" style={{ width: 26, height: 26, objectFit: 'contain', flexShrink: 0, marginTop: 2 }} />
+                  <div style={cp.aiBubble}>{msg.content}</div>
+                </div>
+              )}
+              {msg.role === 'user' && (
+                <div style={cp.userBubble}>{msg.content}</div>
+              )}
+              <div style={{
+                ...cp.timestamp,
+                marginLeft: msg.role === 'assistant' ? 33 : 0,
+              }}>
+                {msg.timestamp}
               </div>
-              <div style={cp.timestamp}>{msg.timestamp}</div>
             </div>
           ))}
+
           {loading && (
-            <div style={{ display: 'flex', alignItems: 'flex-start', marginBottom: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 7, marginBottom: 12 }}>
+              <img src="/Cardinal_Mascot.png" alt="Scout" style={{ width: 26, height: 26, objectFit: 'contain', flexShrink: 0, marginTop: 2 }} />
               <div style={{ ...cp.aiBubble, color: '#9ca3af', letterSpacing: 3 }}>●●●</div>
             </div>
           )}
@@ -432,7 +486,7 @@ function CopilotPanel({ onClose, organizationId }: CopilotPanelProps) {
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && send()}
-            placeholder="Ask a question..."
+            placeholder="Ask Scout anything..."
             disabled={loading}
           />
           <button
@@ -443,6 +497,7 @@ function CopilotPanel({ onClose, organizationId }: CopilotPanelProps) {
             ↑
           </button>
         </div>
+        <div style={cp.footer}>Your school, your pace.</div>
       </div>
     </div>
   )
@@ -450,9 +505,19 @@ function CopilotPanel({ onClose, organizationId }: CopilotPanelProps) {
 
 // ─── Main Header ──────────────────────────────────────────────────────────────
 
+const NAV_ITEMS = [
+  { label: 'Lessons',    href: '/subjects',    emoji: '📚' },
+  { label: 'Calendar',   href: '/calendar',    emoji: '📅' },
+  { label: 'Attendance', href: '/attendance',  emoji: '✅' },
+  { label: 'Compliance', href: '/compliance',  emoji: '📋' },
+  { label: 'Transcript', href: '/transcript',  emoji: '🎓' },
+  { label: 'Resources',  href: '/resources',   emoji: '🔗' },
+]
+
 export default function AppHeader() {
   const { title, backHref } = useContext(HeaderCtx)
   const router = useRouter()
+  const pathname = usePathname()
 
   const [userId, setUserId] = useState<string | null>(null)
   const [orgId, setOrgId] = useState<string | null>(null)
@@ -461,6 +526,7 @@ export default function AppHeader() {
   const [kids, setKids] = useState<Kid[]>([])
   const [showFeedback, setShowFeedback] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
+  const [showMobileMenu, setShowMobileMenu] = useState(false)
   const [showCopilot, setShowCopilot] = useState(false)
   const userMenuRef = useRef<HTMLDivElement>(null)
 
@@ -507,6 +573,12 @@ export default function AppHeader() {
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
+  useEffect(() => {
+    const handler = () => setShowCopilot(true)
+    window.addEventListener('open-scout-copilot', handler)
+    return () => window.removeEventListener('open-scout-copilot', handler)
+  }, [])
+
   const handleLogout = async () => {
     await supabase.auth.signOut()
     router.push('/login')
@@ -543,28 +615,33 @@ export default function AppHeader() {
           )}
         </div>
 
-        {/* Center: kids — hidden on mobile */}
-        {kids.length > 0 && (
+        {/* Center: page nav — desktop only */}
+        {userId && (
           <div className="hr-desktop-only" style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-            {kids.slice(0, 5).map(k => <KidAvatar key={k.id} kid={k} />)}
-            {kids.length > 5 && (
-              <div style={s.kidOverflow}>+{kids.length - 5}</div>
-            )}
+            {NAV_ITEMS.map(item => {
+              const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
+              return (
+                <button
+                  key={item.href}
+                  onClick={() => router.push(item.href)}
+                  className={isActive ? 'hr-nav-btn hr-nav-active' : 'hr-nav-btn'}
+                >
+                  <span>{item.emoji}</span>
+                  <span>{item.label}</span>
+                </button>
+              )
+            })}
           </div>
         )}
 
         {/* Right */}
         <div style={s.right}>
 
-          {/* Copilot — always visible on all screen sizes */}
+          {/* Cardinal Copilot button — always visible */}
           {userId && (
-            <button className="hr-btn hr-copilot-btn" onClick={() => setShowCopilot(true)}>
-              <img
-                src="/schoolhouse-helper.png"
-                alt="Copilot"
-                style={{ width: 20, height: 20, borderRadius: 4, objectFit: 'cover' }}
-              />
-              <span className="hr-copilot-label">Copilot</span>
+            <button className="hr-btn hr-copilot-btn" onClick={() => setShowCopilot(true)} title="Cardinal — your co-pilot">
+              <CardinalIcon size={18} />
+              <span className="hr-copilot-label">Cardinal</span>
             </button>
           )}
 
@@ -612,23 +689,34 @@ export default function AppHeader() {
             </div>
           )}
 
-          {/* Mobile-only: hamburger that collapses Feedback + How To + User */}
-          {userId && (
-            <div className="hr-mobile-only" style={{ position: 'relative' }} ref={userMenuRef}>
-              <button className="hr-btn" onClick={() => setShowUserMenu(v => !v)} aria-label="Menu">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                  <path d="M3 12h18M3 6h18M3 18h18" />
-                </svg>
-              </button>
+         {/* Mobile-only: hamburger */}
+{userId && (
+  <div className="hr-mobile-only" style={{ position: 'relative' }}>
+    <button className="hr-btn" onClick={() => setShowMobileMenu(v => !v)} aria-label="Menu">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+        <path d="M3 12h18M3 6h18M3 18h18" />
+      </svg>
+    </button>
 
-              {showUserMenu && (
-                <>
-                  <div
-                    style={{ position: 'fixed', inset: 0, zIndex: 150 }}
-                    onClick={() => setShowUserMenu(false)}
-                  />
-                  <div style={{ ...s.userMenu, zIndex: 200, minWidth: 200 }}>
+    {showMobileMenu && (
+      <>
+        <div
+          style={{ position: 'fixed', inset: 0, zIndex: 150 }}
+          onClick={() => setShowMobileMenu(false)}
+        />
+        <div style={{ ...s.userMenu, zIndex: 200, minWidth: 200 }}>
                     <div style={s.userMenuEmail}>{email}</div>
+                    {NAV_ITEMS.map(item => {
+                      const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
+                      return (
+                        <button key={item.href}
+                          style={{ ...s.menuItem, fontWeight: isActive ? 800 : 400, color: isActive ? '#4f46e5' : '#374151', background: isActive ? '#f0f0ff' : 'none' }}
+                          onClick={() => { setShowMobileMenu(false); router.push(item.href) }}>
+                          {item.emoji} {item.label}
+                        </button>
+                      )
+                    })}
+                    <div style={{ height: 1, background: '#f3f4f6', margin: '4px 0' }} />
                     {betaEnabled && orgId && (
                       <button style={s.menuItem} onClick={() => { setShowUserMenu(false); setShowFeedback(true) }}>
                         💬 Feedback
@@ -711,7 +799,7 @@ const s: Record<string, CSSProperties> = {
     position: 'absolute', top: 'calc(100% + 8px)', right: 0,
     background: '#fff', borderRadius: 10,
     boxShadow: '0 8px 32px rgba(0,0,0,0.15)', minWidth: 180,
-    border: '1px solid #e5e7eb', overflow: 'hidden', zIndex: 200,
+    border: '1px solid #e5e7eb', overflow: 'hidden', zIndex: 1000,
   },
   userMenuEmail: { padding: '10px 14px', fontSize: 11, color: '#6b7280', fontFamily: 'system-ui, sans-serif', borderBottom: '1px solid #f3f4f6' },
   menuItem: {
@@ -760,29 +848,39 @@ const cp: Record<string, CSSProperties> = {
     boxShadow: '-4px 0 24px rgba(0,0,0,0.15)',
   },
   head: {
-    background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #a855f7 100%)',
+    background: 'linear-gradient(135deg, #B01C1C 0%, #D92B2B 60%, #c0392b 100%)',
     padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
   },
-  avatar: {
-    width: 36, height: 36, borderRadius: '50%',
+  avatarWrap: {
+    width: 40, height: 40, borderRadius: '50%',
     background: 'rgba(255,255,255,0.2)',
-    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18,
+    border: '2px solid rgba(255,255,255,0.35)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    flexShrink: 0,
   },
-  headTitle: { color: '#fff', fontWeight: 700, fontSize: 14, fontFamily: 'system-ui, sans-serif' },
-  headSub: { color: 'rgba(255,255,255,0.7)', fontSize: 11, marginTop: 1, fontFamily: 'system-ui, sans-serif' },
+  inlineAvatar: {
+    width: 28, height: 28, borderRadius: '50%',
+    background: '#fef2f2', border: '1.5px solid #fca5a5',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    flexShrink: 0, marginTop: 2,
+  },
+  headTitle: { color: '#fff', fontWeight: 700, fontSize: 15, fontFamily: 'system-ui, sans-serif' },
+  headSub: { color: 'rgba(255,255,255,0.75)', fontSize: 11, marginTop: 1, fontFamily: 'system-ui, sans-serif' },
   closeBtn: {
     background: 'rgba(255,255,255,0.15)', border: 'none',
     borderRadius: 6, color: '#fff', fontSize: 18, cursor: 'pointer', padding: '4px 8px',
   },
-  messages: { flex: 1, overflowY: 'auto', padding: '16px 16px 8px' },
+  messages: { flex: 1, overflowY: 'auto', padding: '16px 16px 8px', background: '#fafafa' },
   aiBubble: {
-    background: '#f3f4f6', borderRadius: '4px 14px 14px 14px',
+    background: '#fff', borderRadius: '4px 14px 14px 14px',
     padding: '10px 14px', fontSize: 13.5, color: '#111827',
     maxWidth: '85%', lineHeight: 1.5, whiteSpace: 'pre-wrap',
     fontFamily: 'system-ui, sans-serif',
+    border: '1px solid #f3f4f6',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
   },
   userBubble: {
-    background: 'linear-gradient(135deg, #7c3aed, #a855f7)',
+    background: 'linear-gradient(135deg, #C62020, #D92B2B)',
     borderRadius: '14px 4px 14px 14px',
     padding: '10px 14px', fontSize: 13.5, color: '#fff',
     maxWidth: '85%', lineHeight: 1.5, fontFamily: 'system-ui, sans-serif',
@@ -790,18 +888,22 @@ const cp: Record<string, CSSProperties> = {
   timestamp: { fontSize: 10, color: '#9ca3af', marginTop: 3, marginLeft: 2, marginRight: 2, fontFamily: 'system-ui, sans-serif' },
   inputRow: {
     padding: '12px 16px', borderTop: '1px solid #e5e7eb',
-    display: 'flex', gap: 8, alignItems: 'center',
+    display: 'flex', gap: 8, alignItems: 'center', background: '#fff',
   },
   input: {
     flex: 1, border: '1.5px solid #e5e7eb', borderRadius: 10,
     padding: '9px 14px', fontSize: 13.5, outline: 'none',
-    color: '#111827', fontFamily: 'system-ui, sans-serif',
+    color: '#111827', fontFamily: 'system-ui, sans-serif', background: '#fafafa',
   },
   sendBtn: {
     width: 36, height: 36, borderRadius: '50%',
-    background: 'linear-gradient(135deg, #7c3aed, #a855f7)',
+    background: 'linear-gradient(135deg, #C62020, #D92B2B)',
     border: 'none', color: '#fff', fontSize: 16, fontWeight: 700,
     cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+  },
+  footer: {
+    textAlign: 'center', fontSize: 10, color: '#d1d5db',
+    padding: '6px 16px 10px', background: '#fff', fontFamily: 'system-ui, sans-serif',
   },
 }
 
@@ -821,8 +923,30 @@ const HEADER_STYLES = `
   .hr-btn:hover { background: rgba(255,255,255,0.22); color: #fff; }
   .hr-feedback-btn { border-color: rgba(255,255,255,0.4); background: rgba(255,255,255,0.18); }
   .hr-feedback-btn:hover { background: rgba(255,255,255,0.28); }
-  .hr-copilot-btn { border-color: rgba(255,255,255,0.5); background: rgba(255,255,255,0.22); font-weight: 700; }
+  .hr-copilot-btn { border-color: rgba(255,200,200,0.5); background: rgba(255,255,255,0.22); font-weight: 700; }
   .hr-copilot-btn:hover { background: rgba(255,255,255,0.32); color: #fff; }
+  .hr-nav-btn {
+    display: flex; align-items: center; gap: 5px;
+    padding: 5px 11px;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 100px;
+    color: rgba(255,255,255,0.65);
+    font-size: 12px; font-weight: 600;
+    cursor: pointer; white-space: nowrap;
+    font-family: system-ui, sans-serif;
+    transition: all 0.15s;
+  }
+  .hr-nav-btn:hover { background: rgba(255,255,255,0.2); color: rgba(255,255,255,0.9); }
+  .hr-nav-active {
+    background: rgba(255,255,255,0.95) !important;
+    border-color: transparent !important;
+    color: #4f46e5 !important;
+    font-size: 13px !important;
+    font-weight: 800 !important;
+    padding: 6px 14px !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  }
 
   /* Responsive visibility helpers */
   .hr-desktop-only { display: flex !important; }
@@ -831,14 +955,8 @@ const HEADER_STYLES = `
   @media (max-width: 640px) {
     .hr-desktop-only { display: none  !important; }
     .hr-mobile-only  { display: flex  !important; }
-
-    /* Back button: hide "Dashboard" text, keep arrow */
     .hr-back-label { display: none; }
-
-    /* Copilot button: hide text label, keep icon */
     .hr-copilot-label { display: none; }
-
-    /* Tighten button padding on mobile */
     .hr-btn { padding: 5px 8px; }
   }
 `

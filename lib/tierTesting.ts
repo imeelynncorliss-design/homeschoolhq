@@ -269,3 +269,54 @@ export async function getUserTier(userId: string): Promise<UserTier> {
   if (error || !data) return 'FREE'
   return (data.tier as UserTier) || 'FREE'
 }
+// ── Add these two functions to the bottom of lib/tierTesting.ts ──────────────
+
+/**
+ * Get the current tier for testing/development.
+ * Reads from localStorage dev_tier toggle; defaults to PRO for development.
+ */
+export function getTierForTesting(): UserTier {
+  if (typeof window !== 'undefined') {
+    const saved = localStorage.getItem('dev_tier')
+    if (saved && ['FREE', 'ESSENTIAL', 'PRO', 'PREMIUM'].includes(saved)) {
+      return saved as UserTier
+    }
+  }
+  return 'PRO'
+}
+
+/**
+ * Set the tier for testing/development.
+ */
+export function setTierForTesting(tier: UserTier) {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('dev_tier', tier)
+    window.location.reload()
+  }
+}
+
+/**
+ * Get the maximum number of children allowed for a tier.
+ */
+export function getChildLimit(tier: UserTier): number {
+  return tier === 'FREE' ? 1 : 999
+}
+
+/**
+ * One-time sync of the user's real tier into the local dev tier toggle.
+ * Used by calendar and other beta surfaces to align `dev_tier` with
+ * the subscription record while still allowing manual overrides.
+ */
+export async function syncBetaTier(userId: string) {
+  try {
+    const tier = await getUserTier(userId)
+    if (typeof window !== 'undefined') {
+      const existing = localStorage.getItem('dev_tier')
+      if (!existing) {
+        localStorage.setItem('dev_tier', tier)
+      }
+    }
+  } catch (err) {
+    console.error('Error syncing beta tier', err)
+  }
+}

@@ -183,16 +183,6 @@ export default function PricingPage() {
           </div>
         </div>
 
-        {/* Back to Dashboard */}
-        <div className="text-center mt-12">
-          <button
-            onClick={() => router.push('/dashboard')}
-            className="text-blue-600 hover:text-blue-700 font-semibold underline"
-          >
-            ← Back to Dashboard
-          </button>
-        </div>
-
       </div>
     </div>
   )

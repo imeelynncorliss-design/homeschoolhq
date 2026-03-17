@@ -6,23 +6,32 @@ import { useRouter } from 'next/navigation'
 import AuthGuard from '@/components/AuthGuard'
 import ProgressDashboard from '@/components/ProgressDashboard'
 import { getOrganizationId } from '@/src/lib/getOrganizationId'
-import { pageShell, colors } from '@/src/lib/designTokens'
+import { colors } from '@/src/lib/designTokens'
+import { useAppHeader } from '@/components/layout/AppHeader'
+
+const NAV_ITEMS = [
+  { label: 'Home',      icon: '🏠', href: '/dashboard' },
+  { label: 'Subjects',  icon: '📚', href: '/subjects'  },
+  { label: 'Records',   icon: '📋', href: '/reports'   },
+  { label: 'Resources', icon: '💡', href: '/resources' },
+  { label: 'Profile',   icon: '👤', href: '/profile'   },
+]
 
 // ─── Page Content ─────────────────────────────────────────────────────────────
 
 function ProgressContent() {
   const router = useRouter()
-  const [user, setUser]       = useState<any>(null)
+  useAppHeader({ title: '📊 Progress Reports', backHref: '/reports' })
+
+  const [user, setUser]                     = useState<any>(null)
   const [organizationId, setOrganizationId] = useState<string>('')
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading]               = useState(true)
 
   useEffect(() => {
     const init = async () => {
-      // ── Auth ──────────────────────────────────────────────────────────────
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/'); return }
 
-      // ── Co-teacher guard — progress tracking is admin-only ────────────────
       const { data: collaboration } = await supabase
         .from('family_collaborators')
         .select('organization_id')
@@ -31,7 +40,6 @@ function ProgressContent() {
 
       if (collaboration) { router.push('/dashboard'); return }
 
-      // ── Resolve org ───────────────────────────────────────────────────────
       const { orgId } = await getOrganizationId(user.id)
       if (!orgId) { router.push('/onboarding'); return }
 
@@ -50,37 +58,48 @@ function ProgressContent() {
   )
 
   return (
-    <div style={css.root}>
+    <div style={{ minHeight: '100vh', background: colors.pageBackground, fontFamily: "'Nunito', sans-serif", paddingBottom: 100 }}>
 
-      {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <header style={css.topBar}>
-      <div style={css.topBarLeft}>
-          <button style={css.headerBtn} onClick={() => router.push('/dashboard')}>
-            ← Dashboard
-          </button>
-          <div style={css.pageTitle}>  📈 Progress Tracking </div>
-        </div>
-        <div style={css.topBarRight}>
-          <button style={css.headerBtn} onClick={() => router.push('/calendar')}>
-            📅 Calendar
-          </button>
-        </div>
-      </header>
+      {/* Back button */}
+      <button onClick={() => router.push('/reports')} style={{
+        display: 'flex', alignItems: 'center', gap: 6,
+        background: 'rgba(255,255,255,0.72)', border: '1.5px solid rgba(124,58,237,0.15)',
+        borderRadius: 20, padding: '7px 16px 7px 12px',
+        fontSize: 13, fontWeight: 700, color: '#7c3aed',
+        cursor: 'pointer', fontFamily: "'Nunito', sans-serif",
+        margin: '16px 20px 0',
+      }}>
+        ‹ Records
+      </button>
 
-      {/* ── Main ───────────────────────────────────────────────────────────── */}
-      <main style={css.main}>
-        <div style={css.sectionLabel}>TRACK LEARNING GOALS & MILESTONES</div>
-
-        <div style={css.card}>
-          <div style={css.cardHead}>
-            <span style={{ fontSize: 20 }}>📈</span>
-            <span style={css.cardTitle}>Progress Tracking</span>
-          </div>
-          <div style={css.cardBody}>
-          <ProgressDashboard userId={user.id} organizationId={organizationId} />
-          </div>
-        </div>
+      {/* Main content */}
+      <main style={{ padding: '20px' }}>
+        <ProgressDashboard userId={user.id} organizationId={organizationId} />
       </main>
+
+      {/* Bottom Nav */}
+      <nav style={{
+        position: 'fixed', bottom: 0, left: 0, right: 0,
+        background: 'rgba(255,255,255,0.94)', backdropFilter: 'blur(16px)',
+        borderTop: '1px solid rgba(124,58,237,0.10)',
+        display: 'flex', zIndex: 100,
+        padding: '8px 0 12px',
+        boxShadow: '0 -4px 24px rgba(0,0,0,0.07)',
+      }}>
+        {NAV_ITEMS.map(item => (
+          <button key={item.label}
+            style={{
+              flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
+              background: 'none', border: 'none', cursor: 'pointer',
+              padding: '6px 0', fontFamily: "'Nunito', sans-serif", gap: 2,
+              color: item.href === '/reports' ? '#7c3aed' : '#9ca3af',
+            }}
+            onClick={() => router.push(item.href)}>
+            <span style={{ fontSize: 22, lineHeight: 1 }}>{item.icon}</span>
+            <span style={{ fontSize: 10, fontWeight: 500, marginTop: 2 }}>{item.label}</span>
+          </button>
+        ))}
+      </nav>
 
     </div>
   )
@@ -96,13 +115,4 @@ export default function ProgressPage() {
       </Suspense>
     </AuthGuard>
   )
-}
-
-// ─── Styles ───────────────────────────────────────────────────────────────────
-
-const css: Record<string, React.CSSProperties> = {
-  ...pageShell,
-  cardBody: {
-    padding: '24px',
-  },
 }

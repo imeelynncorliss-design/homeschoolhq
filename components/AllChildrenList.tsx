@@ -1,11 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import HoursTracker from './HoursTracker'
 import { formatLessonDescription } from '@/lib/formatLessonDescription'
-import LessonActionModal from './LessonActionModal'
-import RescheduleButton from './RescheduleButton'
+import LessonViewModal from './LessonViewModal'
 
 interface Lesson {
   id: string
@@ -13,6 +12,7 @@ interface Lesson {
   title: string
   subject: string
   description?: string
+  lesson_source?: string | null
   lesson_date: string | null
   duration_minutes: number | null
   status: 'not_started' | 'in_progress' | 'completed'
@@ -34,26 +34,47 @@ interface AllChildrenListProps {
   onEditLesson: (lesson: Lesson) => void
   onDeleteLesson: (id: string) => void
   onCycleStatus: (id: string, currentStatus: string) => void
+  onSetStatus?: (id: string, status: 'not_started' | 'in_progress' | 'completed') => void
   onGenerateAssessment?: (lesson: Lesson) => void
   autoExpandKid?: string | null
   onViewPastAssessments?: (kidId: string, kidName: string) => void
   onRefresh?: () => void
+  organizationId?: string
+  stateCode?: string | null
+  onAddLesson?: (kidId: string) => void
 }
 
-export default function AllChildrenList({ 
-  kids, 
-  lessonsByKid, 
-  onEditLesson, 
+export default function AllChildrenList({
+  kids,
+  lessonsByKid,
+  onEditLesson,
   onDeleteLesson,
   onCycleStatus,
+  onSetStatus,
   onGenerateAssessment,
   autoExpandKid,
-  onViewPastAssessments, 
-  onRefresh 
+  onViewPastAssessments,
+  onRefresh,
+  organizationId,
+  stateCode,
+  onAddLesson,
 }: AllChildrenListProps) {
   const router = useRouter()
   
   const [selectedModalLesson, setSelectedModalLesson] = useState<Lesson | null>(null)
+  const [statusToast, setStatusToast] = useState<{ message: string; emoji: string; lessonId: string; prevStatus: 'not_started' | 'in_progress' | 'completed' } | null>(null)
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const showStatusToast = (lessonId: string, prevStatus: 'not_started' | 'in_progress' | 'completed', newStatus: 'not_started' | 'in_progress' | 'completed') => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
+    const messages = {
+      in_progress: { emoji: '🔵', message: "Moved to In Progress." },
+      completed:   { emoji: '✅', message: "Marked as Done." },
+      not_started: { emoji: '⬜', message: "Reset to Not Started." },
+    }
+    setStatusToast({ ...messages[newStatus], lessonId, prevStatus })
+    toastTimerRef.current = setTimeout(() => setStatusToast(null), 4000)
+  }
   
   const formatLocalDate = (dateString: string | null) => {
     if (!dateString) return ''
@@ -420,6 +441,22 @@ export default function AllChildrenList({
             {isExpanded && (
               <div className="px-6 pb-6 space-y-6 border-t border-gray-100">
 
+                {onAddLesson && (
+                  <div className="pt-4">
+                    <button
+                      onClick={() => onAddLesson(kid.id)}
+                      className="w-full px-4 py-3 rounded-lg font-bold flex items-center justify-center gap-2 transition-colors"
+                      style={{
+                        background: 'linear-gradient(135deg, #7c3aed, #a855f7)',
+                        color: '#fff', border: 'none', cursor: 'pointer',
+                        fontSize: 15, fontFamily: "'Nunito', sans-serif",
+                      }}
+                    >
+                      + Add Lesson for {kid.displayname}
+                    </button>
+                  </div>
+                )}
+
                 {onViewPastAssessments && (
                   <div className="pt-4">
                     <button
@@ -531,15 +568,25 @@ export default function AllChildrenList({
                                                   onClick={(e) => e.stopPropagation()}
                                                 />
                                                 <button
-                                                  onClick={(e) => { e.stopPropagation(); onCycleStatus(lesson.id, lesson.status) }}
-                                                  className={`mt-1 w-6 h-6 rounded border-2 flex items-center justify-center text-xs font-bold cursor-pointer ${
-                                                    lesson.status === 'completed' ? 'bg-green-500 border-green-600 text-white' :
-                                                    lesson.status === 'in_progress' ? 'bg-yellow-400 border-yellow-500 text-gray-800' :
-                                                    'bg-white border-gray-300 text-gray-400'
+                                                  onClick={(e) => {
+                                                    e.stopPropagation()
+                                                    const next: Record<string, 'not_started' | 'in_progress' | 'completed'> = {
+                                                      not_started: 'in_progress',
+                                                      in_progress: 'completed',
+                                                      completed: 'not_started',
+                                                    }
+                                                    const newStatus = next[lesson.status] ?? 'not_started'
+                                                    showStatusToast(lesson.id, lesson.status, newStatus)
+                                                    onCycleStatus(lesson.id, lesson.status)
+                                                  }}
+                                                  className={`mt-0.5 flex items-center gap-1 px-2 py-0.5 rounded-full border text-xs font-700 cursor-pointer transition-colors flex-shrink-0 ${
+                                                    lesson.status === 'completed' ? 'bg-green-100 border-green-300 text-green-700' :
+                                                    lesson.status === 'in_progress' ? 'bg-yellow-100 border-yellow-300 text-yellow-700' :
+                                                    'bg-gray-100 border-gray-300 text-gray-500'
                                                   }`}
-                                                  title={`Status: ${lesson.status.replace('_', ' ')} - Click to change`}
                                                 >
-                                                  {lesson.status === 'completed' ? '✓' : lesson.status === 'in_progress' ? '◐' : '○'}
+                                                  <span>{lesson.status === 'completed' ? '✅' : lesson.status === 'in_progress' ? '🔵' : '⬜'}</span>
+                                                  <span>{lesson.status === 'completed' ? 'Done' : lesson.status === 'in_progress' ? 'In Progress' : 'Not Started'}</span>
                                                 </button>
                                                 <div
                                                   className="flex-1 cursor-pointer hover:bg-gray-50 -m-2 p-2 rounded transition-colors"
@@ -576,15 +623,6 @@ export default function AllChildrenList({
                                                         🏁 End: {calculateEndDate(lesson.lesson_date, lesson.duration_minutes)}
                                                       </span>
                                                     )}
-                                                    {lesson.lesson_date && (
-                                                      <RescheduleButton
-                                                        lessonId={lesson.id}
-                                                        currentDate={lesson.lesson_date}
-                                                        kidId={lesson.kid_id}
-                                                        subjectId={lesson.subject}
-                                                        onRescheduleComplete={() => onRefresh?.()}
-                                                      />
-                                                    )}
                                                   </div>
                                                 </div>
                                               </div>
@@ -609,15 +647,61 @@ export default function AllChildrenList({
         )
       })}
 
-      {/* ── Lesson Action Modal ──────────────────────────────────────── */}
-      <LessonActionModal
-        lesson={selectedModalLesson}
-        isOpen={selectedModalLesson !== null}
-        onClose={() => setSelectedModalLesson(null)}
-        onEdit={onEditLesson}
-        onDelete={onDeleteLesson}
-        onGenerateAssessment={onGenerateAssessment}
-      />
+      {/* ── Lesson View Modal ────────────────────────────────────────── */}
+      {selectedModalLesson && (() => {
+        const kid = kids.find(k => k.id === selectedModalLesson.kid_id)
+        return (
+          <LessonViewModal
+            lesson={selectedModalLesson}
+            kidName={kid?.displayname}
+            kidGrade={kid?.grade}
+            organizationId={organizationId}
+            stateCode={stateCode}
+            onClose={() => setSelectedModalLesson(null)}
+            onEdit={() => { onEditLesson(selectedModalLesson); setSelectedModalLesson(null) }}
+            onDelete={() => { onDeleteLesson(selectedModalLesson.id); setSelectedModalLesson(null) }}
+            onCycleStatus={(id, status) => { onCycleStatus(id, status); onRefresh?.() }}
+            onSetStatus={onSetStatus ? (id, status) => { onSetStatus(id, status); onRefresh?.() } : undefined}
+            onGenerateAssessment={onGenerateAssessment ? (l) => { onGenerateAssessment(l as Lesson); setSelectedModalLesson(null) } : undefined}
+            onSave={() => onRefresh?.()}
+          />
+        )
+      })()}
+
+      {/* ── Status Toast ─────────────────────────────────────────────── */}
+      {statusToast && (
+        <div style={{
+          position: 'fixed', bottom: 88, left: '50%', transform: 'translateX(-50%)',
+          background: '#1f2937', color: '#fff', borderRadius: 14,
+          padding: '12px 16px', zIndex: 9999,
+          display: 'flex', alignItems: 'center', gap: 10,
+          boxShadow: '0 8px 28px rgba(0,0,0,0.22)',
+          maxWidth: 360, width: 'calc(100% - 40px)',
+          animation: 'fadeInUp 0.2s ease',
+          fontFamily: "'Nunito', sans-serif",
+        }}>
+          <style>{`@keyframes fadeInUp { from { opacity: 0; transform: translateX(-50%) translateY(8px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }`}</style>
+          <span style={{ fontSize: 20, flexShrink: 0 }}>{statusToast.emoji}</span>
+          <span style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.4, flex: 1 }}>{statusToast.message}</span>
+          {onSetStatus && (
+            <button
+              onClick={() => {
+                onSetStatus(statusToast.lessonId, statusToast.prevStatus)
+                setStatusToast(null)
+                if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
+              }}
+              style={{
+                background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)',
+                borderRadius: 8, color: '#fff', fontSize: 12, fontWeight: 800,
+                padding: '5px 12px', cursor: 'pointer', flexShrink: 0,
+                fontFamily: "'Nunito', sans-serif",
+              }}
+            >
+              Undo
+            </button>
+          )}
+        </div>
+      )}
 
       {/* ── Bulk Copy Modal ──────────────────────────────────────────── */}
       {showCopyModal && (

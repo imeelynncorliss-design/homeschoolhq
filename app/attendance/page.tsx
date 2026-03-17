@@ -61,7 +61,17 @@ function AttendanceContent() {
 
   return (
     <div style={css.root}>
-      <main style={css.main}>
+      <button onClick={() => router.push('/reports')} style={{
+        display: 'flex', alignItems: 'center', gap: 6,
+        background: 'rgba(255,255,255,0.72)', border: '1.5px solid rgba(124,58,237,0.15)',
+        borderRadius: 20, padding: '7px 16px 7px 12px',
+        fontSize: 13, fontWeight: 700, color: '#7c3aed',
+        cursor: 'pointer', fontFamily: "'Nunito', sans-serif",
+        margin: '16px 20px 0',
+      }}>
+        ‹ Records
+      </button>
+      <main style={{ ...css.main, paddingBottom: 100 }}>
         <div style={css.sectionLabel}>TRACK YOUR SCHOOL DAYS & HOURS</div>
 
         <div style={css.card}>
@@ -87,6 +97,37 @@ function AttendanceContent() {
           </div>
         </div>
       </main>
+
+      {/* ── Bottom Nav ── */}
+      <nav style={{
+        position: 'fixed', bottom: 0, left: 0, right: 0,
+        background: 'rgba(255,255,255,0.94)',
+        backdropFilter: 'blur(16px)',
+        borderTop: '1px solid rgba(124,58,237,0.10)',
+        display: 'flex', zIndex: 100,
+        padding: '8px 0 12px',
+        boxShadow: '0 -4px 24px rgba(0,0,0,0.07)',
+      }}>
+        {[
+          { id: 'home',      label: 'Home',      icon: '🏠', href: '/dashboard' },
+          { id: 'plan',      label: 'Subjects',  icon: '📚', href: '/subjects'  },
+          { id: 'records',   label: 'Records',   icon: '📋', href: '/reports'   },
+          { id: 'resources', label: 'Resources', icon: '💡', href: '/resources' },
+          { id: 'profile',   label: 'Profile',   icon: '👤', href: '/profile'   },
+        ].map(item => (
+          <button key={item.id}
+            style={{
+              flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
+              background: 'none', border: 'none', cursor: 'pointer',
+              padding: '6px 0', fontFamily: "'Nunito', sans-serif", gap: 2,
+              color: '#9ca3af',
+            }}
+            onClick={() => router.push(item.href)}>
+            <span style={{ fontSize: 22, lineHeight: 1 }}>{item.icon}</span>
+            <span style={{ fontSize: 10, fontWeight: 500, marginTop: 2 }}>{item.label}</span>
+          </button>
+        ))}
+      </nav>
     </div>
   )
 }

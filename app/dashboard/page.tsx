@@ -5,316 +5,527 @@ import { supabase } from '@/src/lib/supabase'
 import { useRouter } from 'next/navigation'
 import AuthGuard from '@/components/AuthGuard'
 import DevTierToggle from '@/components/DevTierToggle'
-import StatsBar from '@/src/components/dashboard/StatsBar'
-import { type UserTier, getTierForTesting, getChildLimit } from '@/lib/tierTesting'
 import { getOrganizationId } from '@/src/lib/getOrganizationId'
-
-
-// ─── Nav Card Data ────────────────────────────────────────────────────────────
-
-const NAV_CARDS = [
-  {
-    id: 'school',
-    icon: '🏫',
-    title: 'My School',
-    gradient: 'linear-gradient(135deg, #7c3aed, #a855f7)',
-    shadow: 'rgba(124,58,237,0.22)',
-    border: '#ede9fe',
-    dotColor: '#7c3aed',
-    items: [
-      { label: 'Calendar',          icon: '📅', href: '/calendar'          },
-      { label: 'Lessons',           icon: '📚', href: '/lessons'           },
-      { label: 'Attendance',        icon: '✅', href: '/attendance'        },
-      { label: 'Teaching Schedule', icon: '👩‍🏫', href: '/teaching-schedule' },
-    ],
-  },
-  {
-    id: 'kids',
-    icon: '👧',
-    title: 'My Kids',
-    gradient: 'linear-gradient(135deg, #0ea5e9, #38bdf8)',
-    shadow: 'rgba(14,165,233,0.22)',
-    border: '#e0f2fe',
-    dotColor: '#0ea5e9',
-    items: [
-      { label: 'Progress Tracking',             icon: '📈', href: '/progress'    },
-      { label: 'Assessment Results & Standards', icon: '📊', href: '/assessments' },
-      { label: 'Courses',                        icon: '🎓', href: '/courses'     },
-      { label: 'Transcripts',                    icon: '📄', href: '/transcript'  },
-    ],
-  },
-  {
-    id: 'planning',
-    icon: '📋',
-    title: 'Planning',
-    gradient: 'linear-gradient(135deg, #ec4899, #f472b6)',
-    shadow: 'rgba(236,72,153,0.22)',
-    border: '#fce7f3',
-    dotColor: '#ec4899',
-    items: [
-      { label: 'School Year & Compliance', icon: '⚖️', href: '/school-year'  },
-      { label: 'Vacation Planner',         icon: '🌴', href: '/vacation'     },
-      { label: 'Bulk Scheduler',           icon: '⚡', href: '/bulk-schedule' },
-    ],
-  },
-  {
-    id: 'resources',
-    icon: '📦',
-    title: 'Resources',
-    gradient: 'linear-gradient(135deg, #f59e0b, #fbbf24)',
-    shadow: 'rgba(245,158,11,0.22)',
-    border: '#fef3c7',
-    dotColor: '#f59e0b',
-    items: [
-      { label: 'Homeschool Library', icon: '💡', href: '/resources'         },
-      { label: 'Materials',          icon: '🗂️', href: '/materials'         },
-      { label: 'Curriculum Import',  icon: '⬆️', href: '/curriculum/import' },
-    ],
-  },
-]
+import LessonViewModal, { type LessonViewModalLesson } from '@/components/LessonViewModal'
+import ActivityGenerator from '@/components/ActivityGenerator'
+import LessonGenerator from '@/components/LessonGenerator'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface KidScheduleStatus {
+interface Kid {
   id: string
-  name: string
-  unscheduled: number
-  total: number
+  displayname: string
+  grade_level?: string
 }
 
-// ─── Onboarding Steps ─────────────────────────────────────────────────────────
+interface KidPulse {
+  kid: Kid
+  totalToday: number
+  completedToday: number
+  pct: number
+  subjectNames: string[]
+  color: string
+}
 
-const ONBOARDING_STEPS = [
-  { id: 1, icon: '👧', title: 'Add Your Child',        desc: 'Create a profile so everything is personalized.',    completedLabel: 'Profile created!',       href: '/calendar'      },
-  { id: 2, icon: '📚', title: 'Add Your First Lesson', desc: 'Create a lesson or import from your curriculum.',    completedLabel: 'First lesson added!',    href: '/lessons'       },
-  { id: 3, icon: '⚡', title: 'Schedule Your Lessons', desc: 'Use the Bulk Scheduler to assign dates to lessons.', completedLabel: 'All lessons scheduled!', href: '/bulk-schedule' },
-  { id: 4, icon: '📅', title: 'View Your Teaching Day', desc: "See what you're teaching at a glance.",             completedLabel: "You're ready to teach!", href: '/calendar'      },
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const KID_COLORS = ['#7c3aed', '#0d9488', '#ec4899', '#f59e0b', '#3b82f6']
+
+const DAY_CARDINAL: Record<number, string> = {
+  0: '/cardinal-sunday.png',
+  1: '/cardinal-monday.png',
+  2: '/cardinal-tuesday.png',
+  3: '/cardinal-wednesday.png',
+  4: '/cardinal-thursday.png',
+  5: '/cardinal-friday.png',
+  6: '/cardinal-saturday.png',
+}
+
+const DAY_GREETINGS: Record<number, { line1: string; line2: string }> = {
+  0: { line1: 'Good morning',  line2: 'Sunday prep time! Next week awaits.' },
+  1: { line1: 'Good morning',  line2: "New week, fresh start. Let's go!" },
+  2: { line1: 'Good morning',  line2: "Two days in — you're on a roll." },
+  3: { line1: 'Good morning',  line2: 'Halfway there. Keep it going!' },
+  4: { line1: 'Good morning',  line2: 'Almost Friday — finish strong!' },
+  5: { line1: 'Good morning',  line2: 'Friday! Your school is ready when you are.' },
+  6: { line1: 'Good morning',  line2: "Weekend — rest up, you've earned it." },
+}
+
+const MONTHS    = ['January','February','March','April','May','June','July','August','September','October','November','December']
+const DAYS_SHORT = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
+
+const SUBJECT_PALETTE = [
+  '#7c3aed', '#0d9488', '#ec4899', '#f59e0b', '#3b82f6',
+  '#ef4444', '#8b5cf6', '#06b6d4', '#84cc16', '#f97316',
 ]
 
-// ─── Onboarding Checklist ─────────────────────────────────────────────────────
+const SUBJECT_EMOJI: Record<string, string> = {
+  'mathematics': '🔢', 'math': '🔢',
+  'english': '📖', 'language arts': '📖', 'reading': '📖',
+  'science': '🔬',
+  'social studies': '🌍', 'history': '🏛️', 'geography': '🗺️',
+  'art': '🎨', 'music': '🎵',
+  'physical education': '⚽', 'pe': '⚽', 'health': '💪',
+  'foreign language': '💬', 'spanish': '💬', 'french': '💬',
+  'bible': '✝️', 'computer science': '💻', 'life skills': '🏠', 'logic': '🧩',
+}
 
-function OnboardingChecklist({
-  hasKids,
-  hasLessons,
-  kidScheduleStatuses,
-  calendarVisited,
-}: {
-  hasKids: boolean
-  hasLessons: boolean
-  kidScheduleStatuses: KidScheduleStatus[]
-  calendarVisited: boolean
-}) {
-  const router = useRouter()
-  const [collapsed, setCollapsed] = useState(false)
-  const [dismissed, setDismissed] = useState(false)
-
-  const allScheduled =
-    kidScheduleStatuses.length > 0 &&
-    kidScheduleStatuses.every(k => k.unscheduled === 0)
-
-  const completed = {
-    1: hasKids,
-    2: hasLessons,
-    3: allScheduled,
-    4: calendarVisited,
+function subjectEmoji(subject: string): string {
+  const lower = subject.toLowerCase()
+  for (const [key, emoji] of Object.entries(SUBJECT_EMOJI)) {
+    if (lower.includes(key)) return emoji
   }
+  return '📚'
+}
 
-  const completedCount = Object.values(completed).filter(Boolean).length
-  const progressPct = Math.round((completedCount / 4) * 100)
-  const allDone = completedCount === 4
+function subjectColor(subject: string): string {
+  let hash = 0
+  for (let i = 0; i < subject.length; i++) {
+    hash = subject.charCodeAt(i) + ((hash << 5) - hash)
+  }
+  return SUBJECT_PALETTE[Math.abs(hash) % SUBJECT_PALETTE.length]
+}
 
-  if (dismissed) return null
+// ─── Pulse Ring ───────────────────────────────────────────────────────────────
 
+function PulseRing({ pct, color, size = 120 }: { pct: number; color: string; size?: number }) {
+  const sw = 11
+  const r  = (size - sw) / 2
+  const c  = 2 * Math.PI * r
+  const cx = size / 2, cy = size / 2
   return (
-    <div style={css.checklistCard}>
-      <div style={css.checklistHeader}>
-        <div style={css.checklistHeaderLeft}>
-          <span style={{ fontSize: 22 }}>🚀</span>
+    <svg width={size} height={size} style={{ transform: 'rotate(-90deg)', display: 'block', flexShrink: 0 }}>
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(0,0,0,0.09)" strokeWidth={sw} />
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke={color} strokeWidth={sw}
+        strokeDasharray={`${(pct / 100) * c} ${c - (pct / 100) * c}`} strokeLinecap="round"
+        style={{ transition: 'stroke-dasharray 1s cubic-bezier(0.4,0,0.2,1)' }} />
+    </svg>
+  )
+}
+
+// ─── Stuck Modal ──────────────────────────────────────────────────────────────
+
+function StuckModal({ onClose, onGenerateLesson, onGenerateActivity, onAskScout }: {
+  onClose: () => void
+  onGenerateLesson: () => void
+  onGenerateActivity: () => void
+  onAskScout: () => void
+}) {
+  const actions = [
+    {
+      icon: '📚', label: 'Generate a Lesson', sub: 'Scout writes a full lesson plan',
+      color: '#7c3aed',
+      onClick: () => { onClose(); onGenerateLesson() },
+    },
+    {
+      icon: '🎯', label: 'Generate an Activity', sub: 'Quick, fun activity in seconds',
+      color: '#0d9488',
+      onClick: () => { onClose(); onGenerateActivity() },
+    },
+    {
+      icon: null, imgSrc: '/Cardinal_Mascot.png', label: 'Ask Scout', sub: 'Chat with your homeschool co-pilot',
+      color: '#f59e0b',
+      onClick: () => { onClose(); onAskScout() },
+    },
+  ]
+  return (
+    <div style={css.overlay} onClick={onClose}>
+      <div style={css.modalBox} onClick={e => e.stopPropagation()}>
+        <div style={css.modalHead}>
+          <img src="/Cardinal_Mascot.png" alt="Scout" style={{ width: 70, height: 70, objectFit: 'contain' }} />
           <div>
-            <div style={css.checklistTitle}>Get Started with HomeschoolReady</div>
-            <div style={css.checklistSub}>
-              {allDone ? "You're fully set up!" : `${completedCount} of 4 steps complete`}
-            </div>
+            <div style={{ fontWeight: 900, fontSize: 20, color: '#2d1b69' }}>Need a hand?</div>
+            <div style={{ fontSize: 14, color: '#7c6faa', marginTop: 3 }}>Scout's got you covered.</div>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          {allDone && (
-            <button style={css.checklistBtn} onClick={() => setDismissed(true)}>✕</button>
-          )}
-          <button style={css.checklistBtn} onClick={() => setCollapsed(!collapsed)}>
-            {collapsed ? '▼' : '▲'}
-          </button>
-        </div>
-      </div>
-
-      <div style={css.progressTrack}>
-        <div style={{
-          ...css.progressFill,
-          width: `${progressPct}%`,
-          background: allDone
-            ? 'linear-gradient(90deg, #10b981, #34d399)'
-            : 'linear-gradient(90deg, #7c3aed, #a855f7, #ec4899)'
-        }} />
-      </div>
-
-      {!collapsed && (
-        <div style={css.checklistSteps}>
-          {ONBOARDING_STEPS.map((step) => {
-            const isDone = completed[step.id as keyof typeof completed]
-            const isAccessible = isDone || completed[(step.id - 1) as keyof typeof completed] || step.id === 1
-            const isCurrent = !isDone && isAccessible
-            const isStep3 = step.id === 3
-
-            return (
-              <div key={step.id} style={{ ...css.checklistStep, opacity: isAccessible ? 1 : 0.45 }}>
-                <div style={{
-                  ...css.stepBadge,
-                  background: isDone ? 'linear-gradient(135deg, #7c3aed, #a855f7)' : isCurrent ? '#fff' : '#f3f4f6',
-                  color: isDone ? '#fff' : isCurrent ? '#7c3aed' : '#9ca3af',
-                  border: isDone ? 'none' : isCurrent ? '2px solid #7c3aed' : '2px solid #e5e7eb',
-                }}>
-                  {isDone ? '✓' : step.id}
-                </div>
-
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span>{step.icon}</span>
-                    <span style={{
-                      fontWeight: 700, fontSize: 13.5,
-                      color: isDone ? '#6b7280' : '#111827',
-                      textDecoration: isDone ? 'line-through' : 'none',
-                    }}>
-                      {step.title}
-                    </span>
-                  </div>
-
-                  <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 2 }}>
-                    {isDone ? step.completedLabel : step.desc}
-                  </div>
-
-                  {isDone && step.id === 1 && (
-                    <button
-                      onClick={() => router.push('/calendar?addChild=true')}
-                      style={{ marginTop: 6, background: 'none', border: 'none', color: '#7c3aed', fontSize: 12, fontWeight: 700, cursor: 'pointer', padding: 0 }}
-                    >
-                      ＋ Add another child →
-                    </button>
-                  )}
-
-                  {isStep3 && isCurrent && kidScheduleStatuses.length > 0 && (
-                    <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                      {kidScheduleStatuses.map(kid => {
-                        const done = kid.unscheduled === 0
-                        return (
-                          <div key={kid.id} style={{
-                            display: 'flex', alignItems: 'center', gap: 6,
-                            fontSize: 12,
-                            color: done ? '#065f46' : '#92400e',
-                            background: done ? '#f0fdf4' : '#fffbeb',
-                            border: `1px solid ${done ? '#bbf7d0' : '#fde68a'}`,
-                            borderRadius: 6, padding: '4px 10px',
-                          }}>
-                            <span>{done ? '✓' : '⚠️'}</span>
-                            <span style={{ fontWeight: 700 }}>{kid.name}</span>
-                            <span style={{ color: '#6b7280' }}>
-                              {done ? 'all scheduled' : `${kid.unscheduled} lesson${kid.unscheduled !== 1 ? 's' : ''} still need dates`}
-                            </span>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )}
-
-                  {!isDone && step.href && isAccessible && (
-                    <button style={css.stepCta} onClick={() => router.push(step.href!)}>
-                      Go →
-                    </button>
-                  )}
-                </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {actions.map(a => (
+            <button key={a.label} style={{ ...css.modalAction, borderColor: a.color + '40' }}
+              onClick={a.onClick}>
+              {a.imgSrc
+                ? <img src={a.imgSrc} alt={a.label} style={{ width: 36, height: 36, objectFit: 'contain' }} />
+                : <span style={{ fontSize: 28 }}>{a.icon}</span>
+              }
+              <div style={{ flex: 1, textAlign: 'left' as const }}>
+                <div style={{ fontWeight: 800, fontSize: 15, color: '#2d1b69' }}>{a.label}</div>
+                <div style={{ fontSize: 13, color: '#4b5563', marginTop: 2 }}>{a.sub}</div>
               </div>
-            )
-          })}
+              <span style={{ color: a.color, fontSize: 18, fontWeight: 700 }}>→</span>
+            </button>
+          ))}
         </div>
-      )}
+        <button style={css.modalClose} onClick={onClose}>Maybe later</button>
+      </div>
     </div>
   )
 }
 
-// ─── Nav Card ────────────────────────────────────────────────────────────────
+// ─── Today's Learning Modal ───────────────────────────────────────────────────
 
-function NavCard({ card }: { card: typeof NAV_CARDS[0] }) {
-  const router = useRouter()
-  const [hovered, setHovered] = useState(false)
-  const [hoveredItem, setHoveredItem] = useState<string | null>(null)
-
+function TodaysLearningModal({
+  onClose, kidPulses, todayLessons, onLessonClick,
+}: {
+  onClose: () => void
+  kidPulses: KidPulse[]
+  todayLessons: Record<string, any[]>
+  onLessonClick: (lesson: any, kidName: string) => void
+}) {
   return (
-    <div
-      style={{
-        ...css.card,
-        borderColor: card.border,
-        boxShadow: hovered
-          ? `0 16px 40px ${card.shadow}, 0 2px 8px rgba(0,0,0,0.06)`
-          : `0 2px 12px ${card.shadow}80`,
-        transform: hovered ? 'translateY(-4px)' : 'translateY(0)',
-      }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-    >
-      <div style={{ ...css.cardHead, background: card.gradient }}>
-        <span style={{ fontSize: 20 }}>{card.icon}</span>
-        <span style={css.cardTitle}>{card.title}</span>
+    <div style={css.overlay} onClick={onClose}>
+      <div style={{ ...css.modalBox, maxWidth: 640, maxHeight: '80vh', overflowY: 'auto' as const }}
+        onClick={e => e.stopPropagation()}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22 }}>
+          <div style={{ fontWeight: 900, fontSize: 20, color: '#2d1b69' }}>Today's Learning</div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: '#4b5563', lineHeight: 1 }}>✕</button>
+        </div>
+
+        {kidPulses.map(pulse => {
+          const lessons = todayLessons[pulse.kid.id] || []
+          // Group by status
+          const complete   = lessons.filter((l: any) => l.status === 'completed')
+          const inProgress = lessons.filter((l: any) => l.status === 'in_progress')
+          const notStarted = lessons.filter((l: any) => l.status === 'not_started')
+          const grouped    = [
+            { label: 'Complete',    items: complete,   dot: '#10b981' },
+            { label: 'In Progress', items: inProgress, dot: '#f59e0b' },
+            { label: 'Not Started', items: notStarted, dot: '#d1d5db' },
+          ].filter(g => g.items.length > 0)
+
+          return (
+            <div key={pulse.kid.id} style={{ marginBottom: 26 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                <div style={{ width: 10, height: 10, borderRadius: '50%', background: pulse.color, flexShrink: 0 }} />
+                <div style={{ fontWeight: 900, fontSize: 16, color: '#2d1b69' }}>{pulse.kid.displayname}</div>
+                <div style={{ fontSize: 12, color: '#4b5563' }}>{pulse.completedToday} of {pulse.totalToday} done today</div>
+              </div>
+
+              {lessons.length === 0 ? (
+                <div style={{ fontSize: 13, color: '#b5bec9', paddingLeft: 20 }}>No lessons scheduled today</div>
+              ) : (
+                grouped.map(group => (
+                  <div key={group.label} style={{ marginBottom: 10 }}>
+                    <div style={{ fontSize: 11, fontWeight: 800, color: '#4b5563', letterSpacing: 0.8, marginBottom: 6, paddingLeft: 20 }}>
+                      {group.label.toUpperCase()}
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, paddingLeft: 20 }}>
+                      {group.items.map((l: any) => (
+                        <div key={l.id}
+                          onClick={() => onLessonClick(l, pulse.kid.displayname)}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: 10,
+                            background: 'rgba(255,255,255,0.75)', borderRadius: 10,
+                            padding: '9px 14px', border: '1px solid rgba(0,0,0,0.06)',
+                            cursor: 'pointer',
+                          }}>
+                          <div style={{ width: 9, height: 9, borderRadius: '50%', background: group.dot, flexShrink: 0 }} />
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: 700, fontSize: 13, color: '#2d1b69' }}>{l.title}</div>
+                            <div style={{ fontSize: 12, color: '#4b5563', marginTop: 1 }}>
+                              {l.subject}
+                            </div>
+                          </div>
+                          <span style={{ fontSize: 16, color: '#c4b5fd' }}>›</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )
+        })}
       </div>
-      <ul style={css.itemList}>
-        {card.items.map((item, i) => (
-          <li
-            key={i}
-            style={{
-              ...css.item,
-              background: hoveredItem === `${card.id}-${i}` ? card.border : 'transparent',
-            }}
-            onMouseEnter={() => setHoveredItem(`${card.id}-${i}`)}
-            onMouseLeave={() => setHoveredItem(null)}
-            onClick={() => router.push(item.href)}
-          >
-            <span style={{ fontSize: 15, width: 22, textAlign: 'center' as const }}>{item.icon}</span>
-            <span style={css.itemLabel}>{item.label}</span>
-            <span style={{ fontSize: 12, color: card.dotColor, opacity: hoveredItem === `${card.id}-${i}` ? 1 : 0, transition: 'opacity 0.15s' }}>→</span>
-          </li>
-        ))}
-      </ul>
     </div>
   )
+}
+
+// ─── Bottom Nav ───────────────────────────────────────────────────────────────
+
+const NAV_ITEMS = [
+  { id: 'home',      label: 'Home',      icon: '🏠', href: '/dashboard' },
+  { id: 'plan',      label: 'Subjects',     icon: '📚', href: '/subjects'  },
+  { id: 'records',   label: 'Records',   icon: '📋', href: '/reports'   },
+  { id: 'resources', label: 'Resources', icon: '💡', href: '/resources' },
+  { id: 'profile',   label: 'Profile',   icon: '👤', href: '/profile'   },
+]
+
+function BottomNav({ active }: { active: string }) {
+  const router = useRouter()
+  return (
+    <nav style={css.bottomNav}>
+      {NAV_ITEMS.map(item => {
+        const isActive = item.id === active
+        return (
+          <button key={item.id} className="nav-btn"
+            style={{ ...css.navItem, color: isActive ? '#7c3aed' : '#9ca3af', position: 'relative' }}
+            onClick={() => router.push(item.href)}>
+            {isActive && <span style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: 20, height: 3, borderRadius: 2, background: '#7c3aed' }} />}
+            <span style={{ fontSize: isActive ? 28 : 22, lineHeight: 1, transition: 'font-size 0.15s' }}>{item.icon}</span>
+            <span style={{ fontSize: isActive ? 12 : 10, fontWeight: isActive ? 800 : 500, marginTop: 2, transition: 'all 0.15s' }}>{item.label}</span>
+          </button>
+        )
+      })}
+    </nav>
+  )
+}
+
+// ─── Life Happens Modal ───────────────────────────────────────────────────────
+
+const SCOUT_QUIPS = [
+  "Sunshine > worksheets. Science agrees. 🌞 Let me push those lessons forward so you can enjoy today guilt-free!",
+  "Plot twist: today is now a bonus unschool day! 🎉 Your lessons aren't going anywhere — except to tomorrow.",
+  "Even Columbus took wrong turns, and he discovered a whole continent. 🧭 Take the day — I'll handle the reschedule.",
+  "Rain, sunshine, a really comfy couch, or a spontaneous donut run — life happens! 🍩 I've got your back.",
+  "Fun fact: spontaneous days off are basically advanced Life Skills class. ✅ Consider it logged.",
+  "The best homeschool families know when to close the books and open the door. 🚪 Go enjoy your day!",
+]
+
+function nextSchoolDay(): string {
+  const d = new Date()
+  do { d.setDate(d.getDate() + 1) } while (d.getDay() === 0 || d.getDay() === 6)
+  return [d.getFullYear(), String(d.getMonth() + 1).padStart(2, '0'), String(d.getDate()).padStart(2, '0')].join('-')
+}
+
+function formatNextDay(dateStr: string): string {
+  return new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+}
+
+function LifeHappensModal({ todayLessons, kidPulses, cardinalSrc, onClose, onRescheduled }: {
+  todayLessons: Record<string, any[]>
+  kidPulses: KidPulse[]
+  cardinalSrc: string
+  onClose: () => void
+  onRescheduled: () => void
+}) {
+  const [step, setStep] = useState<'scout' | 'reschedule' | 'done'>('scout')
+  const [rescheduling, setRescheduling] = useState(false)
+  const [quip] = useState(() => SCOUT_QUIPS[Math.floor(Math.random() * SCOUT_QUIPS.length)])
+
+  const nextDay = nextSchoolDay()
+
+  const unfinished = kidPulses.flatMap(p =>
+    (todayLessons[p.kid.id] || [])
+      .filter((l: any) => l.status !== 'completed')
+      .map((l: any) => ({ ...l, kidName: p.kid.displayname }))
+  )
+
+  const handleReschedule = async () => {
+    if (unfinished.length === 0) { onClose(); return }
+    setRescheduling(true)
+    const { error } = await supabase
+      .from('lessons')
+      .update({ lesson_date: nextDay })
+      .in('id', unfinished.map((l: any) => l.id))
+    setRescheduling(false)
+    if (error) { alert('Something went wrong rescheduling. Please try again.'); return }
+    setStep('done')
+  }
+
+  return (
+    <div style={lh.overlay} onClick={onClose}>
+      <div style={lh.modal} onClick={e => e.stopPropagation()}>
+
+        {step === 'scout' && (
+          <>
+            <button style={lh.closeBtn} onClick={onClose}>×</button>
+            <div style={lh.cardinalWrap}>
+              <img src={cardinalSrc} alt="Scout" style={{ width: 120, height: 'auto' }} />
+            </div>
+            <div style={lh.bubble}>{quip}</div>
+            <div style={{ padding: '0 22px 24px', display: 'flex', flexDirection: 'column' as const, gap: 10 }}>
+              {unfinished.length > 0 ? (
+                <button style={lh.btnPrimary} onClick={() => setStep('reschedule')}>
+                  See Today&apos;s Lessons →
+                </button>
+              ) : (
+                <button style={lh.btnPrimary} onClick={onClose}>
+                  Enjoy your day! 🎉
+                </button>
+              )}
+              <button style={lh.btnGhost} onClick={onClose}>Never mind, back to school</button>
+            </div>
+          </>
+        )}
+
+        {step === 'reschedule' && (
+          <>
+            <div style={lh.reschedHead}>
+              <button style={lh.backBtn} onClick={() => setStep('scout')}>←</button>
+              <div style={lh.reschedTitle}>Reschedule Today</div>
+            </div>
+            <div style={lh.reschedBody}>
+              <div style={lh.nextDayNote}>
+                Moving <strong>{unfinished.length} lesson{unfinished.length !== 1 ? 's' : ''}</strong> to{' '}
+                <strong>{formatNextDay(nextDay)}</strong>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 8 }}>
+                {unfinished.map((l: any) => (
+                  <div key={l.id} style={lh.lessonRow}>
+                    <span style={lh.kidTag}>{l.kidName}</span>
+                    <span style={lh.lessonName}>{l.title}</span>
+                    <span style={lh.subjectTag}>{l.subject}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div style={{ padding: '0 22px 24px' }}>
+              <button
+                style={{ ...lh.btnPrimary, opacity: rescheduling ? 0.6 : 1 }}
+                disabled={rescheduling}
+                onClick={handleReschedule}
+              >
+                {rescheduling ? 'Moving lessons…' : "🎉 Push 'Em Forward!"}
+              </button>
+            </div>
+          </>
+        )}
+
+        {step === 'done' && (
+          <div style={lh.doneWrap}>
+            <div style={{ fontSize: 56 }}>🎉</div>
+            <div style={lh.doneTitle}>You&apos;re all set!</div>
+            <div style={lh.doneSub}>
+              <strong>{unfinished.length} lesson{unfinished.length !== 1 ? 's' : ''}</strong> moved to{' '}
+              <strong>{formatNextDay(nextDay)}</strong>.<br />Go enjoy your day!
+            </div>
+            <button style={{ ...lh.btnPrimary, marginTop: 8 }} onClick={onRescheduled}>
+              Got it! 👍
+            </button>
+          </div>
+        )}
+
+      </div>
+    </div>
+  )
+}
+
+const lh: Record<string, import('react').CSSProperties> = {
+  overlay: {
+    position: 'fixed', inset: 0, zIndex: 1000,
+    background: 'rgba(15,10,40,0.5)', backdropFilter: 'blur(6px)',
+    display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+    padding: '0 16px 24px',
+  },
+  modal: {
+    background: '#fff', borderRadius: 24,
+    width: '100%', maxWidth: 420,
+    boxShadow: '0 -4px 40px rgba(0,0,0,0.2)',
+    position: 'relative', overflow: 'hidden',
+  },
+  closeBtn: {
+    position: 'absolute', top: 12, right: 14,
+    background: 'rgba(0,0,0,0.07)', border: 'none', borderRadius: '50%',
+    width: 30, height: 30, fontSize: 18, cursor: 'pointer', color: '#6b7280',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+  },
+  cardinalWrap: { display: 'flex', justifyContent: 'center', paddingTop: 28 },
+  bubble: {
+    margin: '12px 22px 16px',
+    background: 'linear-gradient(135deg, #faf5ff, #ede9fe)',
+    border: '1.5px solid #ddd6fe',
+    borderRadius: 16, padding: '14px 18px',
+    fontSize: 14, fontWeight: 600, color: '#4c1d95', lineHeight: 1.65,
+    textAlign: 'center', fontFamily: "'Nunito', sans-serif",
+  },
+  btnPrimary: {
+    width: '100%', padding: '14px',
+    background: 'linear-gradient(135deg, #7c3aed, #ec4899)',
+    border: 'none', borderRadius: 14, color: '#fff',
+    fontSize: 15, fontWeight: 800, cursor: 'pointer',
+    fontFamily: "'Nunito', sans-serif",
+  },
+  btnGhost: {
+    width: '100%', padding: '12px',
+    background: 'none', border: '1.5px solid #e5e7eb',
+    borderRadius: 14, color: '#9ca3af',
+    fontSize: 13, fontWeight: 600, cursor: 'pointer',
+    fontFamily: "'Nunito', sans-serif",
+  },
+  reschedHead: {
+    display: 'flex', alignItems: 'center', gap: 12,
+    padding: '18px 20px 14px', borderBottom: '1px solid #f3f4f6',
+  },
+  backBtn: {
+    background: 'none', border: 'none',
+    fontSize: 20, cursor: 'pointer', color: '#7c3aed', padding: '0 2px',
+  },
+  reschedTitle: {
+    fontSize: 17, fontWeight: 800, color: '#1a1a2e',
+    fontFamily: "'Nunito', sans-serif",
+  },
+  reschedBody: { padding: '14px 20px 16px', maxHeight: 260, overflowY: 'auto' },
+  nextDayNote: {
+    fontSize: 13, color: '#6b7280', marginBottom: 12,
+    fontFamily: "'Nunito', sans-serif", lineHeight: 1.5,
+  },
+  lessonRow: {
+    display: 'flex', alignItems: 'center', gap: 8,
+    background: '#f9fafb', borderRadius: 10, padding: '9px 12px',
+  },
+  kidTag: {
+    fontSize: 10, fontWeight: 800, color: '#7c3aed',
+    background: '#ede9fe', borderRadius: 4, padding: '2px 6px',
+    flexShrink: 0, fontFamily: 'system-ui, sans-serif',
+  },
+  lessonName: {
+    flex: 1, fontSize: 13, fontWeight: 700, color: '#1a1a2e',
+    fontFamily: "'Nunito', sans-serif",
+    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+  },
+  subjectTag: {
+    fontSize: 10, color: '#9ca3af',
+    fontFamily: 'system-ui, sans-serif', flexShrink: 0,
+  },
+  doneWrap: {
+    padding: '44px 24px 36px',
+    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
+    textAlign: 'center',
+  },
+  doneTitle: {
+    fontSize: 24, fontWeight: 900, color: '#1a1a2e',
+    fontFamily: "'Nunito', sans-serif",
+  },
+  doneSub: {
+    fontSize: 14, color: '#6b7280', lineHeight: 1.6,
+    fontFamily: "'Nunito', sans-serif",
+  },
 }
 
 // ─── Dashboard Content ────────────────────────────────────────────────────────
 
 function DashboardContent() {
   const router = useRouter()
-  const [user, setUser] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
-  const [kids, setKids] = useState<any[]>([])
-  const [hasLessons, setHasLessons] = useState(false)
+  const [user, setUser]                     = useState<any>(null)
+  const [loading, setLoading]               = useState(true)
+  const [kidPulses, setKidPulses]           = useState<KidPulse[]>([])
+  const [todayLessons, setTodayLessons]     = useState<Record<string, any[]>>({})
   const [organizationId, setOrganizationId] = useState<string | null>(null)
-  const [userTier, setUserTier] = useState<UserTier>('FREE')
-  const [parentName, setParentName] = useState('')
-  const [kidScheduleStatuses, setKidScheduleStatuses] = useState<KidScheduleStatus[]>([])
-  const [calendarVisited, setCalendarVisited] = useState(false)
-  const [isCollaborator, setIsCollaborator] = useState(false)
+  const [parentName, setParentName]         = useState('')
+  const [, setIsCollaborator] = useState(false)
+  const [showStuck, setShowStuck]           = useState(false)
+  const [showToday, setShowToday]           = useState(false)
+  const [schoolState, setSchoolState]       = useState<string | null>(null)
+  const [requiredDays, setRequiredDays]     = useState<string | null>(null)
+  const [selectedLesson, setSelectedLesson] = useState<LessonViewModalLesson | null>(null)
+  const [selectedKidName, setSelectedKidName] = useState<string | undefined>(undefined)
+  const [showLifeHappens, setShowLifeHappens] = useState(false)
+  const [showActivity, setShowActivity]       = useState(false)
+  const [showGenerator, setShowGenerator]     = useState(false)
+  const [activePulseKidId, setActivePulseKidId] = useState<string | null>(null)
 
-  const visibleNavCards = NAV_CARDS.map(card => {
-    if (card.id === 'collaborate' && isCollaborator) {
-      return { ...card, items: card.items.filter(item => item.label !== 'Manage Co-Teachers') }
-    }
-    return card
-  })
+  const now         = new Date()
+  const dow         = now.getDay()
+  const greeting    = DAY_GREETINGS[dow]
+  const cardinalSrc = DAY_CARDINAL[dow]
+  const dateStr     = `${DAYS_SHORT[dow]} · ${MONTHS[now.getMonth()]} ${now.getDate()}`
 
   useEffect(() => {
-    const getUser = async () => {
+    const load = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/'); return }
       setUser(user)
 
-      const { data: collaboration } = await supabase
+      const { data: collab } = await supabase
         .from('family_collaborators')
         .select('organization_id, role, name')
         .eq('user_id', user.id)
@@ -322,129 +533,545 @@ function DashboardContent() {
 
       let orgId: string
 
-      if (collaboration) {
+      if (collab) {
         setIsCollaborator(true)
-        orgId = collaboration.organization_id
-        setOrganizationId(orgId)
-        setParentName(collaboration.name || user.email?.split('@')[0] || '')
-
-        const { data: kidsData } = await supabase
-          .from('kids')
-          .select('*')
-          .eq('organization_id', orgId)
-          .order('created_at', { ascending: false })
-
-        setKids(kidsData || [])
+        orgId = collab.organization_id
+        setParentName(collab.name || user.email?.split('@')[0] || '')
       } else {
-        const { orgId: resolvedOrgId } = await getOrganizationId(user.id)
-        if (!resolvedOrgId) { router.push('/onboarding'); return }
-        orgId = resolvedOrgId
-        setOrganizationId(orgId)
-
-        const { data: kidsData } = await supabase
-          .from('kids')
-          .select('*')
-          .eq('organization_id', orgId)
-          .order('created_at', { ascending: false })
-
-        if (kidsData?.length) {
-          setKids(kidsData)
-
-          const { count: totalCount } = await supabase
-            .from('lessons')
-            .select('id', { count: 'exact', head: true })
-            .eq('organization_id', orgId)
-          setHasLessons((totalCount ?? 0) > 0)
-
-          const statuses: KidScheduleStatus[] = await Promise.all(
-            kidsData.map(async (kid: any) => {
-              const { count: total } = await supabase
-                .from('lessons')
-                .select('id', { count: 'exact', head: true })
-                .eq('kid_id', kid.id)
-
-              const { count: unscheduled } = await supabase
-                .from('lessons')
-                .select('id', { count: 'exact', head: true })
-                .eq('kid_id', kid.id)
-                .is('lesson_date', null)
-
-              return { id: kid.id, name: kid.displayname, total: total ?? 0, unscheduled: unscheduled ?? 0 }
-            })
-          )
-          setKidScheduleStatuses(statuses.filter(s => s.total > 0))
-        }
+        const { orgId: resolved } = await getOrganizationId(user.id)
+        if (!resolved) { router.push('/onboarding'); return }
+        orgId = resolved
 
         const { data: profile } = await supabase
           .from('user_profiles')
-          .select('first_name, calendar_visited_at')
+          .select('first_name')
           .eq('user_id', user.id)
           .maybeSingle()
         if (profile?.first_name) setParentName(profile.first_name)
-        if (profile?.calendar_visited_at) setCalendarVisited(true)
+
+        const { data: sy } = await supabase
+          .from('school_year_settings')
+          .select('state, required_days, required_months')
+          .eq('organization_id', orgId)
+          .maybeSingle()
+        if (sy) {
+          setSchoolState(sy.state || null)
+          if (sy.required_days)   setRequiredDays(`${sy.required_days} days / year`)
+          else if (sy.required_months) setRequiredDays(`${sy.required_months} months / year`)
+        }
+      }
+
+      setOrganizationId(orgId)
+
+      const { data: kidsData } = await supabase
+        .from('kids')
+        .select('*')
+        .eq('organization_id', orgId)
+        .order('created_at', { ascending: true })
+
+      if (kidsData?.length) {
+        const todayStr   = [
+          now.getFullYear(),
+          String(now.getMonth() + 1).padStart(2, '0'),
+          String(now.getDate()).padStart(2, '0'),
+        ].join('-')
+        const lessonsMap: Record<string, any[]> = {}
+
+        const pulses: KidPulse[] = await Promise.all(
+          kidsData.map(async (kid: any, idx: number) => {
+            const { data: lessons } = await supabase
+              .from('lessons')
+              .select('id, title, status, subject, start_time, lesson_date, duration_minutes, kid_id, description, lesson_source')
+              .eq('kid_id', kid.id)
+              .eq('lesson_date', todayStr)
+              .order('start_time', { ascending: true })
+
+            lessonsMap[kid.id] = lessons || []
+
+            const total     = lessons?.length ?? 0
+            const completed = lessons?.filter((l: any) => l.status === 'completed').length ?? 0
+
+            const subjectNames = [...new Set(
+              (lessons || []).map((l: any) => l.subject).filter(Boolean)
+            )].slice(0, 3) as string[]
+
+            return {
+              kid: { id: kid.id, displayname: kid.displayname, grade_level: kid.grade_level },
+              totalToday: total,
+              completedToday: completed,
+              pct: total > 0 ? Math.round((completed / total) * 100) : 0,
+              subjectNames,
+              color: KID_COLORS[idx % KID_COLORS.length],
+            }
+          })
+        )
+
+        setKidPulses(pulses)
+        setTodayLessons(lessonsMap)
       }
 
       setLoading(false)
     }
-    getUser()
+    load()
   }, [])
 
+  const handleLessonStatusUpdate = (lessonId: string, kidId: string, newStatus: string) => {
+    setTodayLessons(prev => {
+      const updated: Record<string, any[]> = {}
+      for (const kid in prev) {
+        updated[kid] = prev[kid].map((l: any) => l.id === lessonId ? { ...l, status: newStatus } : l)
+      }
+      const kidLessons = updated[kidId] || []
+      const total = kidLessons.length
+      const completed = kidLessons.filter((l: any) => l.status === 'completed').length
+      setKidPulses(pulses => pulses.map(p =>
+        p.kid.id === kidId
+          ? { ...p, completedToday: completed, pct: total > 0 ? Math.round((completed / total) * 100) : 0 }
+          : p
+      ))
+      return updated
+    })
+  }
+
   if (loading) return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f5f3ff' }}>
-      <div style={{ color: '#7c3aed', fontWeight: 700, fontSize: 16 }}>Loading...</div>
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #c4b5fd 0%, #e879f9 18%, #f0abfc 36%, #fbcfe8 54%, #bae6fd 76%, #6ee7b7 100%)' }}>
+      <div style={{ color: '#7c3aed', fontWeight: 800, fontSize: 18, fontFamily: "'Nunito', sans-serif" }}>Loading...</div>
     </div>
   )
 
+  const attendanceNote = [schoolState, requiredDays].filter(Boolean).join(': ') || 'Daily check-in'
+
   return (
     <>
-      {/* Inject responsive grid styles — can't do media queries in inline styles */}
       <style>{`
-        .dashboard-grid {
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: 16px;
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
+        *, *::before, *::after { box-sizing: border-box; }
+        body { margin: 0; }
+        @keyframes sparkle { 0%,100% { opacity:.7; transform:scale(1) rotate(0deg); } 50% { opacity:1; transform:scale(1.3) rotate(20deg); } }
+        .spark { position:absolute; pointer-events:none; animation:sparkle 2.8s ease-in-out infinite; color:#fff; font-size:18px; opacity:.7; }
+        .dash-bg { position:relative; overflow:hidden; }
+        .dash-bg::before {
+          content:'';
+          position:absolute; inset:0; pointer-events:none;
+          background:
+            radial-gradient(ellipse 400px 300px at 10% 20%, rgba(167,139,250,0.45) 0%, transparent 70%),
+            radial-gradient(ellipse 350px 250px at 85% 10%, rgba(249,168,212,0.35) 0%, transparent 70%),
+            radial-gradient(ellipse 300px 300px at 90% 70%, rgba(110,231,183,0.30) 0%, transparent 70%),
+            radial-gradient(ellipse 250px 200px at 40% 80%, rgba(186,230,253,0.40) 0%, transparent 70%);
+          z-index:0;
         }
-        @media (max-width: 768px) {
-          .dashboard-grid {
-            grid-template-columns: repeat(2, 1fr);
-          }
+        .pulse-card { transition: transform 0.15s ease; }
+        .pulse-card:hover { transform: translateY(-4px); }
+        .pulse-card:active { transform: scale(0.97); }
+        .quick-btn { transition: transform 0.13s ease, box-shadow 0.13s ease; }
+        .quick-btn:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.11) !important; }
+        .quick-btn:active { transform: scale(0.97); }
+        .nav-btn:hover { opacity: 0.8; }
+        @media (max-width: 900px) {
+          .quick-grid { grid-template-columns: repeat(2, 1fr) !important; }
+          .pulse-grid { grid-template-columns: repeat(2, 1fr) !important; }
         }
-        @media (max-width: 480px) {
-          .dashboard-grid {
-            grid-template-columns: 1fr;
-          }
+        @media (max-width: 580px) {
+          .quick-grid { grid-template-columns: 1fr !important; }
+          .pulse-grid { grid-template-columns: 1fr !important; }
         }
       `}</style>
 
-      <div style={css.root}>
-        {/* Welcome bar — replaces the old duplicate header */}
-        <div style={css.welcomeBar}>
-          <span style={css.welcomeMsg}>
-            Welcome back, <strong>{parentName || user?.email?.split('@')[0]}</strong> 👋
-          </span>
-        </div>
+      <div style={css.root} className="dash-bg">
+        {/* Sparkle decorations */}
+        <span className="spark" style={{ top: '8%',  left: '6%',  animationDelay: '0s'   }}>✦</span>
+        <span className="spark" style={{ top: '14%', left: '55%', animationDelay: '0.7s', fontSize: 12 }}>✦</span>
+        <span className="spark" style={{ top: '5%',  left: '80%', animationDelay: '1.4s' }}>✦</span>
+        <span className="spark" style={{ top: '35%', left: '92%', animationDelay: '0.4s', fontSize: 13 }}>✦</span>
+        <span className="spark" style={{ top: '60%', left: '3%',  animationDelay: '1.1s', fontSize: 14 }}>✦</span>
+        <span className="spark" style={{ top: '75%', left: '70%', animationDelay: '0.2s', fontSize: 11 }}>✦</span>
 
-        {!isCollaborator && <StatsBar organizationId={organizationId} />}
+        {/* ── Header ── */}
+        <header style={css.header}>
+          <div style={css.headerInner}>
+            <div style={css.headerLeft}>
+              <div style={css.logo}>
+                {/* Line 1: house-H + OMESCHOOL */}
+                <div style={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}>
+                  <svg viewBox="0 0 18 20" width="22" height="25" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0, marginBottom: 2 }}>
+                    <polygon points="9,0 18,8 0,8" fill="#7c3aed" />
+                    <rect x="1" y="8" width="5" height="12" rx="0.5" fill="#7c3aed" />
+                    <rect x="12" y="8" width="5" height="12" rx="0.5" fill="#7c3aed" />
+                    <rect x="1" y="12.5" width="16" height="4" rx="0.5" fill="#7c3aed" />
+                  </svg>
+                  <span style={css.logoH}>OMESCHOOL</span>
+                </div>
+                {/* Line 2: READY + checkmark in teal */}
+                <div style={css.logoR}>READY ✓</div>
+              </div>
+              <div style={css.dateStr}>{dateStr}</div>
+            </div>
+            <div style={css.cardinalWrap}>
+              <div style={css.bubble}>
+                <div style={css.bubbleBold}>{greeting.line1}{parentName ? `, ${parentName}!` : '!'}</div>
+                <div style={css.bubbleSub}>{greeting.line2}</div>
+              </div>
+              <img src={cardinalSrc} alt="Cardinal mascot" style={css.cardinal} />
+            </div>
+          </div>
+        </header>
 
+        {/* ── Main ── */}
         <main style={css.main}>
-          {!isCollaborator && (
-            <OnboardingChecklist
-              hasKids={kids.length > 0}
-              hasLessons={hasLessons}
-              kidScheduleStatuses={kidScheduleStatuses}
-              calendarVisited={calendarVisited}
-            />
-          )}
 
-          {(isCollaborator || kids.length > 0) && (
+          {/* Pulse Check */}
+          <section>
+            <div style={css.sectionRow}>
+              <span style={css.secTitle}>PULSE CHECK</span>
+              <span style={css.secSub}>Tap a child to see their lessons</span>
+            </div>
+            {kidPulses.length === 0 ? (
+              <div style={css.emptyCard}>
+                <div style={{ fontSize: 40, marginBottom: 12 }}>👧</div>
+                <div style={{ fontWeight: 800, color: '#2d1b69', fontSize: 17 }}>No children added yet</div>
+                <div style={{ fontSize: 13, color: '#4b5563', marginTop: 6 }}>Add a child in Profile to get started</div>
+              </div>
+            ) : (
+              <div
+                className="pulse-grid"
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: `repeat(${Math.min(kidPulses.length, 4)}, 1fr)`,
+                  gap: 18,
+                }}
+              >
+                {kidPulses.map(pulse => (
+                  <div key={pulse.kid.id} className="pulse-card"
+                    style={{ ...css.pulseCard, cursor: 'pointer' }}
+                    onClick={() => setActivePulseKidId(pulse.kid.id)}>
+                    {/* Ring */}
+                    <div style={{ position: 'relative', width: 150, height: 150, margin: '0 auto 16px' }}>
+                      <PulseRing pct={pulse.pct} color={pulse.color} size={150} />
+                      <div style={css.ringCenter}>
+                        <span style={{ fontSize: 13, fontWeight: 800, color: '#4b5563', marginBottom: 2 }}>{pulse.kid.displayname}</span>
+                        <span style={{ fontSize: 28, fontWeight: 900, color: '#1a1a2e', lineHeight: 1 }}>{pulse.pct}%</span>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: '#4b5563', marginTop: 3 }}>Complete</span>
+                      </div>
+                    </div>
+                    {/* Lessons count */}
+                    <div style={{ fontSize: 12, color: '#374151', textAlign: 'center' as const, marginBottom: 12 }}>
+                      {pulse.totalToday > 0
+                        ? `${pulse.completedToday} of ${pulse.totalToday} lessons done today`
+                        : 'No lessons scheduled today'}
+                    </div>
+                    {/* Focus subjects — emoji icon tiles */}
+                    {pulse.subjectNames.length > 0 && (
+                      <>
+                        <div style={{ fontSize: 11, fontWeight: 800, color: '#4b5563', letterSpacing: 0.6, textAlign: 'center' as const, marginBottom: 8 }}>
+                          FOCUS SUBJECTS
+                        </div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 8, justifyContent: 'center' }}>
+                          {pulse.subjectNames.map(s => (
+                            <div key={s} style={{ display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 4 }}>
+                              <div style={{
+                                width: 40, height: 40, borderRadius: 12,
+                                background: subjectColor(s) + '18',
+                                border: `1.5px solid ${subjectColor(s)}40`,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                fontSize: 18,
+                              }}>
+                                {subjectEmoji(s)}
+                              </div>
+                              <span style={{ fontSize: 10, fontWeight: 700, color: '#374151', textAlign: 'center' as const, maxWidth: 48 }}>
+                                {s.split('/')[0].trim()}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
+          {/* Quick Actions */}
+          <section>
+            <div style={css.sectionRow}>
+              <span style={css.secTitle}>QUICK ACTIONS</span>
+            </div>
+
+            <div className="quick-grid" style={css.quickGrid}>
+
+              <button className="quick-btn" style={{ ...css.quickCard, background: 'linear-gradient(135deg, #ede9fe, #ddd6fe)' }}
+                onClick={() => setShowToday(true)}>
+                <div style={{ ...css.qIcon, background: '#7c3aed' }}><span style={{ fontSize: 22 }}>📝</span></div>
+                <div>
+                  <div style={{ ...css.qLabel, color: '#4c1d95' }}>Today's Learning</div>
+                  <div style={{ ...css.qSub, color: '#7c3aed' }}>All children's agenda</div>
+                </div>
+              </button>
+
+              <button className="quick-btn" style={{ ...css.quickCard, background: 'linear-gradient(135deg, #fce7f3, #fbcfe8)' }}
+                onClick={() => setShowStuck(true)}>
+                <div style={{ ...css.qIcon, background: '#ec4899' }}><span style={{ fontSize: 22 }}>🆘</span></div>
+                <div>
+                  <div style={{ ...css.qLabel, color: '#831843' }}>The Stuck Button</div>
+                  <div style={{ ...css.qSub, color: '#ec4899' }}>Need help? Tap me.</div>
+                </div>
+              </button>
+
+              <button className="quick-btn" style={{ ...css.quickCard, background: 'linear-gradient(135deg, #ccfbf1, #99f6e4)' }}
+                onClick={() => router.push('/supply-scout')}>
+                <div style={{ ...css.qIcon, background: '#5eead4' }}><span style={{ fontSize: 22 }}>🛒</span></div>
+                <div>
+                  <div style={{ ...css.qLabel, color: '#134e4a' }}>Supply Scout</div>
+                  <div style={{ ...css.qSub, color: '#0d9488' }}>
+                    {"Materials needed for your lessons"}
+                  </div>
+                </div>
+              </button>
+
+              <button className="quick-btn" style={{ ...css.quickCard, background: 'linear-gradient(135deg, #d1fae5, #a7f3d0)' }}
+                onClick={() => router.push('/attendance')}>
+                <div style={{ ...css.qIcon, background: '#059669' }}><span style={{ fontSize: 22 }}>✅</span></div>
+                <div>
+                  <div style={{ ...css.qLabel, color: '#064e3b' }}>Attendance Tracker</div>
+                  <div style={{ ...css.qSub, color: '#059669' }}>{attendanceNote}</div>
+                </div>
+              </button>
+
+            </div>
+
+            {/* Life Happens FAB */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, padding: '8px 0 4px' }}>
+              <button style={css.lifeFab} onClick={() => setShowLifeHappens(true)}>
+                <span style={{ fontSize: 44 }}>🌤️</span>
+              </button>
+              <span style={{ fontSize: 12, fontWeight: 800, color: '#92400e', fontFamily: "'Nunito', sans-serif", letterSpacing: 0.5 }}>
+                Life Happens?
+              </span>
+            </div>
+          </section>
+
+        </main>
+
+        <div style={{ height: 80 }} />
+        <BottomNav active="home" />
+
+        {showLifeHappens && (
+          <LifeHappensModal
+            todayLessons={todayLessons}
+            kidPulses={kidPulses}
+            cardinalSrc={cardinalSrc}
+            onClose={() => setShowLifeHappens(false)}
+            onRescheduled={() => {
+              setShowLifeHappens(false)
+              setTodayLessons(prev => {
+                const updated = { ...prev }
+                for (const kid in updated) {
+                  updated[kid] = updated[kid].filter((l: any) => l.status === 'completed')
+                }
+                return updated
+              })
+            }}
+          />
+        )}
+        {showStuck && (
+          <StuckModal
+            onClose={() => setShowStuck(false)}
+            onGenerateLesson={() => setShowGenerator(true)}
+            onGenerateActivity={() => setShowActivity(true)}
+            onAskScout={() => window.dispatchEvent(new CustomEvent('open-scout-copilot'))}
+          />
+        )}
+        {showGenerator && (
+          <LessonGenerator
+            kids={kidPulses.map(p => ({ id: p.kid.id, displayname: p.kid.displayname, grade: p.kid.grade_level }))}
+            userId={user?.id ?? ''}
+            onClose={() => setShowGenerator(false)}
+          />
+        )}
+        {showActivity && (
+          <ActivityGenerator
+            kids={kidPulses.map(p => p.kid)}
+            onClose={() => setShowActivity(false)}
+            onSaved={() => {}}
+          />
+        )}
+        {showToday && (
+          <TodaysLearningModal
+            onClose={() => setShowToday(false)}
+            kidPulses={kidPulses}
+            todayLessons={todayLessons}
+            onLessonClick={(lesson, kidName) => {
+              setShowToday(false)
+              setSelectedLesson(lesson as LessonViewModalLesson)
+              setSelectedKidName(kidName)
+            }}
+          />
+        )}
+        {selectedLesson && (
+          <LessonViewModal
+            lesson={selectedLesson}
+            kidName={selectedKidName}
+            organizationId={organizationId ?? undefined}
+            stateCode={schoolState}
+            onClose={() => setSelectedLesson(null)}
+            onEdit={() => {
+              setSelectedLesson(null)
+              router.push(`/subjects?kid=${selectedLesson.kid_id}`)
+            }}
+            onDelete={async () => {
+              await supabase.from('lessons').delete().eq('id', selectedLesson.id)
+              setTodayLessons(prev => {
+                const updated = { ...prev }
+                for (const kid in updated) {
+                  updated[kid] = updated[kid].filter(l => l.id !== selectedLesson.id)
+                }
+                return updated
+              })
+              setSelectedLesson(null)
+            }}
+            onCycleStatus={async (lessonId, currentStatus) => {
+              const next = currentStatus === 'not_started' ? 'in_progress'
+                         : currentStatus === 'in_progress'  ? 'completed'
+                         : 'not_started'
+              await supabase.from('lessons').update({ status: next }).eq('id', lessonId)
+              handleLessonStatusUpdate(lessonId, selectedLesson!.kid_id, next)
+              setSelectedLesson(s => s ? { ...s, status: next as LessonViewModalLesson['status'] } : null)
+            }}
+            onSetStatus={async (lessonId, newStatus) => {
+              await supabase.from('lessons').update({ status: newStatus }).eq('id', lessonId)
+              handleLessonStatusUpdate(lessonId, selectedLesson!.kid_id, newStatus)
+              setSelectedLesson(s => s ? { ...s, status: newStatus as LessonViewModalLesson['status'] } : null)
+            }}
+            onSave={(lessonId, updates) => {
+              setTodayLessons(prev => {
+                const updated = { ...prev }
+                for (const kid in updated) {
+                  updated[kid] = updated[kid].map(l => l.id === lessonId ? { ...l, ...updates } : l)
+                }
+                return updated
+              })
+              setSelectedLesson(s => s ? { ...s, ...updates } : null)
+            }}
+          />
+        )}
+
+        {/* ── Kid Today Panel (slide-up) ── */}
+        {activePulseKidId && (() => {
+          const activePulse = kidPulses.find(p => p.kid.id === activePulseKidId)
+          const panelLessons = todayLessons[activePulseKidId] || []
+          const STATUS_CONFIG = {
+            completed:   { label: 'Done',        bg: '#d1fae5', color: '#065f46', dot: '#10b981' },
+            in_progress: { label: 'In Progress', bg: '#fef3c7', color: '#92400e', dot: '#f59e0b' },
+            not_started: { label: 'Not Started', bg: '#f3f4f6', color: '#374151', dot: '#9ca3af' },
+          }
+          return (
             <>
-              <div style={css.sectionLabel}>WHERE WOULD YOU LIKE TO GO?</div>
-              <div className="dashboard-grid">
-                {visibleNavCards.map(card => <NavCard key={card.id} card={card} />)}
+              {/* Backdrop */}
+              <div
+                onClick={() => setActivePulseKidId(null)}
+                style={{
+                  position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)',
+                  zIndex: 200, backdropFilter: 'blur(2px)',
+                }}
+              />
+              {/* Sheet */}
+              <div style={{
+                position: 'fixed', bottom: 0, left: 0, right: 0,
+                background: '#fff', borderRadius: '24px 24px 0 0',
+                boxShadow: '0 -8px 40px rgba(0,0,0,0.18)',
+                zIndex: 201, maxHeight: '80vh', display: 'flex', flexDirection: 'column',
+                fontFamily: "'Nunito', sans-serif",
+              }}>
+                {/* Handle */}
+                <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 4px' }}>
+                  <div style={{ width: 40, height: 4, borderRadius: 2, background: '#e5e7eb' }} />
+                </div>
+                {/* Header */}
+                <div style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '8px 20px 14px',
+                }}>
+                  <div>
+                    <div style={{ fontSize: 20, fontWeight: 900, color: '#1a1a2e' }}>
+                      {activePulse?.kid.displayname}&rsquo;s Lessons Today
+                    </div>
+                    <div style={{ fontSize: 13, color: '#6b7280', marginTop: 2, fontWeight: 600 }}>
+                      {activePulse?.completedToday} of {activePulse?.totalToday} completed · {activePulse?.pct}%
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setActivePulseKidId(null)}
+                    style={{
+                      background: '#f3f4f6', border: 'none', borderRadius: '50%',
+                      width: 36, height: 36, fontSize: 18, cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      color: '#374151', flexShrink: 0,
+                    }}>×</button>
+                </div>
+                {/* Lesson list */}
+                <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px 100px' }}>
+                  {panelLessons.length === 0 ? (
+                    <div style={{
+                      textAlign: 'center', padding: '40px 20px',
+                      color: '#9ca3af', fontSize: 15, fontWeight: 600,
+                    }}>
+                      <div style={{ fontSize: 36, marginBottom: 10 }}>📭</div>
+                      No lessons scheduled for today
+                    </div>
+                  ) : (
+                    panelLessons.map((lesson: any) => {
+                      const sc = STATUS_CONFIG[lesson.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.not_started
+                      return (
+                        <div
+                          key={lesson.id}
+                          onClick={() => {
+                            setActivePulseKidId(null)
+                            setSelectedLesson(lesson as LessonViewModalLesson)
+                            setSelectedKidName(activePulse?.kid.displayname)
+                          }}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: 14,
+                            background: '#f9fafb', borderRadius: 14,
+                            padding: '14px 16px', marginBottom: 10,
+                            cursor: 'pointer', border: '1.5px solid #f3f4f6',
+                            transition: 'all 0.12s',
+                          }}
+                        >
+                          {/* Status dot */}
+                          <div style={{
+                            width: 12, height: 12, borderRadius: '50%',
+                            background: sc.dot, flexShrink: 0,
+                          }} />
+                          {/* Info */}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{
+                              fontSize: 15, fontWeight: 800, color: '#1a1a2e',
+                              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                            }}>{lesson.title}</div>
+                            {lesson.subject && (
+                              <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2, fontWeight: 600 }}>
+                                {lesson.subject}
+                                {lesson.start_time && ` · ${lesson.start_time.slice(0, 5)}`}
+                              </div>
+                            )}
+                          </div>
+                          {/* Status badge */}
+                          <div style={{
+                            fontSize: 11, fontWeight: 800, padding: '3px 9px',
+                            borderRadius: 20, background: sc.bg, color: sc.color,
+                            flexShrink: 0,
+                          }}>{sc.label}</div>
+                          {/* Chevron */}
+                          <div style={{ color: '#d1d5db', fontSize: 16, flexShrink: 0 }}>›</div>
+                        </div>
+                      )
+                    })
+                  )}
+                </div>
               </div>
             </>
-          )}
-        </main>
+          )
+        })()}
 
         <DevTierToggle />
       </div>
@@ -452,7 +1079,7 @@ function DashboardContent() {
   )
 }
 
-// ─── Page ────────────────────────────────────────────────────────────────────
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
   return (
@@ -464,38 +1091,208 @@ export default function DashboardPage() {
   )
 }
 
-// ─── Styles ──────────────────────────────────────────────────────────────────
+// ─── Styles ───────────────────────────────────────────────────────────────────
 
 const css: Record<string, React.CSSProperties> = {
-  root: { fontFamily: 'var(--font-dm-sans), var(--font-nunito), sans-serif', background: '#f5f3ff', minHeight: '100vh' },
-
-  // Slim welcome bar replaces the old duplicate header
-  welcomeBar: {
-    background: 'rgba(124,58,237,0.06)',
-    borderBottom: '1px solid #ede9fe',
-    padding: '10px 24px',
+  root: {
+    fontFamily: "'Nunito', sans-serif",
+    minHeight: '100vh',
+    background: 'linear-gradient(135deg, #c4b5fd 0%, #e879f9 18%, #f0abfc 36%, #fbcfe8 54%, #bae6fd 76%, #6ee7b7 100%)',
   },
-  welcomeMsg: { color: '#5b21b6', fontSize: 13.5 },
+  header: {
+    background: 'transparent',
+    padding: '0 40px',
+  },
+  headerInner: {
+    maxWidth: 1200,
+    margin: '0 auto',
+    padding: '28px 0 20px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 24,
+  },
+  headerLeft: { display: 'flex', flexDirection: 'column' as const, gap: 4 },
+  logo: { display: 'flex', flexDirection: 'column', lineHeight: 1, gap: 1 },
+  logoH: { fontWeight: 900, fontSize: 26, color: '#7c3aed', letterSpacing: 0.5 },
+  logoR: { fontWeight: 800, fontSize: 13, color: '#0d9488', letterSpacing: 2, paddingLeft: 24 },
+  dateStr: { fontSize: 13, color: '#4b5563', fontWeight: 600 },
 
-  main: { maxWidth: 1100, margin: '0 auto', padding: '24px 16px 48px' },
-  sectionLabel: { fontSize: 11, fontWeight: 800, color: '#9ca3af', letterSpacing: 1, marginBottom: 14, marginTop: 8 },
-  // grid class is handled by <style> tag above for responsive breakpoints
-  card: { background: '#fff', borderRadius: 14, border: '1.5px solid', overflow: 'hidden', transition: 'all 0.22s cubic-bezier(0.4,0,0.2,1)', cursor: 'pointer' },
-  cardHead: { padding: '13px 16px', display: 'flex', alignItems: 'center', gap: 10 },
-  cardTitle: { color: '#fff', fontWeight: 900, fontSize: 15, flex: 1, letterSpacing: 0.1 },
-  itemList: { listStyle: 'none', margin: 0, padding: '6px 0 10px' },
-  item: { display: 'flex', alignItems: 'center', gap: 10, padding: '7px 16px', cursor: 'pointer', transition: 'background 0.12s ease', borderRadius: 6, margin: '0 6px' },
-  itemLabel: { fontSize: 13, color: '#374151', fontWeight: 500, flex: 1 },
-  checklistCard: { background: '#fff', borderRadius: 14, border: '1.5px solid #ede9fe', overflow: 'hidden', marginBottom: 20, boxShadow: '0 4px 16px rgba(124,58,237,0.08)' },
-  checklistHeader: { background: 'linear-gradient(135deg, #7c3aed, #a855f7, #ec4899)', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
-  checklistHeaderLeft: { display: 'flex', alignItems: 'center', gap: 12 },
-  checklistTitle: { color: '#fff', fontWeight: 800, fontSize: 15 },
-  checklistSub: { color: 'rgba(255,255,255,0.8)', fontSize: 12, marginTop: 2 },
-  checklistBtn: { background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 6, color: '#fff', width: 28, height: 28, cursor: 'pointer', fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' },
-  progressTrack: { height: 5, background: '#ede9fe' },
-  progressFill: { height: '100%', transition: 'width 0.6s ease', borderRadius: '0 4px 4px 0' },
-  checklistSteps: { padding: '12px 20px 16px', display: 'flex', flexDirection: 'column', gap: 12 },
-  checklistStep: { display: 'flex', alignItems: 'flex-start', gap: 12, transition: 'opacity 0.2s ease' },
-  stepBadge: { width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 12, flexShrink: 0, marginTop: 2 },
-  stepCta: { marginTop: 8, background: 'linear-gradient(135deg, #7c3aed, #a855f7)', color: '#fff', border: 'none', borderRadius: 6, padding: '5px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer' },
+  cardinalWrap: { display: 'flex', alignItems: 'flex-end', gap: 12, flexShrink: 0 },
+  bubble: {
+    background: 'rgba(255,255,255,0.92)',
+    borderRadius: '16px 16px 0 16px',
+    padding: '14px 18px',
+    boxShadow: '0 4px 20px rgba(0,0,0,0.10)',
+    maxWidth: 280,
+    border: '1px solid rgba(255,255,255,0.95)',
+  },
+  bubbleBold: { fontWeight: 900, fontSize: 15, color: '#1a1a2e' },
+  bubbleSub:  { fontSize: 13, color: '#374151', marginTop: 4, lineHeight: 1.45 },
+  cardinal: {
+    width: 130,
+    height: 130,
+    objectFit: 'contain' as const,
+  },
+
+  main: {
+    maxWidth: 1200,
+    margin: '0 auto',
+    padding: '0 40px 20px',
+    display: 'flex',
+    flexDirection: 'column' as const,
+    gap: 36,
+  },
+
+  sectionRow: { display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 18 },
+  secTitle:   { fontSize: 12, fontWeight: 900, color: '#6d28d9', letterSpacing: 1.2 },
+  secSub:     { fontSize: 12, color: '#c4cdd6', fontWeight: 600 },
+
+  pulseCard: {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    alignItems: 'center',
+    padding: '8px 12px 16px',
+  },
+  ringCenter: {
+    position: 'absolute' as const,
+    inset: 0,
+    display: 'flex',
+    flexDirection: 'column' as const,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pill: {
+    fontSize: 11,
+    fontWeight: 700,
+    padding: '3px 12px',
+    borderRadius: 20,
+    border: '1.5px solid',
+  },
+  emptyCard: {
+    background: 'rgba(255,255,255,0.7)',
+    borderRadius: 22,
+    padding: '48px 32px',
+    textAlign: 'center' as const,
+    border: '2px dashed #d1d5db',
+  },
+
+  quickGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, 1fr)',
+    gap: 16,
+    marginBottom: 14,
+  },
+  quickCard: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 16,
+    borderRadius: 20,
+    border: '1.5px solid rgba(255,255,255,0.9)',
+    padding: '20px 18px',
+    boxShadow: '0 2px 16px rgba(0,0,0,0.07)',
+    textAlign: 'left' as const,
+    fontFamily: "'Nunito', sans-serif",
+    width: '100%',
+  },
+  qIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: 16,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  qLabel: { fontWeight: 900, fontSize: 14, marginBottom: 3 },
+  qSub:   { fontSize: 12, fontWeight: 600, lineHeight: 1.4 },
+
+  lifeFab: {
+    width: 100, height: 100, borderRadius: '50%',
+    background: 'linear-gradient(135deg, #fde68a 0%, #fbbf24 60%, #f59e0b 100%)',
+    border: '3px solid rgba(255,255,255,0.85)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    cursor: 'pointer',
+    boxShadow: '0 6px 24px rgba(251,191,36,0.45), 0 2px 8px rgba(0,0,0,0.1)',
+    transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+  },
+
+  bottomNav: {
+    position: 'fixed' as const,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    background: 'rgba(255,255,255,0.94)',
+    backdropFilter: 'blur(16px)',
+    borderTop: '1px solid rgba(124,58,237,0.10)',
+    display: 'flex',
+    zIndex: 100,
+    padding: '8px 0 12px',
+    boxShadow: '0 -4px 24px rgba(0,0,0,0.07)',
+  },
+  navItem: {
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column' as const,
+    alignItems: 'center',
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    padding: '6px 0',
+    fontFamily: "'Nunito', sans-serif",
+    gap: 2,
+  },
+
+  overlay: {
+    position: 'fixed' as const,
+    inset: 0,
+    background: 'rgba(45,27,105,0.38)',
+    backdropFilter: 'blur(8px)',
+    zIndex: 200,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  modalBox: {
+    background: 'linear-gradient(160deg, #faf5ff 0%, #ede9fe 40%, #e0f2fe 100%)',
+    borderRadius: 26,
+    padding: '30px 26px 26px',
+    width: '100%',
+    maxWidth: 460,
+    boxShadow: '0 24px 64px rgba(45,27,105,0.22)',
+    border: '1px solid rgba(255,255,255,0.85)',
+  },
+  modalHead: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 18,
+    marginBottom: 24,
+    paddingBottom: 20,
+    borderBottom: '1px solid rgba(124,58,237,0.12)',
+  },
+  modalAction: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 16,
+    background: 'rgba(255,255,255,0.84)',
+    border: '1.5px solid',
+    borderRadius: 16,
+    padding: '15px 18px',
+    cursor: 'pointer',
+    width: '100%',
+    fontFamily: "'Nunito', sans-serif",
+  },
+  modalClose: {
+    marginTop: 20,
+    width: '100%',
+    background: 'none',
+    border: 'none',
+    color: '#4b5563',
+    fontSize: 14,
+    fontWeight: 600,
+    cursor: 'pointer',
+    padding: '8px 0',
+    fontFamily: "'Nunito', sans-serif",
+  },
 }

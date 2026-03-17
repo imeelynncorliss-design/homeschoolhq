@@ -26,7 +26,7 @@ interface Material {
 
 export default function MaterialsPage() {
   const router = useRouter();
-  useAppHeader({ title: '📚 Materials', backHref: '/dashboard' })
+  useAppHeader({ title: '📚 Materials', backHref: '/resources' })
   const [loading, setLoading] = useState(true);
   const [materials, setMaterials] = useState<Material[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -321,14 +321,15 @@ export default function MaterialsPage() {
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
   
-      <div className="max-w-7xl mx-auto px-8 -mt-0">
+  <div className="max-w-7xl mx-auto px-4 md:px-8 -mt-0">
         {/* STATS SUMMARY */}
-        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 24 }}>
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6">
           <div>
             <h1 style={{ fontSize: 24, fontWeight: 800, color: '#111827', margin: 0 }}>Materials & Resources</h1>
             <p style={{ fontSize: 13, color: '#6b7280', marginTop: 4 }}>Track your curriculum, logins, and supplies</p>
           </div>
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div className="flex gap-2 flex-shrink-0">
+
             <button
               onClick={() => setShowHelpModal(true)}
               className="bg-white border-2 border-gray-200 text-gray-600 px-4 py-2 rounded-xl font-semibold text-sm hover:bg-gray-50 transition-all"

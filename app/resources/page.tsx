@@ -6,6 +6,46 @@ import AuthGuard from '@/components/AuthGuard'
 import { supabase } from '@/src/lib/supabase'
 import { getOrganizationId } from '@/src/lib/getOrganizationId'
 import { useAppHeader } from '@/components/layout/AppHeader'
+import MaterialsHelpModal from '@/components/MaterialsHelpModal'
+
+const NAV_ITEMS = [
+  { id: 'home',      label: 'Home',      icon: '🏠', href: '/dashboard' },
+  { id: 'plan',      label: 'Subjects',     icon: '📚', href: '/subjects'  },
+  { id: 'records',   label: 'Records',   icon: '📋', href: '/reports'   },
+  { id: 'resources', label: 'Resources', icon: '💡', href: '/resources' },
+  { id: 'profile',   label: 'Profile',   icon: '👤', href: '/profile'   },
+]
+
+function BottomNav({ active }: { active: string }) {
+  const router = useRouter()
+  return (
+    <nav style={{
+      position: 'fixed', bottom: 0, left: 0, right: 0,
+      background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(12px)',
+      borderTop: '1px solid rgba(0,0,0,0.08)',
+      display: 'flex', height: 64, zIndex: 50,
+      fontFamily: "'Nunito', sans-serif",
+    }}>
+      {NAV_ITEMS.map(item => {
+        const isActive = item.id === active
+        return (
+          <button key={item.id}
+            style={{
+              flex: 1, display: 'flex', flexDirection: 'column' as const, alignItems: 'center',
+              justifyContent: 'center', gap: 2, background: 'none', border: 'none',
+              cursor: 'pointer', color: isActive ? '#7c3aed' : '#9ca3af',
+              fontFamily: "'Nunito', sans-serif", position: 'relative',
+            }}
+            onClick={() => router.push(item.href)}>
+            {isActive && <span style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: 20, height: 3, borderRadius: 2, background: '#7c3aed' }} />}
+            <span style={{ fontSize: isActive ? 28 : 22, lineHeight: 1, transition: 'font-size 0.15s' }}>{item.icon}</span>
+            <span style={{ fontSize: isActive ? 12 : 10, fontWeight: isActive ? 800 : 500, transition: 'all 0.15s' }}>{item.label}</span>
+          </button>
+        )
+      })}
+    </nav>
+  )
+}
 
 // ─── Static Data ──────────────────────────────────────────────────────────────
 
@@ -65,6 +105,39 @@ const TEACHING_STYLES = [
     strengths: ['Trains critical thinking', 'Deep engagement with ideas', 'Strong writing foundation'],
     curricula: ['Classical Conversations', 'The Well-Trained Mind', 'Memoria Press'],
   },
+  {
+    id: 'montessori',
+    emoji: '🌱',
+    name: 'Montessori',
+    color: '#059669',
+    bg: '#ecfdf5',
+    tagline: 'Follow the child — independence, hands-on work, and self-directed discovery.',
+    desc: 'Child-led learning using hands-on materials and mixed-age environments. Emphasizes independence, concentration, and intrinsic motivation over grades and tests.',
+    strengths: ['Builds deep independence', 'Self-paced mastery', 'Strong executive function'],
+    curricula: ['Montessori at Home', 'NAMC Curriculum', 'Waseca Biomes'],
+  },
+  {
+    id: 'unit',
+    emoji: '🔭',
+    name: 'Unit Studies',
+    color: '#0284c7',
+    bg: '#f0f9ff',
+    tagline: 'One topic, every subject — deep dives that make learning stick.',
+    desc: 'Teach all subjects through a single theme or topic at a time — a study of Ancient Egypt covers history, writing, art, science, and math together. Great for multi-age families.',
+    strengths: ['Works for all ages at once', 'Deep retention through context', 'Endlessly customizable'],
+    curricula: ['Konos', 'Five in a Row', 'Tapestry of Grace'],
+  },
+  {
+    id: 'waldorf',
+    emoji: '🎭',
+    name: 'Waldorf',
+    color: '#d97706',
+    bg: '#fffbeb',
+    tagline: 'Head, heart, hands — nurturing the whole child through art and rhythm.',
+    desc: 'Learning unfolds in developmental stages through storytelling, art, music, and movement. Academics are introduced gradually, with an emphasis on creativity and imagination over early academics.',
+    strengths: ['Rich in arts and creativity', 'Strong social-emotional focus', 'Predictable daily rhythm'],
+    curricula: ['Waldorf Essentials', 'Oak Meadow', 'Live Education'],
+  },
 ]
 
 const CURRICULUM_DETAILS: Record<string, Array<{ name: string; type: 'free' | 'paid'; desc: string; url: string }>> = {
@@ -92,6 +165,21 @@ const CURRICULUM_DETAILS: Record<string, Array<{ name: string; type: 'free' | 'p
     { name: 'Classical Conversations', type: 'paid', desc: 'Community-based classical program with weekly group learning.', url: 'https://classicalconversations.com' },
     { name: 'The Well-Trained Mind', type: 'paid', desc: 'The definitive guide to classical homeschooling by Susan Wise Bauer.', url: 'https://welltrainedmind.com' },
     { name: 'Memoria Press', type: 'paid', desc: 'Traditional classical curriculum with Latin, logic, and great books.', url: 'https://www.memoriapress.com' },
+  ],
+  montessori: [
+    { name: 'Montessori at Home', type: 'free', desc: 'Free resource hub for parents implementing Montessori principles at home with printables and guides.', url: 'https://www.montessoriathome.org' },
+    { name: 'NAMC Curriculum', type: 'paid', desc: 'North American Montessori Center offers complete homeschool albums covering ages 3–12.', url: 'https://www.montessoritraining.net' },
+    { name: 'Waseca Biomes', type: 'paid', desc: 'Beautiful Montessori-inspired materials focused on the natural world and geography.', url: 'https://wasecabiomes.org' },
+  ],
+  unit: [
+    { name: 'Konos', type: 'paid', desc: 'Character-based unit studies built around virtues — covers all core subjects for K–8.', url: 'https://www.konos.com' },
+    { name: 'Five in a Row', type: 'paid', desc: 'Literature-based unit studies for young learners built around classic picture books.', url: 'https://fiveinarow.com' },
+    { name: 'Tapestry of Grace', type: 'paid', desc: 'History-centered unit studies covering all subjects for multiple ages simultaneously.', url: 'https://www.tapestryofgrace.com' },
+  ],
+  waldorf: [
+    { name: 'Waldorf Essentials', type: 'paid', desc: 'Practical, parent-friendly Waldorf curriculum with main lesson books and seasonal guides.', url: 'https://www.waldorfessentials.com' },
+    { name: 'Oak Meadow', type: 'paid', desc: 'Waldorf-inspired K–12 curriculum with accredited high school options and beautiful materials.', url: 'https://www.oakmeadow.com' },
+    { name: 'Live Education', type: 'paid', desc: 'Story-based Waldorf homeschool curriculum grounded in the original Steiner tradition.', url: 'https://live-education.com' },
   ],
 }
 
@@ -291,6 +379,20 @@ function CurriculumTab({ initialStyle }: { initialStyle: string }) {
       <div style={css.infoBanner}>
         📚 Showing curated options for <strong>{TEACHING_STYLES.find(s => s.id === activeStyle)?.name}</strong>.
         Always research before purchasing — curriculum fit is personal.
+      </div>
+
+      <div style={{
+        background: '#fff',
+        border: '1px solid #e5e7eb',
+        borderLeft: '3px solid #d1d5db',
+        borderRadius: 10,
+        padding: '11px 16px',
+        marginBottom: 18,
+        fontSize: 12,
+        color: '#9ca3af',
+        lineHeight: 1.6,
+      }}>
+        <strong style={{ color: '#6b7280' }}>Disclosure:</strong> The resources listed here are for informational purposes only. HomeschoolReady does not endorse, recommend, or receive any compensation in connection with any curriculum or product listed. We have no affiliate relationships with these providers. Always do your own research to find what's right for your family.
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -683,14 +785,295 @@ function GuidesTab() {
   )
 }
 
+// ─── Materials Tab ────────────────────────────────────────────────────────────
+
+type MaterialType = 'textbook' | 'subscription' | 'physical' | 'digital'
+
+function MaterialsTab({ organizationId }: { organizationId: string }) {
+  const [materials, setMaterials]         = useState<any[]>([])
+  const [loadingMats, setLoadingMats]     = useState(true)
+  const [filterType, setFilterType]       = useState<MaterialType | 'all'>('all')
+  const [searchQuery, setSearchQuery]     = useState('')
+  const [showAddForm, setShowAddForm]     = useState(false)
+  const [editingMaterial, setEditingMaterial] = useState<any>(null)
+  const [showHelpModal, setShowHelpModal] = useState(false)
+  const [isSaving, setIsSaving]           = useState(false)
+  const [collapsed, setCollapsed]         = useState<Set<string>>(new Set())
+
+  const toggleCollapse = (type: string) =>
+    setCollapsed(prev => {
+      const next = new Set(prev)
+      next.has(type) ? next.delete(type) : next.add(type)
+      return next
+    })
+
+  // Form state
+  const [formType, setFormType]               = useState<MaterialType>('textbook')
+  const [formName, setFormName]               = useState('')
+  const [formSubject, setFormSubject]         = useState('')
+  const [formGrade, setFormGrade]             = useState('')
+  const [formQuantity, setFormQuantity]       = useState(1)
+  const [formUrl, setFormUrl]                 = useState('')
+  const [formLoginInfo, setFormLoginInfo]     = useState('')
+  const [formNotes, setFormNotes]             = useState('')
+
+  useEffect(() => { loadMaterials() }, [organizationId, filterType, searchQuery])
+
+  const loadMaterials = async () => {
+    if (!organizationId) return
+    setLoadingMats(true)
+    try {
+      let query = supabase
+        .from('materials')
+        .select('*')
+        .eq('organization_id', organizationId)
+        .order('created_at', { ascending: false })
+      if (filterType !== 'all') query = query.eq('material_type', filterType)
+      if (searchQuery) query = query.ilike('name', `%${searchQuery}%`)
+      const { data } = await query
+      setMaterials(data || [])
+    } catch (e) { console.error(e) }
+    finally { setLoadingMats(false) }
+  }
+
+  const resetForm = () => {
+    setFormType('textbook'); setFormName(''); setFormSubject(''); setFormGrade('')
+    setFormQuantity(1); setFormUrl(''); setFormLoginInfo(''); setFormNotes('')
+    setEditingMaterial(null)
+  }
+
+  const openEdit = (m: any) => {
+    setEditingMaterial(m)
+    setFormType(m.material_type); setFormName(m.name); setFormSubject(m.subject || '')
+    setFormGrade(m.grade_level || ''); setFormQuantity(m.quantity || 1)
+    setFormUrl(m.url || ''); setFormLoginInfo(m.login_info || ''); setFormNotes(m.notes || '')
+    setShowAddForm(true)
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSaving(true)
+    const payload = {
+      organization_id: organizationId, material_type: formType, name: formName,
+      subject: formSubject || null, grade_level: formGrade || null,
+      quantity: formQuantity, url: formUrl || null,
+      login_info: formLoginInfo || null, notes: formNotes || null,
+    }
+    try {
+      if (editingMaterial) {
+        await supabase.from('materials').update(payload).eq('id', editingMaterial.id)
+      } else {
+        await supabase.from('materials').insert([payload])
+      }
+      setShowAddForm(false); resetForm(); loadMaterials()
+    } catch (err: any) { alert(`Failed to save: ${err.message}`) }
+    finally { setIsSaving(false) }
+  }
+
+  const deleteMaterial = async (id: string) => {
+    if (!confirm('Delete this material?')) return
+    await supabase.from('materials').delete().eq('id', id)
+    loadMaterials()
+  }
+
+  const ICONS: Record<MaterialType, string> = { textbook: '📚', subscription: '🔑', physical: '🧰', digital: '💻' }
+
+  if (loadingMats) return (
+    <div style={{ padding: 40, textAlign: 'center', color: '#7c3aed', fontWeight: 700 }}>Loading materials...</div>
+  )
+
+  return (
+    <div>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
+        <div>
+          <h2 style={{ fontSize: 18, fontWeight: 800, color: '#111827', margin: 0 }}>Materials & Resources</h2>
+          <p style={{ fontSize: 13, color: '#6b7280', margin: '4px 0 0' }}>Track your curriculum, logins, and supplies</p>
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={() => setShowHelpModal(true)} style={{ background: '#fff', border: '2px solid #e5e7eb', color: '#6b7280', padding: '8px 14px', borderRadius: 10, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}>
+            💡 How this works
+          </button>
+          <button onClick={() => { resetForm(); setShowAddForm(true) }} style={{ background: '#4f46e5', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: 10, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}>
+            + Add Material
+          </button>
+        </div>
+      </div>
+
+      {/* Stats */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 18 }}>
+        {(['textbook', 'subscription', 'physical', 'digital'] as MaterialType[]).map(type => (
+          <div key={type} style={{ background: '#fff', padding: '14px 16px', borderRadius: 14, border: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 22 }}>{ICONS[type]}</span>
+            <div>
+              <div style={{ fontSize: 9, fontWeight: 800, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.07em' }}>{type}s</div>
+              <div style={{ fontSize: 22, fontWeight: 900, color: '#111827' }}>{materials.filter(m => m.material_type === type).length}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Search + filter */}
+      <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e5e7eb', padding: 14, marginBottom: 18, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+        <input type="text" placeholder="🔍 Search materials..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+          style={{ flex: 1, minWidth: 180, padding: '10px 14px', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 10, fontSize: 13, fontWeight: 600, outline: 'none', color: '#111827', fontFamily: "'Nunito', sans-serif" }} />
+        <select value={filterType} onChange={e => setFilterType(e.target.value as any)}
+          style={{ padding: '10px 14px', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer', color: '#111827', fontFamily: "'Nunito', sans-serif" }}>
+          <option value="all">All Types</option>
+          <option value="textbook">Textbooks</option>
+          <option value="subscription">Subscriptions</option>
+          <option value="physical">Physical</option>
+          <option value="digital">Digital</option>
+        </select>
+      </div>
+
+      {/* List */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14, paddingBottom: 20 }}>
+        {(['textbook', 'subscription', 'physical', 'digital'] as MaterialType[]).map(type => {
+          const typeMats = materials.filter(m => m.material_type === type)
+          if (typeMats.length === 0) return null
+          const isCollapsed = collapsed.has(type)
+          return (
+            <div key={type} style={{ background: '#fff', borderRadius: 14, border: '1px solid #e5e7eb', overflow: 'hidden' }}>
+              <div
+                onClick={() => toggleCollapse(type)}
+                style={{ background: '#f9fafb', padding: '10px 18px', borderBottom: isCollapsed ? 'none' : '1px solid #e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', userSelect: 'none' }}
+              >
+                <span style={{ fontSize: 12, fontWeight: 800, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                  {ICONS[type]} {type}s <span style={{ color: '#c4b5fd', fontWeight: 600 }}>({typeMats.length})</span>
+                </span>
+                <span style={{ fontSize: 13, color: '#9ca3af', transform: isCollapsed ? 'rotate(-90deg)' : 'none', transition: 'transform 0.15s', display: 'inline-block' }}>▾</span>
+              </div>
+              {!isCollapsed && typeMats.map(m => (
+                <div key={m.id} style={{ padding: '14px 18px', borderBottom: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: '#111827' }}>{m.name}</div>
+                    <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 3 }}>
+                      {m.subject || 'General'} · {m.grade_level || 'All Grades'}
+                      {m.url && <a href={m.url} target="_blank" rel="noopener noreferrer" style={{ color: '#7c3aed', marginLeft: 10, fontWeight: 700, textDecoration: 'none' }}>🔗 Open</a>}
+                    </div>
+                    {m.login_info && <div style={{ fontSize: 12, color: '#92400e', background: '#fef3c7', padding: '4px 10px', borderRadius: 6, marginTop: 6, display: 'inline-block', fontWeight: 700 }}>🗝️ {m.login_info}</div>}
+                  </div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button onClick={() => openEdit(m)} style={{ padding: '6px 14px', background: '#ede9fe', color: '#7c3aed', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}>Edit</button>
+                    <button onClick={() => deleteMaterial(m.id)} style={{ padding: '6px 14px', background: 'none', color: '#ef4444', border: '1px solid #fca5a5', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}>Delete</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
+        })}
+
+        {materials.length === 0 && (
+          <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e5e7eb', padding: '48px 24px', textAlign: 'center' }}>
+            <div style={{ fontSize: 48, marginBottom: 12 }}>📦</div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: '#111827', marginBottom: 8 }}>No Materials Yet</div>
+            <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 16 }}>Start building your resource library by adding your first material.</p>
+            <button onClick={() => { resetForm(); setShowAddForm(true) }} style={{ background: '#4f46e5', color: '#fff', border: 'none', padding: '10px 24px', borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}>
+              + Add Your First Material
+            </button>
+          </div>
+        )}
+      </div>
+
+      {showHelpModal && <MaterialsHelpModal onClose={() => setShowHelpModal(false)} />}
+
+      {/* Add / Edit modal */}
+      {showAddForm && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,14,46,0.6)', backdropFilter: 'blur(4px)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div style={{ background: '#fff', borderRadius: 24, padding: 32, maxWidth: 540, width: '100%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 24px 64px rgba(0,0,0,0.18)' }}>
+            <h2 style={{ fontSize: 20, fontWeight: 800, color: '#111827', marginBottom: 24 }}>{editingMaterial ? 'Edit' : 'Add New'} Material</h2>
+            <form onSubmit={handleSubmit}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div>
+                  <label style={{ fontSize: 11, fontWeight: 800, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>Resource Name *</label>
+                  <input type="text" value={formName} onChange={e => setFormName(e.target.value)} required
+                    style={{ width: '100%', padding: '10px 14px', background: '#f9fafb', border: '2px solid #e5e7eb', borderRadius: 10, fontSize: 13, fontWeight: 600, outline: 'none', boxSizing: 'border-box', color: '#111827', fontFamily: "'Nunito', sans-serif" }}
+                    placeholder="e.g. Saxon Math 5/4" />
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 800, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>Subject</label>
+                    <input type="text" value={formSubject} onChange={e => setFormSubject(e.target.value)}
+                      style={{ width: '100%', padding: '10px 14px', background: '#f9fafb', border: '2px solid #e5e7eb', borderRadius: 10, fontSize: 13, fontWeight: 600, outline: 'none', boxSizing: 'border-box', color: '#111827', fontFamily: "'Nunito', sans-serif" }}
+                      placeholder="e.g. Math" />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 800, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>Type</label>
+                    {editingMaterial?.material_type === 'physical' ? (
+                      <div style={{ padding: '10px 14px', background: '#f3f4f6', border: '2px solid #e5e7eb', borderRadius: 10, fontSize: 13, fontWeight: 600, color: '#6b7280' }}>🧰 Physical (locked)</div>
+                    ) : (
+                      <select value={formType} onChange={e => setFormType(e.target.value as any)}
+                        style={{ width: '100%', padding: '10px 14px', background: '#f9fafb', border: '2px solid #e5e7eb', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer', color: '#111827', fontFamily: "'Nunito', sans-serif" }}>
+                        <option value="textbook">📚 Textbook</option>
+                        <option value="subscription">🔑 Subscription</option>
+                        <option value="physical">🧰 Physical</option>
+                        <option value="digital">💻 Digital</option>
+                      </select>
+                    )}
+                  </div>
+                </div>
+                {(formType === 'digital' || formType === 'subscription') && (
+                  <div style={{ background: '#f5f3ff', borderRadius: 12, padding: 14, border: '1.5px solid #ede9fe', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <div>
+                      <label style={{ fontSize: 11, fontWeight: 800, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>Resource URL</label>
+                      <input type="url" value={formUrl} onChange={e => setFormUrl(e.target.value)}
+                        style={{ width: '100%', padding: '10px 14px', background: '#fff', border: '1.5px solid #ddd6fe', borderRadius: 8, fontSize: 13, outline: 'none', boxSizing: 'border-box', color: '#111827', fontFamily: "'Nunito', sans-serif" }}
+                        placeholder="https://..." />
+                    </div>
+                    {formType === 'subscription' && (
+                      <div>
+                        <label style={{ fontSize: 11, fontWeight: 800, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>Access Credentials</label>
+                        <input type="text" value={formLoginInfo} onChange={e => setFormLoginInfo(e.target.value)}
+                          style={{ width: '100%', padding: '10px 14px', background: '#fff', border: '1.5px solid #ddd6fe', borderRadius: 8, fontSize: 13, outline: 'none', boxSizing: 'border-box', color: '#111827', fontFamily: "'Nunito', sans-serif" }}
+                          placeholder="Username / Password notes" />
+                      </div>
+                    )}
+                  </div>
+                )}
+                {formType === 'physical' && (
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 800, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>Quantity</label>
+                    <input type="number" min="1" value={formQuantity} onChange={e => setFormQuantity(parseInt(e.target.value) || 1)}
+                      style={{ width: '100%', padding: '10px 14px', background: '#f9fafb', border: '2px solid #e5e7eb', borderRadius: 10, fontSize: 13, fontWeight: 600, outline: 'none', boxSizing: 'border-box', color: '#111827', fontFamily: "'Nunito', sans-serif" }} />
+                  </div>
+                )}
+                {formNotes !== undefined && (
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 800, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>Notes</label>
+                    <input type="text" value={formNotes} onChange={e => setFormNotes(e.target.value)}
+                      style={{ width: '100%', padding: '10px 14px', background: '#f9fafb', border: '2px solid #e5e7eb', borderRadius: 10, fontSize: 13, fontWeight: 600, outline: 'none', boxSizing: 'border-box', color: '#111827', fontFamily: "'Nunito', sans-serif" }}
+                      placeholder="Optional notes" />
+                  </div>
+                )}
+              </div>
+              <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
+                <button type="submit" disabled={isSaving}
+                  style={{ flex: 1, background: '#4f46e5', color: '#fff', border: 'none', padding: '13px 0', borderRadius: 12, fontSize: 14, fontWeight: 800, cursor: isSaving ? 'not-allowed' : 'pointer', opacity: isSaving ? 0.7 : 1, fontFamily: "'Nunito', sans-serif" }}>
+                  {isSaving ? 'Saving...' : `${editingMaterial ? 'Update' : 'Save'} Resource`}
+                </button>
+                <button type="button" onClick={() => { setShowAddForm(false); resetForm() }} disabled={isSaving}
+                  style={{ flex: 1, background: '#f3f4f6', color: '#374151', border: 'none', padding: '13px 0', borderRadius: 12, fontSize: 14, fontWeight: 800, cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}>
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Resources Content ────────────────────────────────────────────────────────
 
 function ResourcesContent() {
   const router = useRouter()
   useAppHeader({ title: '💡 Resources', backHref: '/dashboard' })
-  const [activeTab, setActiveTab] = useState<'styles' | 'curriculum' | 'compliance' | 'guides'>('styles')
+  const [activeTab, setActiveTab] = useState<'styles' | 'curriculum' | 'compliance' | 'guides' | 'materials'>('styles')
   const [curriculumStyle, setCurriculumStyle] = useState('charlotte')
   const [userStyle, setUserStyle] = useState<string | null>(null)
+  const [organizationId, setOrganizationId] = useState<string>('')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -700,6 +1083,7 @@ function ResourcesContent() {
 
       const { orgId } = await getOrganizationId(user.id)
       if (orgId) {
+        setOrganizationId(orgId)
         // Try to pull teaching style from org settings
         const { data: orgSettings } = await supabase
           .from('organization_settings')
@@ -729,6 +1113,7 @@ function ResourcesContent() {
     { id: 'curriculum' as const, icon: '📚', label: 'Curriculum'         },
     { id: 'compliance' as const, icon: '✅', label: 'Compliance Basics'  },
     { id: 'guides' as const,     icon: '🌱', label: 'Guides'             },
+    { id: 'materials' as const,  icon: '🗂️', label: 'My Materials'       },
   ]
 
   const handleViewCurriculum = (styleId: string) => {
@@ -746,28 +1131,14 @@ function ResourcesContent() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(160deg, #f5f3ff 0%, #ede9fe 40%, #fce7f3 100%)', fontFamily: 'var(--font-dm-sans), sans-serif' }}>
+    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #c4b5fd 0%, #e879f9 18%, #f0abfc 36%, #fbcfe8 54%, #bae6fd 76%, #6ee7b7 100%)', fontFamily: "'Nunito', sans-serif", paddingBottom: 80 }}>
 
-      <div style={{ maxWidth: activeTab === 'guides' ? 1060 : 860, margin: '0 auto', padding: '24px 24px 48px' }}>
+      <div style={{ maxWidth: (activeTab === 'guides' || activeTab === 'materials') ? 1060 : 860, margin: '0 auto', padding: '24px 24px 48px' }}>
 
         {/* Page title row */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
-          <div>
-            <h1 style={{ fontSize: 22, fontWeight: 800, color: '#1e1060', margin: 0 }}>Your Homeschool Library</h1>
-            <p style={{ fontSize: 13, color: '#6b7280', margin: '4px 0 0' }}>Teaching styles, curriculum guides, and compliance basics.</p>
-          </div>
-          <button
-            onClick={() => router.push('/materials')}
-            style={{
-              background: G.full, border: 'none',
-              borderRadius: 10, color: '#fff', fontSize: 13, fontWeight: 700,
-              padding: '9px 18px', cursor: 'pointer',
-              display: 'inline-flex', alignItems: 'center', gap: 8,
-              boxShadow: '0 4px 14px rgba(124,58,237,0.3)',
-            }}
-          >
-            🗂️ My Materials Library →
-          </button>
+        <div style={{ marginBottom: 20 }}>
+          <h1 style={{ fontSize: 22, fontWeight: 800, color: '#1e1060', margin: 0 }}>Your Homeschool Library</h1>
+          <p style={{ fontSize: 13, color: '#6b7280', margin: '4px 0 0' }}>Teaching styles, curriculum guides, compliance basics, and your materials.</p>
         </div>
 
         {/* Tab pills */}
@@ -804,7 +1175,14 @@ function ResourcesContent() {
         {activeTab === 'guides' && (
           <GuidesTab />
         )}
+        {activeTab === 'materials' && organizationId && (
+          <MaterialsTab organizationId={organizationId} />
+        )}
+        {activeTab === 'materials' && !organizationId && (
+          <div style={{ padding: 40, textAlign: 'center', color: '#9ca3af', fontWeight: 700 }}>Loading...</div>
+        )}
       </div>
+      <BottomNav active="resources" />
     </div>
   )
 }
