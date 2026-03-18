@@ -449,23 +449,10 @@ function ComplianceTab() {
 
 function GuidesTab() {
   const [activeGuide, setActiveGuide] = useState<'deschooling' | 'portfolio'>('deschooling')
-  const [completedItems, setCompletedItems] = useState<string[]>([])
   const [showPhilosophy, setShowPhilosophy] = useState(false)
   const [showHoursGuide, setShowHoursGuide] = useState(false)
 
-  const toggleItem = (id: string) => {
-    setCompletedItems(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id])
-  }
-
-  const handleStartTracking = () => {
-    setShowHoursGuide(false)
-    setActiveGuide('portfolio')
-  }
-
   const tasks = activeGuide === 'deschooling' ? DESCHOOLING_TASKS : PORTFOLIO_TASKS
-  const prefix = activeGuide === 'deschooling' ? 'd' : 'p'
-  const done = completedItems.filter(id => id.startsWith(prefix)).length
-  const progress = tasks.length > 0 ? Math.round((done / tasks.length) * 100) : 0
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 24, alignItems: 'start' }}>
@@ -519,98 +506,23 @@ function GuidesTab() {
           </div>
         )}
 
-        {/* Progress card */}
-        <div style={{ background: '#fff', borderRadius: 16, padding: '18px 20px', border: '1px solid #e5e7eb', marginBottom: 16, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <span style={{ fontSize: 11, fontWeight: 800, color: '#9ca3af', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Step-by-Step Progress</span>
-            <span style={{ fontSize: 20, fontWeight: 900, color: '#7c3aed' }}>{progress}%</span>
-          </div>
-          <div style={{ background: '#f3f4f6', borderRadius: 99, height: 10, overflow: 'hidden' }}>
-            <div style={{
-              height: '100%', borderRadius: 99, transition: 'width 0.6s ease',
-              width: `${progress}%`,
-              background: G.full,
-            }} />
-          </div>
-        </div>
-
-        {/* Task cards */}
+        {/* Guide cards — read only */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {tasks.map(task => {
-            const isDone = completedItems.includes(task.id)
-            return (
-              <div
-                key={task.id}
-                onClick={() => toggleItem(task.id)}
-                style={{
-                  background: isDone ? '#f9fafb' : '#fff',
-                  borderRadius: 16, padding: '18px 20px',
-                  border: '1px solid #e5e7eb',
-                  display: 'flex', alignItems: 'center', gap: 16,
-                  cursor: 'pointer', transition: 'all 0.15s',
-                  opacity: isDone ? 0.7 : 1,
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-                }}
-              >
-                {/* Checkbox */}
-                <div style={{
-                  width: 24, height: 24, borderRadius: 8, flexShrink: 0,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  background: isDone ? '#10b981' : 'transparent',
-                  border: isDone ? 'none' : '2px solid #d1d5db',
-                  transition: 'all 0.15s',
-                  fontSize: 13, color: '#fff', fontWeight: 800,
-                }}>
-                  {isDone ? '✓' : ''}
-                </div>
-
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 10, fontWeight: 800, color: '#7c3aed', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: 3 }}>
-                    {task.phase}
-                  </div>
-                  <div style={{
-                    fontSize: 15, fontWeight: 700, color: '#111827', marginBottom: 4,
-                    textDecoration: isDone ? 'line-through' : 'none',
-                  }}>
-                    {task.title}
-                  </div>
-                  <div style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.6 }}>{task.desc}</div>
-                </div>
-
-                <span style={{ fontSize: 16, color: '#d1d5db', flexShrink: 0 }}>›</span>
+          {tasks.map(task => (
+            <div key={task.id} style={{
+              background: '#fff', borderRadius: 16, padding: '18px 20px',
+              border: '1px solid #e5e7eb', boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+            }}>
+              <div style={{ fontSize: 10, fontWeight: 800, color: '#7c3aed', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: 3 }}>
+                {task.phase}
               </div>
-            )
-          })}
-        </div>
-
-        {/* Deschooling → Portfolio CTA */}
-        {activeGuide === 'deschooling' && (
-          <div style={{
-            marginTop: 20, background: '#fff', borderRadius: 16, padding: '20px 24px',
-            border: '1px solid #e5e7eb', boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16,
-          }}>
-            <div>
-              <div style={{ fontSize: 14, fontWeight: 800, color: '#111827', marginBottom: 4 }}>
-                Ready to start tracking?
+              <div style={{ fontSize: 15, fontWeight: 700, color: '#111827', marginBottom: 4 }}>
+                {task.title}
               </div>
-              <div style={{ fontSize: 13, color: '#6b7280' }}>
-                Once deschooling feels natural, begin recording your progress.
-              </div>
+              <div style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.6 }}>{task.desc}</div>
             </div>
-            <button
-              onClick={() => setActiveGuide('portfolio')}
-              style={{
-                background: G.full, border: 'none', borderRadius: 10, color: '#fff',
-                fontSize: 13, fontWeight: 700, padding: '10px 20px', cursor: 'pointer',
-                whiteSpace: 'nowrap', boxShadow: '0 4px 12px rgba(124,58,237,0.3)',
-                flexShrink: 0,
-              }}
-            >
-              Start Recording Progress →
-            </button>
-          </div>
-        )}
+          ))}
+        </div>
       </div>
 
       {/* Right — sidebar */}

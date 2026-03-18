@@ -55,7 +55,7 @@ export async function POST(request: Request) {
 STUDENT: ${kid.displayname}, Grade ${kid.grade || 'unknown'}, Age ${kid.age || 'unknown'}
 Learning style: ${kid.learning_style || 'not specified'}
 Current interests: ${kid.current_hook || 'not specified'}
-${kid.curriculum ? `Curriculum: ${kid.curriculum}` : ''}
+${kid.curriculum === 'Eclectic / Mix' ? 'Curriculum: Eclectic mix — use flexible, subject-appropriate approach' : kid.curriculum && kid.curriculum !== 'Custom' ? `Curriculum: ${kid.curriculum}` : ''}
 Subject: ${subject}
 ${topic ? `Topic/focus: ${topic}` : ''}
 Activity vibe: ${vibeDesc[vibe] || vibe}

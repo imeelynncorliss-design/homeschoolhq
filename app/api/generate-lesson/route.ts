@@ -77,7 +77,7 @@ Each lesson plan must include:
 - Match ${kid.displayname}'s learning style: ${kid.learning_style || 'flexible'}
 - Connect to their interests: ${kid.current_hook || 'general topics'}
 - Align with their current focus: ${kid.current_focus || 'broad learning goals'}
-${kid.curriculum ? `- Align lesson structure and terminology with ${kid.curriculum} (e.g. match its sequence, vocabulary, and teaching approach)` : ''}
+${kid.curriculum === 'Eclectic / Mix' ? '- Family uses an eclectic mix of curricula — use flexible, subject-appropriate structure rather than any single curriculum\'s approach' : kid.curriculum && kid.curriculum !== 'Custom' ? `- Align lesson structure and terminology with ${kid.curriculum} (e.g. match its sequence, vocabulary, and teaching approach)` : ''}
 
 Return ONLY valid JSON:
 {
