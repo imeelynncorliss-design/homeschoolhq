@@ -662,7 +662,6 @@ export default function AppHeader() {
   const [copilotMessages, setCopilotMessages] = useState<CopilotMessage[]>([])
   const [copilotStarred, setCopilotStarred] = useState(false)
   const [showFeedback, setShowFeedback] = useState(false)
-  const [showMobileMenu, setShowMobileMenu] = useState(false)
   const [showCopilot, setShowCopilot] = useState(false)
   const conversationIdRef = useRef<string | null>(null)
 
@@ -807,11 +806,6 @@ export default function AppHeader() {
     if (id === conversationIdRef.current) setCopilotStarred(!currentlyStarred)
   }
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut()
-    router.push('/login')
-  }
-
   return (
     <>
       <style>{HEADER_STYLES}</style>
@@ -867,39 +861,6 @@ export default function AppHeader() {
 
 
 
-         {/* Mobile-only: hamburger */}
-{userId && (
-  <div className="hr-mobile-only" style={{ position: 'relative' }}>
-    <button className="hr-btn" onClick={() => setShowMobileMenu(v => !v)} aria-label="Menu">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-        <path d="M3 12h18M3 6h18M3 18h18" />
-      </svg>
-    </button>
-
-    {showMobileMenu && (
-      <>
-        <div
-          style={{ position: 'fixed', inset: 0, zIndex: 150 }}
-          onClick={() => setShowMobileMenu(false)}
-        />
-        <div style={{ ...s.userMenu, zIndex: 200, minWidth: 200 }}>
-                    <div style={s.userMenuEmail}>{email}</div>
-                    {betaEnabled && orgId && (
-                      <button style={s.menuItem} onClick={() => { setShowFeedback(true) }}>
-                        💬 Feedback
-                      </button>
-                    )}
-                    <button style={s.menuItem} onClick={() => { router.push('/settings') }}>
-                      ⚙️ Settings
-                    </button>
-                    <button style={{ ...s.menuItem, color: '#ef4444' }} onClick={handleLogout}>
-                      🚪 Log out
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
         </div>
       </header>
 

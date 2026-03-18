@@ -26,17 +26,19 @@ function AttendanceContent() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/'); return }
 
-      // Co-teacher guard — attendance is admin-only
-      const { data: collaboration } = await supabase
-        .from('family_collaborators')
-        .select('organization_id')
-        .eq('user_id', user.id)
-        .maybeSingle()
-
-      if (collaboration) { router.push('/dashboard'); return }
-
       const { orgId } = await getOrganizationId(user.id)
-      if (!orgId) { router.push('/onboarding'); return }
+
+      // Co-teacher guard — attendance is admin-only
+      // Only applies if the user is NOT an org owner
+      if (!orgId) {
+        const { data: collaboration } = await supabase
+          .from('family_collaborators')
+          .select('organization_id')
+          .eq('user_id', user.id)
+          .maybeSingle()
+        if (collaboration) { router.push('/dashboard'); return }
+        router.push('/onboarding'); return
+      }
 
       const { data: kidsData } = await supabase
         .from('kids')
