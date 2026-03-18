@@ -1156,10 +1156,50 @@ useEffect(() => {
 
           {/* Other tabs remain the same */}
           {activeTab === 'insights' && (
-            <AttendanceInsights
-              days={allDays}
-              requiredDays={stats.required}
-            />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {/* Kid filter pills */}
+              {kids.length > 1 && (
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' as const }}>
+                  {[{ id: 'all', displayname: 'All kids' }, ...kids].map((kid, idx) => {
+                    const KID_COLORS = ['#7c3aed', '#0d9488', '#ec4899', '#f59e0b', '#3b82f6']
+                    const isAll = kid.id === 'all'
+                    const isActive = selectedKid === kid.id
+                    const color = isAll ? '#7c3aed' : KID_COLORS[(idx - 1) % KID_COLORS.length]
+                    return (
+                      <button
+                        key={kid.id}
+                        onClick={() => setSelectedKid(kid.id)}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: isAll ? 0 : 8,
+                          padding: isAll ? '7px 16px' : '7px 16px 7px 10px',
+                          borderRadius: 999, fontFamily: "'Nunito', sans-serif",
+                          fontWeight: 700, fontSize: 14, cursor: 'pointer', transition: 'all 0.15s',
+                          border: `2px solid ${isActive ? color : '#e5e7eb'}`,
+                          background: isActive ? `${color}18` : '#fff',
+                          color: isActive ? color : '#6b7280',
+                        }}
+                      >
+                        {!isAll && (
+                          <div style={{
+                            width: 24, height: 24, borderRadius: '50%',
+                            background: isActive ? color : '#d1d5db',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            color: '#fff', fontSize: 12, fontWeight: 800, flexShrink: 0,
+                          }}>
+                            {kid.displayname.charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                        {kid.displayname}
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+              <AttendanceInsights
+                days={allDays}
+                requiredDays={stats.required}
+              />
+            </div>
           )}
 
             {activeTab === 'goals' && organizationId && (

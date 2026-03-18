@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import AuthGuard from '@/components/AuthGuard'
 import { supabase } from '@/src/lib/supabase'
 import { getOrganizationId } from '@/src/lib/getOrganizationId'
+import { useAppHeader } from '@/components/layout/AppHeader'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -56,6 +57,7 @@ function isImage(fileType: string | null, fileName: string) {
 
 function PortfolioContent() {
   const router = useRouter()
+  useAppHeader({ title: '🗂️ Portfolio', backHref: '/reports' })
 
   const [groups, setGroups]     = useState<KidGroup[]>([])
   const [loading, setLoading]   = useState(true)

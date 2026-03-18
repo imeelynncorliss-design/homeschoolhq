@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/src/lib/supabase/client'
 import AuthGuard from '@/components/AuthGuard'
 import { getOrganizationId } from '@/src/lib/getOrganizationId'
+import { useAppHeader } from '@/components/layout/AppHeader'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -77,6 +78,7 @@ const GRADIENT = 'linear-gradient(135deg, #fef9c3 0%, #fde68a 15%, #d1fae5 55%, 
 
 function SupplyScoutContent() {
   const router = useRouter()
+  useAppHeader({ title: '🔍 Supply Scout', backHref: '/resources' })
   const supabase = createClient()
 
   const [loading, setLoading]         = useState(true)

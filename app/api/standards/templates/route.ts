@@ -20,7 +20,8 @@ export async function GET(request: NextRequest) {
       .select('*')
       .order('state_code')
       .order('grade_level')
-      .order('subject');
+      .order('subject')
+      .limit(5000);
 
     if (stateCode) query = query.eq('state_code', stateCode);
     if (subject) query = query.eq('subject', subject);
@@ -71,21 +72,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get organization
-    const { data: kids } = await supabaseAdmin
-      .from('kids')
-      .select('organization_id')
+    // Get organization (same lookup as getOrganizationId)
+    const { data: org } = await supabaseAdmin
+      .from('organizations')
+      .select('id')
       .eq('user_id', user.id)
-      .limit(1);
-    
-    if (!kids || kids.length === 0) {
+      .maybeSingle();
+
+    if (!org?.id) {
       return NextResponse.json(
         { success: false, error: { code: 'NO_ORG', message: 'No organization found' } },
         { status: 400 }
       );
     }
 
-    const organizationId = kids[0].organization_id;
+    const organizationId = org.id;
 
     // Get template IDs to copy
     const body = await request.json();

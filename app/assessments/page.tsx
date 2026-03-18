@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, Suspense } from 'react'
 import { useRouter } from 'next/navigation'
 import { createBrowserClient } from '@supabase/ssr'
+import { useAppHeader } from '@/components/layout/AppHeader'
 import AuthGuard from '@/components/AuthGuard'
 import AssessmentStandardsManager from '@/components/AssessmentStandardsManager'
 import StandardsImporter from '@/components/StandardsImporter'
@@ -62,6 +63,7 @@ type MonthGroup = {
 
 function AssessmentsContent() {
   const router = useRouter()
+  useAppHeader({ title: 'Assessments', backHref: '/reports' })
   const [currentView, setCurrentView] = useState<'results' | 'standards'>('results')
   const [assessments, setAssessments] = useState<AssessmentWithDetails[]>([])
   const [loading, setLoading] = useState(true)

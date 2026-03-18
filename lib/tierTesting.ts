@@ -64,6 +64,7 @@ export const TIER_FEATURES = {
     'transcript_generator',
     'advanced_reporting',
     'schoolhouse_helper_full',
+    'scout_standards_import',
   ],
   PREMIUM: [
     'manual_lessons',
@@ -85,6 +86,7 @@ export const TIER_FEATURES = {
     'transcript_generator',
     'advanced_reporting',
     'schoolhouse_helper_full',
+    'scout_standards_import',
     'coop_management',
     'org_switcher',
     'priority_support',
@@ -185,9 +187,10 @@ export const TIER_DISPLAY: Record<UserTier, {
     ctaColor: 'bg-purple-600 hover:bg-purple-700',
     features: [
       'Everything in Essential',
-      '✨ Unlimited AI lesson generation',
-      '✨ Unlimited AI activity generation',
+      '✨ Unlimited Scout lesson generation',
+      '✨ Unlimited Scout activity generation',
       '✨ Curriculum import (PDF & image)',
+      '🗺️ Scout state standards importer',
       '👩‍🏫 Co-teacher & family collaboration',
       '📅 Google Calendar sync',
       'Transcript generator',
@@ -220,10 +223,11 @@ export const TIER_DISPLAY: Record<UserTier, {
 export const PRICING_COMPARISON_ROWS: { name: string; values: string[] }[] = [
   // Students
   { name: 'Students',                    values: ['1',           'Unlimited',  'Unlimited',  'Unlimited'] },
-  // AI generation
-  { name: 'AI lesson generation',        values: ['10 / mo',     '25 / mo',    'Unlimited',  'Unlimited'] },
-  { name: 'AI activity generation',      values: ['5 / mo',      '15 / mo',    'Unlimited',  'Unlimited'] },
-  { name: 'Curriculum import (PDF)',      values: ['–',           '–',          '✓',          '✓'] },
+  // Scout generation
+  { name: 'Scout lesson generation',     values: ['10 / mo',     '25 / mo',    'Unlimited',  'Unlimited'] },
+  { name: 'Scout activity generation',   values: ['5 / mo',      '15 / mo',    'Unlimited',  'Unlimited'] },
+  { name: 'Scout state standards import',values: ['–',           '–',          '✓',          '✓'] },
+  { name: 'Curriculum import (PDF)',     values: ['–',           '–',          '✓',          '✓'] },
   // Planning
   { name: 'Lesson planning & calendar',  values: ['✓',           '✓',          '✓',          '✓'] },
   { name: 'Bulk lesson scheduler',       values: ['–',           '✓',          '✓',          '✓'] },

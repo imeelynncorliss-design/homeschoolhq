@@ -199,7 +199,7 @@ export default function CalendarSettingsClient({ connection }: CalendarSettingsC
       <Card>
         <CardHeader>
           <CardTitle className="text-gray-900 text-xl">Sync Settings</CardTitle>
-          <CardDescription>Control how your calendar syncs with HomeschoolHQ</CardDescription>
+          <CardDescription>Control how your calendar syncs with HomeschoolReady</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="flex items-center justify-between">

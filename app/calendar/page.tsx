@@ -7,6 +7,7 @@ import LessonCalendar from '@/components/LessonCalendar'
 import AuthGuard from '@/components/AuthGuard'
 import { syncBetaTier } from '@/lib/tierTesting'
 import { getOrganizationId } from '@/src/lib/getOrganizationId'
+import { useAppHeader } from '@/components/layout/AppHeader'
 
 // ─── Bottom Nav ───────────────────────────────────────────────────────────────
 
@@ -16,6 +17,7 @@ const GRADIENT = 'linear-gradient(135deg, #c4b5fd 0%, #e879f9 18%, #f0abfc 36%, 
 
 function CalendarContent() {
   const router = useRouter()
+  useAppHeader({ title: '📅 Calendar', backHref: '/tools' })
   const [user, setUser] = useState<any>(null)
   const [kids, setKids] = useState<any[]>([])
   const [lessonsByKid, setLessonsByKid] = useState<{ [kidId: string]: any[] }>({})

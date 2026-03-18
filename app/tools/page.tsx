@@ -4,22 +4,23 @@ import { useEffect, useState, Suspense } from 'react'
 import { supabase } from '@/src/lib/supabase'
 import { useRouter } from 'next/navigation'
 import AuthGuard from '@/components/AuthGuard'
-import BulkLessonScheduler from '@/components/BulkLessonScheduler'
 import CurriculumImporter from '@/components/CurriculumImporter'
 import { getOrganizationId } from '@/src/lib/getOrganizationId'
+import { useAppHeader } from '@/components/layout/AppHeader'
 
 interface Kid {
   id: string
   displayname: string
 }
 
+const GRADIENT = 'linear-gradient(135deg, #c4b5fd 0%, #e879f9 18%, #f0abfc 36%, #fbcfe8 54%, #bae6fd 76%, #6ee7b7 100%)'
+
 function ToolsContent() {
   const router = useRouter()
-  const [userId, setUserId] = useState<string | null>(null)
+  useAppHeader({ title: '🔧 Tools' })
   const [orgId, setOrgId] = useState<string | null>(null)
   const [kids, setKids] = useState<Kid[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeTool, setActiveTool] = useState<'bulk' | 'import' | null>(null)
   const [importKidId, setImportKidId] = useState<string>('')
   const [showImporter, setShowImporter] = useState(false)
 
@@ -37,7 +38,6 @@ function ToolsContent() {
         .eq('organization_id', oid)
         .order('displayname')
 
-      setUserId(user.id)
       setOrgId(oid)
       setKids((kidsData ?? []) as Kid[])
       if (kidsData?.length) setImportKidId(kidsData[0].id)
@@ -56,19 +56,26 @@ function ToolsContent() {
 
   return (
     <div style={css.root}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
+        *, *::before, *::after { box-sizing: border-box; }
+        body { margin: 0; }
+        .tool-card:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(124,58,237,0.18) !important; }
+        .tool-card:active { transform: scale(0.98); }
+      `}</style>
       <div style={css.inner}>
 
         {/* Page header */}
         <div style={css.pageHeader}>
-          <div style={css.pageTitle}>🔧 Tools</div>
-          <div style={css.pageSub}>Setup, scheduling, and account management</div>
+          <h1 style={css.pageTitle}>🔧 Tools</h1>
+          <p style={css.pageSub}>Setup, scheduling, and account management</p>
         </div>
 
         {/* Tool cards */}
         <div style={css.grid}>
 
           {/* Curriculum Import */}
-          <div style={css.card}>
+          <div className="tool-card" style={css.card}>
             <div style={css.cardIcon}>📋</div>
             <div style={css.cardTitle}>Curriculum Import</div>
             <div style={css.cardDesc}>
@@ -98,7 +105,7 @@ function ToolsContent() {
           </div>
 
           {/* Bulk Schedule */}
-          <div style={css.card}>
+          <div className="tool-card" style={css.card}>
             <div style={css.cardIcon}>⚡</div>
             <div style={css.cardTitle}>Bulk Schedule</div>
             <div style={css.cardDesc}>
@@ -106,14 +113,14 @@ function ToolsContent() {
             </div>
             <button
               style={css.secondaryBtn}
-              onClick={() => setActiveTool(activeTool === 'bulk' ? null : 'bulk')}
+              onClick={() => router.push('/bulk-schedule')}
             >
-              {activeTool === 'bulk' ? '▲ Hide Scheduler' : '⚡ Open Scheduler'}
+              ⚡ Open Scheduler
             </button>
           </div>
 
           {/* Vacation Planner */}
-          <div style={css.card}>
+          <div className="tool-card" style={css.card}>
             <div style={css.cardIcon}>🌴</div>
             <div style={css.cardTitle}>Vacation Planner</div>
             <div style={css.cardDesc}>
@@ -128,7 +135,7 @@ function ToolsContent() {
           </div>
 
           {/* Co-Teachers */}
-          <div style={css.card}>
+          <div className="tool-card" style={css.card}>
             <div style={css.cardIcon}>👩‍🏫</div>
             <div style={css.cardTitle}>Co-Teachers</div>
             <div style={css.cardDesc}>
@@ -141,18 +148,37 @@ function ToolsContent() {
               👩‍🏫 Manage Co-Teachers
             </button>
           </div>
-        </div>
 
-        {/* Inline Bulk Scheduler */}
-        {activeTool === 'bulk' && userId && (
-          <div style={css.inlinePanel}>
-            <div style={css.inlinePanelHead}>
-              <span style={{ fontWeight: 800, fontSize: 15, color: '#2d1b69' }}>⚡ Bulk Lesson Scheduler</span>
-              <button style={css.closeInline} onClick={() => setActiveTool(null)}>✕</button>
+          {/* Standards Setup */}
+          <div className="tool-card" style={css.card}>
+            <div style={css.cardIcon}>📌</div>
+            <div style={css.cardTitle}>Standards Setup</div>
+            <div style={css.cardDesc}>
+              Import Common Core standards for your kids' grade levels. Once imported, you can tag standards to lessons and track coverage automatically.
             </div>
-            <BulkLessonScheduler userId={userId} />
+            <button
+              style={css.secondaryBtn}
+              onClick={() => router.push('/standards-setup')}
+            >
+              📥 Import Standards
+            </button>
           </div>
-        )}
+
+          {/* Google Calendar Sync */}
+          <div className="tool-card" style={css.card}>
+            <div style={css.cardIcon}>📅</div>
+            <div style={css.cardTitle}>Google Calendar Sync</div>
+            <div style={css.cardDesc}>
+              Connect your Google Calendar or Outlook to detect conflicts between work meetings and homeschool lessons — automatically, every 15 minutes.
+            </div>
+            <button
+              style={css.secondaryBtn}
+              onClick={() => router.push('/calendar/connect')}
+            >
+              📅 Connect Calendar
+            </button>
+          </div>
+        </div>
 
         {/* Spacer for bottom nav */}
         <div style={{ height: 88 }} />
@@ -187,27 +213,31 @@ export default function ToolsPage() {
 const css: Record<string, React.CSSProperties> = {
   root: {
     minHeight: '100vh',
-    background: 'linear-gradient(135deg, #f5f3ff 0%, #faf5ff 100%)',
+    background: GRADIENT,
     fontFamily: "'Nunito', sans-serif",
+    paddingBottom: 80,
   },
   inner: {
     maxWidth: 800,
     margin: '0 auto',
-    padding: '24px 20px 0',
+    padding: '28px 20px 0',
   },
   pageHeader: {
-    marginBottom: 28,
+    marginBottom: 24,
   },
   pageTitle: {
     fontSize: 26,
     fontWeight: 900,
-    color: '#2d1b69',
-    letterSpacing: -0.5,
+    color: '#1e1b4b',
+    margin: '0 0 6px',
+    fontFamily: "'Nunito', sans-serif",
   },
   pageSub: {
     fontSize: 14,
-    color: '#6b7280',
-    marginTop: 4,
+    color: '#4b5563',
+    fontWeight: 600,
+    margin: '0 0 24px',
+    lineHeight: 1.6,
   },
   grid: {
     display: 'grid',
@@ -216,29 +246,40 @@ const css: Record<string, React.CSSProperties> = {
     marginBottom: 20,
   },
   card: {
-    background: '#fff',
-    borderRadius: 16,
-    padding: '22px 22px 20px',
-    boxShadow: '0 2px 12px rgba(0,0,0,0.07)',
-    border: '1px solid rgba(124,58,237,0.08)',
+    background: 'rgba(255,255,255,0.82)',
+    borderRadius: 18,
+    border: '1.5px solid rgba(124,58,237,0.13)',
+    backdropFilter: 'blur(8px)',
+    boxShadow: '0 2px 12px rgba(124,58,237,0.08)',
+    padding: '18px 20px',
     display: 'flex',
     flexDirection: 'column' as const,
     gap: 8,
+    transition: 'transform 0.15s ease, box-shadow 0.15s ease',
   },
   cardIcon: {
-    fontSize: 32,
-    lineHeight: 1,
-    marginBottom: 2,
+    width: 52,
+    height: 52,
+    borderRadius: 16,
+    flexShrink: 0,
+    background: 'linear-gradient(135deg, #ede9fe, #dbeafe)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: 26,
+    marginBottom: 4,
   },
   cardTitle: {
-    fontSize: 17,
-    fontWeight: 900,
-    color: '#2d1b69',
+    fontSize: 16,
+    fontWeight: 800,
+    color: '#1a1a2e',
+    marginBottom: 3,
   },
   cardDesc: {
     fontSize: 13,
-    color: '#6b7280',
-    lineHeight: 1.55,
+    color: '#4b5563',
+    fontWeight: 600,
+    lineHeight: 1.4,
     flex: 1,
   },
   label: {
@@ -273,12 +314,12 @@ const css: Record<string, React.CSSProperties> = {
   },
   secondaryBtn: {
     padding: '11px 18px',
-    background: '#f3f4f6',
-    color: '#374151',
-    border: '1.5px solid #e5e7eb',
+    background: 'linear-gradient(135deg, #7c3aed, #a855f7)',
+    color: '#fff',
+    border: 'none',
     borderRadius: 10,
     fontSize: 14,
-    fontWeight: 700,
+    fontWeight: 800,
     cursor: 'pointer',
     marginTop: 4,
   },

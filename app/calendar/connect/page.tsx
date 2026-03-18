@@ -9,23 +9,28 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/src
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Calendar, 
-  AlertCircle, 
-  CheckCircle, 
-  Loader2, 
+import {
+  Calendar,
+  AlertCircle,
+  CheckCircle,
+  Loader2,
   Trash2,
   RefreshCw,
   Settings,
   ArrowRight,
-  XCircle  
+  XCircle
 } from 'lucide-react';
 import type { CalendarConnection } from '@/src/types/calendar';
+import { useAppHeader } from '@/components/layout/AppHeader';
+import { supabase } from '@/src/lib/supabase';
+import { getOrganizationId } from '@/src/lib/getOrganizationId';
 
 // Renamed from CalendarConnectPage to CalendarConnectContent
 function CalendarConnectContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  useAppHeader({ title: '📅 Calendar Sync', backHref: '/tools' });
+  const [orgId, setOrgId] = useState<string | null>(null);
   const [connections, setConnections] = useState<CalendarConnection[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState<string | null>(null);
@@ -45,20 +50,28 @@ function CalendarConnectContent() {
       setError(`Connection failed: ${oauthError}`);
     } else if (oauthSuccess) {
       setSuccess('Calendar connected successfully!');
-      loadConnections();
+      loadConnections();  // orgId already set by init
     }
   }, [searchParams]);
 
   useEffect(() => {
-    loadConnections();
+    const init = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { router.push('/'); return }
+      const { orgId: oid } = await getOrganizationId(user.id)
+      if (!oid) { router.push('/onboarding'); return }
+      setOrgId(oid)
+      await loadConnections(oid)
+    }
+    init()
   }, []);
 
-  const loadConnections = async () => {
+  const loadConnections = async (resolvedOrgId?: string) => {
+    const id = resolvedOrgId ?? orgId
+    if (!id) return
     try {
       setLoading(true);
-      const response = await fetch(
-        `/api/calendar/connections?organizationId=${getCurrentOrgId()}`
-      );
+      const response = await fetch(`/api/calendar/connections?organizationId=${id}`);
       const data = await response.json();
       setConnections(data.connections || []);
     } catch (err: any) {
@@ -71,10 +84,6 @@ function CalendarConnectContent() {
   const connectGoogle = () => {
     // Just navigate to the OAuth endpoint - it will handle the redirect to Google
     window.location.href = '/api/calendar/oauth/google';
-  };
-
-  const connectOutlook = () => {
-    window.location.href = '/api/calendar/oauth/outlook';
   };
 
   const syncConnection = async (connectionId: string) => {
@@ -153,10 +162,6 @@ function CalendarConnectContent() {
     }
   };
 
-  const getCurrentOrgId = () => {
-    return 'd52497c0-42a9-49b7-ba3b-849bffa27fc4';
-  };
-
   const getProviderIcon = (provider: string) => {
     return provider === 'google' ? (
       <div className="w-5 h-5 bg-blue-500 rounded" />
@@ -183,18 +188,11 @@ function CalendarConnectContent() {
   
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-6">
-      {/* Header with Back Button */}
+      {/* Page description */}
       <div>
-        <button
-          onClick={() => router.push('/dashboard')}
-          className="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition-colors flex items-center gap-2 font-medium text-sm mb-4"
-        >
-          ← Dashboard
-        </button>
-        <h1 className="text-3xl font-bold">Work Calendar Integration</h1>
-        <p className="text-gray-600 mt-2">
-          Connect your Google Calendar or Outlook to automatically detect conflicts
-          with your homeschool schedule
+        <p className="text-gray-600">
+          Connect your Google Calendar to automatically detect conflicts
+          with your homeschool schedule.
         </p>
       </div>
   
@@ -291,14 +289,10 @@ function CalendarConnectContent() {
               Add a work calendar to enable automatic conflict detection
             </CardDescription>
           </CardHeader>
-          <CardContent className="flex gap-4">
+          <CardContent>
             <Button onClick={connectGoogle} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white">
               <Calendar className="w-4 h-4" />
               Connect Google Calendar
-            </Button>
-            <Button onClick={connectOutlook} variant="outline" className="flex items-center gap-2 bg-white hover:bg-gray-50 text-gray-900 border-gray-300">
-              <Calendar className="w-4 h-4" />
-              Connect Outlook
             </Button>
           </CardContent>
         </Card>
@@ -499,7 +493,7 @@ function CalendarConnectContent() {
                 <ul className="text-sm text-gray-700 space-y-1 list-disc list-inside">
                   <li>Work events won&apos;t appear as regular lessons in your schedule</li>
                   <li>Your work calendar won&apos;t be changed or modified in any way</li>
-                  <li>HomeschoolHQ lessons won&apos;t be added to your work calendar</li>
+                  <li>HomeschoolReady lessons won&apos;t be added to your work calendar</li>
                 </ul>
               </div>
             </div>
@@ -529,7 +523,7 @@ function CalendarConnectContent() {
             <div>
               <h3 className="font-semibold mb-1">Connect Your Work Calendar</h3>
               <p className="text-sm text-gray-600">
-                Securely connect Google Calendar or Outlook to HomeschoolHQ
+                Securely connect Google Calendar to HomeschoolReady
               </p>
             </div>
           </div>

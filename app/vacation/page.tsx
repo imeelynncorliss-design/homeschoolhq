@@ -7,11 +7,13 @@ import AuthGuard from '@/components/AuthGuard'
 import EnhancedVacationManager from '@/components/admin/EnhancedVacationManager'
 import { getOrganizationId } from '@/src/lib/getOrganizationId'
 import { pageShell, colors } from '@/src/lib/designTokens'
+import { useAppHeader } from '@/components/layout/AppHeader'
 
 // ─── Page Content ─────────────────────────────────────────────────────────────
 
 function VacationContent() {
   const router = useRouter()
+  useAppHeader({ title: '🏖️ Vacation Planner', backHref: '/tools' })
   const [organizationId, setOrganizationId] = useState<string | null>(null)
   const [loading, setLoading]               = useState(true)
 

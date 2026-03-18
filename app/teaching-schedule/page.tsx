@@ -257,7 +257,7 @@ function NoteModal({ lesson, onSave, onClose }: { lesson: Lesson; onSave: (id: s
 function TeachingScheduleContent() {
   const router = useRouter()
 
-  useAppHeader({ title: '👩‍🏫 Teaching Schedule', backHref: '/dashboard' })
+  useAppHeader({ title: '👩‍🏫 Teaching Schedule' })
 
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<any>(null)

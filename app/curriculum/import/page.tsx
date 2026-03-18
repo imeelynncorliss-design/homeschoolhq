@@ -202,7 +202,7 @@ const s: Record<string, React.CSSProperties> = {
 
 function CurriculumImportContent() {
   const router = useRouter()
-  useAppHeader({ title: '📥 Import Curriculum', backHref: '/dashboard' })
+  useAppHeader({ title: '📥 Import Curriculum', backHref: '/tools' })
 
   const [pageLoading, setPageLoading]       = useState(true)
   const [kids, setKids]                     = useState<Kid[]>([])

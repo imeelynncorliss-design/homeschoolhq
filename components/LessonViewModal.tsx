@@ -41,7 +41,6 @@ interface LessonViewModalProps {
   onDelete: () => void
   onCycleStatus: (lessonId: string, currentStatus: string) => void
   onSetStatus?: (lessonId: string, status: 'not_started' | 'in_progress' | 'completed') => void
-  onGenerateAssessment?: (lesson: LessonViewModalLesson) => void
   onSave?: (lessonId: string, updates: Partial<LessonViewModalLesson>) => void
 }
 
@@ -189,7 +188,6 @@ export default function LessonViewModal({
   onDelete,
   onCycleStatus,
   onSetStatus,
-  onGenerateAssessment,
   onSave,
 }: LessonViewModalProps) {
   const status = STATUS_CONFIG[lesson.status] ?? STATUS_CONFIG.not_started
@@ -216,7 +214,15 @@ export default function LessonViewModal({
   const [deletingUploadId, setDeletingUploadId] = useState<string | null>(null)
 
   // Tabs
-  const [activeTab, setActiveTab] = useState<'details' | 'checkin'>('details')
+  const [activeTab, setActiveTab] = useState<'details' | 'checkin' | 'standards'>('details')
+
+  // Standards
+  type LinkedStandard = { id: string; user_standard_id: string; standard_code: string; description: string; subject: string; grade_level: string }
+  type AvailableStandard = { id: string; standard_code: string; description: string; subject: string; grade_level: string }
+  const [linkedStandards, setLinkedStandards]     = useState<LinkedStandard[]>([])
+  const [availableStandards, setAvailableStandards] = useState<AvailableStandard[]>([])
+  const [standardSearch, setStandardSearch]       = useState('')
+  const [loadingStandards, setLoadingStandards]   = useState(false)
 
   // Edit mode
   const [editing, setEditing] = useState(false)
@@ -229,7 +235,54 @@ export default function LessonViewModal({
   useEffect(() => {
     loadCheckIn()
     loadExistingUploads()
+    loadStandards()
   }, [lesson.id])
+
+  const loadStandards = async () => {
+    if (!organizationId) return
+    setLoadingStandards(true)
+    const [{ data: links }, { data: available }] = await Promise.all([
+      supabase
+        .from('lesson_standards')
+        .select('id, user_standard_id, user_standards(standard_code, description, subject, grade_level)')
+        .eq('lesson_id', lesson.id),
+      supabase
+        .from('user_standards')
+        .select('id, standard_code, description, subject, grade_level')
+        .eq('organization_id', organizationId)
+        .eq('active', true)
+        .order('subject')
+        .order('grade_level'),
+    ])
+    setLinkedStandards(
+      (links || []).map((l: any) => ({
+        id: l.id,
+        user_standard_id: l.user_standard_id,
+        standard_code: l.user_standards?.standard_code ?? '',
+        description: l.user_standards?.description ?? '',
+        subject: l.user_standards?.subject ?? '',
+        grade_level: l.user_standards?.grade_level ?? '',
+      }))
+    )
+    setAvailableStandards((available || []) as AvailableStandard[])
+    setLoadingStandards(false)
+  }
+
+  const linkStandard = async (std: AvailableStandard) => {
+    const { data } = await supabase
+      .from('lesson_standards')
+      .insert({ lesson_id: lesson.id, user_standard_id: std.id, organization_id: organizationId })
+      .select('id')
+      .single()
+    if (data) {
+      setLinkedStandards(prev => [...prev, { id: data.id, user_standard_id: std.id, standard_code: std.standard_code, description: std.description, subject: std.subject, grade_level: std.grade_level }])
+    }
+  }
+
+  const unlinkStandard = async (linkId: string) => {
+    await supabase.from('lesson_standards').delete().eq('id', linkId)
+    setLinkedStandards(prev => prev.filter(l => l.id !== linkId))
+  }
 
   const loadExistingUploads = async () => {
     const { data } = await supabase
@@ -462,7 +515,42 @@ ${overviewHtml}${objectivesHtml}${materialsHtml}${activitiesHtml}${assessmentHtm
   const tabs = [
     { key: 'details'   as const, label: 'Details',   emoji: '📋' },
     { key: 'checkin'   as const, label: 'Check-In',  emoji: '🎯' },
+    { key: 'standards' as const, label: 'Standards',  emoji: '📌' },
   ]
+
+  // Map kid's grade (e.g. "8th", "3rd Grade") to DB grade_level values ('8', '3', etc.)
+  const normalizeGrade = (grade: string | number | null | undefined): string[] => {
+    if (!grade) return []
+    const g = String(grade).toLowerCase().trim().replace(/\s*grade\s*/g, '').trim()
+    if (g === 'kindergarten' || g === 'k') return ['K']
+    if (g === '1st'  || g === '1')  return ['1']
+    if (g === '2nd'  || g === '2')  return ['2']
+    if (g === '3rd'  || g === '3')  return ['3']
+    if (g === '4th'  || g === '4')  return ['4']
+    if (g === '5th'  || g === '5')  return ['5']
+    if (g === '6th'  || g === '6')  return ['6']
+    if (g === '7th'  || g === '7')  return ['7']
+    if (g === '8th'  || g === '8')  return ['8']
+    if (g === '9th'  || g === '9')  return ['9-10', 'HS']
+    if (g === '10th' || g === '10') return ['9-10', 'HS']
+    if (g === '11th' || g === '11') return ['11-12', 'HS']
+    if (g === '12th' || g === '12') return ['11-12', 'HS']
+    return [String(grade)]
+  }
+
+  const kidGradeLevels = normalizeGrade(kidGrade)
+
+  const filteredAvailable = availableStandards.filter(s => {
+    const alreadyLinked = linkedStandards.some(l => l.user_standard_id === s.id)
+    if (alreadyLinked) return false
+    // If searching, match across all grades
+    if (standardSearch.trim()) {
+      const q = standardSearch.toLowerCase()
+      return s.description.toLowerCase().includes(q) || s.standard_code.toLowerCase().includes(q) || s.subject.toLowerCase().includes(q)
+    }
+    // Default: show kid's grade only
+    return kidGradeLevels.length === 0 || kidGradeLevels.includes(s.grade_level)
+  })
 
   return (
     <div style={vw.overlay} onClick={onClose} role="dialog" aria-modal="true">
@@ -898,6 +986,162 @@ ${overviewHtml}${objectivesHtml}${materialsHtml}${activitiesHtml}${assessmentHtm
         )}
 
 
+        {/* ── Standards Tab ── */}
+        {activeTab === 'standards' && (
+          <div style={vw.body}>
+
+            {/* ── Section 1: Linked to this lesson ── */}
+            <div style={{ padding: '16px 22px 0' }}>
+              <div style={{ fontSize: 11, fontWeight: 800, color: '#7c3aed', letterSpacing: 0.5, textTransform: 'uppercase' as const, fontFamily: 'system-ui, sans-serif', marginBottom: 10 }}>
+                📌 Linked to this lesson
+              </div>
+              {loadingStandards ? (
+                <div style={{ fontSize: 13, color: '#9ca3af', fontFamily: 'system-ui, sans-serif' }}>Loading…</div>
+              ) : linkedStandards.length === 0 ? (
+                <div style={{ fontSize: 13, color: '#9ca3af', fontFamily: 'system-ui, sans-serif', fontStyle: 'italic', paddingBottom: 12 }}>
+                  None yet — add one from the list below.
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 8, marginBottom: 16 }}>
+                  {linkedStandards.map(s => (
+                    <div key={s.id} style={{
+                      display: 'flex', alignItems: 'flex-start', gap: 10,
+                      background: '#f5f3ff', borderRadius: 10, padding: '10px 14px',
+                      border: '1.5px solid #ede9fe',
+                    }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 12, fontWeight: 800, color: '#7c3aed', fontFamily: 'system-ui, sans-serif', marginBottom: 2 }}>
+                          {s.standard_code} · {s.subject}{s.grade_level && ` · Grade ${s.grade_level}`}
+                        </div>
+                        <div style={{ fontSize: 13, color: '#374151', fontFamily: 'system-ui, sans-serif', lineHeight: 1.4 }}>
+                          {s.description}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => unlinkStandard(s.id)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: 16, flexShrink: 0, padding: 2, lineHeight: 1 }}
+                        title="Remove"
+                      >×</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Divider */}
+            <div style={{ borderTop: '2px dashed #f3f4f6', margin: '0 22px 16px' }} />
+
+            {/* ── Section 2: Add a standard ── */}
+            {availableStandards.length === 0 && !loadingStandards ? (
+              <div style={{ padding: '0 22px 20px', fontSize: 13, color: '#6b7280', fontFamily: 'system-ui, sans-serif', lineHeight: 1.6 }}>
+                💡 No standards imported yet. Go to <strong>Records → Standards</strong> to import your state's standards.
+              </div>
+            ) : (
+              <div style={{ padding: '0 22px 20px' }}>
+                {/* Header row */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <div style={{ fontSize: 11, fontWeight: 800, color: '#4b5563', letterSpacing: 0.5, textTransform: 'uppercase' as const, fontFamily: 'system-ui, sans-serif' }}>
+                    ➕ Add a standard
+                  </div>
+                  {!standardSearch.trim() && (
+                    <div style={{ fontSize: 11, color: '#9ca3af', fontFamily: 'system-ui, sans-serif', fontWeight: 600 }}>
+                      {kidGrade ? `${kidGrade} · ` : ''}{filteredAvailable.length} available
+                    </div>
+                  )}
+                </div>
+
+                {/* Subject quick-filter pills (only when not searching, only if >1 subject in grade) */}
+                {!standardSearch.trim() && (() => {
+                  const subjects = [...new Set(filteredAvailable.map(s => s.subject))].sort()
+                  if (subjects.length <= 1) return null
+                  const lessonSubject = lesson.subject || ''
+                  return (
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' as const, marginBottom: 10 }}>
+                      {subjects.map(subj => {
+                        const isLesson = subj.toLowerCase() === lessonSubject.toLowerCase()
+                        return (
+                          <button
+                            key={subj}
+                            onClick={() => setStandardSearch(subj)}
+                            style={{
+                              padding: '4px 12px', borderRadius: 999, fontSize: 11, fontWeight: 700,
+                              cursor: 'pointer', fontFamily: 'system-ui, sans-serif',
+                              border: `2px solid ${isLesson ? '#7c3aed' : '#e5e7eb'}`,
+                              background: isLesson ? '#ede9fe' : '#f9fafb',
+                              color: isLesson ? '#7c3aed' : '#6b7280',
+                            }}
+                          >
+                            {subj}{isLesson ? ' ✓' : ''}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )
+                })()}
+
+                {/* Search input */}
+                <input
+                  style={{ ...vw.editInput, marginBottom: 8 }}
+                  placeholder="Filter by keyword or standard code…"
+                  value={standardSearch}
+                  onChange={e => setStandardSearch(e.target.value)}
+                />
+                {standardSearch.trim() && filteredAvailable.length === 0 && (
+                  <div style={{ fontSize: 13, color: '#9ca3af', fontFamily: 'system-ui, sans-serif', fontStyle: 'italic' }}>
+                    No matching standards found.
+                  </div>
+                )}
+
+                {/* Standards list — sorted so lesson subject appears first */}
+                {[...filteredAvailable]
+                  .sort((a, b) => {
+                    const ls = (lesson.subject || '').toLowerCase()
+                    const aMatch = a.subject.toLowerCase() === ls ? 0 : 1
+                    const bMatch = b.subject.toLowerCase() === ls ? 0 : 1
+                    if (aMatch !== bMatch) return aMatch - bMatch
+                    return a.standard_code.localeCompare(b.standard_code)
+                  })
+                  .slice(0, 12)
+                  .map(s => {
+                    const isLessonSubject = s.subject.toLowerCase() === (lesson.subject || '').toLowerCase()
+                    return (
+                      <div key={s.id} style={{
+                        display: 'flex', alignItems: 'flex-start', gap: 10,
+                        padding: '9px 12px', borderRadius: 10, marginBottom: 6,
+                        background: isLessonSubject ? '#faf5ff' : '#f9fafb',
+                        border: `1.5px solid ${isLessonSubject ? '#ede9fe' : '#e5e7eb'}`,
+                      }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 12, fontWeight: 800, color: isLessonSubject ? '#7c3aed' : '#6b7280', fontFamily: 'system-ui, sans-serif', marginBottom: 2 }}>
+                            {s.standard_code} · {s.subject}{s.grade_level && ` · Grade ${s.grade_level}`}
+                          </div>
+                          <div style={{ fontSize: 12, color: '#374151', fontFamily: 'system-ui, sans-serif', lineHeight: 1.4 }}>
+                            {s.description}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => { linkStandard(s); setStandardSearch('') }}
+                          style={{
+                            background: '#7c3aed', color: '#fff', border: 'none',
+                            borderRadius: 8, padding: '5px 12px', fontSize: 12,
+                            fontWeight: 700, cursor: 'pointer', flexShrink: 0,
+                            fontFamily: 'system-ui, sans-serif',
+                          }}
+                        >+ Add</button>
+                      </div>
+                    )
+                  })}
+
+                {filteredAvailable.length > 12 && !standardSearch.trim() && (
+                  <div style={{ fontSize: 12, color: '#9ca3af', fontFamily: 'system-ui, sans-serif', fontWeight: 600, textAlign: 'center' as const, marginTop: 4 }}>
+                    {filteredAvailable.length - 12} more — use the filter above to narrow down
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         </>)}
 
         {/* ── Footer ── */}
@@ -917,11 +1161,6 @@ ${overviewHtml}${objectivesHtml}${materialsHtml}${activitiesHtml}${assessmentHtm
               </>
             ) : (
               <>
-                {onGenerateAssessment && (
-                  <button style={vw.btnSecondary} onClick={() => { onGenerateAssessment(lesson); onClose() }}>
-                    📝 Assessment
-                  </button>
-                )}
                 <button style={vw.btnPrimary} onClick={() => setEditing(true)}>✏️ Edit</button>
               </>
             )}

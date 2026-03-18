@@ -48,11 +48,15 @@ const convertMinutesToDuration = (minutes: number | null): { value: number; unit
   return { value: minutes, unit: 'minutes' }
 }
 
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const KID_COLORS = ['#7c3aed', '#0d9488', '#ec4899', '#f59e0b', '#3b82f6']
+
 // ─── Page Content ─────────────────────────────────────────────────────────────
 
 function LessonsContent() {
   const router = useRouter()
-  useAppHeader({ title: '📚 Lessons', backHref: '/dashboard' })
+  useAppHeader({ title: '📚 Lessons' })
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [kids, setKids] = useState<any[]>([])
@@ -63,6 +67,7 @@ function LessonsContent() {
   const [vacationPeriods, setVacationPeriods] = useState<any[]>([])
   const [isCoTeacher, setIsCoTeacher] = useState(false)
   const [stateCode, setStateCode] = useState<string | null>(null)
+  const [activeKidId, setActiveKidId] = useState<string | null>(null)
 
   // Add Lesson modal state
   const [showLessonForm, setShowLessonForm] = useState(false)
@@ -139,6 +144,7 @@ function LessonsContent() {
       if (kidsData.length > 0 && !selectedKidForLesson) {
         setSelectedKidForLesson(kidsData[0].id)
       }
+      setActiveKidId(prev => prev ?? kidsData[0]?.id ?? null)
     }
 
     const { data: lessonsData } = await supabase
@@ -402,16 +408,6 @@ function LessonsContent() {
     setShowLessonEditModal(true)
   }
 
-  const handleDeleteLesson = async (id: string) => {
-    const lesson = Object.values(lessonsByKid).flat().find(l => l.id === id)
-    const msg = lesson?.duration_minutes
-      ? `This lesson has ${lesson.duration_minutes} min tracked.\n\nDeleting will remove these hours. Continue?`
-      : 'Delete this lesson?'
-    if (!confirm(msg)) return
-    await supabase.from('lessons').delete().eq('id', id).eq('user_id', user.id)
-    await loadData(user.id, organizationId)
-  }
-
   const handleCycleStatus = async (lessonId: string, currentStatus: string) => {
     const next: Record<string, 'not_started' | 'in_progress' | 'completed'> = {
       not_started: 'in_progress',
@@ -438,16 +434,6 @@ function LessonsContent() {
     await loadData(user.id, organizationId)
   }
 
-  const handleGenerateAssessment = (lesson: Lesson) => {
-    setAssessmentLesson(lesson)
-    setShowAssessmentGenerator(true)
-  }
-
-  const handleViewPastAssessments = (kidId: string, kidName: string) => {
-    setPastAssessmentsKidId(kidId)
-    setPastAssessmentsKidName(kidName)
-    setShowPastAssessments(true)
-  }
 
   const hasFeature = (feature: string) => checkFeature(userTier, feature)
   const now = new Date()
@@ -466,95 +452,138 @@ function LessonsContent() {
   // ── Render ──────────────────────────────────────────────────────────────────
 
   if (loading) return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #c4b5fd 0%, #e879f9 18%, #f0abfc 36%, #fbcfe8 54%, #bae6fd 76%, #6ee7b7 100%)' }}>
-      <div style={{ color: '#7c3aed', fontWeight: 700, fontSize: 16, fontFamily: "'Nunito', sans-serif" }}>Loading lessons...</div>
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #ede9fe 0%, #dbeafe 50%, #d1fae5 100%)' }}>
+      <div style={{ color: '#7c3aed', fontWeight: 800, fontSize: 16, fontFamily: "'Nunito', sans-serif" }}>Loading lessons...</div>
     </div>
   )
 
   return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #c4b5fd 0%, #e879f9 18%, #f0abfc 36%, #fbcfe8 54%, #bae6fd 76%, #6ee7b7 100%)', fontFamily: "'Nunito', sans-serif" }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');`}</style>
+    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #ede9fe 0%, #dbeafe 50%, #d1fae5 100%)', fontFamily: "'Nunito', sans-serif", paddingBottom: 88 }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
+        *, *::before, *::after { box-sizing: border-box; }
+        .kid-pill:hover { opacity: 0.85; }
+        .cal-btn:hover { opacity: 0.85; }
+      `}</style>
 
-      {/* ── View tabs ─────────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', gap: 8, padding: '14px 16px 0', maxWidth: 900, margin: '0 auto', flexWrap: 'wrap' as const }}>
-        <button style={{
-          padding: '7px 18px', borderRadius: 20, border: 'none', cursor: 'default',
-          fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 13,
-          background: 'rgba(255,255,255,0.95)', color: '#7c3aed',
-          boxShadow: '0 1px 6px rgba(124,58,237,0.15)',
-        }}>
-          📚 Lessons
-        </button>
-        <button
-          onClick={() => router.push('/calendar')}
-          style={{
-            padding: '7px 18px', borderRadius: 20, border: '1.5px solid rgba(124,58,237,0.3)',
-            cursor: 'pointer', fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 13,
-            background: 'rgba(255,255,255,0.7)', color: '#7c3aed',
-          }}>
-          📅 Calendar
-        </button>
+      {/* ── Page header ────────────────────────────────────────────────── */}
+      <div style={{ maxWidth: 860, margin: '0 auto', padding: '20px 20px 0' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+          <h1 style={{ fontSize: 26, fontWeight: 900, color: '#1e1b4b', margin: 0, fontFamily: "'Nunito', sans-serif" }}>
+            Lessons
+          </h1>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              className="cal-btn"
+              onClick={() => router.push('/subjects')}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '7px 14px', borderRadius: 20,
+                border: '1.5px solid rgba(124,58,237,0.25)',
+                background: 'rgba(255,255,255,0.7)', color: '#7c3aed',
+                fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 13,
+                cursor: 'pointer',
+              }}>
+              📚 Subjects
+            </button>
+            <button
+              className="cal-btn"
+              onClick={() => router.push('/calendar')}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '7px 14px', borderRadius: 20,
+                border: '1.5px solid rgba(124,58,237,0.25)',
+                background: 'rgba(255,255,255,0.7)', color: '#7c3aed',
+                fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 13,
+                cursor: 'pointer',
+              }}>
+              📅 Calendar
+            </button>
+          </div>
+        </div>
+        <p style={{ fontSize: 14, color: '#6b7280', fontWeight: 600, margin: '0 0 20px' }}>
+          Lesson plans by child
+        </p>
+
+        {/* ── Kid switcher pills ──────────────────────────────────────── */}
+        {kids.length > 1 && (
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' as const, marginBottom: 24 }}>
+            {kids.map((kid, idx) => {
+              const color = KID_COLORS[idx % KID_COLORS.length]
+              const isActive = kid.id === activeKidId
+              return (
+                <button
+                  key={kid.id}
+                  className="kid-pill"
+                  onClick={() => setActiveKidId(kid.id)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    padding: '8px 16px 8px 10px', borderRadius: 30,
+                    border: `2px solid ${isActive ? color : color + '45'}`,
+                    background: isActive ? color + '18' : 'rgba(255,255,255,0.65)',
+                    fontFamily: "'Nunito', sans-serif", fontWeight: isActive ? 800 : 600,
+                    fontSize: 14, color: isActive ? color : '#6b7280',
+                    cursor: 'pointer', transition: 'all 0.15s',
+                  }}>
+                  <div style={{
+                    width: 26, height: 26, borderRadius: '50%',
+                    background: color + '30', border: `2px solid ${color}`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 12, fontWeight: 900, color,
+                  }}>
+                    {kid.displayname.charAt(0).toUpperCase()}
+                  </div>
+                  {kid.displayname}
+                </button>
+              )
+            })}
+          </div>
+        )}
       </div>
 
       {/* ── Main ──────────────────────────────────────────────────────── */}
-      <main style={{ maxWidth: 900, margin: '0 auto', padding: '16px 16px 100px' }}>
-      <PastUnstartedLessonsBanner
-        lessons={pastUnstartedLessons}
-        onMarkCompleted={async (ids) => {
-          await Promise.all(ids.map(id =>
-            supabase.from('lessons').update({ status: 'completed', completed_at: new Date().toISOString() }).eq('id', id)
-          ))
-          await loadData(user.id, organizationId)
-        }}
-        onDelete={async (ids) => {
-          await Promise.all(ids.map(id =>
-            supabase.from('lessons').delete().eq('id', id)
-          ))
-          await loadData(user.id, organizationId)
-        }}
-        onViewLesson={(lessonId) => {
-          const lesson = allLessons.find(l => l.id === lessonId)
-          if (lesson) handleEditLesson(lesson)
-        }}
-      />
+      <main style={{ maxWidth: 860, margin: '0 auto', padding: '0 16px 100px' }}>
+        <PastUnstartedLessonsBanner
+          lessons={pastUnstartedLessons}
+          onMarkCompleted={async (ids) => {
+            await Promise.all(ids.map(id =>
+              supabase.from('lessons').update({ status: 'completed', completed_at: new Date().toISOString() }).eq('id', id)
+            ))
+            await loadData(user.id, organizationId)
+          }}
+          onDelete={async (ids) => {
+            await Promise.all(ids.map(id =>
+              supabase.from('lessons').delete().eq('id', id)
+            ))
+            await loadData(user.id, organizationId)
+          }}
+          onViewLesson={(lessonId) => {
+            const lesson = allLessons.find(l => l.id === lessonId)
+            if (lesson) handleEditLesson(lesson)
+          }}
+        />
         {kids.length === 0 ? (
           <div style={{
-            background: '#fff', borderRadius: 14,
-            border: '1.5px solid #ede9fe',
+            background: 'rgba(255,255,255,0.82)', borderRadius: 18,
+            border: '1.5px solid rgba(124,58,237,0.13)',
             padding: '48px 32px', textAlign: 'center',
-            boxShadow: '0 4px 16px rgba(124,58,237,0.08)',
           }}>
             <div style={{ fontSize: 48, marginBottom: 12 }}>📚</div>
-            <h2 style={{ fontSize: 20, fontWeight: 900, color: '#111827', margin: '0 0 8px' }}>No lessons yet</h2>
-            <p style={{ color: '#6b7280', fontSize: 14, margin: '0 0 20px' }}>
+            <h2 style={{ fontSize: 20, fontWeight: 900, color: '#111827', margin: '0 0 8px', fontFamily: "'Nunito', sans-serif" }}>No lessons yet</h2>
+            <p style={{ color: '#6b7280', fontSize: 14, margin: '0 0 20px', fontFamily: "'Nunito', sans-serif" }}>
               {isCoTeacher
                 ? "No lessons found. The account admin hasn't added any lessons yet."
                 : "Add your first child and lesson to get started."}
             </p>
-            {!isCoTeacher && (
-              <button
-                onClick={() => router.push('/dashboard')}
-                style={{
-                  background: 'linear-gradient(135deg, #7c3aed, #a855f7)',
-                  color: '#fff', border: 'none', borderRadius: 10,
-                  padding: '12px 28px', fontSize: 14, fontWeight: 700,
-                  cursor: 'pointer',
-                }}
-              >
-                Go to Dashboard
-              </button>
-            )}
           </div>
         ) : (
           <AllChildrenList
-            kids={kids}
-            lessonsByKid={lessonsByKid}
+            kids={activeKidId ? kids.filter(k => k.id === activeKidId) : kids}
+            lessonsByKid={activeKidId ? { [activeKidId]: lessonsByKid[activeKidId] || [] } : lessonsByKid}
             onEditLesson={handleEditLesson}
-            onDeleteLesson={handleDeleteLesson}
             onCycleStatus={handleCycleStatus}
             onSetStatus={handleSetStatus}
-            onGenerateAssessment={handleGenerateAssessment}
-            onViewPastAssessments={handleViewPastAssessments}
+
             onRefresh={() => loadData(user.id, organizationId)}
             organizationId={organizationId ?? undefined}
             stateCode={stateCode}
@@ -628,7 +657,7 @@ function LessonsContent() {
                     ✨ Generate with Scout{!hasFeature('ai_generation') ? ' 🔒' : ''}
                   </div>
                   <div style={{ fontSize: 12, fontWeight: 600, color: '#6b7280' }}>
-                    {hasFeature('ai_generation') ? 'Let Scout create a lesson plan for you' : 'Upgrade to Pro to unlock AI generation'}
+                    {hasFeature('ai_generation') ? 'Let Scout create a lesson plan for you' : 'Pro feature — upgrade to unlock Scout-generated plans'}
                   </div>
                 </button>
 

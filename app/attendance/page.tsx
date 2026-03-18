@@ -19,7 +19,7 @@ function AttendanceContent() {
   const [loading, setLoading]               = useState(true)
 
   // Wire AppHeader — sets the back arrow + page title in the global nav
-  useAppHeader({ title: '📋 Attendance', backHref: '/dashboard' })
+  useAppHeader({ title: '📋 Attendance', backHref: '/reports' })
 
   useEffect(() => {
     const init = async () => {

@@ -42,48 +42,72 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Organization not found' }, { status: 404 });
     }
 
-    const { type, file, url } = await request.json();
+    const { type, file, url, mediaType } = await request.json();
     let rawClaudeText = "";
-    const modelName = "claude-3-haiku-20240307";
+    // Use Sonnet for much better extraction accuracy than Haiku
+    const modelName = "claude-sonnet-4-6";
 
-    const prompt = `Extract educational standards from the provided content. 
+    const prompt = `Extract educational standards from the provided content.
     Return ONLY a raw JSON object with this exact structure:
-    { 
+    {
       "count": number,
       "source_name": "string",
       "effective_year": "string",
       "data": [
-        { 
-          "grade_level": "...", 
-          "subject": "...", 
+        {
+          "grade_level": "...",
+          "subject": "...",
           "standard_code": "...",  // Short code like "MS-LS1-2"
           "code": "...",            // Long formal code like "CCSS.ELA-LITERACY.RI.11-12.3" (if available)
-          "description": "...", 
-          "domain": "...", 
-          "state_code": "..." 
+          "description": "...",
+          "domain": "...",
+          "state_code": "..."
         }
-      ] 
+      ]
     }
     Note: The 'code' field is optional and should only be included if a longer formal identifier exists.
     IMPORTANT: Do not include any introductory text, markdown formatting, or explanations. Just the JSON object.`;
 
     if (type === 'url') {
-      const webRes = await fetch(url);
-      const html = await webRes.text();
+      let html = '';
+      try {
+        const webRes = await fetch(url, {
+          headers: { 'User-Agent': 'Mozilla/5.0 (compatible; HomeschoolHQ/1.0)' },
+          signal: AbortSignal.timeout(10000),
+        });
+        html = await webRes.text();
+      } catch (fetchErr: any) {
+        throw new Error('Could not load that URL — the site may have bot protection or require JavaScript to render. Try uploading a screenshot instead.');
+      }
+
+      // Strip script/style tags to reduce noise before sending to Claude
+      const cleaned = html
+        .replace(/<script[\s\S]*?<\/script>/gi, '')
+        .replace(/<style[\s\S]*?<\/style>/gi, '')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      if (cleaned.length < 500) {
+        throw new Error('This page appears to load its content with JavaScript, which our importer cannot read. Please take a screenshot of the standards page and upload that instead.');
+      }
+
       const msg = await anthropic.messages.create({
         model: modelName,
-        max_tokens: 4000,
-        messages: [{ role: 'user', content: `${prompt}\n\nContent: ${html.slice(0, 40000)}` }]
+        max_tokens: 8192,
+        messages: [{ role: 'user', content: `${prompt}\n\nContent: ${cleaned.slice(0, 60000)}` }]
       });
       rawClaudeText = (msg.content[0] as any).text;
     } else {
+      // Image upload — detect media type from what the client sent
+      const imageMediaType = (mediaType as string) || 'image/png';
       const msg = await anthropic.messages.create({
         model: modelName,
-        max_tokens: 4000,
+        max_tokens: 8192,
         messages: [{
           role: 'user',
           content: [
-            { type: 'image', source: { type: 'base64', media_type: 'image/png', data: file } },
+            { type: 'image', source: { type: 'base64', media_type: imageMediaType as 'image/png' | 'image/jpeg' | 'image/gif' | 'image/webp', data: file } },
             { type: 'text', text: prompt }
           ]
         }]

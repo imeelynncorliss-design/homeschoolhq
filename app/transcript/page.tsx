@@ -15,7 +15,7 @@ import { useAppHeader } from '@/components/layout/AppHeader'
 
 function TranscriptsContent() {
   const router = useRouter()
-  useAppHeader({ title: '📄 Transcripts', backHref: '/dashboard' })
+  useAppHeader({ title: '📄 Transcripts', backHref: '/reports' })
   const [user, setUser]           = useState<any>(null)
   const [loading, setLoading]     = useState(true)
   const [activeTab, setActiveTab] = useState('gradebook')

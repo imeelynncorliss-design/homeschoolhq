@@ -2,12 +2,14 @@
 'use client'
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { supabase } from '@/src/lib/supabase';
+import { getOrganizationId } from '@/src/lib/getOrganizationId';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/src/components/ui/card';
 import { Alert, AlertDescription } from '@/src/components/ui/alert';
 import { Badge } from '@/src/components/ui/badge';
 import { AlertCircle, Calendar, Clock, CheckCircle } from 'lucide-react';
+import { useAppHeader } from '@/components/layout/AppHeader';
 
 interface ConflictEvent {
   id: string;
@@ -24,24 +26,34 @@ interface ConflictEvent {
 }
 
 export default function ConflictsPage() {
-  const router = useRouter();
+  useAppHeader({ title: '⚠️ Schedule Conflicts', backHref: '/calendar/connect' });
+  const [orgId, setOrgId] = useState<string | null>(null);
   const [conflicts, setConflicts] = useState<ConflictEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [filter, setFilter] = useState<'all' | 'unresolved' | 'resolved'>('all');
 
   useEffect(() => {
-    fetchConflicts();
+    const init = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const { orgId: oid } = await getOrganizationId(user.id)
+      if (!oid) return
+      setOrgId(oid)
+      await fetchConflicts(oid)
+    }
+    init()
   }, []);
 
-  const fetchConflicts = async () => {
+  const fetchConflicts = async (resolvedOrgId?: string) => {
+    const id = resolvedOrgId ?? orgId
+    if (!id) return
     try {
       setLoading(true);
-      const orgId = 'd52497c0-42a9-49b7-ba3b-849bffa27fc4'; // Your org ID
-      const response = await fetch(`/api/calendar/conflicts?organizationId=${orgId}`);
-      
+      const response = await fetch(`/api/calendar/conflicts?organizationId=${id}`);
+
       if (!response.ok) throw new Error('Failed to fetch conflicts');
-      
+
       const data = await response.json();
       setConflicts(data.conflicts || []);
     } catch (err: any) {
@@ -52,6 +64,7 @@ export default function ConflictsPage() {
   };
 
   const handleResolve = async (conflictId: string, action: string) => {
+    if (!orgId) return
     try {
       const response = await fetch('/api/calendar/conflicts', {
         method: 'POST',
@@ -59,13 +72,12 @@ export default function ConflictsPage() {
         body: JSON.stringify({
           conflictId,
           action,
-          organizationId: 'd52497c0-42a9-49b7-ba3b-849bffa27fc4',
+          organizationId: orgId,
         }),
       });
 
       if (!response.ok) throw new Error('Failed to resolve conflict');
 
-      // Refresh conflicts
       await fetchConflicts();
     } catch (err: any) {
       setError(err.message);
@@ -97,22 +109,10 @@ export default function ConflictsPage() {
 
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-6">
-      {/* Header with Back Button */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Schedule Conflicts</h1>
-          <p className="text-gray-600 mt-2">
-            Review and resolve conflicts between work meetings and homeschool lessons
-          </p>
-        </div>
-        
-        <button
-          onClick={() => router.push('/dashboard')}
-          className="px-6 py-3 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition-colors flex items-center gap-2 font-medium"
-        >
-          ← Back to Dashboard
-        </button>
-      </div>
+      {/* Page description */}
+      <p className="text-gray-600">
+        Review and resolve conflicts between work meetings and homeschool lessons.
+      </p>
 
       {/* Error Alert */}
       {error && (

@@ -17,7 +17,7 @@ type UserTier = 'FREE' | 'ESSENTIAL' | 'PRO' | 'PREMIUM'
 function SocialHub() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
-  useAppHeader({ title: '🎉 Social Hub', backHref: '/dashboard' })
+  useAppHeader({ title: '🎉 Social Hub' })
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('social-calendar')
   const [userTier, setUserTier] = useState<UserTier>('FREE')

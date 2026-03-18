@@ -24,6 +24,11 @@ type LessonRow = {
   subject?: string
 }
 
+type Kid = {
+  id: string
+  displayname: string
+}
+
 export default function ProgressDashboard({ userId, organizationId }: ProgressDashboardProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
@@ -34,6 +39,8 @@ export default function ProgressDashboard({ userId, organizationId }: ProgressDa
   const [isExporting, setIsExporting] = useState(false)
   const [requiredDays, setRequiredDays] = useState(180)
   const [selectedState, setSelectedState] = useState('')
+  const [kids, setKids] = useState<Kid[]>([])
+  const [selectedKidId, setSelectedKidId] = useState<string | null>(null)
 
   // ── Shared attendance stats (same logic as AttendanceTracker) ──
   const attendanceStats = useAttendanceStats({
@@ -93,10 +100,12 @@ export default function ProgressDashboard({ userId, organizationId }: ProgressDa
       // Lessons (for subject breakdown only — day counting comes from hook)
       const { data: kidsData } = await supabase
         .from('kids')
-        .select('id')
+        .select('id, displayname')
         .eq('organization_id', organizationId)
 
-      const kidIds = (kidsData || []).map((k: any) => k.id)
+      const kidList = (kidsData || []) as Kid[]
+      setKids(kidList)
+      const kidIds = kidList.map(k => k.id)
       if (kidIds.length > 0) {
         const { data: lessons } = await supabase
           .from('lessons')
@@ -141,7 +150,7 @@ export default function ProgressDashboard({ userId, organizationId }: ProgressDa
 
   const getSubjectBreakdown = () => {
     const subjects: Record<string, { total: number; completed: number }> = {}
-    allLessons.forEach((l: LessonRow) => {
+    filteredLessons.forEach((l: LessonRow) => {
       const subj = l.subject || 'Other'
       if (!subjects[subj]) subjects[subj] = { total: 0, completed: 0 }
       subjects[subj].total++
@@ -221,14 +230,18 @@ export default function ProgressDashboard({ userId, organizationId }: ProgressDa
     return <div className="text-center py-8">Loading progress data...</div>
   }
 
+  const filteredLessons = selectedKidId
+    ? allLessons.filter(l => l.kid_id === selectedKidId)
+    : allLessons
+
   const completed = attendanceStats.totalDays
   const goal = requiredDays
   const percentComplete = goal > 0 ? Math.round((completed / goal) * 100) : 0
   const expectedProgress = calculateExpectedProgress()
   const estimatedCompletion = calculateEstimatedCompletion()
   const daysRemaining = Math.max(0, goal - completed)
-  const completedLessons = allLessons.filter(l => l.status === 'completed').length
-  const totalLessons = allLessons.length
+  const completedLessons = filteredLessons.filter(l => l.status === 'completed').length
+  const totalLessons = filteredLessons.length
   const completedHours = attendanceStats.totalHours
 
   const progressStatus =
@@ -243,12 +256,62 @@ export default function ProgressDashboard({ userId, organizationId }: ProgressDa
     { id: 'reports',    icon: '📄', label: 'Reports'    },
   ]
 
+  const KID_COLORS = ['#7c3aed', '#0d9488', '#ec4899', '#f59e0b', '#3b82f6']
+
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Progress Tracking</h2>
         <p className="text-gray-600">Monitor your annual learning goals and stay on track</p>
       </div>
+
+      {/* Kid filter pills — Insights only */}
+      {kids.length > 1 && activeTab === 'insights' && (
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' as const }}>
+          <button
+            onClick={() => setSelectedKidId(null)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              padding: '7px 16px', borderRadius: 999, fontFamily: "'Nunito', sans-serif",
+              fontWeight: 700, fontSize: 14, cursor: 'pointer', transition: 'all 0.15s',
+              border: selectedKidId === null ? '2px solid #7c3aed' : '2px solid #e5e7eb',
+              background: selectedKidId === null ? '#ede9fe' : '#fff',
+              color: selectedKidId === null ? '#7c3aed' : '#6b7280',
+            }}
+          >
+            All kids
+          </button>
+          {kids.map((kid, idx) => {
+            const color = KID_COLORS[idx % KID_COLORS.length]
+            const isActive = kid.id === selectedKidId
+            return (
+              <button
+                key={kid.id}
+                onClick={() => setSelectedKidId(isActive ? null : kid.id)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  padding: '7px 16px 7px 10px', borderRadius: 999, fontFamily: "'Nunito', sans-serif",
+                  fontWeight: 700, fontSize: 14, cursor: 'pointer', transition: 'all 0.15s',
+                  border: `2px solid ${isActive ? color : '#e5e7eb'}`,
+                  background: isActive ? `${color}18` : '#fff',
+                  color: isActive ? color : '#6b7280',
+                }}
+              >
+                <div style={{
+                  width: 24, height: 24, borderRadius: '50%',
+                  background: isActive ? color : '#d1d5db',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: '#fff', fontSize: 12, fontWeight: 800, flexShrink: 0,
+                }}>
+                  {kid.displayname.charAt(0).toUpperCase()}
+                </div>
+                {kid.displayname}
+              </button>
+            )
+          })}
+        </div>
+      )}
+
 
       {/* Days breakdown notice — surfaces confirmed vs inferred split */}
       {attendanceStats.lessonInferredDays > 0 && (
@@ -440,6 +503,10 @@ export default function ProgressDashboard({ userId, organizationId }: ProgressDa
                     </div>
                   )
                 })}
+                <div className="flex justify-between text-sm pt-3 mt-1 border-t border-gray-200">
+                  <span className="font-bold text-gray-700">Total</span>
+                  <span className="font-bold text-gray-900">{completedLessons} of {totalLessons} lessons completed</span>
+                </div>
               </div>
             )}
           </div>

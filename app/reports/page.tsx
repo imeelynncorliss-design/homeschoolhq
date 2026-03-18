@@ -45,6 +45,20 @@ function ReportsContent() {
       href: '/portfolio',
       comingSoon: false,
     },
+    {
+      icon: '🎯',
+      label: 'Mastery Tracker',
+      desc: 'Subject-by-subject learning insights from your check-ins',
+      href: '/mastery',
+      comingSoon: false,
+    },
+    {
+      icon: '📌',
+      label: 'Standards',
+      desc: 'Track which standards your lessons cover and where the gaps are',
+      href: '/standards',
+      comingSoon: false,
+    },
   ]
 
   return (

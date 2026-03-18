@@ -10,7 +10,7 @@ import { useAppHeader } from '@/components/layout/AppHeader'
 
 function CoursesContent() {
   const router = useRouter()
-  useAppHeader({ title: '📚 Courses', backHref: '/dashboard' })
+  useAppHeader({ title: '📚 Courses', backHref: '/reports' })
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [kids, setKids] = useState<any[]>([])

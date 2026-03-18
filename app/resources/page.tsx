@@ -1030,7 +1030,7 @@ function MaterialsTab({ organizationId }: { organizationId: string }) {
 
 function ResourcesContent() {
   const router = useRouter()
-  useAppHeader({ title: '💡 Resources', backHref: '/dashboard' })
+  useAppHeader({ title: '💡 Resources' })
   const [activeTab, setActiveTab] = useState<'styles' | 'curriculum' | 'compliance' | 'guides' | 'materials'>('styles')
   const [curriculumStyle, setCurriculumStyle] = useState('charlotte')
   const [userStyle, setUserStyle] = useState<string | null>(null)

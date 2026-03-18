@@ -1,8 +1,6 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { useRouter } from 'next/navigation'
-import HoursTracker from './HoursTracker'
 import { formatLessonDescription } from '@/lib/formatLessonDescription'
 import LessonViewModal from './LessonViewModal'
 
@@ -32,12 +30,8 @@ interface AllChildrenListProps {
   kids: Child[]
   lessonsByKid: { [kidId: string]: Lesson[] }
   onEditLesson: (lesson: Lesson) => void
-  onDeleteLesson: (id: string) => void
   onCycleStatus: (id: string, currentStatus: string) => void
   onSetStatus?: (id: string, status: 'not_started' | 'in_progress' | 'completed') => void
-  onGenerateAssessment?: (lesson: Lesson) => void
-  autoExpandKid?: string | null
-  onViewPastAssessments?: (kidId: string, kidName: string) => void
   onRefresh?: () => void
   organizationId?: string
   stateCode?: string | null
@@ -48,22 +42,53 @@ export default function AllChildrenList({
   kids,
   lessonsByKid,
   onEditLesson,
-  onDeleteLesson,
   onCycleStatus,
   onSetStatus,
-  onGenerateAssessment,
-  autoExpandKid,
-  onViewPastAssessments,
   onRefresh,
   organizationId,
   stateCode,
   onAddLesson,
 }: AllChildrenListProps) {
-  const router = useRouter()
-  
   const [selectedModalLesson, setSelectedModalLesson] = useState<Lesson | null>(null)
   const [statusToast, setStatusToast] = useState<{ message: string; emoji: string; lessonId: string; prevStatus: 'not_started' | 'in_progress' | 'completed' } | null>(null)
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const [deleteToast, setDeleteToast] = useState<{ lessons: Lesson[] } | null>(null)
+  const deleteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const softDeleteLessons = (lessonsToDelete: Lesson[]) => {
+    const ids = new Set(lessonsToDelete.map(l => l.id))
+    setLocalLessonsByKid(prev => {
+      const updated = { ...prev }
+      Object.keys(updated).forEach(kidId => {
+        updated[kidId] = updated[kidId].filter(l => !ids.has(l.id))
+      })
+      return updated
+    })
+    if (deleteTimerRef.current) clearTimeout(deleteTimerRef.current)
+    setDeleteToast({ lessons: lessonsToDelete })
+    deleteTimerRef.current = setTimeout(async () => {
+      const { supabase } = await import('@/src/lib/supabase')
+      await supabase.from('lessons').delete().in('id', Array.from(ids))
+      setDeleteToast(null)
+      onRefresh?.()
+    }, 5000)
+  }
+
+  const undoDelete = () => {
+    if (!deleteToast) return
+    if (deleteTimerRef.current) clearTimeout(deleteTimerRef.current)
+    setLocalLessonsByKid(prev => {
+      const updated = { ...prev }
+      deleteToast.lessons.forEach(lesson => {
+        if (!updated[lesson.kid_id]) updated[lesson.kid_id] = []
+        updated[lesson.kid_id] = [...updated[lesson.kid_id], lesson]
+          .sort((a, b) => (a.lesson_date || '').localeCompare(b.lesson_date || ''))
+      })
+      return updated
+    })
+    setDeleteToast(null)
+  }
 
   const showStatusToast = (lessonId: string, prevStatus: 'not_started' | 'in_progress' | 'completed', newStatus: 'not_started' | 'in_progress' | 'completed') => {
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
@@ -98,17 +123,7 @@ export default function AllChildrenList({
     setLocalLessonsByKid(lessonsByKid)
   }, [lessonsByKid])
 
-  const [expandedKids, setExpandedKids] = useState<Set<string>>(() => {
-    if (autoExpandKid) return new Set([autoExpandKid])
-    return new Set()
-  })
-
-  useEffect(() => {
-    if (autoExpandKid) setExpandedKids(new Set([autoExpandKid]))
-  }, [autoExpandKid])
-  
   const [selectedLessons, setSelectedLessons] = useState<Set<string>>(new Set())
-  const [showBulkActions, setShowBulkActions] = useState(false)
   const [bulkDate, setBulkDate] = useState(new Date().toISOString().split('T')[0])
   
   const [showCopyModal, setShowCopyModal] = useState(false)
@@ -116,7 +131,7 @@ export default function AllChildrenList({
   
   const [collapsedSubjects, setCollapsedSubjects] = useState<Set<string>>(new Set())
   const [collapsedStatuses, setCollapsedStatuses] = useState<Set<string>>(new Set())
-  const [hasInitialized, setHasInitialized] = useState(false)
+  const [initializedKids, setInitializedKids] = useState<Set<string>>(new Set())
 
   const [showBulkShiftModal, setShowBulkShiftModal] = useState(false)
   const [pendingShift, setPendingShift] = useState<{
@@ -125,23 +140,24 @@ export default function AllChildrenList({
   } | null>(null)
 
   useEffect(() => {
-    if (Object.keys(lessonsByKid).length > 0 && !hasInitialized) {
-      const newCollapsed = new Set<string>()
-      kids.forEach(kid => {
-        // Auto-collapse Completed by default
-        newCollapsed.add(`${kid.id}-Completed`)
+    if (Object.keys(lessonsByKid).length === 0) return
+    const uninitializedKids = kids.filter(k => !initializedKids.has(k.id))
+    if (uninitializedKids.length === 0) return
+    setCollapsedStatuses(prev => {
+      const next = new Set(prev)
+      uninitializedKids.forEach(kid => {
+        next.add(`${kid.id}-Not Started`)
+        next.add(`${kid.id}-In Progress`)
+        next.add(`${kid.id}-Completed`)
       })
-      setCollapsedStatuses(newCollapsed)
-      setHasInitialized(true)
-    }
-  }, [lessonsByKid, kids, hasInitialized])
-
-  const toggleKid = (kidId: string) => {
-    const newExpanded = new Set(expandedKids)
-    if (newExpanded.has(kidId)) newExpanded.delete(kidId)
-    else newExpanded.add(kidId)
-    setExpandedKids(newExpanded)
-  }
+      return next
+    })
+    setInitializedKids(prev => {
+      const next = new Set(prev)
+      uninitializedKids.forEach(k => next.add(k.id))
+      return next
+    })
+  }, [lessonsByKid, kids])
 
   const toggleSubject = (key: string) => {
     const newCollapsed = new Set(collapsedSubjects)
@@ -241,30 +257,13 @@ export default function AllChildrenList({
     setPendingShift(null)
   }
 
-  const bulkDelete = async () => {
+  const bulkDelete = () => {
     if (selectedLessons.size === 0) return
-    if (confirm(`Are you sure you want to delete ${selectedLessons.size} lesson(s)? This cannot be undone.`)) {
-      const { supabase } = await import('@/src/lib/supabase')
-      const { error } = await supabase
-        .from('lessons')
-        .delete()
-        .in('id', Array.from(selectedLessons))
-      
-      if (error) {
-        console.error('Bulk delete error:', error)
-        alert(`Failed to delete lessons: ${error.message}`)
-      } else {
-        const updatedLessonsByKid = { ...localLessonsByKid }
-        Object.keys(updatedLessonsByKid).forEach(kidId => {
-          updatedLessonsByKid[kidId] = updatedLessonsByKid[kidId].filter(
-            lesson => !selectedLessons.has(lesson.id)
-          )
-        })
-        setLocalLessonsByKid(updatedLessonsByKid)
-        setSelectedLessons(new Set())
-        setShowBulkActions(false)
-      }
-    }
+    const lessonsToDelete: Lesson[] = Object.values(localLessonsByKid)
+      .flat()
+      .filter(l => selectedLessons.has(l.id))
+    setSelectedLessons(new Set())
+    softDeleteLessons(lessonsToDelete)
   }
 
   const bulkCopyToChild = async () => {
@@ -393,17 +392,13 @@ export default function AllChildrenList({
       {/* ── Kids List ────────────────────────────────────────────────── */}
       {kids.map(kid => {
         const kidLessons = localLessonsByKid[kid.id] || []
-        const isExpanded = expandedKids.has(kid.id)
         const stats = getChildStats(kidLessons)
 
         return (
           <div key={kid.id} className="bg-white rounded-lg shadow overflow-hidden">
 
             {/* Child Header */}
-            <button
-              onClick={() => toggleKid(kid.id)}
-              className="w-full p-6 flex items-center justify-between hover:bg-gray-50 transition-colors"
-            >
+            <div className="w-full p-6 flex items-center justify-between">
               <div className="flex items-center gap-4">
                 {kid.photo_url && (
                   <img src={kid.photo_url} alt={kid.displayname} className="w-16 h-16 rounded-full object-cover" />
@@ -415,31 +410,21 @@ export default function AllChildrenList({
                     {kid.age && kid.grade && ' • '}
                     {kid.grade && `Grade: ${kid.grade}`}
                   </p>
-                  {!isExpanded && kidLessons.length > 0 && (
-                    <div className="mt-2 flex items-center gap-4 text-sm text-gray-600">
+                  {kidLessons.length > 0 && (
+                    <div className="mt-1 flex items-center gap-3 text-sm text-gray-500">
                       <span>{stats.total} lessons</span>
-                      <span>•</span>
+                      <span>·</span>
                       <span>{stats.completedPercent}% complete</span>
-                      <span>•</span>
-                      <span>{stats.totalHours} hours</span>
+                      <span>·</span>
+                      <span>{stats.totalHours} hrs</span>
                     </div>
                   )}
                 </div>
               </div>
-              <div className="flex items-center gap-4">
-                {!isExpanded && kidLessons.length > 0 && (
-                  <div className="text-right">
-                    <div className="text-2xl font-bold text-gray-900">{stats.completedPercent}%</div>
-                    <div className="text-xs text-gray-500">{stats.completed} of {stats.total}</div>
-                  </div>
-                )}
-                <span className="text-2xl text-gray-400">{isExpanded ? '▼' : '▶'}</span>
-              </div>
-            </button>
+            </div>
 
             {/* Child Content */}
-            {isExpanded && (
-              <div className="px-6 pb-6 space-y-6 border-t border-gray-100">
+            <div className="px-6 pb-6 space-y-6 border-t border-gray-100">
 
                 {onAddLesson && (
                   <div className="pt-4">
@@ -456,26 +441,6 @@ export default function AllChildrenList({
                     </button>
                   </div>
                 )}
-
-                {onViewPastAssessments && (
-                  <div className="pt-4">
-                    <button
-                      onClick={() => onViewPastAssessments(kid.id, kid.displayname)}
-                      className="w-full px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium flex items-center justify-center gap-2 transition-colors"
-                    >
-                      📊 Completed Assessments & Reviews
-                    </button>
-                  </div>
-                )}
-
-                <div className="pt-6">
-                  <HoursTracker
-                    lessons={kidLessons}
-                    childName={kid.displayname}
-                    childId={kid.id}
-                    photoUrl={kid.photo_url}
-                  />
-                </div>
 
                 {/* Lessons grouped by status */}
                 {kidLessons.length === 0 ? (
@@ -642,7 +607,6 @@ export default function AllChildrenList({
                   </div>
                 )}
               </div>
-            )}
           </div>
         )
       })}
@@ -659,10 +623,9 @@ export default function AllChildrenList({
             stateCode={stateCode}
             onClose={() => setSelectedModalLesson(null)}
             onEdit={() => { onEditLesson(selectedModalLesson); setSelectedModalLesson(null) }}
-            onDelete={() => { onDeleteLesson(selectedModalLesson.id); setSelectedModalLesson(null) }}
+            onDelete={() => { softDeleteLessons([selectedModalLesson]); setSelectedModalLesson(null) }}
             onCycleStatus={(id, status) => { onCycleStatus(id, status); onRefresh?.() }}
             onSetStatus={onSetStatus ? (id, status) => { onSetStatus(id, status); onRefresh?.() } : undefined}
-            onGenerateAssessment={onGenerateAssessment ? (l) => { onGenerateAssessment(l as Lesson); setSelectedModalLesson(null) } : undefined}
             onSave={() => onRefresh?.()}
           />
         )
@@ -700,6 +663,36 @@ export default function AllChildrenList({
               Undo
             </button>
           )}
+        </div>
+      )}
+
+      {/* ── Delete Toast ─────────────────────────────────────────────── */}
+      {deleteToast && (
+        <div style={{
+          position: 'fixed', bottom: 88, left: '50%', transform: 'translateX(-50%)',
+          background: '#1f2937', color: '#fff', borderRadius: 14,
+          padding: '12px 16px', zIndex: 9999,
+          display: 'flex', alignItems: 'center', gap: 10,
+          boxShadow: '0 8px 28px rgba(0,0,0,0.22)',
+          maxWidth: 360, width: 'calc(100% - 40px)',
+          animation: 'fadeInUp 0.2s ease',
+          fontFamily: "'Nunito', sans-serif",
+        }}>
+          <span style={{ fontSize: 20, flexShrink: 0 }}>🗑️</span>
+          <span style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.4, flex: 1 }}>
+            {deleteToast.lessons.length === 1 ? 'Lesson deleted.' : `${deleteToast.lessons.length} lessons deleted.`}
+          </span>
+          <button
+            onClick={undoDelete}
+            style={{
+              background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)',
+              borderRadius: 8, color: '#fff', fontSize: 12, fontWeight: 800,
+              padding: '5px 12px', cursor: 'pointer', flexShrink: 0,
+              fontFamily: "'Nunito', sans-serif",
+            }}
+          >
+            Undo
+          </button>
         </div>
       )}
 

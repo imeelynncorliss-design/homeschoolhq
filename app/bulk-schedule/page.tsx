@@ -6,12 +6,14 @@ import { useRouter } from 'next/navigation'
 import AuthGuard from '@/components/AuthGuard'
 import BulkLessonScheduler from '@/components/BulkLessonScheduler'
 import { getOrganizationId } from '@/src/lib/getOrganizationId'
-import { pageShell, colors } from '@/src/lib/designTokens'
+import { colors } from '@/src/lib/designTokens'
+import { useAppHeader } from '@/components/layout/AppHeader'
 
 // ─── Page Content ─────────────────────────────────────────────────────────────
 
 function BulkScheduleContent() {
   const router = useRouter()
+  useAppHeader({ title: '📆 Bulk Schedule', backHref: '/tools' })
   const [user, setUser]     = useState<any>(null)
   const [loading, setLoading] = useState(true)
 
@@ -48,38 +50,10 @@ function BulkScheduleContent() {
   )
 
   return (
-    <div style={css.root}>
-
-      {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <header style={css.topBar}>
-      <div style={css.topBarLeft}>
-          <button style={css.headerBtn} onClick={() => router.push('/dashboard')}>
-            ← Dashboard
-          </button>
-          <div style={css.pageTitle}>⚡ Bulk Scheduler </div>
-        </div>
-        <div style={css.topBarRight}>
-          <button style={css.headerBtn} onClick={() => router.push('/calendar')}>
-            📅 Calendar
-          </button>
-        </div>
-      </header>
-
-      {/* ── Main ───────────────────────────────────────────────────────────── */}
-      <main style={css.main}>
-        <div style={css.sectionLabel}>ASSIGN DATES TO YOUR LESSONS IN BULK</div>
-
-        <div style={css.card}>
-          <div style={css.cardHead}>
-            <span style={{ fontSize: 20 }}>⚡</span>
-            <span style={css.cardTitle}>Bulk Lesson Scheduler</span>
-          </div>
-          <div style={css.cardBody}>
-            <BulkLessonScheduler userId={user.id} />
-          </div>
-        </div>
+    <div style={{ minHeight: '100vh', background: colors.pageBackground, paddingBottom: 100 }}>
+      <main style={{ padding: '20px', maxWidth: 800, margin: '0 auto' }}>
+        <BulkLessonScheduler userId={user.id} />
       </main>
-
     </div>
   )
 }
@@ -97,10 +71,3 @@ export default function BulkSchedulePage() {
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
-
-const css: Record<string, React.CSSProperties> = {
-  ...pageShell,
-  cardBody: {
-    padding: '24px',
-  },
-}

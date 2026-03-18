@@ -44,7 +44,7 @@ interface KidComplianceData {
 
 export default function CompliancePage() {
   const router = useRouter()
-  useAppHeader({ title: 'Compliance', backHref: '/dashboard' })  
+  useAppHeader({ title: 'Compliance', backHref: '/reports' })
   const supabase = createClient()
   
   const { templates, loading: templatesLoading, getTemplate } = useStateComplianceTemplates()

@@ -25,7 +25,7 @@ const FAQS = [
 ]
 
 function HowToContent() {
-  useAppHeader({ title: '💡 How To', backHref: '/dashboard' })
+  useAppHeader({ title: '💡 How To' })
   const router = useRouter()
   const [openFaq, setOpenFaq] = useState<number | null>(null)
 

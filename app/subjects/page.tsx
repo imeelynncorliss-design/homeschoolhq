@@ -586,13 +586,13 @@ function SubjectsContent() {
         return (
           <div onClick={() => setSelected(null)} style={{
             position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)',
-            zIndex: 200, display: 'flex', alignItems: 'flex-end',
+            zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px',
           }}>
             <div onClick={e => e.stopPropagation()} style={{
-              width: '100%', maxWidth: 600, margin: '0 auto',
-              background: '#fff', borderRadius: '20px 20px 0 0',
-              maxHeight: '75vh', display: 'flex', flexDirection: 'column',
-              boxShadow: '0 -8px 40px rgba(0,0,0,0.18)',
+              width: '100%', maxWidth: 600,
+              background: '#fff', borderRadius: 20,
+              maxHeight: '85vh', display: 'flex', flexDirection: 'column',
+              boxShadow: '0 8px 40px rgba(0,0,0,0.22)',
             }}>
               {/* Panel header */}
               <div style={{

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/src/lib/supabase';
 import { pageShell } from '@/src/lib/designTokens';
+import { useAppHeader } from '@/components/layout/AppHeader';
 import {
   revokeInvite,
   getOrgInvites,
@@ -63,6 +64,7 @@ function formatDate(dateStr: string) {
 
 export default function CoTeachersPage() {
   const router = useRouter();
+  useAppHeader({ title: '👩‍🏫 Co-Teachers', backHref: '/tools' });
   const supabase = createClient();
 
   const [orgId, setOrgId] = useState<string | null>(null);

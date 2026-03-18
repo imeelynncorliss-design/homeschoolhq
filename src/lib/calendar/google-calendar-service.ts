@@ -17,7 +17,6 @@ export class GoogleCalendarService {
   private oauth2Client: OAuth2Client;
   private readonly SCOPES = [
     'https://www.googleapis.com/auth/calendar.readonly',
-    'https://www.googleapis.com/auth/calendar.events',
   ];
 
   constructor() {

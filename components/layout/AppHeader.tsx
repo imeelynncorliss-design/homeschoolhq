@@ -637,6 +637,15 @@ function CopilotPanel({ onClose, organizationId, userId, userName, userState, me
   )
 }
 
+// ─── Back-button label map ────────────────────────────────────────────────────
+
+const BACK_LABELS: Record<string, string> = {
+  '/reports':   'Records',
+  '/resources': 'Resources',
+  '/tools':     'Tools',
+  '/profile':   'Profile',
+}
+
 // ─── Main Header ──────────────────────────────────────────────────────────────
 
 
@@ -826,7 +835,7 @@ export default function AppHeader() {
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M19 12H5M12 5l-7 7 7 7" />
                   </svg>
-                  <span className="hr-back-label">Dashboard</span>
+                  <span className="hr-back-label">{BACK_LABELS[backHref] ?? 'Back'}</span>
                 </button>
               )}
               {title && <span style={s.pageTitle}>{title}</span>}
