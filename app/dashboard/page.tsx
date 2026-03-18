@@ -891,6 +891,7 @@ function DashboardContent() {
         {showActivity && (
           <ActivityGenerator
             kids={kidPulses.map(p => p.kid)}
+            organizationId={organizationId}
             onClose={() => setShowActivity(false)}
             onSaved={() => {}}
           />

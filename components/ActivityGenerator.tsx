@@ -23,6 +23,7 @@ interface GeneratedActivity {
 
 interface ActivityGeneratorProps {
   kids: Kid[]
+  organizationId?: string | null
   onClose: () => void
   onSaved?: () => void
 }
@@ -38,7 +39,7 @@ const VIBES = [
 
 // ─── ActivityGenerator ────────────────────────────────────────────────────────
 
-export default function ActivityGenerator({ kids, onClose, onSaved }: ActivityGeneratorProps) {
+export default function ActivityGenerator({ kids, organizationId, onClose, onSaved }: ActivityGeneratorProps) {
   const [step, setStep] = useState<'setup' | 'vibe' | 'loading' | 'results'>('setup')
   const [selectedKidId, setSelectedKidId] = useState<string>(kids[0]?.id ?? '')
   const [subject, setSubject] = useState('')
@@ -76,6 +77,7 @@ export default function ActivityGenerator({ kids, onClose, onSaved }: ActivityGe
     const today = new Date().toISOString().split('T')[0]
     const { error: dbErr } = await supabase.from('lessons').insert({
       kid_id: selectedKidId,
+      organization_id: organizationId,
       subject,
       title: act.title,
       description: JSON.stringify({ overview: act.description, steps: act.steps, materials: act.materials }),
