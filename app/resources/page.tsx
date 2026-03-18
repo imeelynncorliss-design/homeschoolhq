@@ -271,8 +271,8 @@ const HS_SECTIONS = [
       { label: 'What to include', text: 'School name (e.g., "Johnson Home Academy"), student legal name + DOB, years attended, courses by year with grades and credits earned, cumulative GPA, graduation date, parent/administrator signature.' },
       { label: 'Calculating GPA', text: 'Standard 4.0 scale: A=4.0, B=3.0, C=2.0, D=1.0. Weight honors or dual-enrollment courses by +0.5 or +1.0 point. Calculate weighted average across all credits.' },
       { label: 'Course names matter', text: 'Use standard names colleges recognize: "English I–IV," "Algebra I/II," "US History," "Biology with Lab." Avoid creative names like "Nature Discovery" for science — save those for the course description portfolio.' },
-      { label: 'Course descriptions', text: 'Many colleges ask for 1-paragraph descriptions of each course: what was covered, what materials/textbooks were used, and how it was evaluated. Prepare these alongside the transcript.' },
-      { label: 'Free tools', text: 'Canva has free transcript templates. HSLDA offers a free transcript builder. Microsoft/Google Docs with a simple table works fine — colleges are accustomed to homeschool transcripts in various formats.' },
+      { label: 'Course descriptions', text: 'Many colleges ask for 1-paragraph descriptions of each course: what was covered, what materials/textbooks were used, and how it was evaluated. HomeschoolReady\'s transcript builder includes a Course Descriptions section so everything stays in one place.' },
+      { label: 'Built-in transcript generator', text: 'HomeschoolReady has a transcript builder under Records → Transcript. It handles grade entry, GPA calculation, and PDF export — no third-party tools needed.' },
     ],
   },
   {
@@ -1252,12 +1252,12 @@ function HighSchoolTab() {
         <div style={{ fontSize: 13, fontWeight: 800, color: '#9d174d', marginBottom: 8 }}>📚 Helpful Resources</div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
           {[
-            { name: 'HSLDA — Homeschool Transcripts', url: 'https://hslda.org/legal/transcripts' },
+            { name: 'HomeschoolReady Transcript Builder', url: '/transcript' },
             { name: 'College Board (SAT Registration)', url: 'https://collegeboard.org' },
             { name: 'ACT for Homeschoolers', url: 'https://act.org' },
             { name: 'Common App Homeschool FAQ', url: 'https://commonapp.org' },
           ].map(link => (
-            <a key={link.name} href={link.url} target="_blank" rel="noopener noreferrer" style={{ background: '#fff', borderRadius: 10, padding: '10px 14px', fontSize: 12, fontWeight: 700, color: '#7c3aed', textDecoration: 'none', border: '1px solid #e5e7eb', display: 'block' }}>
+            <a key={link.name} href={link.url} {...(link.url.startsWith('/') ? {} : { target: '_blank', rel: 'noopener noreferrer' })} style={{ background: '#fff', borderRadius: 10, padding: '10px 14px', fontSize: 12, fontWeight: 700, color: '#7c3aed', textDecoration: 'none', border: '1px solid #e5e7eb', display: 'block' }}>
               → {link.name}
             </a>
           ))}
