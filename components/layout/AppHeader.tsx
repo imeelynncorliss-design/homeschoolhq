@@ -665,14 +665,6 @@ export default function AppHeader() {
             </button>
           )}
 
-          {/* Desktop-only: How To */}
-          <button className="hr-btn hr-desktop-only" onClick={() => router.push('/how-to')}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10" />
-              <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01" />
-            </svg>
-            <span>How To</span>
-          </button>
 
           {/* Desktop-only: User menu */}
           {userId && (
@@ -721,9 +713,6 @@ export default function AppHeader() {
                         💬 Feedback
                       </button>
                     )}
-                    <button style={s.menuItem} onClick={() => { setShowUserMenu(false); router.push('/how-to') }}>
-                      ❓ How To
-                    </button>
                     <button style={s.menuItem} onClick={() => { setShowUserMenu(false); router.push('/settings') }}>
                       ⚙️ Settings
                     </button>
