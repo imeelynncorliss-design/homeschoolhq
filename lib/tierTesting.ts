@@ -1,5 +1,7 @@
 // lib/tierTesting.ts
-import { supabase } from '@/src/lib/supabase'
+// NOTE: Do NOT import supabase at the top level here — this file is imported
+// by server-side API routes (via aiUsage.ts) for constants only.
+// createBrowserClient crashes in Node.js if evaluated at module load time.
 
 export type UserTier = 'FREE' | 'ESSENTIAL' | 'PRO' | 'PREMIUM'
 
@@ -260,6 +262,9 @@ export function getUpgradeMessage(requiredTier: UserTier): string {
 }
 
 export async function getUserTier(userId: string): Promise<UserTier> {
+  // Lazy import — keeps createBrowserClient out of module-init scope so
+  // server-side imports of this file (for constants) don't crash in Node.js.
+  const { supabase } = await import('@/src/lib/supabase')
   const { data, error } = await supabase
     .from('user_subscriptions')
     .select('tier')
