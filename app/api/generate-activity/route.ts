@@ -25,7 +25,7 @@ export async function POST(request: Request) {
     const [{ data: kid }, { data: materials }] = await Promise.all([
       supabase
         .from('kids')
-        .select('displayname, age, grade, learning_style, current_hook')
+        .select('displayname, age, grade, learning_style, current_hook, curriculum')
         .eq('id', kidId)
         .single(),
       organizationId
@@ -55,6 +55,7 @@ export async function POST(request: Request) {
 STUDENT: ${kid.displayname}, Grade ${kid.grade || 'unknown'}, Age ${kid.age || 'unknown'}
 Learning style: ${kid.learning_style || 'not specified'}
 Current interests: ${kid.current_hook || 'not specified'}
+${kid.curriculum ? `Curriculum: ${kid.curriculum}` : ''}
 Subject: ${subject}
 ${topic ? `Topic/focus: ${topic}` : ''}
 Activity vibe: ${vibeDesc[vibe] || vibe}

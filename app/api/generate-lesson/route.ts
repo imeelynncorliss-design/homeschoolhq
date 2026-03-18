@@ -37,7 +37,7 @@ export async function POST(request: Request) {
     // Fetch kid profile for personalization
     const { data: kid, error: kidError } = await supabase
       .from('kids')
-      .select('displayname, age, grade, learning_style, current_hook, current_focus')
+      .select('displayname, age, grade, learning_style, current_hook, current_focus, curriculum')
       .eq('id', childId)
       .single();
 
@@ -55,6 +55,7 @@ Grade Level: ${gradeLevel || kid.grade || 'Not specified'}
 Learning Style: ${kid.learning_style || 'Not specified'}
 Current Interests: ${kid.current_hook || 'None specified'}
 Current Focus: ${kid.current_focus || 'General learning'}
+Curriculum: ${kid.curriculum || 'Not specified'}
 
 **LESSON REQUIREMENTS:**
 Subject: ${subject}
@@ -76,6 +77,7 @@ Each lesson plan must include:
 - Match ${kid.displayname}'s learning style: ${kid.learning_style || 'flexible'}
 - Connect to their interests: ${kid.current_hook || 'general topics'}
 - Align with their current focus: ${kid.current_focus || 'broad learning goals'}
+${kid.curriculum ? `- Align lesson structure and terminology with ${kid.curriculum} (e.g. match its sequence, vocabulary, and teaching approach)` : ''}
 
 Return ONLY valid JSON:
 {

@@ -24,10 +24,11 @@ interface KidData {
   lastname?: string
   displayname?: string
   age?: number | null
-  grade?: string
+  grade?: string | null
   photo_url?: string
-  learning_style?: string
-  current_hook?: string
+  learning_style?: string | null
+  current_hook?: string | null
+  curriculum?: string | null
   photoFile?: File
 }
 
@@ -59,6 +60,7 @@ export default function KidProfileForm({ kid, onSave, onCancel }: KidProfileForm
     kid?.learning_style ? kid.learning_style.split(',').map((s: string) => s.trim()) : []
   )
   const [currentHook, setCurrentHook] = useState(kid?.current_hook || '')
+  const [curriculum, setCurriculum] = useState(kid?.curriculum || '')
 
   const toggleStyle = (value: string) => {
     setLearningStyles(prev =>
@@ -100,6 +102,7 @@ export default function KidProfileForm({ kid, onSave, onCancel }: KidProfileForm
         grade: grade || null,
         learning_style: learningStyles.length > 0 ? learningStyles.join(', ') : null,
         current_hook: currentHook.trim() || null,
+        curriculum: curriculum || null,
         photoFile: photoFile || undefined,
       })
     } finally {
@@ -357,7 +360,7 @@ export default function KidProfileForm({ kid, onSave, onCancel }: KidProfileForm
                   <span className="font-normal text-gray-400">(optional)</span>
                 </label>
                 <p className="text-xs text-gray-400 mb-2">
-                  Copilot weaves their current interests into lessons to make them more engaging —
+                  Scout weaves their current interests into lessons to make them more engaging —
                   update this as their obsessions change
                 </p>
                 <input
@@ -367,6 +370,53 @@ export default function KidProfileForm({ kid, onSave, onCancel }: KidProfileForm
                   placeholder="e.g. Minecraft, Dinosaurs, Drawing animals, Space..."
                   className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-gray-900 focus:border-purple-500 focus:outline-none text-sm"
                 />
+              </div>
+
+              {/* Curriculum */}
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">
+                  Curriculum{' '}
+                  <span className="font-normal text-gray-400">(optional)</span>
+                </label>
+                <p className="text-xs text-gray-400 mb-2">
+                  Scout aligns lesson structure and terminology with your chosen curriculum
+                </p>
+                <select
+                  value={curriculum}
+                  onChange={e => setCurriculum(e.target.value)}
+                  className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-xl text-gray-900 focus:border-purple-500 focus:outline-none text-sm"
+                >
+                  <option value="">Select curriculum...</option>
+                  <optgroup label="All-in-One">
+                    {['Sonlight', 'Abeka', 'BJU Press', "My Father's World", 'Classical Conversations', 'Memoria Press', 'Veritas Press', 'Bookshark', 'The Good and the Beautiful'].map(c => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="Math">
+                    {['Singapore Math', 'Saxon Math', 'Math-U-See', 'RightStart Math', 'Beast Academy', 'Teaching Textbooks', 'Math Mammoth', 'Life of Fred'].map(c => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="Language Arts">
+                    {['All About Reading', 'All About Spelling', 'IEW', 'Brave Writer', 'Shurley English'].map(c => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="Science">
+                    {['Apologia', 'Real Science Odyssey'].map(c => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="History">
+                    {['Story of the World', 'Mystery of History', 'Notgrass History'].map(c => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="Other">
+                    <option value="Eclectic / Mix">Eclectic / Mix</option>
+                    <option value="Custom">Custom / Not Listed</option>
+                  </optgroup>
+                </select>
               </div>
             </>
           )}
