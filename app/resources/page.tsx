@@ -182,6 +182,146 @@ const PORTFOLIO_TASKS = [
   { id: 'p3', phase: 'Memory', title: 'Photo of the Week', desc: 'Snap a photo of a project, a messy science experiment, or a focused reading moment.' },
 ]
 
+// ─── State Laws Data ──────────────────────────────────────────────────────────
+
+type RegLevel = 'low' | 'moderate' | 'high'
+
+const STATE_LAWS: Array<{
+  name: string; abbr: string; level: RegLevel
+  requirements: string[]; notes: string
+}> = [
+  { name: 'Alabama', abbr: 'AL', level: 'moderate', requirements: ['Enroll in church school or cover school', 'Annual attendance records required', 'No standardized testing required'], notes: 'Most families join an umbrella/cover school to satisfy requirements.' },
+  { name: 'Alaska', abbr: 'AK', level: 'low', requirements: ['No notice of intent required', 'Teach state-required subjects', 'No assessment required'], notes: 'One of the most flexible states. Parents have full control over curriculum.' },
+  { name: 'Arizona', abbr: 'AZ', level: 'moderate', requirements: ['File affidavit with county school superintendent', 'Teach required subjects', 'No standardized testing required'], notes: 'One-time filing; annual renewal not required unless you move districts.' },
+  { name: 'Arkansas', abbr: 'AR', level: 'moderate', requirements: ['File notice of intent with local district by Aug 15', 'Teach required subjects', 'No assessment required'], notes: 'Must refile annually. Subjects include reading, language arts, math, science, and social studies.' },
+  { name: 'California', abbr: 'CA', level: 'moderate', requirements: ['File private school affidavit (PSA) annually by Oct 15', 'Teach required subjects in English', 'No standardized testing required'], notes: 'Filing the PSA establishes your home as a private school. Most flexible legal avenue.' },
+  { name: 'Colorado', abbr: 'CO', level: 'moderate', requirements: ['File notice of intent with local school district', 'Teach required subjects', 'No assessment required'], notes: 'Must notify the district within 14 days of starting or each fall.' },
+  { name: 'Connecticut', abbr: 'CT', level: 'moderate', requirements: ['File notice with local superintendent', 'Submit annual plan of instruction', 'No standardized testing required'], notes: 'Submit a written plan describing instruction. No approval needed.' },
+  { name: 'Delaware', abbr: 'DE', level: 'moderate', requirements: ['File annual notice with DE Dept of Education', 'Teach required subjects', 'No testing required'], notes: 'Notice must be filed by Sept 1 each year.' },
+  { name: 'Florida', abbr: 'FL', level: 'moderate', requirements: ['File notice of intent with local school district', 'Maintain portfolio of work', 'Annual evaluation by certified teacher, psychologist, or standardized test'], notes: 'Portfolio review is one of several acceptable evaluation methods.' },
+  { name: 'Georgia', abbr: 'GA', level: 'moderate', requirements: ['File declaration of intent annually', 'Teach required subjects', 'Annual standardized test in grades 3, 6, 9 (scores kept by parent)'], notes: 'Test scores do not need to be submitted to the state — just kept on file.' },
+  { name: 'Hawaii', abbr: 'HI', level: 'moderate', requirements: ['File notice with DOE annually', 'Teach required subjects', 'Annual assessment (standardized test, portfolio, or evaluation)'], notes: 'Submit assessment results to the DOE each year.' },
+  { name: 'Idaho', abbr: 'ID', level: 'low', requirements: ['No notice required', 'No assessment required', 'No subject requirements mandated'], notes: 'Idaho has virtually no homeschool regulation — one of the least restrictive states.' },
+  { name: 'Illinois', abbr: 'IL', level: 'low', requirements: ['No notice required', 'Teach required subjects in English', 'No assessment required'], notes: 'Your home functions as a private school. No registration needed with any government body.' },
+  { name: 'Indiana', abbr: 'IN', level: 'low', requirements: ['No notice required', 'No assessment required', 'No specific subject requirements'], notes: 'Homeschooling is treated as attendance at a non-accredited private school.' },
+  { name: 'Iowa', abbr: 'IA', level: 'moderate', requirements: ['File annual competent private instruction form', 'Either use a licensed teacher OR submit quarterly assessments', 'No standardized test required if using licensed teacher'], notes: 'Two-track system: supervised (with licensed teacher) or independent (with quarterly reports).' },
+  { name: 'Kansas', abbr: 'KS', level: 'moderate', requirements: ['Register as an unaccredited private school', 'Teach required subjects', 'No assessment required'], notes: 'One-time registration. No annual renewal.' },
+  { name: 'Kentucky', abbr: 'KY', level: 'low', requirements: ['No formal notice required', 'Teach equivalent instruction', 'No assessment required'], notes: 'Home is considered a private school. No registration or approval needed.' },
+  { name: 'Louisiana', abbr: 'LA', level: 'moderate', requirements: ['File application with BESE (Board of Elementary and Secondary Education)', 'Teach required subjects', 'No standardized testing required'], notes: 'Approval is required but routinely granted for qualified families.' },
+  { name: 'Maine', abbr: 'ME', level: 'moderate', requirements: ['File notice with local school board by Sept 1', 'Teach required subjects', 'Annual assessment (standardized test, portfolio, or other approved method)'], notes: 'Assessment results must be reported to the school board annually.' },
+  { name: 'Maryland', abbr: 'MD', level: 'moderate', requirements: ['File notice with local school superintendent', 'Annual portfolio review by school supervisor or approved umbrella school', 'No standardized test required'], notes: 'Portfolio reviewed once per year — usually a brief, informal meeting.' },
+  { name: 'Massachusetts', abbr: 'MA', level: 'high', requirements: ['Must obtain prior approval from local school committee or superintendent', 'Submit proposed curriculum and materials', 'Annual assessment (standardized test, portfolio, or progress report)'], notes: 'Prior approval requirement makes MA one of the most regulated states. Approval can be appealed if denied.' },
+  { name: 'Michigan', abbr: 'MI', level: 'low', requirements: ['No notice required', 'Teach required subjects', 'No assessment required'], notes: 'No formal registration or approval needed. Parents must be teaching — non-parent tutors need certification.' },
+  { name: 'Minnesota', abbr: 'MN', level: 'moderate', requirements: ['File annual declaration with local school district', 'Parent must have college degree OR use state-approved materials', 'Annual assessment (standardized test or portfolio)'], notes: 'One of the few states with a parent education requirement.' },
+  { name: 'Mississippi', abbr: 'MS', level: 'low', requirements: ['File annual notice of enrollment with local attendance officer', 'No assessment required', 'No subject requirements'], notes: 'Very low regulation overall. Simple notice filing suffices.' },
+  { name: 'Missouri', abbr: 'MO', level: 'low', requirements: ['No state-level notice required', 'Teach required subjects (1,000 hours/year, 600 in core subjects)', 'Maintain attendance, course, and immunization records'], notes: 'Some districts may send letters — you are not required to respond or register.' },
+  { name: 'Montana', abbr: 'MT', level: 'low', requirements: ['File notice with county superintendent by Sept 15', 'Teach required subjects', 'No assessment required'], notes: 'Simple annual filing. No approval needed.' },
+  { name: 'Nebraska', abbr: 'NE', level: 'moderate', requirements: ['File annually with state Dept of Education', 'Teach required subjects', 'Annual assessment (standardized test or portfolio reviewed by certified teacher)'], notes: 'Exempt status requires filing each year.' },
+  { name: 'Nevada', abbr: 'NV', level: 'moderate', requirements: ['File notice of intent with school district', 'Teach required subjects', 'Annual evaluation (standardized test, portfolio, or certified teacher evaluation)'], notes: 'Assessment results are kept by the parent — not submitted to the district.' },
+  { name: 'New Hampshire', abbr: 'NH', level: 'moderate', requirements: ['File notice with local school board or school district', 'Teach required subjects', 'Annual assessment (standardized test, portfolio, or other approved method)'], notes: 'Notify within 30 days of starting. Results reported annually.' },
+  { name: 'New Jersey', abbr: 'NJ', level: 'low', requirements: ['No notice required', 'Provide equivalent instruction', 'No assessment required'], notes: 'NJ treats homeschool as a private school. No registration, no testing, no paperwork.' },
+  { name: 'New Mexico', abbr: 'NM', level: 'moderate', requirements: ['File notice with NMPED (NM Public Education Dept)', 'Teach required subjects', 'No standardized testing required'], notes: 'Annual filing required. No assessment or portfolio submission needed.' },
+  { name: 'New York', abbr: 'NY', level: 'high', requirements: ['File annual Individual Home Instruction Plan (IHIP) with school district', 'Quarterly reports submitted to district', 'Annual standardized test or portfolio assessment (results submitted)'], notes: 'NY has the most detailed homeschool regulations in the US. Specific subject hours are required by grade.' },
+  { name: 'North Carolina', abbr: 'NC', level: 'moderate', requirements: ['File annual notice with NC Division of Non-Public Education', 'Teach required subjects', 'Annual standardized test (scores kept by parent)'], notes: 'Test scores stay with the family — not submitted to any authority.' },
+  { name: 'North Dakota', abbr: 'ND', level: 'moderate', requirements: ['File annual notice with local school board', 'Teaching parent must have HS diploma + 30 college credits OR use certified teacher', 'Annual assessment at certain grade levels'], notes: 'Parent education requirement is one of the stricter ones nationally.' },
+  { name: 'Ohio', abbr: 'OH', level: 'moderate', requirements: ['File notification with school district superintendent', 'Teach required subjects', 'Annual assessment (standardized test or portfolio)'], notes: 'Yearly notification required. Assessment results kept by parent.' },
+  { name: 'Oklahoma', abbr: 'OK', level: 'low', requirements: ['No notice required', 'Teach required subjects', 'No assessment required'], notes: 'Homeschooling is treated as attendance at a private school. No registration needed.' },
+  { name: 'Oregon', abbr: 'OR', level: 'moderate', requirements: ['File notice with local Education Service District by Oct 1', 'Teach required subjects', 'Assessment every other year starting at grade 3'], notes: 'Assessment options include standardized tests, licensed teacher evaluation, or portfolio review.' },
+  { name: 'Pennsylvania', abbr: 'PA', level: 'high', requirements: ['File annual affidavit with local superintendent by Aug 1', 'Submit learning objectives for each subject', 'Annual portfolio reviewed by a licensed PA teacher or licensed psychologist'], notes: 'PA has the most detailed requirements after NY. Portfolio must include samples and be reviewed annually.' },
+  { name: 'Rhode Island', abbr: 'RI', level: 'high', requirements: ['File annual application with local school committee', 'Submit curriculum and materials for approval', 'Annual progress reports or portfolio'], notes: 'Prior approval required from local school committee. Requirements vary significantly by district.' },
+  { name: 'South Carolina', abbr: 'SC', level: 'moderate', requirements: ['Join approved home school association OR file with school district', 'Teach required subjects', 'Annual review by the association or certified teacher'], notes: 'Joining a homeschool association (3 options statewide) simplifies compliance significantly.' },
+  { name: 'South Dakota', abbr: 'SD', level: 'moderate', requirements: ['File notice with local school board', 'Teach required subjects', 'No assessment required'], notes: 'Simple annual notice. No approval or assessment needed.' },
+  { name: 'Tennessee', abbr: 'TN', level: 'moderate', requirements: ['File notice with local school board', 'Teach required subjects', 'No standardized testing required'], notes: 'Parent must have a HS diploma or GED. Church-related schools offer an alternative pathway.' },
+  { name: 'Texas', abbr: 'TX', level: 'low', requirements: ['No notice required', 'Must use a bona fide curriculum covering basic subjects', 'No assessment required'], notes: 'TX has no state oversight of homeschooling. One of the most homeschool-friendly states in the US.' },
+  { name: 'Utah', abbr: 'UT', level: 'moderate', requirements: ['File annual affidavit with local school board', 'Teach required subjects', 'No standardized testing required'], notes: 'Annual filing. The school board has no approval authority — it is a notification only.' },
+  { name: 'Vermont', abbr: 'VT', level: 'moderate', requirements: ['File annual enrollment notice with state Dept of Education', 'Teach required subjects', 'Annual assessment (standardized test or portfolio reviewed by certified educator)'], notes: 'Assessment results submitted to the state annually.' },
+  { name: 'Virginia', abbr: 'VA', level: 'moderate', requirements: ['File annual notice of intent with school division superintendent by Aug 1', 'Teaching parent must have bachelor\'s degree OR use approved curriculum', 'Annual evidence of progress (standardized test or evaluation letter)'], notes: 'Parent education or curriculum requirement is one of the more specific conditions nationally.' },
+  { name: 'Washington', abbr: 'WA', level: 'moderate', requirements: ['File annual declaration of intent with school district', 'Parent must have 45 college credits OR use a supervised curriculum', 'Annual assessment at grades 4, 8, and 11'], notes: 'Three assessment methods allowed: standardized test, portfolio, or professional evaluation.' },
+  { name: 'West Virginia', abbr: 'WV', level: 'moderate', requirements: ['File annual notice with county superintendent', 'Teach required subjects', 'Annual standardized test (scores submitted to county)'], notes: 'One of the few states requiring test score submission. Scores kept private by the district.' },
+  { name: 'Wisconsin', abbr: 'WI', level: 'moderate', requirements: ['File annual PI-1206 form with state DPI', 'Teach required subjects', 'No assessment required'], notes: 'Simple annual filing online. One of the easiest moderate states.' },
+  { name: 'Wyoming', abbr: 'WY', level: 'low', requirements: ['No notice required', 'No assessment required', 'No specific subject requirements'], notes: 'Wyoming has virtually no homeschool regulations.' },
+  { name: 'Washington D.C.', abbr: 'DC', level: 'moderate', requirements: ['File notice with DC Public Schools (DCPS)', 'Teach required subjects', 'Annual assessment or portfolio review'], notes: 'Treated similarly to Maryland requirements. Annual portfolio review required.' },
+]
+
+// ─── High School Guide Data ───────────────────────────────────────────────────
+
+const HS_SECTIONS = [
+  {
+    id: 'credits',
+    emoji: '📋',
+    title: 'Credits & Carnegie Units',
+    color: '#7c3aed',
+    bg: '#ede9fe',
+    summary: 'One Carnegie unit = 120 hours of instruction. Most states require 22–26 credits for a diploma.',
+    content: [
+      { label: 'What is a Carnegie Unit?', text: 'One credit equals roughly 120 hours of instruction over a year, or about 1 hour/day, 5 days/week for a school year. Half-credits (60 hours) are common for single-semester courses.' },
+      { label: 'Typical credit requirements', text: '4 credits: English/Language Arts\n3 credits: Math (through Algebra II recommended)\n3 credits: Science (with lab)\n3–4 credits: History/Social Studies\n1 credit: PE/Health\n1 credit: Fine Arts\n4–7 credits: Electives (foreign language, coding, music, life skills, etc.)' },
+      { label: 'How to track hours', text: 'Keep a simple log: date, subject, activity, and time. A spreadsheet works great. You do NOT need to submit this to anyone — it\'s your documentation in case it\'s ever needed.' },
+      { label: 'Dual enrollment tip', text: 'Community college courses taken in high school typically count as 1 college credit AND 1 high school credit simultaneously — one of the highest-value options available.' },
+    ],
+  },
+  {
+    id: 'transcript',
+    emoji: '📄',
+    title: 'Creating a Transcript',
+    color: '#0284c7',
+    bg: '#f0f9ff',
+    summary: 'A homeschool transcript is a legal document. You — the parent — are the school administrator who issues it.',
+    content: [
+      { label: 'What to include', text: 'School name (e.g., "Johnson Home Academy"), student legal name + DOB, years attended, courses by year with grades and credits earned, cumulative GPA, graduation date, parent/administrator signature.' },
+      { label: 'Calculating GPA', text: 'Standard 4.0 scale: A=4.0, B=3.0, C=2.0, D=1.0. Weight honors or dual-enrollment courses by +0.5 or +1.0 point. Calculate weighted average across all credits.' },
+      { label: 'Course names matter', text: 'Use standard names colleges recognize: "English I–IV," "Algebra I/II," "US History," "Biology with Lab." Avoid creative names like "Nature Discovery" for science — save those for the course description portfolio.' },
+      { label: 'Course descriptions', text: 'Many colleges ask for 1-paragraph descriptions of each course: what was covered, what materials/textbooks were used, and how it was evaluated. Prepare these alongside the transcript.' },
+      { label: 'Free tools', text: 'Canva has free transcript templates. HSLDA offers a free transcript builder. Microsoft/Google Docs with a simple table works fine — colleges are accustomed to homeschool transcripts in various formats.' },
+    ],
+  },
+  {
+    id: 'diploma',
+    emoji: '🎓',
+    title: 'Awarding a Diploma',
+    color: '#059669',
+    bg: '#ecfdf5',
+    summary: 'Homeschool diplomas are 100% legal in all 50 states. You issue it as the school administrator.',
+    content: [
+      { label: 'Are homeschool diplomas valid?', text: 'Yes — all 50 states recognize homeschool diplomas for employment, military enlistment, and most college admissions. The US military (all branches) accepts homeschool diplomas alongside a transcript.' },
+      { label: 'What to include on a diploma', text: 'Student\'s full legal name, school name, date of graduation, "This certifies that [Name] has successfully completed the requirements for graduation," parent signature as school administrator, and optionally a gold seal.' },
+      { label: 'Diploma vs. GED', text: 'A homeschool diploma is generally preferred over a GED. Colleges typically treat them equivalently, but some employers view a diploma more favorably. A GED is only needed if you choose not to issue your own diploma.' },
+      { label: 'Accreditation', text: 'Homeschool diplomas do not need to be accredited. However, if you want accreditation (sometimes required by certain colleges or employers), umbrella schools like Bridgeway Academy, Kolbe Academy, or Clonlara offer it.' },
+    ],
+  },
+  {
+    id: 'testing',
+    emoji: '✏️',
+    title: 'SAT, ACT & PSAT',
+    color: '#d97706',
+    bg: '#fffbeb',
+    summary: 'Homeschool students register and test exactly like traditional students. No school code needed.',
+    content: [
+      { label: 'PSAT (Grade 10–11)', text: 'A practice SAT taken in October. Strong scores qualify for National Merit Scholarship consideration. Register through a local high school — call them in September to ask about testing.' },
+      { label: 'SAT vs ACT', text: 'Both are widely accepted. SAT is math-heavy with evidence-based reading. ACT has a science section and is often preferred in the Midwest/South. Many students take both once and decide which to focus on.' },
+      { label: 'Registering as a homeschooler', text: 'Create an account on collegeboard.org (SAT) or act.org (ACT). Select "I am homeschooled" — no school code required. You\'ll choose a testing center near you.' },
+      { label: 'When to start', text: 'PSAT: Grade 10 for practice, Grade 11 for National Merit. First SAT/ACT: Late Grade 10 or early Grade 11. Final attempt: Fall of Grade 12 (Oct/Nov).' },
+      { label: 'AP Exams', text: 'Homeschoolers can take AP exams at local high schools. Call the school\'s AP coordinator by March. Strong AP scores can earn college credit and demonstrate academic rigor.' },
+    ],
+  },
+  {
+    id: 'college',
+    emoji: '🏛️',
+    title: 'College Applications',
+    color: '#ec4899',
+    bg: '#fdf2f8',
+    summary: 'More colleges than ever actively recruit homeschoolers. You may need a few extra documents.',
+    content: [
+      { label: 'What colleges typically want', text: 'Homeschool transcript (parent-issued is fine), course descriptions portfolio, 2–3 letters of recommendation (from non-parent instructors, coaches, or mentors), SAT/ACT scores, personal essay, extracurricular/activity list.' },
+      { label: 'The Common App', text: 'The Common Application has a dedicated homeschool section. You\'ll upload your transcript and course descriptions directly. Most colleges on Common App accept homeschool applicants.' },
+      { label: 'Community college as a bridge', text: 'Dual enrollment at a community college builds an official college transcript, which can make 4-year college admissions smoother. Many homeschoolers start CC at 16.' },
+      { label: 'Letters of recommendation', text: 'Strong sources: community college professors, co-op instructors, coaches, clergy, employers, or mentors. Avoid parent letters. If dual-enrolled, a professor letter is excellent.' },
+      { label: 'Portfolio vs. GPA', text: 'Some colleges (especially arts, liberal arts) are test-optional and portfolio-friendly. Highlight independent projects, entrepreneurship, community service, and any publications or competitions.' },
+      { label: 'Military path', text: 'All branches accept homeschool graduates. ROTC scholarships are available. Service academies (West Point, Annapolis, etc.) treat homeschoolers like traditional applicants — competitive grades, test scores, and activities matter.' },
+    ],
+  },
+]
+
 // ─── Gradient helpers ─────────────────────────────────────────────────────────
 
 const G = {
@@ -938,12 +1078,201 @@ function MaterialsTab({ organizationId }: { organizationId: string }) {
   )
 }
 
+// ─── State Laws Tab ───────────────────────────────────────────────────────────
+
+function StateLawsTab() {
+  const [search, setSearch] = useState('')
+  const [levelFilter, setLevelFilter] = useState<RegLevel | 'all'>('all')
+  const [expanded, setExpanded] = useState<string | null>(null)
+
+  const LEVEL_META: Record<RegLevel, { label: string; color: string; bg: string; dot: string }> = {
+    low:      { label: 'Low',      color: '#059669', bg: '#ecfdf5', dot: '#10b981' },
+    moderate: { label: 'Moderate', color: '#d97706', bg: '#fffbeb', dot: '#f59e0b' },
+    high:     { label: 'High',     color: '#dc2626', bg: '#fef2f2', dot: '#ef4444' },
+  }
+
+  const filtered = STATE_LAWS.filter(s => {
+    const matchSearch = s.name.toLowerCase().includes(search.toLowerCase()) || s.abbr.toLowerCase().includes(search.toLowerCase())
+    const matchLevel = levelFilter === 'all' || s.level === levelFilter
+    return matchSearch && matchLevel
+  })
+
+  return (
+    <div>
+      <div style={css.infoBanner}>
+        📌 Requirements vary widely by state — from zero paperwork to annual approval. This is a plain-language summary for reference. Always verify current laws at <strong>hslda.org/legal</strong> or your state homeschool association.
+      </div>
+
+      {/* Filters */}
+      <div style={{ display: 'flex', gap: 10, marginBottom: 18, flexWrap: 'wrap' }}>
+        <input
+          type="text"
+          placeholder="🔍 Search state..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          style={{ flex: 1, minWidth: 160, padding: '9px 14px', background: '#fff', border: '1px solid #e5e7eb', borderRadius: 10, fontSize: 13, fontWeight: 600, outline: 'none', color: '#111827', fontFamily: "'Nunito', sans-serif" }}
+        />
+        {(['all', 'low', 'moderate', 'high'] as const).map(lvl => {
+          const active = levelFilter === lvl
+          const meta = lvl === 'all' ? null : LEVEL_META[lvl]
+          return (
+            <button
+              key={lvl}
+              onClick={() => setLevelFilter(lvl)}
+              style={{
+                padding: '9px 16px', borderRadius: 20, cursor: 'pointer',
+                fontSize: 12, fontWeight: 700, transition: 'all 0.15s',
+                background: active ? (meta ? meta.bg : G.full) : '#fff',
+                color: active ? (meta ? meta.color : '#fff') : '#6b7280',
+                border: active ? `2px solid ${meta ? meta.dot : 'transparent'}` : '1px solid #e5e7eb',
+                fontFamily: "'Nunito', sans-serif",
+              }}
+            >
+              {lvl === 'all' ? 'All States' : `${lvl === 'low' ? '🟢' : lvl === 'moderate' ? '🟡' : '🔴'} ${LEVEL_META[lvl].label}`}
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Count summary */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 18 }}>
+        {(['low', 'moderate', 'high'] as RegLevel[]).map(lvl => {
+          const meta = LEVEL_META[lvl]
+          const count = STATE_LAWS.filter(s => s.level === lvl).length
+          return (
+            <div key={lvl} onClick={() => setLevelFilter(levelFilter === lvl ? 'all' : lvl)} style={{ background: meta.bg, border: `2px solid ${meta.dot}22`, borderRadius: 14, padding: '14px 16px', cursor: 'pointer', textAlign: 'center' }}>
+              <div style={{ fontSize: 22, fontWeight: 900, color: meta.color }}>{count}</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: meta.color, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{meta.label} Regulation</div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* State cards */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {filtered.length === 0 && (
+          <div style={{ padding: 40, textAlign: 'center', color: '#9ca3af', fontWeight: 700 }}>No states match your search.</div>
+        )}
+        {filtered.map(state => {
+          const meta = LEVEL_META[state.level]
+          const isOpen = expanded === state.abbr
+          return (
+            <div key={state.abbr} style={{ background: '#fff', borderRadius: 14, border: `2px solid ${isOpen ? meta.dot : '#e5e7eb'}`, overflow: 'hidden', transition: 'border-color 0.2s' }}>
+              <div onClick={() => setExpanded(isOpen ? null : state.abbr)} style={{ padding: '14px 18px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div style={{ width: 44, height: 44, borderRadius: 10, background: meta.bg, border: `2px solid ${meta.dot}33`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <span style={{ fontSize: 13, fontWeight: 900, color: meta.color }}>{state.abbr}</span>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+                    <span style={{ fontSize: 15, fontWeight: 700, color: '#111827' }}>{state.name}</span>
+                    <span style={{ background: meta.bg, color: meta.color, fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 10, border: `1px solid ${meta.dot}44` }}>
+                      {meta.label.toUpperCase()} REGULATION
+                    </span>
+                  </div>
+                  <div style={{ fontSize: 12, color: '#9ca3af' }}>{state.requirements[0]}</div>
+                </div>
+                <span style={{ color: '#9ca3af', fontSize: 14, transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }}>▾</span>
+              </div>
+              {isOpen && (
+                <div style={{ padding: '0 18px 18px', borderTop: '1px solid #f3f4f6' }}>
+                  <div style={{ marginTop: 14, marginBottom: 12 }}>
+                    <div style={{ fontSize: 10, fontWeight: 800, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Requirements</div>
+                    {state.requirements.map((r, i) => (
+                      <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 6, alignItems: 'flex-start' }}>
+                        <span style={{ color: meta.dot, marginTop: 1, flexShrink: 0 }}>✓</span>
+                        <span style={{ fontSize: 13, color: '#4b5563', lineHeight: 1.5 }}>{r}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ background: meta.bg, borderRadius: 10, padding: '11px 14px', border: `1px solid ${meta.dot}22` }}>
+                    <span style={{ fontSize: 10, fontWeight: 800, color: meta.color, textTransform: 'uppercase', letterSpacing: '0.06em' }}>💡 Note  </span>
+                    <span style={{ fontSize: 12, color: '#4b5563', lineHeight: 1.5 }}>{state.notes}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+
+      <div style={{ marginTop: 20, padding: '14px 18px', background: '#f5f3ff', borderRadius: 14, border: '1px solid #ede9fe', fontSize: 12, color: '#7c3aed', lineHeight: 1.6 }}>
+        <strong>Disclaimer:</strong> Laws change. This summary is for general guidance only. Confirm current requirements with your state homeschool association or HSLDA before making decisions.
+      </div>
+    </div>
+  )
+}
+
+// ─── High School Tab ──────────────────────────────────────────────────────────
+
+function HighSchoolTab() {
+  const [expanded, setExpanded] = useState<string | null>('credits')
+
+  return (
+    <div>
+      <div style={css.infoBanner}>
+        🎓 Homeschool high school is completely legal and well-recognized. Colleges, employers, and the military all accept homeschool transcripts and diplomas — here is everything you need to know.
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {HS_SECTIONS.map(section => {
+          const isOpen = expanded === section.id
+          return (
+            <div key={section.id} style={{ background: '#fff', borderRadius: 14, border: `2px solid ${isOpen ? section.color : '#e5e7eb'}`, overflow: 'hidden', transition: 'border-color 0.2s' }}>
+              <div onClick={() => setExpanded(isOpen ? null : section.id)} style={{ padding: '16px 18px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div style={{
+                  width: 44, height: 44, borderRadius: 10, flexShrink: 0,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20,
+                  background: isOpen ? `linear-gradient(135deg, ${section.color}, #ec4899)` : section.bg,
+                  transition: 'background 0.2s',
+                }}>
+                  {section.emoji}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: '#111827', marginBottom: 2 }}>{section.title}</div>
+                  <div style={{ fontSize: 12, color: '#9ca3af', fontStyle: 'italic' }}>{section.summary}</div>
+                </div>
+                <span style={{ color: '#9ca3af', fontSize: 14, transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }}>▾</span>
+              </div>
+              {isOpen && (
+                <div style={{ padding: '0 18px 18px', borderTop: '1px solid #f3f4f6' }}>
+                  {section.content.map((item, i) => (
+                    <div key={i} style={{ marginTop: 16, paddingBottom: 16, borderBottom: i < section.content.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
+                      <div style={{ fontSize: 12, fontWeight: 800, color: section.color, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>{item.label}</div>
+                      <div style={{ fontSize: 13, color: '#4b5563', lineHeight: 1.7, whiteSpace: 'pre-line' }}>{item.text}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+
+      <div style={{ marginTop: 20, background: '#fdf2f8', borderRadius: 14, padding: '16px 20px', border: '1px solid #fbcfe8' }}>
+        <div style={{ fontSize: 13, fontWeight: 800, color: '#9d174d', marginBottom: 8 }}>📚 Helpful Resources</div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+          {[
+            { name: 'HSLDA — Homeschool Transcripts', url: 'https://hslda.org/legal/transcripts' },
+            { name: 'College Board (SAT Registration)', url: 'https://collegeboard.org' },
+            { name: 'ACT for Homeschoolers', url: 'https://act.org' },
+            { name: 'Common App Homeschool FAQ', url: 'https://commonapp.org' },
+          ].map(link => (
+            <a key={link.name} href={link.url} target="_blank" rel="noopener noreferrer" style={{ background: '#fff', borderRadius: 10, padding: '10px 14px', fontSize: 12, fontWeight: 700, color: '#7c3aed', textDecoration: 'none', border: '1px solid #e5e7eb', display: 'block' }}>
+              → {link.name}
+            </a>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Resources Content ────────────────────────────────────────────────────────
 
 function ResourcesContent() {
   const router = useRouter()
   useAppHeader({ title: '💡 Resources' })
-  const [activeTab, setActiveTab] = useState<'styles' | 'curriculum' | 'compliance' | 'guides' | 'materials'>('styles')
+  const [activeTab, setActiveTab] = useState<'styles' | 'curriculum' | 'compliance' | 'guides' | 'materials' | 'statelaws' | 'highschool'>('styles')
   const [curriculumStyle, setCurriculumStyle] = useState('charlotte')
   const [userStyle, setUserStyle] = useState<string | null>(null)
   const [organizationId, setOrganizationId] = useState<string>('')
@@ -984,6 +1313,8 @@ function ResourcesContent() {
   const TABS = [
     { id: 'styles' as const,     icon: '🎨', label: 'Teaching Styles'   },
     { id: 'curriculum' as const, icon: '📚', label: 'Curriculum'         },
+    { id: 'statelaws' as const,  icon: '⚖️', label: 'State Laws'         },
+    { id: 'highschool' as const, icon: '🎓', label: 'High School'        },
     { id: 'compliance' as const, icon: '✅', label: 'Compliance Basics'  },
     { id: 'guides' as const,     icon: '🌱', label: 'Guides'             },
     { id: 'materials' as const,  icon: '🗂️', label: 'My Materials'       },
@@ -1006,16 +1337,16 @@ function ResourcesContent() {
   return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #c4b5fd 0%, #e879f9 18%, #f0abfc 36%, #fbcfe8 54%, #bae6fd 76%, #6ee7b7 100%)', fontFamily: "'Nunito', sans-serif", paddingBottom: 80 }}>
 
-      <div style={{ maxWidth: (activeTab === 'guides' || activeTab === 'materials') ? 1060 : 860, margin: '0 auto', padding: '24px 24px 48px' }}>
+      <div style={{ maxWidth: (activeTab === 'guides' || activeTab === 'materials' || activeTab === 'statelaws') ? 1060 : 860, margin: '0 auto', padding: '24px 24px 48px' }}>
 
         {/* Page title row */}
         <div style={{ marginBottom: 20 }}>
           <h1 style={{ fontSize: 22, fontWeight: 800, color: '#1e1060', margin: 0 }}>Your Homeschool Library</h1>
-          <p style={{ fontSize: 13, color: '#6b7280', margin: '4px 0 0' }}>Teaching styles, curriculum guides, compliance basics, and your materials.</p>
+          <p style={{ fontSize: 13, color: '#6b7280', margin: '4px 0 0' }}>Teaching styles, state laws, high school planning, curriculum guides, and your materials.</p>
         </div>
 
         {/* Tab pills */}
-        <div style={{ display: 'flex', gap: 10, marginBottom: 24 }}>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 24, flexWrap: 'wrap' }}>
           {TABS.map(tab => (
             <button
               key={tab.id}
@@ -1041,6 +1372,12 @@ function ResourcesContent() {
         )}
         {activeTab === 'curriculum' && (
           <CurriculumTab initialStyle={curriculumStyle} />
+        )}
+        {activeTab === 'statelaws' && (
+          <StateLawsTab />
+        )}
+        {activeTab === 'highschool' && (
+          <HighSchoolTab />
         )}
         {activeTab === 'compliance' && (
           <ComplianceTab />
