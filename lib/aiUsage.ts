@@ -1,10 +1,20 @@
 import { createClient } from '@supabase/supabase-js'
-import { getUserTier, AI_LIMITS, TIER_INFO, TIER_ORDER, type UserTier } from './tierTesting'
+import { AI_LIMITS, TIER_INFO, TIER_ORDER, type UserTier } from './tierTesting'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
+
+/** Server-safe tier lookup — uses service-role client, no localStorage */
+async function getUserTier(userId: string): Promise<UserTier> {
+  const { data } = await supabase
+    .from('user_subscriptions')
+    .select('tier')
+    .eq('user_id', userId)
+    .maybeSingle()
+  return (data?.tier as UserTier) || 'FREE'
+}
 
 type UsageType = 'lessons' | 'activities' | 'scout'
 
