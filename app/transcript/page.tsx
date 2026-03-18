@@ -219,9 +219,10 @@ const css: Record<string, React.CSSProperties> = {
     borderRadius: 12,
     padding: '14px 20px',
     display: 'flex',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
-    gap: 16,
+    flexWrap: 'wrap' as const,
+    gap: 12,
     marginBottom: 20,
   },
   bannerBtn: {
@@ -269,7 +270,8 @@ const css: Record<string, React.CSSProperties> = {
     color: colors.textSecondary,
     outline: 'none',
     cursor: 'pointer',
-    minWidth: 200,
+    width: '100%',
+    maxWidth: 320,
     fontSize: 13,
   },
   tabRow: {

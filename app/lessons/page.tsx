@@ -16,6 +16,7 @@ import { formatLessonDescription } from '@/lib/formatLessonDescription'
 import { DEFAULT_HOLIDAYS_2025_2026 } from '@/app/utils/holidayUtils'
 import { getOrganizationId } from '@/src/lib/getOrganizationId'
 import GenerateAssessmentModal from '@/components/GenerateAssessmentModal'
+import { useAppHeader } from '@/components/layout/AppHeader'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -51,6 +52,7 @@ const convertMinutesToDuration = (minutes: number | null): { value: number; unit
 
 function LessonsContent() {
   const router = useRouter()
+  useAppHeader({ title: '📚 Lessons', backHref: '/dashboard' })
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [kids, setKids] = useState<any[]>([])
@@ -473,30 +475,8 @@ function LessonsContent() {
     <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #c4b5fd 0%, #e879f9 18%, #f0abfc 36%, #fbcfe8 54%, #bae6fd 76%, #6ee7b7 100%)', fontFamily: "'Nunito', sans-serif" }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');`}</style>
 
-      {/* ── Header ────────────────────────────────────────────────────── */}
-      <header style={{
-        background: 'linear-gradient(135deg, #5b21b6 0%, #7c3aed 45%, #a855f7 75%, #ec4899 100%)',
-        padding: '0 16px',
-        height: 58,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        position: 'sticky',
-        top: 0,
-        zIndex: 50,
-      }}>
-        {/* Left: title */}
-        <div style={{ display: 'flex', alignItems: 'center' }}>
-          <h1 style={{ color: '#fff', fontWeight: 900, fontSize: 18, margin: 0 }}>
-            📚 Lessons
-          </h1>
-        </div>
-
-
-      </header>
-
       {/* ── View tabs ─────────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', gap: 8, padding: '14px 20px 0', maxWidth: 900, margin: '0 auto' }}>
+      <div style={{ display: 'flex', gap: 8, padding: '14px 16px 0', maxWidth: 900, margin: '0 auto', flexWrap: 'wrap' as const }}>
         <button style={{
           padding: '7px 18px', borderRadius: 20, border: 'none', cursor: 'default',
           fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 13,
@@ -517,7 +497,7 @@ function LessonsContent() {
       </div>
 
       {/* ── Main ──────────────────────────────────────────────────────── */}
-      <main style={{ maxWidth: 900, margin: '0 auto', padding: '16px 24px 100px' }}>
+      <main style={{ maxWidth: 900, margin: '0 auto', padding: '16px 16px 100px' }}>
       <PastUnstartedLessonsBanner
         lessons={pastUnstartedLessons}
         onMarkCompleted={async (ids) => {

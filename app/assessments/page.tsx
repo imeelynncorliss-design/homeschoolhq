@@ -279,10 +279,10 @@ function AssessmentsContent() {
           <div className="max-w-7xl mx-auto">
 
             {/* View Toggle */}
-            <div className="flex gap-4 mb-8">
+            <div className="flex flex-wrap gap-3 mb-8">
               <button
                 onClick={() => setCurrentView('results')}
-                className={`px-8 py-4 rounded-2xl font-bold transition-all shadow-sm ${
+                className={`flex-1 min-w-[140px] px-4 py-3 rounded-2xl font-bold transition-all shadow-sm text-sm ${
                   currentView === 'results' ? 'bg-white text-purple-600 scale-105' : 'bg-white/50 text-slate-500 hover:bg-white'
                 }`}
               >
@@ -290,7 +290,7 @@ function AssessmentsContent() {
               </button>
               <button
                 onClick={() => setCurrentView('standards')}
-                className={`px-8 py-4 rounded-2xl font-bold transition-all shadow-sm ${
+                className={`flex-1 min-w-[140px] px-4 py-3 rounded-2xl font-bold transition-all shadow-sm text-sm ${
                   currentView === 'standards' ? 'bg-white text-purple-600 scale-105' : 'bg-white/50 text-slate-500 hover:bg-white'
                 }`}
               >
