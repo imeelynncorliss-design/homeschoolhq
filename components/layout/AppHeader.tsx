@@ -4,7 +4,7 @@ import {
   useState, useEffect, useContext, createContext,
   useCallback, useRef,
 } from 'react'
-import type { ReactNode, CSSProperties } from 'react'
+import type { ReactNode, CSSProperties, Dispatch, SetStateAction } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/src/lib/supabase'
 import { gradients } from '@/src/lib/designTokens'
@@ -47,18 +47,33 @@ interface KidAvatarProps {
   size?: number
 }
 
+interface CopilotMessage {
+  role: 'user' | 'assistant'
+  content: string
+  timestamp: string
+}
+
+interface SavedConversation {
+  id: string
+  title: string | null
+  starred: boolean
+  last_message_at: string
+  messages: CopilotMessage[]
+}
+
 interface CopilotPanelProps {
   onClose: () => void
   organizationId?: string
   userId?: string
   userName?: string
   userState?: string | null
-}
-
-interface CopilotMessage {
-  role: 'user' | 'assistant'
-  content: string
-  timestamp: string
+  messages: CopilotMessage[]
+  setMessages: Dispatch<SetStateAction<CopilotMessage[]>>
+  isStarred: boolean
+  onStar: () => void
+  onNewChat: () => void
+  loadHistory: () => Promise<SavedConversation[]>
+  onStarConversation: (id: string, currentlyStarred: boolean) => void
 }
 
 type Phase = 'form' | 'submitting' | 'success' | 'error'
@@ -364,25 +379,19 @@ function KidAvatar({ kid, size = 30 }: KidAvatarProps) {
 
 // ─── Copilot Panel ────────────────────────────────────────────────────────────
 
-function CopilotPanel({ onClose, organizationId, userId, userName, userState }: CopilotPanelProps) {
-  const greeting = userName
-    ? `Hi ${userName}! I'm Scout, your HomeschoolReady co-pilot 🐦 I'm here to keep you on course — lesson planning, scheduling, compliance, and whatever else comes up. What can I help you with today?`
-    : "Hi! I'm Scout, your HomeschoolReady co-pilot 🐦 I'm here to keep you on course — lesson planning, scheduling, compliance, and whatever else comes up. What can I help you with today?"
-
-  const [messages, setMessages] = useState<CopilotMessage[]>([
-    {
-      role: 'assistant',
-      content: greeting,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    },
-  ])
+function CopilotPanel({ onClose, organizationId, userId, userName, userState, messages, setMessages, isStarred, onStar, onNewChat, loadHistory, onStarConversation }: CopilotPanelProps) {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [showHistory, setShowHistory] = useState(false)
+  const [historyList, setHistoryList] = useState<SavedConversation[]>([])
+  const [historyLoading, setHistoryLoading] = useState(false)
+  const [filterStarred, setFilterStarred] = useState(false)
+  const [previewConv, setPreviewConv] = useState<SavedConversation | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+  }, [messages, showHistory])
 
   const send = async () => {
     const text = input.trim()
@@ -437,6 +446,50 @@ function CopilotPanel({ onClose, organizationId, userId, userName, userState }: 
     }
   }
 
+  const handleOpenHistory = async () => {
+    setShowHistory(true)
+    setPreviewConv(null)
+    setHistoryLoading(true)
+    const list = await loadHistory()
+    setHistoryList(list)
+    setHistoryLoading(false)
+  }
+
+  const handleStarInPreview = async (conv: SavedConversation) => {
+    await onStarConversation(conv.id, conv.starred)
+    setPreviewConv(prev => prev ? { ...prev, starred: !prev.starred } : null)
+    setHistoryList(prev => prev.map(c => c.id === conv.id ? { ...c, starred: !c.starred } : c))
+  }
+
+  const formatDate = (iso: string) => new Date(iso).toLocaleDateString([], { month: 'short', day: 'numeric' })
+
+  const displayedHistory = filterStarred ? historyList.filter(c => c.starred) : historyList
+
+  const renderMessages = (msgs: CopilotMessage[], readOnly = false) => (
+    <>
+      {msgs.map((msg, i) => (
+        <div key={i} style={{
+          display: 'flex', flexDirection: 'column',
+          alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start',
+          marginBottom: 12,
+        }}>
+          {msg.role === 'assistant' && (
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 7 }}>
+              <img src="/Cardinal_Mascot.png" alt="Scout" style={{ width: 26, height: 26, objectFit: 'contain', flexShrink: 0, marginTop: 2 }} />
+              <div style={{ ...cp.aiBubble, opacity: readOnly ? 0.85 : 1 }}>{msg.content}</div>
+            </div>
+          )}
+          {msg.role === 'user' && (
+            <div style={{ ...cp.userBubble, opacity: readOnly ? 0.85 : 1 }}>{msg.content}</div>
+          )}
+          <div style={{ ...cp.timestamp, marginLeft: msg.role === 'assistant' ? 33 : 0 }}>
+            {msg.timestamp}
+          </div>
+        </div>
+      ))}
+    </>
+  )
+
   return (
     <div style={cp.overlay} onClick={onClose}>
       <div style={cp.drawer} onClick={e => e.stopPropagation()}>
@@ -444,70 +497,141 @@ function CopilotPanel({ onClose, organizationId, userId, userName, userState }: 
         {/* Header */}
         <div style={cp.head}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {showHistory && (
+              <button style={cp.headIconBtn} onClick={() => { setShowHistory(false); setPreviewConv(null) }} title="Back to chat">
+                ←
+              </button>
+            )}
             <img src="/Cardinal_Mascot.png" alt="Scout" style={{ width: 40, height: 40, objectFit: 'contain' }} />
             <div>
-              <div style={cp.headTitle}>Scout</div>
-              <div style={cp.headSub}>Your HomeschoolReady Co-pilot</div>
-            </div>
-          </div>
-          <button style={cp.closeBtn} onClick={onClose}>×</button>
-        </div>
-
-        {/* Messages */}
-        <div style={cp.messages}>
-          {messages.map((msg, i) => (
-            <div key={i} style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start',
-              marginBottom: 12,
-            }}>
-              {msg.role === 'assistant' && (
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 7 }}>
-                  <img src="/Cardinal_Mascot.png" alt="Scout" style={{ width: 26, height: 26, objectFit: 'contain', flexShrink: 0, marginTop: 2 }} />
-                  <div style={cp.aiBubble}>{msg.content}</div>
-                </div>
-              )}
-              {msg.role === 'user' && (
-                <div style={cp.userBubble}>{msg.content}</div>
-              )}
-              <div style={{
-                ...cp.timestamp,
-                marginLeft: msg.role === 'assistant' ? 33 : 0,
-              }}>
-                {msg.timestamp}
+              <div style={cp.headTitle}>
+                {showHistory ? (previewConv ? (previewConv.title ?? 'Conversation') : 'Chat History') : 'Scout'}
+              </div>
+              <div style={cp.headSub}>
+                {showHistory
+                  ? (previewConv ? formatDate(previewConv.last_message_at) : 'Past conversations')
+                  : 'Your HomeschoolReady Co-pilot'}
               </div>
             </div>
-          ))}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            {!showHistory && messages.length > 2 && (
+              <button
+                style={{ ...cp.headIconBtn, color: isStarred ? '#fbbf24' : 'rgba(255,255,255,0.6)', fontSize: 20, lineHeight: 1 }}
+                onClick={onStar}
+                title={isStarred ? 'Unstar this chat' : 'Star this chat'}
+              >
+                {isStarred ? '★' : '☆'}
+              </button>
+            )}
+            {!showHistory && (
+              <button style={cp.headIconBtn} onClick={handleOpenHistory} title="Chat history">
+                🕐
+              </button>
+            )}
+            <button style={cp.closeBtn} onClick={onClose}>×</button>
+          </div>
+        </div>
 
-          {loading && (
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 7, marginBottom: 12 }}>
-              <img src="/Cardinal_Mascot.png" alt="Scout" style={{ width: 26, height: 26, objectFit: 'contain', flexShrink: 0, marginTop: 2 }} />
-              <div style={{ ...cp.aiBubble, color: '#9ca3af', letterSpacing: 3 }}>●●●</div>
+        {/* History view */}
+        {showHistory ? (
+          <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', background: '#fafafa' }}>
+            {previewConv ? (
+              /* ── Preview a past conversation ── */
+              <>
+                <div style={{ display: 'flex', gap: 8, padding: '12px 16px', borderBottom: '1px solid #e5e7eb', background: '#fff' }}>
+                  <button style={cp.historyBackBtn} onClick={() => setPreviewConv(null)}>← All chats</button>
+                  <button
+                    style={{ ...cp.historyBackBtn, color: previewConv.starred ? '#92400e' : '#374151', background: previewConv.starred ? '#fef3c7' : '#f3f4f6', borderColor: previewConv.starred ? '#f59e0b' : '#e5e7eb' }}
+                    onClick={() => handleStarInPreview(previewConv)}
+                  >
+                    {previewConv.starred ? '★ Unstar' : '☆ Star'}
+                  </button>
+                </div>
+                <div style={{ flex: 1, overflowY: 'auto', padding: '16px 16px 8px' }}>
+                  {renderMessages(previewConv.messages, true)}
+                </div>
+              </>
+            ) : (
+              /* ── History list ── */
+              <div style={{ flex: 1, overflowY: 'auto', padding: 16 }}>
+                <div style={{ display: 'flex', gap: 8, marginBottom: 14, alignItems: 'center' }}>
+                  <button
+                    style={{ ...cp.filterTab, ...(filterStarred ? {} : cp.filterTabActive) }}
+                    onClick={() => setFilterStarred(false)}
+                  >All</button>
+                  <button
+                    style={{ ...cp.filterTab, ...(filterStarred ? cp.filterTabActive : {}) }}
+                    onClick={() => setFilterStarred(true)}
+                  >★ Starred</button>
+                  <div style={{ flex: 1 }} />
+                  <button
+                    style={{ ...cp.filterTab, fontSize: 11 }}
+                    onClick={() => { onNewChat(); setShowHistory(false) }}
+                  >+ New Chat</button>
+                </div>
+
+                {historyLoading ? (
+                  <div style={{ textAlign: 'center', color: '#9ca3af', padding: 32, fontFamily: 'system-ui, sans-serif', fontSize: 13 }}>Loading…</div>
+                ) : displayedHistory.length === 0 ? (
+                  <div style={{ textAlign: 'center', color: '#9ca3af', padding: 32, fontFamily: 'system-ui, sans-serif', fontSize: 13, whiteSpace: 'pre-line' }}>
+                    {filterStarred ? 'No starred conversations yet.\nStar a chat using ☆ in the header.' : 'No chat history yet.'}
+                  </div>
+                ) : (
+                  displayedHistory.map(conv => (
+                    <div key={conv.id} style={cp.historyRow} onClick={() => setPreviewConv(conv)}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={cp.historyTitle}>{conv.title ?? 'Conversation'}</div>
+                        <div style={cp.historyDate}>{formatDate(conv.last_message_at)}</div>
+                      </div>
+                      <button
+                        style={{ ...cp.starBtn, color: conv.starred ? '#fbbf24' : '#d1d5db' }}
+                        onClick={e => { e.stopPropagation(); onStarConversation(conv.id, conv.starred); setHistoryList(prev => prev.map(c => c.id === conv.id ? { ...c, starred: !c.starred } : c)) }}
+                        title={conv.starred ? 'Unstar' : 'Star'}
+                      >
+                        {conv.starred ? '★' : '☆'}
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+        ) : (
+          <>
+            {/* Messages */}
+            <div style={cp.messages}>
+              {renderMessages(messages)}
+              {loading && (
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 7, marginBottom: 12 }}>
+                  <img src="/Cardinal_Mascot.png" alt="Scout" style={{ width: 26, height: 26, objectFit: 'contain', flexShrink: 0, marginTop: 2 }} />
+                  <div style={{ ...cp.aiBubble, color: '#9ca3af', letterSpacing: 3 }}>●●●</div>
+                </div>
+              )}
+              <div ref={bottomRef} />
             </div>
-          )}
-          <div ref={bottomRef} />
-        </div>
 
-        {/* Input */}
-        <div style={cp.inputRow}>
-          <input
-            style={cp.input}
-            value={input}
-            onChange={e => setInput(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && send()}
-            placeholder="Ask Scout anything..."
-            disabled={loading}
-          />
-          <button
-            style={{ ...cp.sendBtn, opacity: (!input.trim() || loading) ? 0.45 : 1 }}
-            onClick={send}
-            disabled={!input.trim() || loading}
-          >
-            ↑
-          </button>
-        </div>
-        <div style={cp.footer}>Your school, your pace.</div>
+            {/* Input */}
+            <div style={cp.inputRow}>
+              <input
+                style={cp.input}
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && send()}
+                placeholder="Ask Scout anything..."
+                disabled={loading}
+              />
+              <button
+                style={{ ...cp.sendBtn, opacity: (!input.trim() || loading) ? 0.45 : 1 }}
+                onClick={send}
+                disabled={!input.trim() || loading}
+              >
+                ↑
+              </button>
+            </div>
+            <div style={cp.footer}>Your school, your pace.</div>
+          </>
+        )}
       </div>
     </div>
   )
@@ -526,11 +650,12 @@ export default function AppHeader() {
   const [userState, setUserState] = useState<string | null>(null)
   const [email, setEmail] = useState('')
   const [kids, setKids] = useState<Kid[]>([])
+  const [copilotMessages, setCopilotMessages] = useState<CopilotMessage[]>([])
+  const [copilotStarred, setCopilotStarred] = useState(false)
   const [showFeedback, setShowFeedback] = useState(false)
-  const [showUserMenu, setShowUserMenu] = useState(false)
   const [showMobileMenu, setShowMobileMenu] = useState(false)
   const [showCopilot, setShowCopilot] = useState(false)
-  const userMenuRef = useRef<HTMLDivElement>(null)
+  const conversationIdRef = useRef<string | null>(null)
 
   const betaEnabled = process.env.NEXT_PUBLIC_BETA_FEEDBACK_ENABLED === 'true'
 
@@ -540,11 +665,24 @@ export default function AppHeader() {
       if (!user) return
       setUserId(user.id)
       setEmail(user.email ?? '')
-      setDisplayName(
+
+      const { data: profileData } = await supabase
+        .from('user_profiles')
+        .select('parent_name')
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+      const name =
+        profileData?.parent_name ||
         (user.user_metadata?.full_name as string) ||
         user.email?.split('@')[0] ||
         'there'
-      )
+      setDisplayName(name)
+      setCopilotMessages([{
+        role: 'assistant',
+        content: `Hi ${name}! I'm Scout, your HomeschoolReady co-pilot 🐦 I'm here to keep you on course — lesson planning, scheduling, compliance, and whatever else comes up. What can I help you with today?`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      }])
 
       // Check org owner path first
       const { data: ownedOrg } = await supabase
@@ -592,20 +730,73 @@ export default function AppHeader() {
   }, [])
 
   useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
-        setShowUserMenu(false)
-      }
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [])
-
-  useEffect(() => {
     const handler = () => setShowCopilot(true)
     window.addEventListener('open-scout-copilot', handler)
     return () => window.removeEventListener('open-scout-copilot', handler)
   }, [])
+
+  // Auto-save conversation to DB after each AI response
+  useEffect(() => {
+    if (!userId || copilotMessages.length < 3) return
+    const lastMsg = copilotMessages[copilotMessages.length - 1]
+    if (lastMsg.role !== 'assistant') return
+
+    const title = copilotMessages.find(m => m.role === 'user')?.content.slice(0, 60) ?? 'Conversation'
+    const save = async () => {
+      const id = conversationIdRef.current
+      if (id) {
+        await supabase.from('scout_conversations').update({
+          messages: copilotMessages as unknown as Record<string, unknown>[],
+          last_message_at: new Date().toISOString(),
+          title,
+        }).eq('id', id)
+      } else {
+        const { data } = await supabase.from('scout_conversations').insert({
+          user_id: userId,
+          organization_id: orgId,
+          messages: copilotMessages as unknown as Record<string, unknown>[],
+          title,
+          starred: false,
+        }).select('id').single()
+        if (data?.id) conversationIdRef.current = data.id
+      }
+    }
+    save()
+  }, [copilotMessages, userId, orgId])
+
+  const handleStar = async () => {
+    if (!conversationIdRef.current) return
+    const newStarred = !copilotStarred
+    setCopilotStarred(newStarred)
+    await supabase.from('scout_conversations').update({ starred: newStarred }).eq('id', conversationIdRef.current)
+  }
+
+  const handleNewChat = () => {
+    conversationIdRef.current = null
+    setCopilotStarred(false)
+    setCopilotMessages([{
+      role: 'assistant',
+      content: `Hi ${displayName}! I'm Scout, your HomeschoolReady co-pilot 🐦 What can I help you with today?`,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    }])
+  }
+
+  const handleLoadHistory = async (): Promise<SavedConversation[]> => {
+    if (!userId) return []
+    const { data } = await supabase
+      .from('scout_conversations')
+      .select('id, title, starred, last_message_at, messages')
+      .eq('user_id', userId)
+      .order('starred', { ascending: false })
+      .order('last_message_at', { ascending: false })
+      .limit(25)
+    return (data ?? []) as SavedConversation[]
+  }
+
+  const handleStarConversation = async (id: string, currentlyStarred: boolean) => {
+    await supabase.from('scout_conversations').update({ starred: !currentlyStarred }).eq('id', id)
+    if (id === conversationIdRef.current) setCopilotStarred(!currentlyStarred)
+  }
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
@@ -666,30 +857,6 @@ export default function AppHeader() {
           )}
 
 
-          {/* Desktop-only: User menu */}
-          {userId && (
-            <div className="hr-desktop-only" style={{ position: 'relative' }} ref={userMenuRef}>
-              <button className="hr-btn" onClick={() => setShowUserMenu(v => !v)}>
-                <div style={s.userAvatar}>{displayName[0]?.toUpperCase() || '?'}</div>
-                <span>{displayName}</span>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <path d="M6 9l6 6 6-6" />
-                </svg>
-              </button>
-
-              {showUserMenu && (
-                <div style={s.userMenu}>
-                  <div style={s.userMenuEmail}>{email}</div>
-                  <button style={s.menuItem} onClick={() => { setShowUserMenu(false); router.push('/settings') }}>
-                    Settings
-                  </button>
-                  <button style={{ ...s.menuItem, color: '#ef4444' }} onClick={handleLogout}>
-                    Log out
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
 
          {/* Mobile-only: hamburger */}
 {userId && (
@@ -709,11 +876,11 @@ export default function AppHeader() {
         <div style={{ ...s.userMenu, zIndex: 200, minWidth: 200 }}>
                     <div style={s.userMenuEmail}>{email}</div>
                     {betaEnabled && orgId && (
-                      <button style={s.menuItem} onClick={() => { setShowUserMenu(false); setShowFeedback(true) }}>
+                      <button style={s.menuItem} onClick={() => { setShowFeedback(true) }}>
                         💬 Feedback
                       </button>
                     )}
-                    <button style={s.menuItem} onClick={() => { setShowUserMenu(false); router.push('/settings') }}>
+                    <button style={s.menuItem} onClick={() => { router.push('/settings') }}>
                       ⚙️ Settings
                     </button>
                     <button style={{ ...s.menuItem, color: '#ef4444' }} onClick={handleLogout}>
@@ -738,6 +905,13 @@ export default function AppHeader() {
           userId={userId ?? undefined}
           userName={displayName || undefined}
           userState={userState}
+          messages={copilotMessages}
+          setMessages={setCopilotMessages}
+          isStarred={copilotStarred}
+          onStar={handleStar}
+          onNewChat={handleNewChat}
+          loadHistory={handleLoadHistory}
+          onStarConversation={handleStarConversation}
         />
       )}
     </>
@@ -898,6 +1072,43 @@ const cp: Record<string, CSSProperties> = {
   footer: {
     textAlign: 'center', fontSize: 10, color: '#d1d5db',
     padding: '6px 16px 10px', background: '#fff', fontFamily: 'system-ui, sans-serif',
+  },
+  headIconBtn: {
+    background: 'rgba(255,255,255,0.15)', border: 'none',
+    borderRadius: 6, color: 'rgba(255,255,255,0.85)', fontSize: 16,
+    cursor: 'pointer', padding: '4px 8px', lineHeight: 1,
+  },
+  historyRow: {
+    display: 'flex', alignItems: 'center', gap: 10,
+    padding: '12px 14px', borderRadius: 10,
+    border: '1px solid #e5e7eb', background: '#fff',
+    marginBottom: 8, cursor: 'pointer',
+  },
+  historyTitle: {
+    fontSize: 13, fontWeight: 600, color: '#111827',
+    fontFamily: 'system-ui, sans-serif',
+    whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis',
+  },
+  historyDate: { fontSize: 11, color: '#9ca3af', marginTop: 2, fontFamily: 'system-ui, sans-serif' },
+  historyBackBtn: {
+    padding: '6px 12px', borderRadius: 100,
+    background: '#f3f4f6', border: '1px solid #e5e7eb',
+    fontSize: 12, fontWeight: 600, color: '#374151',
+    cursor: 'pointer', fontFamily: 'system-ui, sans-serif',
+  },
+  filterTab: {
+    padding: '5px 12px', borderRadius: 100,
+    background: '#f3f4f6', border: '1px solid #e5e7eb',
+    fontSize: 12, fontWeight: 600, color: '#6b7280',
+    cursor: 'pointer', fontFamily: 'system-ui, sans-serif',
+  },
+  filterTabActive: {
+    background: 'linear-gradient(135deg, #B01C1C, #D92B2B)',
+    borderColor: 'transparent', color: '#fff',
+  },
+  starBtn: {
+    background: 'none', border: 'none', fontSize: 20,
+    cursor: 'pointer', padding: '2px 4px', flexShrink: 0, lineHeight: 1,
   },
 }
 

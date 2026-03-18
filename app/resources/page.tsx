@@ -8,45 +8,6 @@ import { getOrganizationId } from '@/src/lib/getOrganizationId'
 import { useAppHeader } from '@/components/layout/AppHeader'
 import MaterialsHelpModal from '@/components/MaterialsHelpModal'
 
-const NAV_ITEMS = [
-  { id: 'home',      label: 'Home',      icon: '🏠', href: '/dashboard' },
-  { id: 'plan',      label: 'Subjects',     icon: '📚', href: '/subjects'  },
-  { id: 'records',   label: 'Records',   icon: '📋', href: '/reports'   },
-  { id: 'resources', label: 'Resources', icon: '💡', href: '/resources' },
-  { id: 'profile',   label: 'Profile',   icon: '👤', href: '/profile'   },
-]
-
-function BottomNav({ active }: { active: string }) {
-  const router = useRouter()
-  return (
-    <nav style={{
-      position: 'fixed', bottom: 0, left: 0, right: 0,
-      background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(12px)',
-      borderTop: '1px solid rgba(0,0,0,0.08)',
-      display: 'flex', height: 64, zIndex: 50,
-      fontFamily: "'Nunito', sans-serif",
-    }}>
-      {NAV_ITEMS.map(item => {
-        const isActive = item.id === active
-        return (
-          <button key={item.id}
-            style={{
-              flex: 1, display: 'flex', flexDirection: 'column' as const, alignItems: 'center',
-              justifyContent: 'center', gap: 2, background: 'none', border: 'none',
-              cursor: 'pointer', color: isActive ? '#7c3aed' : '#9ca3af',
-              fontFamily: "'Nunito', sans-serif", position: 'relative',
-            }}
-            onClick={() => router.push(item.href)}>
-            {isActive && <span style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: 20, height: 3, borderRadius: 2, background: '#7c3aed' }} />}
-            <span style={{ fontSize: isActive ? 28 : 22, lineHeight: 1, transition: 'font-size 0.15s' }}>{item.icon}</span>
-            <span style={{ fontSize: isActive ? 12 : 10, fontWeight: isActive ? 800 : 500, transition: 'all 0.15s' }}>{item.label}</span>
-          </button>
-        )
-      })}
-    </nav>
-  )
-}
-
 // ─── Static Data ──────────────────────────────────────────────────────────────
 
 const TEACHING_STYLES = [
@@ -1182,7 +1143,6 @@ function ResourcesContent() {
           <div style={{ padding: 40, textAlign: 'center', color: '#9ca3af', fontWeight: 700 }}>Loading...</div>
         )}
       </div>
-      <BottomNav active="resources" />
     </div>
   )
 }

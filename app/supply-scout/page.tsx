@@ -31,43 +31,6 @@ interface DayGroup {
 
 // ─── Nav ──────────────────────────────────────────────────────────────────────
 
-const NAV_ITEMS = [
-  { id: 'home',      label: 'Home',      icon: '🏠', href: '/dashboard' },
-  { id: 'plan',      label: 'Subjects',  icon: '📚', href: '/subjects'  },
-  { id: 'records',   label: 'Records',   icon: '📋', href: '/reports'   },
-  { id: 'resources', label: 'Resources', icon: '💡', href: '/resources' },
-  { id: 'profile',   label: 'Profile',   icon: '👤', href: '/profile'   },
-]
-
-function BottomNav() {
-  const router = useRouter()
-  return (
-    <nav style={{
-      position: 'fixed', bottom: 0, left: 0, right: 0,
-      background: 'rgba(255,255,255,0.94)', backdropFilter: 'blur(16px)',
-      borderTop: '1px solid rgba(0,0,0,0.08)',
-      display: 'flex', zIndex: 100,
-      padding: '8px 0 12px',
-      boxShadow: '0 -4px 24px rgba(0,0,0,0.07)',
-      fontFamily: "'Nunito', sans-serif",
-    }}>
-      {NAV_ITEMS.map(item => (
-        <button key={item.id}
-          style={{
-            flex: 1, display: 'flex', flexDirection: 'column' as const, alignItems: 'center',
-            background: 'none', border: 'none', cursor: 'pointer',
-            color: '#9ca3af', padding: '6px 0', gap: 2,
-            fontFamily: "'Nunito', sans-serif",
-          }}
-          onClick={() => router.push(item.href)}>
-          <span style={{ fontSize: 22, lineHeight: 1 }}>{item.icon}</span>
-          <span style={{ fontSize: 10, fontWeight: 500 }}>{item.label}</span>
-        </button>
-      ))}
-    </nav>
-  )
-}
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
@@ -438,7 +401,6 @@ function SupplyScoutContent() {
         )}
       </div>
 
-      <BottomNav />
     </div>
   )
 }

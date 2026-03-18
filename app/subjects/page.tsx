@@ -69,14 +69,6 @@ const COMMON_SUBJECTS = [
   'Bible', 'Computer Science', 'Logic', 'Life Skills',
 ]
 
-const NAV_ITEMS = [
-  { id: 'home',      label: 'Home',      icon: '🏠', href: '/dashboard' },
-  { id: 'plan',      label: 'Subjects',  icon: '📚', href: '/subjects'  },
-  { id: 'records',   label: 'Records',   icon: '📋', href: '/reports'   },
-  { id: 'resources', label: 'Resources', icon: '💡', href: '/resources' },
-  { id: 'profile',   label: 'Profile',   icon: '👤', href: '/profile'   },
-]
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const SUBJECT_EMOJI_MAP: Record<string, string> = {
@@ -127,28 +119,6 @@ function getThisWeekBounds(): { mon: string; sun: string } {
   return { mon: fmt(mon), sun: fmt(sun) }
 }
 
-// ─── BottomNav ────────────────────────────────────────────────────────────────
-
-function BottomNav({ active }: { active: string }) {
-  const router = useRouter()
-  return (
-    <nav style={css.bottomNav}>
-      {NAV_ITEMS.map(item => {
-        const isActive = item.id === active
-        return (
-          <button key={item.id} className="nav-btn"
-            style={{ ...css.navItem, color: isActive ? '#7c3aed' : '#9ca3af', position: 'relative' }}
-            onClick={() => router.push(item.href)}>
-            {isActive && <span style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: 20, height: 3, borderRadius: 2, background: '#7c3aed' }} />}
-            <span style={{ fontSize: isActive ? 28 : 22, lineHeight: 1, transition: 'font-size 0.15s' }}>{item.icon}</span>
-            <span style={{ fontSize: isActive ? 12 : 10, fontWeight: isActive ? 800 : 500, marginTop: 2, transition: 'all 0.15s' }}>{item.label}</span>
-          </button>
-        )
-      })}
-    </nav>
-  )
-}
-
 // ─── CSS ─────────────────────────────────────────────────────────────────────
 
 const css = {
@@ -157,21 +127,6 @@ const css = {
     background: 'linear-gradient(135deg, #ede9fe 0%, #dbeafe 50%, #d1fae5 100%)',
     fontFamily: "'Nunito', sans-serif",
     paddingBottom: 88,
-  },
-  bottomNav: {
-    position: 'fixed' as const,
-    bottom: 0, left: 0, right: 0,
-    background: 'rgba(255,255,255,0.94)',
-    backdropFilter: 'blur(16px)',
-    borderTop: '1px solid rgba(124,58,237,0.10)',
-    display: 'flex', zIndex: 100,
-    padding: '8px 0 12px',
-    boxShadow: '0 -4px 24px rgba(0,0,0,0.07)',
-  },
-  navItem: {
-    flex: 1, display: 'flex', flexDirection: 'column' as const, alignItems: 'center',
-    background: 'none', border: 'none', cursor: 'pointer',
-    padding: '6px 0', fontFamily: "'Nunito', sans-serif", gap: 2,
   },
 }
 
@@ -1191,7 +1146,6 @@ function SubjectsContent() {
         />
       )}
 
-      <BottomNav active="plan" />
     </div>
   )
 }

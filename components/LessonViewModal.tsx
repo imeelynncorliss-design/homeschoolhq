@@ -385,6 +385,78 @@ export default function LessonViewModal({
     if (confirm(msg)) { onDelete(); onClose() }
   }
 
+  const handlePrint = () => {
+    const plan = lessonPlan
+    const dateStr = lesson.lesson_date
+      ? new Date(lesson.lesson_date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+      : 'Unscheduled'
+
+    const materialsHtml = plan?.materials?.length
+      ? `<div class="section"><div class="label">Materials</div><div class="chips">${plan.materials.map(m => `<span class="chip">${m}</span>`).join('')}</div></div>`
+      : ''
+
+    const objectivesHtml = plan?.learningObjectives?.length
+      ? `<div class="section"><div class="label">Learning Objectives</div><ul>${plan.learningObjectives.map(o => `<li>${o}</li>`).join('')}</ul></div>`
+      : ''
+
+    const activitiesHtml = plan?.activities?.length
+      ? `<div class="section"><div class="label">Activities</div>${plan.activities.map(a => `<div class="act-card"><strong>${a.name}</strong>${a.duration ? ` <span class="duration">⏱ ${a.duration}</span>` : ''}<p>${a.description}</p></div>`).join('')}</div>`
+      : ''
+
+    const assessmentHtml = (plan?.assessment || plan?.assessmentIdeas?.length)
+      ? `<div class="section"><div class="label">Assessment Ideas</div>${plan?.assessment ? `<p>${plan.assessment}</p>` : `<ul>${plan?.assessmentIdeas!.map(a => `<li>${a}</li>`).join('')}</ul>`}</div>`
+      : ''
+
+    const extensionsHtml = plan?.extensions?.length
+      ? `<div class="section"><div class="label">Extensions</div><ul>${plan.extensions.map(e => `<li>${e}</li>`).join('')}</ul></div>`
+      : ''
+
+    const overviewHtml = (plan?.overview || plan?.approach || plan?.description)
+      ? `<div class="section"><div class="label">Overview</div><p>${plan?.overview || plan?.approach || plan?.description}</p></div>`
+      : lesson.description && !plan
+        ? `<div class="section"><div class="label">Description</div><p>${lesson.description}</p></div>`
+        : ''
+
+    const html = `<!DOCTYPE html><html><head><title>Lesson Plan — ${lesson.title}</title>
+<style>
+  body { font-family: Georgia, serif; max-width: 680px; margin: 40px auto; color: #1f2937; font-size: 14px; line-height: 1.6; }
+  h1 { font-size: 22px; font-weight: 900; color: #2d1b69; margin: 0 0 4px; }
+  .meta { font-size: 12px; color: #6b7280; margin-bottom: 20px; display: flex; gap: 16px; flex-wrap: wrap; }
+  .meta span { display: flex; align-items: center; gap: 4px; }
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 100px; font-size: 11px; font-weight: 700; background: #eff6ff; color: #2563eb; margin-right: 6px; }
+  .section { margin-bottom: 18px; }
+  .label { font-size: 11px; font-weight: 800; color: #7c3aed; letter-spacing: 0.8px; text-transform: uppercase; margin-bottom: 6px; }
+  p { margin: 0 0 8px; }
+  ul, ol { margin: 0 0 8px; padding-left: 20px; }
+  li { margin-bottom: 3px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 100px; padding: 3px 10px; font-size: 12px; font-family: system-ui, sans-serif; }
+  .act-card { background: #f9fafb; border-radius: 8px; padding: 12px; margin-bottom: 8px; border: 1px solid #e5e7eb; }
+  .act-card strong { font-size: 13px; color: #111827; }
+  .act-card p { margin: 6px 0 0; font-size: 13px; color: #374151; }
+  .duration { font-size: 11px; color: #6b7280; font-family: system-ui; margin-left: 6px; }
+  hr { border: none; border-top: 1px solid #e5e7eb; margin: 20px 0; }
+  @media print { body { margin: 20px; } }
+</style>
+</head><body>
+<h1>${lesson.title}</h1>
+<div class="meta">
+  <span><span class="badge">${lesson.subject}</span></span>
+  <span>📅 ${dateStr}</span>
+  ${lesson.duration_minutes ? `<span>⏱ ${formatDuration(lesson.duration_minutes)}</span>` : ''}
+  ${kidName ? `<span>👤 ${kidName}${kidGrade ? ` · Grade ${kidGrade}` : ''}</span>` : ''}
+</div>
+<hr/>
+${overviewHtml}${objectivesHtml}${materialsHtml}${activitiesHtml}${assessmentHtml}${extensionsHtml}
+</body></html>`
+
+    const win = window.open('', '_blank')
+    if (!win) return
+    win.document.write(html)
+    win.document.close()
+    setTimeout(() => win.print(), 300)
+  }
+
   const activeProficiency = PROFICIENCY_LEVELS.find(p => p.value === checkIn.proficiency)
 
   const tabs = [
@@ -430,7 +502,10 @@ export default function LessonViewModal({
               )}
             </div>
           </div>
-          <button style={vw.closeBtn} onClick={onClose} aria-label="Close">×</button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+            <button style={vw.printBtn} onClick={handlePrint} title="Print lesson plan" aria-label="Print">🖨️</button>
+            <button style={vw.closeBtn} onClick={onClose} aria-label="Close">×</button>
+          </div>
         </div>
 
         {/* ── Edit Form ── */}
@@ -890,6 +965,12 @@ const vw: Record<string, CSSProperties> = {
     display: 'inline-flex', alignItems: 'center',
     padding: '3px 10px', borderRadius: 100,
     fontSize: 11, fontWeight: 700, fontFamily: 'system-ui, sans-serif',
+  },
+  printBtn: {
+    background: 'rgba(255,255,255,0.15)', border: 'none', color: '#fff',
+    fontSize: 16, width: 30, height: 30, borderRadius: '50%',
+    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+    flexShrink: 0,
   },
   closeBtn: {
     background: 'rgba(255,255,255,0.15)', border: 'none', color: '#fff',

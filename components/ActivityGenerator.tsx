@@ -92,6 +92,55 @@ export default function ActivityGenerator({ kids, organizationId, onClose, onSav
     }
   }
 
+  const handlePrintActivities = () => {
+    const selectedKid = kids.find(k => k.id === selectedKidId)
+    const rows = activities.map(act => `
+      <div class="card">
+        <div class="card-top">
+          <span class="emoji">${act.emoji}</span>
+          <div>
+            <div class="act-title">${act.title}</div>
+            <div class="act-meta">⏱ ${act.duration_minutes} min · ${subject}</div>
+          </div>
+        </div>
+        <p>${act.description}</p>
+        ${act.steps?.length ? `<ol>${act.steps.map(s => `<li>${s}</li>`).join('')}</ol>` : ''}
+        ${act.materials_have?.length ? `<div class="mat-section"><span class="mat-label have">✅ Have:</span> ${act.materials_have.join(', ')}</div>` : ''}
+        ${act.materials_need?.length ? `<div class="mat-section"><span class="mat-label need">🛒 Need:</span> ${act.materials_need.join(', ')}</div>` : ''}
+      </div>`).join('')
+
+    const html = `<!DOCTYPE html><html><head><title>Activities — ${selectedKid?.displayname ?? ''}</title>
+<style>
+  body { font-family: Georgia, serif; max-width: 680px; margin: 40px auto; color: #1f2937; font-size: 14px; line-height: 1.6; }
+  h1 { font-size: 20px; font-weight: 900; color: #2d1b69; margin: 0 0 4px; }
+  .meta { font-size: 12px; color: #6b7280; margin-bottom: 24px; }
+  .card { border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px; margin-bottom: 16px; page-break-inside: avoid; }
+  .card-top { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 8px; }
+  .emoji { font-size: 28px; line-height: 1; }
+  .act-title { font-weight: 800; font-size: 15px; color: #2d1b69; }
+  .act-meta { font-size: 12px; color: #7c6faa; margin-top: 2px; }
+  p { margin: 0 0 8px; }
+  ol { margin: 0 0 8px; padding-left: 20px; }
+  li { margin-bottom: 3px; font-size: 13px; }
+  .mat-section { font-size: 12px; margin-top: 6px; }
+  .mat-label { font-weight: 700; }
+  .mat-label.have { color: #059669; }
+  .mat-label.need { color: #dc2626; }
+  @media print { body { margin: 20px; } }
+</style>
+</head><body>
+<h1>Activities for ${selectedKid?.displayname ?? 'Student'}</h1>
+<div class="meta">${subject}${topic ? ` · ${topic}` : ''} · Generated ${new Date().toLocaleDateString()}</div>
+${rows}
+</body></html>`
+
+    const win = window.open('', '_blank')
+    if (!win) return
+    win.document.write(html)
+    win.document.close()
+    setTimeout(() => win.print(), 300)
+  }
+
   const handleSave = async (idx: number) => {
     if (saving || savedIdx.has(idx)) return
     setSaving(true)
@@ -299,8 +348,9 @@ export default function ActivityGenerator({ kids, organizationId, onClose, onSav
               ))}
             </div>
             {error && <div style={{ ...s.error, marginTop: 12 }}>{error}</div>}
-            <div style={{ display: 'flex', gap: 10, marginTop: 18 }}>
+            <div style={{ display: 'flex', gap: 10, marginTop: 18, flexWrap: 'wrap' as const }}>
               <button style={s.backBtn} onClick={() => setStep('vibe')}>← Try different vibe</button>
+              <button style={s.backBtn} onClick={handlePrintActivities}>🖨️ Print</button>
               {savedIdx.size > 0 && (
                 <button style={s.primaryBtn} onClick={onClose}>Done ✓</button>
               )}

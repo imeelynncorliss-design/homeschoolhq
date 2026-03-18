@@ -2,6 +2,7 @@
 
 import { usePathname } from 'next/navigation'
 import AppHeader, { AppHeaderProvider } from '@/components/layout/AppHeader'
+import BottomNav from '@/components/BottomNav'
 
 // Routes that should NOT show the app header (auth, onboarding, public pages)
 const NO_HEADER_ROUTES = [
@@ -27,6 +28,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     <AppHeaderProvider>
       <AppHeader />
       {children}
+      <BottomNav />
     </AppHeaderProvider>
   )
 }

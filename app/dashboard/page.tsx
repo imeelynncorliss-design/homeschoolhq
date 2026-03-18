@@ -171,13 +171,94 @@ function TodaysLearningModal({
   todayLessons: Record<string, any[]>
   onLessonClick: (lesson: any, kidName: string) => void
 }) {
+  const handlePrintDailyPlan = () => {
+    const today = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+
+    const childSections = kidPulses.map(pulse => {
+      const lessons = todayLessons[pulse.kid.id] || []
+      if (!lessons.length) return ''
+
+      const lessonRows = lessons.map((l: any) => {
+        // Try to parse Scout JSON description for overview
+        let descHtml = ''
+        if (l.description) {
+          try {
+            const parsed = JSON.parse(l.description)
+            const overview = parsed.overview || parsed.approach || parsed.description
+            if (overview) descHtml = `<p class="desc">${overview}</p>`
+            if (parsed.materials?.length) {
+              descHtml += `<p class="mats"><strong>Materials:</strong> ${parsed.materials.join(', ')}</p>`
+            }
+          } catch {
+            descHtml = `<p class="desc">${l.description}</p>`
+          }
+        }
+        const statusDot = l.status === 'completed' ? '#10b981' : l.status === 'in_progress' ? '#f59e0b' : '#d1d5db'
+        return `<div class="lesson">
+          <div class="lesson-top">
+            <span class="dot" style="background:${statusDot}"></span>
+            <div>
+              <div class="lesson-title">${l.title}</div>
+              <div class="lesson-meta">${l.subject}${l.duration_minutes ? ` · ${l.duration_minutes} min` : ''}</div>
+            </div>
+          </div>
+          ${descHtml}
+        </div>`
+      }).join('')
+
+      return `<div class="child-section">
+        <div class="child-name">${pulse.kid.displayname}</div>
+        <div class="progress-note">${pulse.completedToday} of ${pulse.totalToday} lessons complete</div>
+        ${lessonRows}
+      </div>`
+    }).join('')
+
+    const html = `<!DOCTYPE html><html><head><title>Daily Lesson Plan — ${today}</title>
+<style>
+  body { font-family: Georgia, serif; max-width: 680px; margin: 40px auto; color: #1f2937; font-size: 14px; line-height: 1.6; }
+  h1 { font-size: 22px; font-weight: 900; color: #2d1b69; margin: 0 0 4px; }
+  .date { font-size: 13px; color: #6b7280; margin-bottom: 28px; }
+  .child-section { margin-bottom: 28px; page-break-inside: avoid; }
+  .child-name { font-size: 17px; font-weight: 900; color: #2d1b69; border-bottom: 2px solid #e5e7eb; padding-bottom: 6px; margin-bottom: 4px; }
+  .progress-note { font-size: 11px; color: #9ca3af; margin-bottom: 12px; }
+  .lesson { border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px 14px; margin-bottom: 10px; }
+  .lesson-top { display: flex; align-items: flex-start; gap: 10px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; margin-top: 5px; flex-shrink: 0; }
+  .lesson-title { font-weight: 700; font-size: 14px; color: #111827; }
+  .lesson-meta { font-size: 11px; color: #6b7280; margin-top: 2px; font-family: system-ui; }
+  .desc { margin: 8px 0 0; font-size: 13px; color: #374151; }
+  .mats { margin: 4px 0 0; font-size: 12px; color: #6b7280; }
+  @media print { body { margin: 20px; } }
+</style>
+</head><body>
+<h1>Daily Lesson Plan</h1>
+<div class="date">${today}</div>
+${childSections}
+</body></html>`
+
+    const win = window.open('', '_blank')
+    if (!win) return
+    win.document.write(html)
+    win.document.close()
+    setTimeout(() => win.print(), 300)
+  }
+
   return (
     <div style={css.overlay} onClick={onClose}>
       <div style={{ ...css.modalBox, maxWidth: 640, maxHeight: '80vh', overflowY: 'auto' as const }}
         onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22 }}>
           <div style={{ fontWeight: 900, fontSize: 20, color: '#2d1b69' }}>Today's Learning</div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: '#4b5563', lineHeight: 1 }}>✕</button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button
+              onClick={handlePrintDailyPlan}
+              title="Print Daily Lesson Plan"
+              style={{ background: '#f3f4f6', border: '1px solid #e5e7eb', borderRadius: 8, padding: '5px 12px', fontSize: 13, fontWeight: 700, cursor: 'pointer', color: '#374151' }}
+            >
+              🖨️ Print
+            </button>
+            <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: '#4b5563', lineHeight: 1 }}>✕</button>
+          </div>
         </div>
 
         {kidPulses.map(pulse => {
@@ -237,36 +318,6 @@ function TodaysLearningModal({
         })}
       </div>
     </div>
-  )
-}
-
-// ─── Bottom Nav ───────────────────────────────────────────────────────────────
-
-const NAV_ITEMS = [
-  { id: 'home',      label: 'Home',      icon: '🏠', href: '/dashboard' },
-  { id: 'plan',      label: 'Subjects',     icon: '📚', href: '/subjects'  },
-  { id: 'records',   label: 'Records',   icon: '📋', href: '/reports'   },
-  { id: 'resources', label: 'Resources', icon: '💡', href: '/resources' },
-  { id: 'profile',   label: 'Profile',   icon: '👤', href: '/profile'   },
-]
-
-function BottomNav({ active }: { active: string }) {
-  const router = useRouter()
-  return (
-    <nav style={css.bottomNav}>
-      {NAV_ITEMS.map(item => {
-        const isActive = item.id === active
-        return (
-          <button key={item.id} className="nav-btn"
-            style={{ ...css.navItem, color: isActive ? '#7c3aed' : '#9ca3af', position: 'relative' }}
-            onClick={() => router.push(item.href)}>
-            {isActive && <span style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: 20, height: 3, borderRadius: 2, background: '#7c3aed' }} />}
-            <span style={{ fontSize: isActive ? 28 : 22, lineHeight: 1, transition: 'font-size 0.15s' }}>{item.icon}</span>
-            <span style={{ fontSize: isActive ? 12 : 10, fontWeight: isActive ? 800 : 500, marginTop: 2, transition: 'all 0.15s' }}>{item.label}</span>
-          </button>
-        )
-      })}
-    </nav>
   )
 }
 
@@ -854,7 +905,6 @@ function DashboardContent() {
         </main>
 
         <div style={{ height: 80 }} />
-        <BottomNav active="home" />
 
         {showLifeHappens && (
           <LifeHappensModal
@@ -1217,32 +1267,6 @@ const css: Record<string, React.CSSProperties> = {
     cursor: 'pointer',
     boxShadow: '0 6px 24px rgba(251,191,36,0.45), 0 2px 8px rgba(0,0,0,0.1)',
     transition: 'transform 0.15s ease, box-shadow 0.15s ease',
-  },
-
-  bottomNav: {
-    position: 'fixed' as const,
-    bottom: 0,
-    left: 0,
-    right: 0,
-    background: 'rgba(255,255,255,0.94)',
-    backdropFilter: 'blur(16px)',
-    borderTop: '1px solid rgba(124,58,237,0.10)',
-    display: 'flex',
-    zIndex: 100,
-    padding: '8px 0 12px',
-    boxShadow: '0 -4px 24px rgba(0,0,0,0.07)',
-  },
-  navItem: {
-    flex: 1,
-    display: 'flex',
-    flexDirection: 'column' as const,
-    alignItems: 'center',
-    background: 'none',
-    border: 'none',
-    cursor: 'pointer',
-    padding: '6px 0',
-    fontFamily: "'Nunito', sans-serif",
-    gap: 2,
   },
 
   overlay: {
