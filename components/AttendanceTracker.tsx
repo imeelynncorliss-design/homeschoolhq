@@ -1328,7 +1328,7 @@ function MarkAttendanceModal({ date, kids, selectedKid, existingAttendance, defa
         .from('portfolio-uploads')
         .getPublicUrl(path)
 
-      await supabaseClient.from('portfolio_uploads').insert({
+      const { error: insertError } = await supabaseClient.from('portfolio_uploads').insert({
         organization_id: organizationId,
         kid_id:          kidId || null,
         attendance_date: date,
@@ -1339,6 +1339,11 @@ function MarkAttendanceModal({ date, kids, selectedKid, existingAttendance, defa
         file_size:       file.size,
         uploaded_by:     userId,
       })
+      if (insertError) {
+        setUploadError(`Failed to save file record: ${insertError.message}`)
+        setUploading(false)
+        return
+      }
     }
 
     setUploading(false)

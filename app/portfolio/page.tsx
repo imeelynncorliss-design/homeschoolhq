@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from 'react'
 import { useRouter } from 'next/navigation'
 import AuthGuard from '@/components/AuthGuard'
 import { supabase } from '@/src/lib/supabase'
+import { getOrganizationId } from '@/src/lib/getOrganizationId'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -113,17 +114,13 @@ function PortfolioContent() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
-      const { data: userOrg } = await supabase
-        .from('user_organizations')
-        .select('organization_id')
-        .eq('user_id', user.id)
-        .maybeSingle()
-      if (!userOrg?.organization_id) { setGroups([]); setLoading(false); return }
+      const { orgId } = await getOrganizationId(user.id)
+      if (!orgId) { setGroups([]); setLoading(false); return }
 
       const { data: uploads, error: uploadsErr } = await supabase
         .from('portfolio_uploads')
         .select('id, file_name, file_path, file_type, file_size, attendance_date, lesson_id, kid_id, created_at')
-        .eq('organization_id', userOrg.organization_id)
+        .eq('organization_id', orgId)
         .order('created_at', { ascending: false })
       if (uploadsErr) throw uploadsErr
       if (!uploads || uploads.length === 0) { setGroups([]); setLoading(false); return }
