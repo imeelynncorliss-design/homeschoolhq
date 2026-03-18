@@ -171,6 +171,7 @@ function TodaysLearningModal({
   todayLessons: Record<string, any[]>
   onLessonClick: (lesson: any, kidName: string) => void
 }) {
+  const router = useRouter()
   const handlePrintDailyPlan = () => {
     const today = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
 
@@ -250,6 +251,13 @@ ${childSections}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22 }}>
           <div style={{ fontWeight: 900, fontSize: 20, color: '#2d1b69' }}>Today's Learning</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button
+              onClick={() => { onClose(); router.push('/calendar') }}
+              title="View Calendar"
+              style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8, padding: '5px 12px', fontSize: 13, fontWeight: 700, cursor: 'pointer', color: '#2563eb' }}
+            >
+              📅 Calendar
+            </button>
             <button
               onClick={handlePrintDailyPlan}
               title="Print Daily Lesson Plan"

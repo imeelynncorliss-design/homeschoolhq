@@ -39,6 +39,7 @@ export default function EnhancedVacationManager({ organizationId }: EnhancedVaca
   const [vacationType, setVacationType] = useState<'holiday' | 'break' | 'vacation' | 'other'>('vacation');
   const [notes, setNotes] = useState('');
   const [activeConfigId, setActiveConfigId] = useState<string | null>(null);
+  const [showVacationList, setShowVacationList] = useState(false);
 
   
   useEffect(() => {
@@ -319,10 +320,15 @@ export default function EnhancedVacationManager({ organizationId }: EnhancedVaca
         <div className="bg-gradient-to-r from-purple-500 to-pink-600 rounded-lg p-6 text-white">
           <h3 className="text-xl font-bold mb-4">📊 Vacation Impact on Schedule</h3>
           <div className="grid md:grid-cols-3 gap-4">
-            <div className="bg-white/20 rounded-lg p-4">
+            <button
+              className="bg-white/20 rounded-lg p-4 text-left hover:bg-white/30 transition cursor-pointer w-full"
+              onClick={() => setShowVacationList(true)}
+              title="View planned vacations"
+            >
               <div className="text-3xl font-bold mb-1">{totalVacationDays}</div>
               <div className="text-sm text-purple-100">Total Vacation Days</div>
-            </div>
+              <div className="text-xs text-purple-200 mt-1">tap to see schedule →</div>
+            </button>
             <div className="bg-white/20 rounded-lg p-4">
               <div className="text-3xl font-bold mb-1">{impact.schoolDays}</div>
               <div className="text-sm text-purple-100">Adjusted School Days</div>
@@ -541,6 +547,54 @@ export default function EnhancedVacationManager({ organizationId }: EnhancedVaca
               <div className="text-lg font-semibold text-gray-900">
                 {vacations.filter((v) => v.vacation_type === 'vacation').length}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Vacation List Modal */}
+      {showVacationList && (
+        <div
+          style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+          onClick={() => setShowVacationList(false)}
+        >
+          <div
+            style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 520, maxHeight: '80vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ fontWeight: 900, fontSize: 18, color: '#1e1b4b', fontFamily: "'Nunito', sans-serif" }}>🌴 Planned Vacations</div>
+              <button onClick={() => setShowVacationList(false)} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: '#9ca3af', lineHeight: 1 }}>✕</button>
+            </div>
+            <div style={{ padding: '16px 24px 24px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {vacations.length === 0 ? (
+                <div style={{ textAlign: 'center', color: '#6b7280', padding: '24px 0', fontSize: 14 }}>No vacations planned yet.</div>
+              ) : (
+                vacations.map(v => (
+                  <div key={v.id} style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 12, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 800, fontSize: 14, color: '#1a1a2e', fontFamily: "'Nunito', sans-serif", marginBottom: 3 }}>{v.name}</div>
+                      <div style={{ fontSize: 12, color: '#6b7280', fontWeight: 600 }}>
+                        {formatDate(v.start_date)} – {formatDate(v.end_date)}
+                        <span style={{ marginLeft: 8, color: '#7c3aed' }}>{calculateDays(v.start_date, v.end_date)} days</span>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                      <button
+                        onClick={() => { handleEdit(v); setShowVacationList(false); }}
+                        style={{ padding: '5px 12px', borderRadius: 8, background: '#eff6ff', border: '1px solid #bfdbfe', fontSize: 12, fontWeight: 700, color: '#2563eb', cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => { handleDelete(v.id); setShowVacationList(false); }}
+                        style={{ padding: '5px 12px', borderRadius: 8, background: '#fff', border: '1px solid #fca5a5', fontSize: 12, fontWeight: 700, color: '#ef4444', cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>

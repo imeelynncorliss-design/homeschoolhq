@@ -52,15 +52,10 @@ function VacationContent() {
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <header style={css.topBar}>
       <div style={css.topBarLeft}>
-          <button style={css.headerBtn} onClick={() => router.push('/dashboard')}>
-            ← Dashboard
+          <button style={css.headerBtn} onClick={() => router.push('/tools')}>
+            ← Tools
           </button>
           <div style={css.pageTitle}> 🌴 Vacation Planner </div>
-        </div>
-        <div style={css.topBarRight}>
-          <button style={css.headerBtn} onClick={() => router.push('/calendar')}>
-            📅 Calendar
-          </button>
         </div>
       </header>
 

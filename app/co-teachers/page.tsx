@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/src/lib/supabase';
-import { useAppHeader } from '@/components/layout/AppHeader'
+import { pageShell } from '@/src/lib/designTokens';
 import {
   revokeInvite,
   getOrgInvites,
@@ -63,7 +63,6 @@ function formatDate(dateStr: string) {
 
 export default function CoTeachersPage() {
   const router = useRouter();
-  useAppHeader({ title: 'Co-Teachers', backHref: '/dashboard' })  
   const supabase = createClient();
 
   const [orgId, setOrgId] = useState<string | null>(null);
@@ -186,8 +185,17 @@ export default function CoTeachersPage() {
 
   // ── Main render ─────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-slate-50">
-      <div className="max-w-3xl mx-auto px-4 py-10 space-y-8">
+    <div style={pageShell.root}>
+      <header style={pageShell.topBar}>
+        <div style={pageShell.topBarLeft}>
+          <button style={pageShell.headerBtn} onClick={() => router.push('/tools')}>
+            ← Tools
+          </button>
+          <div style={pageShell.pageTitle}>👩‍🏫 Co-Teachers</div>
+        </div>
+      </header>
+
+      <div className="max-w-3xl mx-auto px-4 py-10 space-y-8" style={{ paddingBottom: 100 }}>
 
         {/* Success/Error messages */}
         {success && (
@@ -375,3 +383,4 @@ export default function CoTeachersPage() {
     </div>
   );
 }
+

@@ -61,7 +61,7 @@ function ToolsContent() {
         {/* Page header */}
         <div style={css.pageHeader}>
           <div style={css.pageTitle}>🔧 Tools</div>
-          <div style={css.pageSub}>Curriculum import, bulk scheduling, and more</div>
+          <div style={css.pageSub}>Setup, scheduling, and account management</div>
         </div>
 
         {/* Tool cards */}
@@ -72,7 +72,7 @@ function ToolsContent() {
             <div style={css.cardIcon}>📋</div>
             <div style={css.cardTitle}>Curriculum Import</div>
             <div style={css.cardDesc}>
-              Upload a PDF or photo of your curriculum table of contents — Scout will extract lessons and schedule them automatically.
+              Got a curriculum with a table of contents? Upload a PDF or photo and Scout will extract the lessons and add them to your schedule automatically.
             </div>
             {kids.length > 1 && (
               <div style={{ marginTop: 12 }}>
@@ -102,13 +102,43 @@ function ToolsContent() {
             <div style={css.cardIcon}>⚡</div>
             <div style={css.cardTitle}>Bulk Schedule</div>
             <div style={css.cardDesc}>
-              Assign dates to multiple unscheduled lessons at once. Great for getting a whole semester set up quickly.
+              Have a pile of unscheduled lessons? Assign dates to many lessons at once — perfect for planning out a full semester in minutes.
             </div>
             <button
               style={css.secondaryBtn}
               onClick={() => setActiveTool(activeTool === 'bulk' ? null : 'bulk')}
             >
               {activeTool === 'bulk' ? '▲ Hide Scheduler' : '⚡ Open Scheduler'}
+            </button>
+          </div>
+
+          {/* Vacation Planner */}
+          <div style={css.card}>
+            <div style={css.cardIcon}>🌴</div>
+            <div style={css.cardTitle}>Vacation Planner</div>
+            <div style={css.cardDesc}>
+              Add holidays, breaks, and family trips to your school calendar. Scout won't schedule lessons on days you mark as off.
+            </div>
+            <button
+              style={css.secondaryBtn}
+              onClick={() => router.push('/vacation')}
+            >
+              🌴 Manage Vacations
+            </button>
+          </div>
+
+          {/* Co-Teachers */}
+          <div style={css.card}>
+            <div style={css.cardIcon}>👩‍🏫</div>
+            <div style={css.cardTitle}>Co-Teachers</div>
+            <div style={css.cardDesc}>
+              Invite a spouse, grandparent, or tutor to view and log lessons alongside you. They get their own login with access to your school.
+            </div>
+            <button
+              style={css.secondaryBtn}
+              onClick={() => router.push('/co-teachers')}
+            >
+              👩‍🏫 Manage Co-Teachers
             </button>
           </div>
         </div>
@@ -133,9 +163,8 @@ function ToolsContent() {
         <CurriculumImporter
           childId={selectedKid.id}
           childName={selectedKid.displayname}
-          organizationId={orgId}
           onClose={() => setShowImporter(false)}
-          onImported={() => {
+          onImportComplete={() => {
             setShowImporter(false)
             router.push('/lessons')
           }}
