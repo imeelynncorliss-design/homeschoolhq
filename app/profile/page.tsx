@@ -6,6 +6,7 @@ import { createClient } from '@/src/lib/supabase/client'
 import AuthGuard from '@/components/AuthGuard'
 import { getOrganizationId } from '@/src/lib/getOrganizationId'
 import { TIER_INFO, type UserTier } from '@/lib/tierTesting'
+import KidProfileForm from '@/components/KidProfileForm'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -86,6 +87,7 @@ function ProfileContent() {
   const [kids,           setKids]           = useState<Kid[]>([])
   const [tier,           setTier]           = useState<UserTier>('FREE')
   const [renewDate,      setRenewDate]      = useState<string | null>(null)
+  const [editingKid,     setEditingKid]     = useState<any | null>(null)
 
   useEffect(() => {
     const init = async () => {
@@ -207,6 +209,26 @@ function ProfileContent() {
     )
   }
 
+  const openEditKid = async (kidId: string) => {
+    const { data } = await supabase.from('kids').select('*').eq('id', kidId).single()
+    if (data) setEditingKid(data)
+  }
+
+  const handleSaveKid = async (data: any) => {
+    const { photoFile, ...fields } = data
+    if (photoFile) {
+      const ext  = photoFile.name.split('.').pop()
+      const path = `kids/${data.id}/avatar.${ext}`
+      await supabase.storage.from('avatars').upload(path, photoFile, { upsert: true })
+      const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path)
+      fields.photo_url = publicUrl
+    }
+    await supabase.from('kids').update(fields).eq('id', data.id)
+    // Update local state so name/grade reflects immediately
+    setKids(prev => prev.map(k => k.id === data.id ? { ...k, displayname: fields.displayname, grade: fields.grade } : k))
+    setEditingKid(null)
+  }
+
   const tierInfo  = TIER_INFO[tier]
   const styleKey  = teachingStyle?.toLowerCase().replace(/[\s_-]/g, '') ?? ''
   const styleName = STYLE_NAMES[styleKey] ?? teachingStyle ?? null
@@ -219,6 +241,7 @@ function ProfileContent() {
   ]
 
   return (
+    <>
     <div style={{ fontFamily: "'Nunito', sans-serif", minHeight: '100vh', background: GRADIENT, paddingBottom: 88 }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
@@ -378,26 +401,37 @@ function ProfileContent() {
                   display: 'flex', alignItems: 'center', gap: 14,
                   padding: '14px 20px',
                   borderBottom: '1px solid rgba(0,0,0,0.06)',
-                  cursor: 'pointer', transition: 'background 0.1s',
-                }}
-                onClick={() => router.push(`/subjects?kid=${kid.id}`)}>
-                <div style={{
-                  width: 42, height: 42, borderRadius: '50%', flexShrink: 0,
-                  background: color,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 15, fontWeight: 900, color: '#fff',
+                  transition: 'background 0.1s',
                 }}>
-                  {kid.displayname[0].toUpperCase()}
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 15, fontWeight: 800, color: '#1a1a2e', marginBottom: 2 }}>
-                    {kid.displayname}
+                <div
+                  style={{ display: 'flex', alignItems: 'center', gap: 14, flex: 1, cursor: 'pointer' }}
+                  onClick={() => router.push(`/subjects?kid=${kid.id}`)}>
+                  <div style={{
+                    width: 42, height: 42, borderRadius: '50%', flexShrink: 0,
+                    background: color,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 15, fontWeight: 900, color: '#fff',
+                  }}>
+                    {kid.displayname[0].toUpperCase()}
                   </div>
-                  {subtitle && (
-                    <div style={{ fontSize: 12, color: '#4b5563', fontWeight: 600 }}>{subtitle}</div>
-                  )}
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: '#1a1a2e', marginBottom: 2 }}>
+                      {kid.displayname}
+                    </div>
+                    {subtitle && (
+                      <div style={{ fontSize: 12, color: '#4b5563', fontWeight: 600 }}>{subtitle}</div>
+                    )}
+                  </div>
                 </div>
-                <span style={{ color: '#c4b5fd', fontSize: 18 }}>›</span>
+                <button
+                  onClick={() => openEditKid(kid.id)}
+                  style={{
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    fontSize: 13, fontWeight: 700, color: '#7c3aed',
+                    fontFamily: "'Nunito', sans-serif", padding: '4px 8px',
+                  }}>
+                  Edit
+                </button>
               </div>
             )
           })}
@@ -472,6 +506,15 @@ function ProfileContent() {
       </div>
 
     </div>
+
+    {editingKid && (
+      <KidProfileForm
+        kid={editingKid}
+        onSave={handleSaveKid}
+        onCancel={() => setEditingKid(null)}
+      />
+    )}
+    </>
   )
 }
 
