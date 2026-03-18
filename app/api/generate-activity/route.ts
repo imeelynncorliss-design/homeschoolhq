@@ -11,7 +11,7 @@ export async function POST(request: Request) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    const { userId, kidId, subject, topic, vibe } = await request.json()
+    const { userId, kidId, organizationId, subject, topic, vibe } = await request.json()
 
     // Usage guardrail — enforce monthly tier limits
     if (userId) {
@@ -21,14 +21,27 @@ export async function POST(request: Request) {
       }
     }
 
-    // Fetch kid profile
-    const { data: kid } = await supabase
-      .from('kids')
-      .select('displayname, age, grade, learning_style, current_hook')
-      .eq('id', kidId)
-      .single()
+    // Fetch kid profile and org materials in parallel
+    const [{ data: kid }, { data: materials }] = await Promise.all([
+      supabase
+        .from('kids')
+        .select('displayname, age, grade, learning_style, current_hook')
+        .eq('id', kidId)
+        .single(),
+      organizationId
+        ? supabase
+            .from('materials')
+            .select('name, material_type, subject')
+            .eq('organization_id', organizationId)
+        : Promise.resolve({ data: [] }),
+    ])
 
     if (!kid) return NextResponse.json({ error: 'Student not found' }, { status: 404 })
+
+    const materialNames = (materials ?? []).map((m: { name: string }) => m.name)
+    const materialsSection = materialNames.length > 0
+      ? `\nMATERIALS ALREADY OWNED:\n${materialNames.map(n => `- ${n}`).join('\n')}\nPrefer activities that use these materials. For each activity, identify which of the above materials are needed (materials_have) and what additional items are needed (materials_need).`
+      : `\nFor each activity, list materials_have as [] and list all required items in materials_need.`
 
     const vibeDesc: Record<string, string> = {
       hands_on:    'hands-on, tactile, build/make/do',
@@ -45,12 +58,13 @@ Current interests: ${kid.current_hook || 'not specified'}
 Subject: ${subject}
 ${topic ? `Topic/focus: ${topic}` : ''}
 Activity vibe: ${vibeDesc[vibe] || vibe}
+${materialsSection}
 
 Each activity should:
 - Take 10–30 minutes
-- Require minimal prep (common household materials)
 - Feel fun, not like "more school"
 - Match the vibe requested
+- Be tailored to the student's learning style
 
 Return ONLY valid JSON:
 {
@@ -60,7 +74,8 @@ Return ONLY valid JSON:
       "emoji": "one relevant emoji",
       "duration_minutes": 20,
       "description": "One sentence: what the student actually does",
-      "materials": ["item 1", "item 2"],
+      "materials_have": ["item from their inventory"],
+      "materials_need": ["item they still need to get"],
       "steps": ["Step 1", "Step 2", "Step 3"]
     }
   ]

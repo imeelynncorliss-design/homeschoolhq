@@ -16,6 +16,7 @@ interface Kid {
   id: string
   displayname: string
   grade_level?: string
+  learning_style?: string | null
 }
 
 interface KidPulse {
@@ -596,7 +597,7 @@ function DashboardContent() {
             )].slice(0, 3) as string[]
 
             return {
-              kid: { id: kid.id, displayname: kid.displayname, grade_level: kid.grade_level },
+              kid: { id: kid.id, displayname: kid.displayname, grade_level: kid.grade_level, learning_style: kid.learning_style },
               totalToday: total,
               completedToday: completed,
               pct: total > 0 ? Math.round((completed / total) * 100) : 0,

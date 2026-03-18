@@ -10,6 +10,7 @@ interface Kid {
   id: string
   displayname: string
   grade_level?: string
+  learning_style?: string | null
 }
 
 interface GeneratedActivity {
@@ -17,7 +18,8 @@ interface GeneratedActivity {
   emoji: string
   duration_minutes: number
   description: string
-  materials: string[]
+  materials_have: string[]
+  materials_need: string[]
   steps: string[]
 }
 
@@ -37,6 +39,22 @@ const VIBES = [
   { id: 'review',      emoji: '🔁', label: 'Review',       sub: 'Reinforce it' },
 ]
 
+// ─── Learning Style → Vibe mapping ───────────────────────────────────────────
+
+const STYLE_VIBE: Record<string, string> = {
+  visual:      'hands_on',
+  aural:       'game',
+  read_write:  'review',
+  kinesthetic: 'hands_on',
+}
+
+const STYLE_LABEL: Record<string, string> = {
+  visual:      'Visual',
+  aural:       'Aural',
+  read_write:  'Read / Write',
+  kinesthetic: 'Kinesthetic',
+}
+
 // ─── ActivityGenerator ────────────────────────────────────────────────────────
 
 export default function ActivityGenerator({ kids, organizationId, onClose, onSaved }: ActivityGeneratorProps) {
@@ -50,6 +68,10 @@ export default function ActivityGenerator({ kids, organizationId, onClose, onSav
   const [saving, setSaving] = useState(false)
 
   const selectedKid = kids.find(k => k.id === selectedKidId)
+  const recommendedVibe = selectedKid?.learning_style
+    ? STYLE_VIBE[selectedKid.learning_style] ?? null
+    : null
+  const recommendedVibeObj = VIBES.find(v => v.id === recommendedVibe)
 
   const handleGenerate = async (chosenVibe: string) => {
     setStep('loading')
@@ -58,7 +80,7 @@ export default function ActivityGenerator({ kids, organizationId, onClose, onSav
       const res = await fetch('/api/generate-activity', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ kidId: selectedKidId, subject, topic, vibe: chosenVibe }),
+        body: JSON.stringify({ kidId: selectedKidId, organizationId, subject, topic, vibe: chosenVibe }),
       })
       const data = await res.json()
       if (!res.ok || !data.activities?.length) throw new Error(data.error || 'No activities returned')
@@ -80,7 +102,11 @@ export default function ActivityGenerator({ kids, organizationId, onClose, onSav
       organization_id: organizationId,
       subject,
       title: act.title,
-      description: JSON.stringify({ overview: act.description, steps: act.steps, materials: act.materials }),
+      description: JSON.stringify({
+        overview: act.description,
+        steps: act.steps,
+        materials: [...(act.materials_have ?? []), ...(act.materials_need ?? [])],
+      }),
       lesson_date: today,
       status: 'not_started',
       lesson_source: 'scout_activity',
@@ -156,18 +182,45 @@ export default function ActivityGenerator({ kids, organizationId, onClose, onSav
         {/* ── Step: vibe ────────────────────────────────────────────────────── */}
         {step === 'vibe' && (
           <div style={s.body}>
-            <div style={{ fontSize: 14, color: '#6b7280', marginBottom: 14 }}>
-              What kind of activity for <strong>{selectedKid?.displayname}</strong>?
-            </div>
-            {error && <div style={s.error}>{error}</div>}
-            <div style={s.vibeGrid}>
-              {VIBES.map(v => (
-                <button key={v.id} style={s.vibeBtn} onClick={() => handleGenerate(v.id)}>
-                  <span style={{ fontSize: 32 }}>{v.emoji}</span>
-                  <div style={{ fontWeight: 800, fontSize: 15, color: '#2d1b69', marginTop: 6 }}>{v.label}</div>
-                  <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>{v.sub}</div>
+
+            {/* Learning style recommendation callout */}
+            {recommendedVibeObj && selectedKid?.learning_style && (
+              <div style={s.styleCallout}>
+                <div style={{ fontSize: 20, marginBottom: 4 }}>{recommendedVibeObj.emoji}</div>
+                <div style={{ fontWeight: 800, fontSize: 13, color: '#4f46e5', marginBottom: 2 }}>
+                  {STYLE_LABEL[selectedKid.learning_style]} Learner
+                </div>
+                <div style={{ fontSize: 12, color: '#6b7280', lineHeight: 1.5 }}>
+                  Based on <strong>{selectedKid.displayname}</strong>'s {STYLE_LABEL[selectedKid.learning_style].toLowerCase()} learning style,
+                  we recommend <strong>{recommendedVibeObj.label}</strong> activities.
+                </div>
+                <button
+                  style={s.useRecommendedBtn}
+                  onClick={() => handleGenerate(recommendedVibe!)}>
+                  Continue with {recommendedVibeObj.label} →
                 </button>
-              ))}
+              </div>
+            )}
+
+            <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 10, marginTop: recommendedVibeObj ? 14 : 0 }}>
+              {recommendedVibeObj ? 'Or choose a different vibe:' : `What kind of activity for ${selectedKid?.displayname}?`}
+            </div>
+
+            {error && <div style={s.error}>{error}</div>}
+
+            <div style={s.vibeGrid}>
+              {VIBES.map(v => {
+                const isRecommended = v.id === recommendedVibe
+                return (
+                  <button key={v.id}
+                    style={{ ...s.vibeBtn, ...(isRecommended ? s.vibeBtnRecommended : {}) }}
+                    onClick={() => handleGenerate(v.id)}>
+                    <span style={{ fontSize: 32 }}>{v.emoji}</span>
+                    <div style={{ fontWeight: 800, fontSize: 15, color: '#2d1b69', marginTop: 6 }}>{v.label}</div>
+                    <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>{v.sub}</div>
+                  </button>
+                )
+              })}
             </div>
             <button style={s.backBtn} onClick={() => setStep('setup')}>← Back</button>
           </div>
@@ -208,17 +261,38 @@ export default function ActivityGenerator({ kids, organizationId, onClose, onSav
                       {savedIdx.has(i) ? '✓ Saved' : 'Save'}
                     </button>
                   </div>
+
                   <p style={{ fontSize: 13, color: '#374151', margin: '8px 0 0' }}>{act.description}</p>
+
                   {act.steps?.length > 0 && (
                     <ol style={{ margin: '8px 0 0', paddingLeft: 18, fontSize: 13, color: '#4b5563' }}>
                       {act.steps.map((st, si) => <li key={si} style={{ marginBottom: 3 }}>{st}</li>)}
                     </ol>
                   )}
-                  {act.materials?.length > 0 && (
-                    <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap' as const, gap: 5 }}>
-                      {act.materials.map((m, mi) => (
-                        <span key={mi} style={s.chip}>{m}</span>
-                      ))}
+
+                  {/* Materials — what they have vs what they need */}
+                  {((act.materials_have?.length > 0) || (act.materials_need?.length > 0)) && (
+                    <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column' as const, gap: 6 }}>
+                      {act.materials_have?.length > 0 && (
+                        <div>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: '#059669', marginBottom: 4 }}>✅ You already have:</div>
+                          <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 5 }}>
+                            {act.materials_have.map((m, mi) => (
+                              <span key={mi} style={s.chipHave}>{m}</span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {act.materials_need?.length > 0 && (
+                        <div>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: '#dc2626', marginBottom: 4 }}>🛒 Still need:</div>
+                          <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 5 }}>
+                            {act.materials_need.map((m, mi) => (
+                              <span key={mi} style={s.chipNeed}>{m}</span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -297,6 +371,17 @@ const s: Record<string, React.CSSProperties> = {
     background: '#f9fafb', color: '#6b7280', fontSize: 13, fontWeight: 600, cursor: 'pointer',
     alignSelf: 'flex-start',
   },
+  styleCallout: {
+    background: 'linear-gradient(135deg, #eff6ff, #f5f3ff)',
+    border: '1.5px solid #c7d2fe',
+    borderRadius: 14, padding: '14px 16px',
+    display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2,
+  },
+  useRecommendedBtn: {
+    marginTop: 10, padding: '9px 18px', borderRadius: 10, border: 'none',
+    background: 'linear-gradient(135deg,#4f46e5,#7c3aed)',
+    color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer',
+  },
   vibeGrid: {
     display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20,
   },
@@ -304,6 +389,9 @@ const s: Record<string, React.CSSProperties> = {
     display: 'flex', flexDirection: 'column', alignItems: 'center',
     padding: '18px 12px', borderRadius: 14, border: '2px solid #e5e7eb',
     background: '#fafafa', cursor: 'pointer', transition: 'border-color 0.15s',
+  },
+  vibeBtnRecommended: {
+    borderColor: '#7c3aed', background: '#faf5ff',
   },
   activityCard: {
     border: '1.5px solid #e5e7eb', borderRadius: 14, padding: '14px 16px',
@@ -316,9 +404,13 @@ const s: Record<string, React.CSSProperties> = {
     color: '#fff', fontWeight: 700, fontSize: 12, cursor: 'pointer', whiteSpace: 'nowrap',
   },
   savedBtn: { background: '#d1fae5', color: '#059669', cursor: 'default' },
-  chip: {
-    padding: '3px 10px', borderRadius: 20, background: '#ede9fe',
-    color: '#7c3aed', fontSize: 11, fontWeight: 600,
+  chipHave: {
+    padding: '3px 10px', borderRadius: 20, background: '#dcfce7',
+    color: '#15803d', fontSize: 11, fontWeight: 600,
+  },
+  chipNeed: {
+    padding: '3px 10px', borderRadius: 20, background: '#fee2e2',
+    color: '#dc2626', fontSize: 11, fontWeight: 600,
   },
   error: {
     background: '#fef2f2', border: '1px solid #fecaca',
