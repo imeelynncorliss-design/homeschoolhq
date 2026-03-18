@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import GradeBook from '@/components/GradeBook'
 import TranscriptSettings from '@/components/TranscriptSettings'
 import TranscriptGenerator from '@/components/TranscriptGenerator'
+import CourseDescriptions from '@/components/CourseDescriptions'
 import AuthGuard from '@/components/AuthGuard'
 import { getOrganizationId } from '@/src/lib/getOrganizationId'
 import { pageShell, colors } from '@/src/lib/designTokens'
@@ -60,9 +61,10 @@ function TranscriptsContent() {
   }, [])
 
   const tabs = [
-    { id: 'gradebook', label: '📊 Grade Book', description: 'Grades' },
-    { id: 'settings',  label: '⚙️ Settings',   description: 'Info'   },
-    { id: 'generate',  label: '📄 Generate',    description: 'PDF'    },
+    { id: 'gradebook',     label: '📊 Grade Book',       description: 'Grades'       },
+    { id: 'descriptions',  label: '📝 Course Descriptions', description: 'Descriptions' },
+    { id: 'settings',      label: '⚙️ Settings',          description: 'Info'         },
+    { id: 'generate',      label: '📄 Generate',           description: 'PDF'          },
   ]
 
   if (loading) return (
@@ -153,6 +155,8 @@ function TranscriptsContent() {
             <div style={css.tabContent}>
               {activeTab === 'gradebook' && selectedKid && user &&
                 <GradeBook kidId={selectedKid} userId={user.id} />}
+              {activeTab === 'descriptions' && selectedKid &&
+                <CourseDescriptions kidId={selectedKid} />}
               {activeTab === 'settings' && selectedKid && user &&
                 <TranscriptSettings kidId={selectedKid} userId={user.id} />}
               {activeTab === 'generate' && selectedKid && user &&
