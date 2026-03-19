@@ -15,37 +15,59 @@ interface ProductTourProps {
   parentName?: string
   /** Pass true right after StylePickerModal completes to auto-start the tour */
   autoStart?: boolean
+  homeschoolStyle?: 'flexible' | 'structured' | null
+  pinnedFeatures?: string[]
   onDone: () => void
 }
 
-// ─── Tour steps ───────────────────────────────────────────────────────────────
+// ─── Build tour steps based on what the user actually has visible ─────────────
 
-const TOUR_STEPS: TourStep[] = [
-  {
-    targetId: 'tour-pulse',
-    title: 'Your Daily Pulse Check',
-    content: "These rings show each child's daily progress at a glance. Tap any ring to see their full lesson list and mark things done.",
-    position: 'bottom',
-  },
-  {
+function buildTourSteps(
+  homeschoolStyle: 'flexible' | 'structured' | null | undefined,
+  pinnedFeatures: string[]
+): TourStep[] {
+  const steps: TourStep[] = []
+
+  // Pulse check — only if structured OR user pinned it
+  const hasPulse = homeschoolStyle !== 'flexible' || pinnedFeatures.includes('pulse_check')
+  if (hasPulse) {
+    steps.push({
+      targetId: 'tour-pulse',
+      title: 'Your Daily Pulse Check',
+      content: "These rings show each child's daily progress at a glance. Tap any ring to see their full lesson list and mark things done.",
+      position: 'bottom',
+    })
+  }
+
+  // Quick actions — always present, but description changes by mode
+  const isFlexible = homeschoolStyle === 'flexible'
+  steps.push({
     targetId: 'tour-quick-actions',
-    title: 'Quick Actions',
-    content: 'Your most-used shortcuts live here. Log attendance, plan a lesson, or hit the Stuck button and I\'ll jump in to help.',
+    title: isFlexible ? 'Your Quick Log' : 'Your Quick Actions',
+    content: isFlexible
+      ? 'These are your shortcuts for logging what you do each day — attendance, books read, activities. Tap any button to jump right in.'
+      : 'Jump to Today\'s Learning, plan a lesson, check compliance, or hit Need Help? and I\'ll step in.',
     position: 'bottom',
-  },
-  {
+  })
+
+  // Bottom nav — always
+  steps.push({
     targetId: 'tour-bottom-nav',
     title: 'Navigate Your School',
     content: 'Use the bottom bar to move between Calendar, Records, Tools, and more. Everything your school needs — one tap away.',
     position: 'top',
-  },
-  {
+  })
+
+  // Scout button — always
+  steps.push({
     targetId: 'tour-scout-btn',
     title: "I'm always here!",
     content: "Tap the Scout button anytime to plan a lesson, generate an activity, or just ask me a question. I'm your 24/7 co-pilot.",
     position: 'top',
-  },
-]
+  })
+
+  return steps
+}
 
 const STORAGE_KEY = 'hq_tour_done'
 
@@ -120,7 +142,8 @@ function HighlightRing({ targetId }: { targetId: string }) {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export default function ProductTour({ parentName, autoStart = false, onDone }: ProductTourProps) {
+export default function ProductTour({ parentName, autoStart = false, homeschoolStyle, pinnedFeatures = [], onDone }: ProductTourProps) {
+  const tourSteps = buildTourSteps(homeschoolStyle, pinnedFeatures)
   const [phase, setPhase]         = useState<'idle' | 'welcome' | 'tour'>('idle')
   const [step, setStep]           = useState(0)
   const [tooltipStyle, setTooltipStyle] = useState<React.CSSProperties>({})
@@ -146,7 +169,7 @@ export default function ProductTour({ parentName, autoStart = false, onDone }: P
   // Recalculate tooltip position whenever step changes
   const recalcPosition = useCallback(() => {
     if (phase !== 'tour') return
-    const s = TOUR_STEPS[step]
+    const s = tourSteps[step]
     setTooltipStyle(getTooltipStyle(s.targetId, s.position))
   }, [phase, step])
 
@@ -162,7 +185,7 @@ export default function ProductTour({ parentName, autoStart = false, onDone }: P
   }
 
   function nextStep() {
-    if (step < TOUR_STEPS.length - 1) {
+    if (step < tourSteps.length - 1) {
       setStep(s => s + 1)
     } else {
       finish()
@@ -177,7 +200,7 @@ export default function ProductTour({ parentName, autoStart = false, onDone }: P
 
   if (!mounted) return null
 
-  const currentTourStep = TOUR_STEPS[step]
+  const currentTourStep = tourSteps[step]
 
   return (
     <>
@@ -313,7 +336,7 @@ export default function ProductTour({ parentName, autoStart = false, onDone }: P
                   <img src="/Cardinal_Mascot.png" alt="Scout" style={{ width: 28, height: 28, objectFit: 'contain' }} />
                   <div>
                     <div style={{ fontWeight: 900, fontSize: 13, color: '#fff', lineHeight: 1.2 }}>{currentTourStep.title}</div>
-                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.7)', fontWeight: 600 }}>Scout • Step {step + 1} of {TOUR_STEPS.length}</div>
+                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.7)', fontWeight: 600 }}>Scout • Step {step + 1} of {tourSteps.length}</div>
                   </div>
                 </div>
                 <button onClick={finish} style={{
@@ -332,7 +355,7 @@ export default function ProductTour({ parentName, autoStart = false, onDone }: P
                 {/* Progress dots + Next button */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
-                    {TOUR_STEPS.map((_, i) => (
+                    {tourSteps.map((_, i) => (
                       <div key={i} style={{
                         height: 6, borderRadius: 3,
                         width: i === step ? 22 : 6,
@@ -350,7 +373,7 @@ export default function ProductTour({ parentName, autoStart = false, onDone }: P
                       fontFamily: "'Nunito', sans-serif",
                     }}
                   >
-                    {step === TOUR_STEPS.length - 1 ? "Let's go! 🎉" : 'Next →'}
+                    {step === tourSteps.length - 1 ? "Let's go! 🎉" : 'Next →'}
                   </button>
                 </div>
               </div>

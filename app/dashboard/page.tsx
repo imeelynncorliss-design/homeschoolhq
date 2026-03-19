@@ -35,15 +35,21 @@ interface KidPulse {
 
 const KID_COLORS = ['#7c3aed', '#0d9488', '#ec4899', '#f59e0b', '#3b82f6']
 
-const PINNED_FEATURE_MAP: Record<string, { emoji: string; label: string; href: string }> = {
-  attendance:  { emoji: '✅', label: 'Attendance',   href: '/attendance' },
-  reading_log: { emoji: '📚', label: 'Reading Log',  href: '/reading-log' },
-  field_trips: { emoji: '🚌', label: 'Activities',   href: '/field-trips' },
-  ai_lessons:  { emoji: '🤖', label: 'Lesson Planner', href: '/lessons' },
-  compliance:  { emoji: '📋', label: 'Compliance',   href: '/compliance' },
-  progress:    { emoji: '📊', label: 'Progress',     href: '/progress' },
-  transcript:  { emoji: '🎓', label: 'Transcript',   href: '/transcript' },
-  scout_chat:  { emoji: '💬', label: 'Scout Chat',   href: '/scout' },
+// Config for each pinnable feature → big button card
+const QUICK_ACTION_CONFIG: Record<string, {
+  emoji: string; label: string; sub: string
+  bg: string; iconBg: string; color: string; subColor: string
+  action: 'route' | 'lesson' | 'activity' | 'stuck' | 'today' | 'scout'
+  href?: string
+}> = {
+  attendance:  { emoji: '✅', label: 'Log Attendance',   sub: 'Mark today\'s school day',       bg: 'linear-gradient(135deg,#d1fae5,#a7f3d0)', iconBg: '#059669', color: '#064e3b', subColor: '#059669', action: 'route', href: '/attendance' },
+  reading_log: { emoji: '📚', label: 'Log a Book',       sub: 'Add to reading log',             bg: 'linear-gradient(135deg,#ede9fe,#ddd6fe)', iconBg: '#7c3aed', color: '#4c1d95', subColor: '#7c3aed', action: 'route', href: '/reading-log' },
+  field_trips: { emoji: '🚌', label: 'Log an Activity',  sub: 'Field trip, project, co-op',     bg: 'linear-gradient(135deg,#ccfbf1,#99f6e4)', iconBg: '#0d9488', color: '#134e4a', subColor: '#0d9488', action: 'route', href: '/field-trips' },
+  ai_lessons:  { emoji: '🤖', label: 'Plan a Lesson',    sub: 'Scout generates a full lesson',  bg: 'linear-gradient(135deg,#ede9fe,#ddd6fe)', iconBg: '#7c3aed', color: '#4c1d95', subColor: '#7c3aed', action: 'lesson' },
+  compliance:  { emoji: '📋', label: 'Compliance',       sub: 'Days/hours vs. requirements',    bg: 'linear-gradient(135deg,#fef2f2,#fee2e2)', iconBg: '#dc2626', color: '#7f1d1d', subColor: '#dc2626', action: 'route', href: '/compliance' },
+  progress:    { emoji: '📊', label: 'Progress Reports', sub: 'Learning analytics by subject',  bg: 'linear-gradient(135deg,#f0fdf4,#dcfce7)', iconBg: '#16a34a', color: '#14532d', subColor: '#16a34a', action: 'route', href: '/progress' },
+  transcript:  { emoji: '🎓', label: 'Transcript',       sub: 'GPA, courses, college records',  bg: 'linear-gradient(135deg,#fefce8,#fef08a)', iconBg: '#d97706', color: '#78350f', subColor: '#d97706', action: 'route', href: '/transcript' },
+  scout_chat:  { emoji: '💬', label: 'Ask Scout',        sub: 'Chat with your co-pilot',        bg: 'linear-gradient(135deg,#fef3c7,#fde68a)', iconBg: '#f59e0b', color: '#78350f', subColor: '#d97706', action: 'scout' },
 }
 
 const DAY_CARDINAL: Record<number, string> = {
@@ -898,117 +904,58 @@ function DashboardContent() {
               </button>
             </div>
 
-            {homeschoolStyle === 'flexible' ? (
-              /* ── Flexible mode: big quick-log tiles ── */
-              <div className="quick-grid" style={css.quickGrid}>
-                <button className="quick-btn" style={{ ...css.quickCard, background: 'linear-gradient(135deg, #d1fae5, #a7f3d0)' }}
-                  onClick={() => router.push('/attendance')}>
-                  <div style={{ ...css.qIcon, background: '#059669' }}><span style={{ fontSize: 28 }}>✅</span></div>
-                  <div>
-                    <div style={{ ...css.qLabel, color: '#064e3b' }}>Log Attendance</div>
-                    <div style={{ ...css.qSub, color: '#059669' }}>Mark today's school day</div>
-                  </div>
-                </button>
+            {/* ── Dynamic grid driven by pinnedFeatures ── */}
+            {(() => {
+              // Structured mode always gets Today's Learning first
+              const todayBtn = homeschoolStyle === 'structured' ? [{
+                key: '__today__',
+                emoji: '📝', label: "Today's Learning", sub: "All children's agenda",
+                bg: 'linear-gradient(135deg,#ede9fe,#ddd6fe)', iconBg: '#7c3aed', color: '#4c1d95', subColor: '#7c3aed',
+                onClick: () => setShowToday(true),
+              }] : []
 
-                <button className="quick-btn" style={{ ...css.quickCard, background: 'linear-gradient(135deg, #ede9fe, #ddd6fe)' }}
-                  onClick={() => router.push('/reading-log')}>
-                  <div style={{ ...css.qIcon, background: '#7c3aed' }}><span style={{ fontSize: 28 }}>📚</span></div>
-                  <div>
-                    <div style={{ ...css.qLabel, color: '#4c1d95' }}>Log a Book</div>
-                    <div style={{ ...css.qSub, color: '#7c3aed' }}>Add to reading log</div>
-                  </div>
-                </button>
+              // Pinned features (skip pulse_check — that's a section toggle, not a button)
+              const pinnedBtns = pinnedFeatures
+                .filter(fid => fid !== 'pulse_check' && QUICK_ACTION_CONFIG[fid])
+                .map(fid => {
+                  const c = QUICK_ACTION_CONFIG[fid]
+                  const onClick =
+                    c.action === 'route'    ? () => router.push(c.href!)
+                    : c.action === 'lesson'  ? () => setShowGenerator(true)
+                    : c.action === 'activity'? () => setShowActivity(true)
+                    : c.action === 'scout'   ? () => window.dispatchEvent(new CustomEvent('open-scout-copilot'))
+                    : () => {}
+                  return { key: fid, ...c, onClick }
+                })
 
-                <button className="quick-btn" style={{ ...css.quickCard, background: 'linear-gradient(135deg, #ccfbf1, #99f6e4)' }}
-                  onClick={() => router.push('/field-trips')}>
-                  <div style={{ ...css.qIcon, background: '#0d9488' }}><span style={{ fontSize: 28 }}>🚌</span></div>
-                  <div>
-                    <div style={{ ...css.qLabel, color: '#134e4a' }}>Log an Activity</div>
-                    <div style={{ ...css.qSub, color: '#0d9488' }}>Field trip, project, co-op</div>
-                  </div>
-                </button>
+              // Always append Need Help?
+              const helpBtn = {
+                key: '__help__',
+                emoji: '🆘', label: 'Need Help?', sub: 'Scout & ideas',
+                bg: 'linear-gradient(135deg,#fce7f3,#fbcfe8)', iconBg: '#ec4899', color: '#831843', subColor: '#ec4899',
+                onClick: () => setShowStuck(true),
+              }
 
-                <button className="quick-btn" style={{ ...css.quickCard, background: 'linear-gradient(135deg, #fce7f3, #fbcfe8)' }}
-                  onClick={() => setShowStuck(true)}>
-                  <div style={{ ...css.qIcon, background: '#ec4899' }}><span style={{ fontSize: 28 }}>🆘</span></div>
-                  <div>
-                    <div style={{ ...css.qLabel, color: '#831843' }}>Need Help?</div>
-                    <div style={{ ...css.qSub, color: '#ec4899' }}>Scout & ideas</div>
-                  </div>
-                </button>
-              </div>
-            ) : (
-              /* ── Structured mode: current quick actions ── */
-              <div className="quick-grid" style={css.quickGrid}>
-                <button className="quick-btn" style={{ ...css.quickCard, background: 'linear-gradient(135deg, #ede9fe, #ddd6fe)' }}
-                  onClick={() => setShowToday(true)}>
-                  <div style={{ ...css.qIcon, background: '#7c3aed' }}><span style={{ fontSize: 28 }}>📝</span></div>
-                  <div>
-                    <div style={{ ...css.qLabel, color: '#4c1d95' }}>Today's Learning</div>
-                    <div style={{ ...css.qSub, color: '#7c3aed' }}>All children's agenda</div>
-                  </div>
-                </button>
+              const allBtns = [...todayBtn, ...pinnedBtns, helpBtn]
 
-                <button className="quick-btn" style={{ ...css.quickCard, background: 'linear-gradient(135deg, #fce7f3, #fbcfe8)' }}
-                  onClick={() => setShowStuck(true)}>
-                  <div style={{ ...css.qIcon, background: '#ec4899' }}><span style={{ fontSize: 28 }}>🆘</span></div>
-                  <div>
-                    <div style={{ ...css.qLabel, color: '#831843' }}>The Stuck Button</div>
-                    <div style={{ ...css.qSub, color: '#ec4899' }}>Need help? Tap me.</div>
-                  </div>
-                </button>
-
-                <button className="quick-btn" style={{ ...css.quickCard, background: 'linear-gradient(135deg, #ccfbf1, #99f6e4)' }}
-                  onClick={() => router.push('/supply-scout')}>
-                  <div style={{ ...css.qIcon, background: '#5eead4' }}><span style={{ fontSize: 28 }}>🛒</span></div>
-                  <div>
-                    <div style={{ ...css.qLabel, color: '#134e4a' }}>Supply Scout</div>
-                    <div style={{ ...css.qSub, color: '#0d9488' }}>Materials for your lessons</div>
-                  </div>
-                </button>
-
-                <button className="quick-btn" style={{ ...css.quickCard, background: 'linear-gradient(135deg, #d1fae5, #a7f3d0)' }}
-                  onClick={() => router.push('/attendance')}>
-                  <div style={{ ...css.qIcon, background: '#059669' }}><span style={{ fontSize: 28 }}>✅</span></div>
-                  <div>
-                    <div style={{ ...css.qLabel, color: '#064e3b' }}>Attendance Tracker</div>
-                    <div style={{ ...css.qSub, color: '#059669' }}>{attendanceNote}</div>
-                  </div>
-                </button>
-              </div>
-            )}
-
-            {/* Pinned features */}
-            {pinnedFeatures.length > 0 && (
-              <div style={{ marginTop: 16 }}>
-                <div style={{ fontSize: 11, fontWeight: 800, color: '#9ca3af', letterSpacing: 1, marginBottom: 10, textTransform: 'uppercase' }}>
-                  YOUR PINNED FEATURES
+              return (
+                <div className="quick-grid" style={css.quickGrid}>
+                  {allBtns.map(btn => (
+                    <button key={btn.key} className="quick-btn"
+                      style={{ ...css.quickCard, background: btn.bg }}
+                      onClick={btn.onClick}>
+                      <div style={{ ...css.qIcon, background: btn.iconBg }}>
+                        <span style={{ fontSize: 28 }}>{btn.emoji}</span>
+                      </div>
+                      <div>
+                        <div style={{ ...css.qLabel, color: btn.color }}>{btn.label}</div>
+                        <div style={{ ...css.qSub, color: btn.subColor }}>{btn.sub}</div>
+                      </div>
+                    </button>
+                  ))}
                 </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                  {pinnedFeatures.map(fid => {
-                    const feat = PINNED_FEATURE_MAP[fid]
-                    if (!feat) return null
-                    return (
-                      <button
-                        key={fid}
-                        onClick={() => router.push(feat.href)}
-                        style={{
-                          display: 'flex', alignItems: 'center', gap: 7,
-                          padding: '8px 14px', borderRadius: 20,
-                          background: 'rgba(255,255,255,0.82)',
-                          border: '1.5px solid rgba(124,58,237,0.15)',
-                          fontSize: 13, fontWeight: 700, color: '#374151',
-                          cursor: 'pointer', fontFamily: "'Nunito', sans-serif",
-                        }}
-                      >
-                        <span>{feat.emoji}</span>
-                        <span>{feat.label}</span>
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
+              )
+            })()}
 
             {/* Life Happens FAB */}
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, padding: '8px 0 4px' }}>
@@ -1154,6 +1101,8 @@ function DashboardContent() {
           <ProductTour
             parentName={parentName || undefined}
             autoStart={tourAutoStart}
+            homeschoolStyle={homeschoolStyle ?? null}
+            pinnedFeatures={pinnedFeatures}
             onDone={() => { setShowTour(false); setTourAutoStart(false) }}
           />
         )}
