@@ -137,6 +137,53 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+/* ── HomeschoolReady theme tokens ───────────────────────────────────────── */
+:root {
+  --hr-bg-page:      #f5f3ff;
+  --hr-bg-card:      #ffffff;
+  --hr-bg-surface:   #f9fafb;
+  --hr-text-primary:   #111827;
+  --hr-text-secondary: #6b7280;
+  --hr-text-muted:     #9ca3af;
+  --hr-border:         #ede9fe;
+  --hr-border-subtle:  #e5e7eb;
+  --hr-input-bg:       #fafafa;
+  --hr-modal-overlay:  rgba(0, 0, 0, 0.45);
+}
+
+.dark {
+  --hr-bg-page:      #1a1535;
+  --hr-bg-card:      #251e4a;
+  --hr-bg-surface:   #1e1840;
+  --hr-text-primary:   #f3f4f6;
+  --hr-text-secondary: #c4b5fd;
+  --hr-text-muted:     #a78bfa;
+  --hr-border:         rgba(167,139,250,0.25);
+  --hr-border-subtle:  rgba(255,255,255,0.08);
+  --hr-input-bg:       #2d2460;
+  --hr-modal-overlay:  rgba(0, 0, 0, 0.7);
+}
+
+/* Dark mode: Tailwind bg-white / bg-gray-* overrides */
+.dark .bg-white        { background-color: var(--hr-bg-card) !important; }
+.dark .bg-gray-50      { background-color: var(--hr-bg-surface) !important; }
+.dark .bg-gray-100     { background-color: #2a2258 !important; }
+.dark .bg-blue-50      { background-color: #1e2456 !important; }
+.dark .bg-amber-50     { background-color: #2a1f0e !important; }
+.dark .text-gray-900   { color: var(--hr-text-primary) !important; }
+.dark .text-gray-700   { color: var(--hr-text-secondary) !important; }
+.dark .text-gray-500   { color: var(--hr-text-muted) !important; }
+.dark .border-gray-200 { border-color: var(--hr-border-subtle) !important; }
+.dark .border-gray-300 { border-color: var(--hr-border-subtle) !important; }
+.dark input, .dark select, .dark textarea {
+  background-color: var(--hr-input-bg);
+  color: var(--hr-text-primary);
+  border-color: var(--hr-border-subtle);
+}
+.dark input::placeholder, .dark textarea::placeholder {
+  color: var(--hr-text-muted);
+}
 @keyframes shimmer {
   0%   { background-position: 200% 0; }
   100% { background-position: -200% 0; }

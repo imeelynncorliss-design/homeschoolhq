@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useFocusTrap } from '@/hooks/useFocusTrap'
 import { supabase } from '@/src/lib/supabase'
 import { getRegLevel, REG_LABEL, REG_DESC } from '@/lib/stateRegulation'
 
@@ -42,6 +43,7 @@ export default function StylePickerModal({ userId, stateAbbr, isFirstTime, onCom
   const [style, setStyle] = useState<'flexible' | 'structured' | null>(null)
   const [pins, setPins] = useState<Set<string>>(new Set())
   const [saving, setSaving] = useState(false)
+  const trapRef = useFocusTrap(true)
 
   const regLevel = getRegLevel(stateAbbr)
   const stateName = stateAbbr || 'Your State'
@@ -74,7 +76,7 @@ export default function StylePickerModal({ userId, stateAbbr, isFirstTime, onCom
 
   return (
     <div style={ov} onClick={isFirstTime ? undefined : onCancel} role="dialog" aria-modal="true" aria-labelledby="style-picker-title">
-      <div style={modal} onClick={e => e.stopPropagation()}>
+      <div ref={trapRef} style={modal} onClick={e => e.stopPropagation()}>
         <style>{`@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');`}</style>
 
         {/* ── Step 1: Style choice ─────────────────────────────────── */}

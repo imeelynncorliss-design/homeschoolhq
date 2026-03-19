@@ -22,12 +22,12 @@ export const colors = {
     gray700:      '#374151',
     gray900:      '#111827',
   
-    // Semantic
-    pageBackground: '#f5f3ff',
-    cardBackground: '#ffffff',
-    textPrimary:    '#111827',
-    textSecondary:  '#6b7280',
-    textMuted:      '#9ca3af',
+    // Semantic — these use CSS variables so dark mode works automatically
+    pageBackground: 'var(--hr-bg-page)',
+    cardBackground: 'var(--hr-bg-card)',
+    textPrimary:    'var(--hr-text-primary)',
+    textSecondary:  'var(--hr-text-secondary)',
+    textMuted:      'var(--hr-text-muted)',
   
     // Status
     green:        '#10b981',

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, Suspense } from 'react'
+import { useFocusTrap } from '@/hooks/useFocusTrap'
 import { supabase } from '@/src/lib/supabase'
 import { useRouter } from 'next/navigation'
 import AuthGuard from '@/components/AuthGuard'
@@ -194,6 +195,7 @@ function TodaysLearningModal({
   onLessonClick: (lesson: any, kidName: string) => void
 }) {
   const router = useRouter()
+  const trapRef = useFocusTrap(true)
   const handlePrintDailyPlan = () => {
     const today = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
 
@@ -268,7 +270,7 @@ ${childSections}
 
   return (
     <div style={css.overlay} onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="todays-learning-title">
-      <div style={{ ...css.modalBox, maxWidth: 640, maxHeight: '80vh', overflowY: 'auto' as const }}
+      <div ref={trapRef} style={{ ...css.modalBox, maxWidth: 640, maxHeight: '80vh', overflowY: 'auto' as const }}
         onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22 }}>
           <div id="todays-learning-title" style={{ fontWeight: 900, fontSize: 20, color: '#2d1b69' }}>Today's Learning</div>
@@ -384,6 +386,7 @@ function LifeHappensModal({ todayLessons, kidPulses, cardinalSrc, onClose, onRes
   const [step, setStep] = useState<'scout' | 'reschedule' | 'done'>('scout')
   const [rescheduling, setRescheduling] = useState(false)
   const [quip] = useState(() => SCOUT_QUIPS[Math.floor(Math.random() * SCOUT_QUIPS.length)])
+  const trapRef = useFocusTrap(true)
 
   const nextDay = nextSchoolDay()
 
@@ -407,7 +410,7 @@ function LifeHappensModal({ todayLessons, kidPulses, cardinalSrc, onClose, onRes
 
   return (
     <div style={lh.overlay} onClick={onClose} role="dialog" aria-modal="true" aria-label="Life Happens">
-      <div style={lh.modal} onClick={e => e.stopPropagation()}>
+      <div ref={trapRef} style={lh.modal} onClick={e => e.stopPropagation()}>
 
         {step === 'scout' && (
           <>

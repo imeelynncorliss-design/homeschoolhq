@@ -8,6 +8,8 @@ import type { ReactNode, CSSProperties, Dispatch, SetStateAction } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/src/lib/supabase'
 import { gradients } from '@/src/lib/designTokens'
+import { useTheme } from '@/contexts/ThemeContext'
+import { useFocusTrap } from '@/hooks/useFocusTrap'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -138,6 +140,34 @@ function featureKeyFromPath(pathname: string): string | null {
 // Inline so no image dependency. Swap for <img src="/cardinal.png"> once asset exists.
 
 
+// ─── Theme Toggle ─────────────────────────────────────────────────────────────
+
+function ThemeToggle() {
+  const { isDark, toggleTheme } = useTheme()
+  return (
+    <button
+      onClick={toggleTheme}
+      aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+      title={isDark ? 'Light mode' : 'Dark mode'}
+      style={{
+        background: 'rgba(255,255,255,0.15)',
+        border: '1px solid rgba(255,255,255,0.25)',
+        borderRadius: 8,
+        color: '#fff',
+        fontSize: 16,
+        padding: '5px 8px',
+        cursor: 'pointer',
+        lineHeight: 1,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      {isDark ? '☀️' : '🌙'}
+    </button>
+  )
+}
+
 // ─── Star Rating ──────────────────────────────────────────────────────────────
 
 function StarRating({ label, value, onChange, disabled }: StarRatingProps) {
@@ -175,6 +205,7 @@ function FeedbackModal({ onClose, userId, orgId }: FeedbackModalProps) {
   const [text, setText] = useState('')
   const [phase, setPhase] = useState<Phase>('form')
   const [errMsg, setErrMsg] = useState('')
+  const trapRef = useFocusTrap(true)
 
   const words = countWords(text)
   const remaining = Math.max(0, MIN_WORDS - words)
@@ -237,7 +268,7 @@ function FeedbackModal({ onClose, userId, orgId }: FeedbackModalProps) {
 
   return (
     <div style={s.overlay} onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="feedback-modal-title">
-      <div style={s.modal} onClick={e => e.stopPropagation()}>
+      <div ref={trapRef} style={s.modal} onClick={e => e.stopPropagation()}>
         <div style={s.modalHeader}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <span style={s.betaBadge}>BETA</span>
@@ -843,6 +874,9 @@ export default function AppHeader() {
               <span>Feedback</span>
             </button>
           )}
+
+          {/* Dark / light mode toggle */}
+          <ThemeToggle />
 
           {/* Scout proactive button */}
           {userId && scoutNudge && (

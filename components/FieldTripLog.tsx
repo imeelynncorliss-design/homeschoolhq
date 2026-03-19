@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/src/lib/supabase'
 import { printHeader, printHeaderCSS } from '@/lib/printHeader'
+import { useFocusTrap } from '@/hooks/useFocusTrap'
 
 interface FieldTrip {
   id: string
@@ -34,6 +35,7 @@ export default function FieldTripLog({ organizationId, kids }: FieldTripLogProps
   const [showForm, setShowForm]     = useState(false)
   const [editingTrip, setEditingTrip] = useState<FieldTrip | null>(null)
   const [saving, setSaving]         = useState(false)
+  const trapRef = useFocusTrap(showForm)
 
   // Form state
   const [fTitle, setFTitle]           = useState('')
@@ -279,7 +281,7 @@ export default function FieldTripLog({ organizationId, kids }: FieldTripLogProps
       {/* Add/Edit Modal */}
       {showForm && (
         <div role="dialog" aria-modal="true" aria-labelledby="field-trip-form-title" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div style={{ background: '#fff', borderRadius: 24, width: '100%', maxWidth: 480, maxHeight: '90vh', overflowY: 'auto', padding: 28, boxShadow: '0 24px 64px rgba(0,0,0,0.18)', position: 'relative' }}>
+          <div ref={trapRef} style={{ background: '#fff', borderRadius: 24, width: '100%', maxWidth: 480, maxHeight: '90vh', overflowY: 'auto', padding: 28, boxShadow: '0 24px 64px rgba(0,0,0,0.18)', position: 'relative' }}>
             <button onClick={() => { setShowForm(false); resetForm() }} aria-label="Close form" style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', fontSize: 18, color: '#9ca3af', cursor: 'pointer' }}>✕</button>
             <h3 id="field-trip-form-title" style={{ fontSize: 18, fontWeight: 800, color: '#111827', margin: '0 0 20px' }}>
               {editingTrip ? 'Edit Trip' : 'Add Field Trip'}
