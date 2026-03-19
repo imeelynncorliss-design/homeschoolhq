@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/src/lib/supabase'
+import { printHeader, printHeaderCSS } from '@/lib/printHeader'
 
 interface FieldTrip {
   id: string
@@ -102,7 +103,75 @@ export default function FieldTripLog({ organizationId, kids }: FieldTripLogProps
     loadTrips()
   }
 
-  const handlePrint = () => window.print()
+  const handlePrint = () => {
+    const origin = window.location.origin
+    const subjectColors: Record<string, string> = {
+      Science: '#059669', History: '#d97706', Art: '#ec4899',
+      Geography: '#0284c7', 'Language Arts': '#7c3aed', 'Life Skills': '#6366f1',
+      'Physical Education': '#16a34a', Other: '#6b7280',
+    }
+
+    const tripsHTML = Object.entries(grouped).map(([month, monthTrips]) => `
+      <div class="month-group">
+        <div class="month-label">${month}</div>
+        ${monthTrips.map(trip => {
+          const color = trip.subject ? (subjectColors[trip.subject] ?? '#6b7280') : '#6b7280'
+          const dateStr = new Date(trip.trip_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+          return `
+          <div class="trip-card">
+            <div class="trip-title">${trip.title}</div>
+            ${trip.location ? `<div class="trip-location">📍 ${trip.location}</div>` : ''}
+            <div class="trip-meta">
+              <span class="chip">${dateStr}</span>
+              ${trip.subject ? `<span class="chip" style="background:${color}18;color:${color}">${trip.subject}</span>` : ''}
+              ${trip.hours ? `<span class="chip">⏱️ ${trip.hours}h</span>` : ''}
+            </div>
+            ${trip.description ? `<div class="trip-desc">${trip.description}</div>` : ''}
+          </div>`
+        }).join('')}
+      </div>
+    `).join('')
+
+    const win = window.open('', '_blank', 'width=800,height=900')
+    if (!win) return
+    win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8">
+      <title>Field Trip Log — ${kidName}</title>
+      <style>
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
+        ${printHeaderCSS()}
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Nunito', sans-serif; background: #fff; color: #111827; padding: 36px; }
+        h1 { font-size: 22px; font-weight: 900; color: #111827; margin-bottom: 4px; }
+        .subtitle { font-size: 13px; color: #6b7280; margin-bottom: 24px; }
+        .stats { display: flex; gap: 16px; margin-bottom: 28px; }
+        .stat { flex: 1; border: 1.5px solid #e5e7eb; border-radius: 12px; padding: 12px 16px; text-align: center; }
+        .stat-val { font-size: 24px; font-weight: 900; color: #7c3aed; }
+        .stat-lbl { font-size: 10px; font-weight: 800; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.06em; }
+        .month-group { margin-bottom: 22px; }
+        .month-label { font-size: 10px; font-weight: 800; color: #7c3aed; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; }
+        .trip-card { border: 1px solid #e5e7eb; border-radius: 12px; padding: 12px 14px; margin-bottom: 8px; break-inside: avoid; }
+        .trip-title { font-size: 14px; font-weight: 800; color: #111827; margin-bottom: 3px; }
+        .trip-location { font-size: 12px; color: #6b7280; margin-bottom: 5px; }
+        .trip-meta { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 5px; }
+        .chip { font-size: 11px; font-weight: 700; background: #ede9fe; color: #7c3aed; border-radius: 5px; padding: 2px 8px; }
+        .trip-desc { font-size: 12px; color: #6b7280; margin-top: 4px; }
+        @media print { body { padding: 20px; } }
+      </style>
+    </head><body>
+      ${printHeader(origin)}
+      <h1>Field Trip Log — ${kidName}</h1>
+      <div class="subtitle">${trips.length} trip${trips.length !== 1 ? 's' : ''} · ${totalHours > 0 ? `${totalHours} total hours · ` : ''}Printed ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</div>
+      <div class="stats">
+        <div class="stat"><div class="stat-val">${trips.length}</div><div class="stat-lbl">Total Trips</div></div>
+        <div class="stat"><div class="stat-val">${totalHours > 0 ? totalHours + 'h' : '—'}</div><div class="stat-lbl">Total Hours</div></div>
+        <div class="stat"><div class="stat-val">${new Set(trips.map(t => t.subject).filter(Boolean)).size || '—'}</div><div class="stat-lbl">Subjects</div></div>
+      </div>
+      ${tripsHTML}
+    </body></html>`)
+    win.document.close()
+    win.focus()
+    setTimeout(() => { win.print(); win.close() }, 600)
+  }
 
   const totalHours = trips.reduce((sum, t) => sum + (t.hours ?? 0), 0)
   const kidName = kids.find(k => k.id === selectedKid)?.displayname ?? 'Student'
@@ -122,14 +191,6 @@ export default function FieldTripLog({ organizationId, kids }: FieldTripLogProps
 
   return (
     <div>
-      <style>{`
-        @media print {
-          .no-print { display: none !important; }
-          body { background: white !important; }
-          .print-card { break-inside: avoid; }
-        }
-      `}</style>
-
       {/* Header */}
       <div className="no-print" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
         <div>
@@ -171,14 +232,6 @@ export default function FieldTripLog({ organizationId, kids }: FieldTripLogProps
             <div style={{ fontSize: 11, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{s.label}</div>
           </div>
         ))}
-      </div>
-
-      {/* Print header */}
-      <div style={{ display: 'none' }} className="print-header">
-        <h1 style={{ fontSize: 22, fontWeight: 800, margin: '0 0 4px' }}>Field Trip Log — {kidName}</h1>
-        <p style={{ color: '#6b7280', fontSize: 13, margin: '0 0 20px' }}>
-          {trips.length} trips · {totalHours > 0 ? `${totalHours} hours` : ''} · Printed {new Date().toLocaleDateString()}
-        </p>
       </div>
 
       {/* Trip list */}

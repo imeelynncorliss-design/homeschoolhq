@@ -27,29 +27,38 @@ interface ReconciliationPanelProps {
   onDismissSuggestion: (date: string) => void
   onDismissAll: () => void
   onFixDate: (date: string) => void
+  onDismissDiscrepancy: (date: string, type: string) => void
 }
 
-const DISCREPANCY_LABELS: Record<DiscrepancyDay['type'], { icon: string; label: string; description: (d: DiscrepancyDay) => string }> = {
+const DISCREPANCY_LABELS: Record<DiscrepancyDay['type'], { icon: string; label: string; description: (d: DiscrepancyDay) => string; hint?: string; canDismiss: boolean }> = {
   hours_mismatch: {
     icon: '⚠️',
     label: 'Hours mismatch',
-    description: (d) => `Attendance logged ${d.attendanceHours?.toFixed(1)}h but lessons show ${d.lessonHours?.toFixed(1)}h`
+    description: (d) => `Attendance logged ${d.attendanceHours?.toFixed(1)}h but lessons show ${d.lessonHours?.toFixed(1)}h`,
+    hint: 'Normal if the day included a field trip, museum visit, or hands-on work not logged as a lesson. Tap "Fix" to adjust hours, or "Dismiss" if everything is accurate.',
+    canDismiss: true,
   },
   no_school_with_lessons: {
     icon: '🚫',
     label: 'Marked no school — but lessons exist',
-    description: (d) => `${d.lessonCount} lesson${d.lessonCount !== 1 ? 's' : ''} were logged on this day`
+    description: (d) => `${d.lessonCount} lesson${d.lessonCount !== 1 ? 's' : ''} were logged on this day`,
+    hint: 'Tap "Fix" to update attendance status, or delete the lessons if they were added in error.',
+    canDismiss: true,
   },
   attendance_no_lessons: {
     icon: '📭',
     label: 'Attendance logged — no lessons',
-    description: (d) => `${d.attendanceHours?.toFixed(1)}h of attendance recorded but no lessons found`
+    description: (d) => `${d.attendanceHours?.toFixed(1)}h of attendance recorded but no lessons found`,
+    hint: 'Tap "Fix" to add a lesson, log a field trip, or mark it as reviewed.',
+    canDismiss: false,
   },
   outside_school_year: {
     icon: '📅',
     label: 'Outside school year',
-    description: () => `This confirmed day falls outside your configured school year dates`
-  }
+    description: () => `This confirmed day falls outside your configured school year dates`,
+    hint: 'Update your school year dates in Settings if this day should count.',
+    canDismiss: true,
+  },
 }
 
 const MAX_VISIBLE = 5
@@ -60,7 +69,8 @@ export default function ReconciliationPanel({
   onBulkConfirm,
   onDismissSuggestion,
   onDismissAll,
-  onFixDate
+  onFixDate,
+  onDismissDiscrepancy,
 }: ReconciliationPanelProps) {
   const [selectedDates, setSelectedDates] = useState<Set<string>>(new Set())
   const [bulkStatus, setBulkStatus] = useState<'full_day' | 'half_day'>('full_day')
@@ -245,7 +255,7 @@ export default function ReconciliationPanel({
                 <div key={`${d.date}-${d.type}`} className="bg-white rounded-lg p-3 border-2 border-amber-200">
                   <div className="flex items-start gap-3">
                     <span className="text-lg mt-0.5">{meta.icon}</span>
-                    <div className="flex-1">
+                    <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-semibold text-gray-900 text-sm">
                           {parseLocalDate(d.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
@@ -255,22 +265,32 @@ export default function ReconciliationPanel({
                         </span>
                       </div>
                       <p className="text-xs text-gray-500 mt-1">{meta.description(d)}</p>
+                      {meta.hint && (
+                        <p className="text-xs text-blue-600 mt-1.5 leading-relaxed">{meta.hint}</p>
+                      )}
                     </div>
-                    {d.type === 'outside_school_year' ? (
-                      <a
-                        href="/school-year"
-                        className="text-xs text-amber-700 hover:text-amber-900 font-medium whitespace-nowrap underline"
-                      >
-                        Fix →
-                      </a>
-                    ) : (
-                      <button
-                        onClick={() => onFixDate(d.date)}
-                        className="text-xs text-amber-700 hover:text-amber-900 font-medium whitespace-nowrap underline"
-                      >
-                        Fix →
-                      </button>
-                    )}
+                    <div className="flex flex-col gap-1 items-end flex-shrink-0">
+                      {d.type === 'outside_school_year' ? (
+                        <a href="/school-year" className="text-xs text-amber-700 hover:text-amber-900 font-medium whitespace-nowrap underline">
+                          Fix →
+                        </a>
+                      ) : (
+                        <button
+                          onClick={() => onFixDate(d.date)}
+                          className="text-xs text-amber-700 hover:text-amber-900 font-medium whitespace-nowrap underline"
+                        >
+                          Fix →
+                        </button>
+                      )}
+                      {meta.canDismiss && (
+                        <button
+                          onClick={() => onDismissDiscrepancy(d.date, d.type)}
+                          className="text-xs text-gray-400 hover:text-gray-600 font-medium whitespace-nowrap"
+                        >
+                          Dismiss
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               )

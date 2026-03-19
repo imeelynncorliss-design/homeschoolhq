@@ -74,6 +74,14 @@ function buildTourSteps(
     position: 'top',
   })
 
+  // Life Happens — always
+  steps.push({
+    targetId: 'tour-life-happens',
+    title: 'Life Happens 🌤️',
+    content: "Sick day? Field trip? Just need a break? Tap the sun button to log it. Life Happens lets you record what happened, adjust your school day, and keep your attendance records accurate — without stress.",
+    position: 'top',
+  })
+
   // Ask Scout — always last
   steps.push({
     targetId: 'tour-quick-actions',
@@ -100,8 +108,8 @@ function getTooltipPosition(targetId: string): { style: React.CSSProperties; arr
 
   const vw  = window.innerWidth
   const vh  = window.innerHeight
-  const TW  = Math.min(320, vw - 32)
-  const TH  = 260  // generous estimated tooltip height
+  const TW  = Math.min(360, vw - 32)
+  const TH  = 300  // generous estimated tooltip height
   const GAP = 14
   const M   = 16   // viewport margin
 
@@ -339,8 +347,7 @@ export default function ProductTour({ parentName, autoStart = false, homeschoolS
             onClick={finish}
             style={{
               position: 'fixed', inset: 0,
-              background: 'rgba(15,10,40,0.52)',
-              backdropFilter: 'blur(2px)',
+              background: 'rgba(15,10,40,0.38)',
               zIndex: 9990,
             }}
           />
@@ -355,7 +362,6 @@ export default function ProductTour({ parentName, autoStart = false, homeschoolS
             style={{
               position: 'fixed',
               ...tooltipStyle,
-              width: 320,
               zIndex: 9999,
               fontFamily: "'Nunito', sans-serif",
             }}
@@ -377,11 +383,11 @@ export default function ProductTour({ parentName, autoStart = false, homeschoolS
                 padding: '12px 16px',
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <img src="/Cardinal_Mascot.png" alt="Scout" style={{ width: 28, height: 28, objectFit: 'contain' }} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <img src="/Cardinal_Mascot.png" alt="Scout" style={{ width: 34, height: 34, objectFit: 'contain' }} />
                   <div>
-                    <div style={{ fontWeight: 900, fontSize: 13, color: '#fff', lineHeight: 1.2 }}>{currentTourStep.title}</div>
-                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.7)', fontWeight: 600 }}>Scout • Step {step + 1} of {tourSteps.length}</div>
+                    <div style={{ fontWeight: 900, fontSize: 16, color: '#fff', lineHeight: 1.2 }}>{currentTourStep.title}</div>
+                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)', fontWeight: 600 }}>Scout • Step {step + 1} of {tourSteps.length}</div>
                   </div>
                 </div>
                 <button onClick={finish} style={{
@@ -392,19 +398,19 @@ export default function ProductTour({ parentName, autoStart = false, homeschoolS
               </div>
 
               {/* Body */}
-              <div style={{ padding: '16px 18px 18px' }}>
-                <p style={{ fontSize: 13, color: '#374151', lineHeight: 1.65, margin: currentTourStep.bullets ? '0 0 10px' : '0 0 16px', fontWeight: 600 }}>
+              <div style={{ padding: '18px 20px 20px' }}>
+                <p style={{ fontSize: 14, color: '#374151', lineHeight: 1.65, margin: currentTourStep.bullets ? '0 0 12px' : '0 0 18px', fontWeight: 600 }}>
                   {currentTourStep.content}
                 </p>
                 {currentTourStep.bullets && (
-                  <ul style={{ margin: '0 0 16px', padding: '0 0 0 4px', listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 5 }}>
+                  <ul style={{ margin: '0 0 18px', padding: '0 0 0 4px', listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 6 }}>
                     {currentTourStep.bullets.map((b, i) => (
-                      <li key={i} style={{ fontSize: 12, color: '#374151', fontWeight: 600, lineHeight: 1.4 }}>{b}</li>
+                      <li key={i} style={{ fontSize: 13, color: '#374151', fontWeight: 600, lineHeight: 1.4 }}>{b}</li>
                     ))}
                   </ul>
                 )}
 
-                {/* Progress dots + Next button */}
+                {/* Progress dots + Back/Next buttons */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
                     {tourSteps.map((_, i) => (
@@ -416,17 +422,33 @@ export default function ProductTour({ parentName, autoStart = false, homeschoolS
                       }} />
                     ))}
                   </div>
-                  <button
-                    onClick={nextStep}
-                    style={{
-                      padding: '9px 18px', borderRadius: 10, border: 'none',
-                      background: 'linear-gradient(135deg, #7c3aed, #4f46e5)',
-                      color: '#fff', fontWeight: 800, fontSize: 13, cursor: 'pointer',
-                      fontFamily: "'Nunito', sans-serif",
-                    }}
-                  >
-                    {step === tourSteps.length - 1 ? "Let's go! 🎉" : 'Next →'}
-                  </button>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    {step > 0 && (
+                      <button
+                        onClick={() => setStep(s => s - 1)}
+                        style={{
+                          padding: '9px 14px', borderRadius: 10,
+                          border: '1.5px solid #e5e7eb',
+                          background: '#fafafa', color: '#6b7280',
+                          fontWeight: 700, fontSize: 13, cursor: 'pointer',
+                          fontFamily: "'Nunito', sans-serif",
+                        }}
+                      >
+                        ← Back
+                      </button>
+                    )}
+                    <button
+                      onClick={nextStep}
+                      style={{
+                        padding: '9px 18px', borderRadius: 10, border: 'none',
+                        background: 'linear-gradient(135deg, #7c3aed, #4f46e5)',
+                        color: '#fff', fontWeight: 800, fontSize: 13, cursor: 'pointer',
+                        fontFamily: "'Nunito', sans-serif",
+                      }}
+                    >
+                      {step === tourSteps.length - 1 ? "Let's go! 🎉" : 'Next →'}
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

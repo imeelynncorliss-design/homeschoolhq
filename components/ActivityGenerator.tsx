@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { supabase } from '@/src/lib/supabase'
 import { CANONICAL_SUBJECTS } from '@/src/constants/subjects'
+import { printHeader, printHeaderCSS } from '@/lib/printHeader'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -70,10 +71,16 @@ export default function ActivityGenerator({ kids, organizationId, onClose, onSav
   const [saving, setSaving] = useState(false)
 
   const selectedKid = kids.find(k => k.id === selectedKidId)
-  const recommendedVibe = selectedKid?.learning_style
-    ? STYLE_VIBE[selectedKid.learning_style] ?? null
-    : null
+
+  // learning_style may be comma-separated ("visual, kinesthetic") — map first matching style to a vibe
+  const styleList = selectedKid?.learning_style
+    ? selectedKid.learning_style.split(',').map((s: string) => s.trim()).filter(Boolean)
+    : []
+  const recommendedVibe = styleList.map((s: string) => STYLE_VIBE[s]).find(Boolean) ?? null
   const recommendedVibeObj = VIBES.find(v => v.id === recommendedVibe)
+  const styleDisplayLabel = styleList
+    .map((s: string) => STYLE_LABEL[s] || s)
+    .join(' & ')
 
   const handleGenerate = async (chosenVibe: string) => {
     setStep('loading')
@@ -111,6 +118,7 @@ export default function ActivityGenerator({ kids, organizationId, onClose, onSav
         ${act.materials_need?.length ? `<div class="mat-section"><span class="mat-label need">🛒 Need:</span> ${act.materials_need.join(', ')}</div>` : ''}
       </div>`).join('')
 
+    const origin = window.location.origin
     const html = `<!DOCTYPE html><html><head><title>Activities — ${selectedKid?.displayname ?? ''}</title>
 <style>
   body { font-family: Georgia, serif; max-width: 680px; margin: 40px auto; color: #1f2937; font-size: 14px; line-height: 1.6; }
@@ -129,8 +137,10 @@ export default function ActivityGenerator({ kids, organizationId, onClose, onSav
   .mat-label.have { color: #059669; }
   .mat-label.need { color: #dc2626; }
   @media print { body { margin: 20px; } }
+  ${printHeaderCSS()}
 </style>
 </head><body>
+${printHeader(origin, true)}
 <h1>Activities for ${selectedKid?.displayname ?? 'Student'}</h1>
 <div class="meta">${subject}${topic ? ` · ${topic}` : ''} · Generated ${new Date().toLocaleDateString()}</div>
 ${rows}
@@ -153,6 +163,7 @@ ${rows}
     const needHtml = act.materials_need?.length
       ? `<div class="mat-section"><span class="need">🛒 Still need:</span> ${act.materials_need.join(', ')}</div>`
       : ''
+    const origin = window.location.origin
     const html = `<!DOCTYPE html><html><head><title>${act.title}</title>
 <style>
   body { font-family: Georgia, serif; max-width: 680px; margin: 40px auto; color: #1f2937; font-size: 14px; line-height: 1.6; }
@@ -166,7 +177,9 @@ ${rows}
   .have { font-weight: 700; color: #059669; }
   .need { font-weight: 700; color: #dc2626; }
   @media print { body { margin: 20px; } }
+  ${printHeaderCSS()}
 </style></head><body>
+${printHeader(origin, true)}
 <h1>${act.emoji} ${act.title}</h1>
 <div class="meta">${subject}${topic ? ` · ${topic}` : ''} · ${act.duration_minutes} min · ${selectedKid?.displayname ?? ''}</div>
 <p>${act.description}</p>
@@ -285,10 +298,10 @@ ${stepsHtml}${haveHtml}${needHtml}
               <div style={s.styleCallout}>
                 <div style={{ fontSize: 20, marginBottom: 4 }}>{recommendedVibeObj.emoji}</div>
                 <div style={{ fontWeight: 800, fontSize: 13, color: '#4f46e5', marginBottom: 2 }}>
-                  {STYLE_LABEL[selectedKid.learning_style]} Learner
+                  {styleDisplayLabel} Learner
                 </div>
                 <div style={{ fontSize: 12, color: '#6b7280', lineHeight: 1.5 }}>
-                  Based on <strong>{selectedKid.displayname}</strong>'s {STYLE_LABEL[selectedKid.learning_style].toLowerCase()} learning style,
+                  Based on <strong>{selectedKid.displayname}</strong>'s {styleDisplayLabel.toLowerCase()} learning style,
                   we recommend <strong>{recommendedVibeObj.label}</strong> activities.
                 </div>
                 <button

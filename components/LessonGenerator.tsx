@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/src/lib/supabase';
 import { CANONICAL_SUBJECTS } from '@/src/constants/subjects'
+import { printHeader, printHeaderCSS } from '@/lib/printHeader'
 
 type Child = {
   id: string;
@@ -223,6 +224,7 @@ export default function LessonGenerator({ kids, userId, onClose, initialDate, in
     const assessmentHtml = variation.assessmentIdeas?.length
       ? `<h3>Assessment Ideas</h3><ul>${variation.assessmentIdeas.map(a => `<li>${a}</li>`).join('')}</ul>`
       : ''
+    const origin = window.location.origin
     const html = `<!DOCTYPE html><html><head><title>${variation.title}</title>
 <style>
   body { font-family: Georgia, serif; max-width: 680px; margin: 40px auto; color: #1f2937; font-size: 14px; line-height: 1.6; }
@@ -234,7 +236,9 @@ export default function LessonGenerator({ kids, userId, onClose, initialDate, in
   .dur { font-size: 11px; color: #7c6faa; font-weight: 600; }
   p { margin: 2px 0 6px; font-size: 13px; color: #4b5563; }
   @media print { body { margin: 20px; } }
+  ${printHeaderCSS()}
 </style></head><body>
+${printHeader(origin, true)}
 <h1>${variation.title}</h1>
 <div class="meta">${formData.subject} · ${formData.childName} · ${formData.duration} min · ${new Date(formData.startDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</div>
 ${variation.overview ? `<p style="font-size:14px;color:#374151;margin-bottom:16px;">${variation.overview}</p>` : ''}

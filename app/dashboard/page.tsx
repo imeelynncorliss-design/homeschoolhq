@@ -50,6 +50,8 @@ const QUICK_ACTION_CONFIG: Record<string, {
   compliance:  { emoji: '📋', label: 'Compliance',          sub: 'Days/hours vs. requirements',        bg: 'linear-gradient(135deg,#fef2f2,#fee2e2)', iconBg: '#dc2626', color: '#7f1d1d', subColor: '#dc2626', action: 'route',    href: '/compliance' },
   progress:    { emoji: '📊', label: 'Progress Reports',    sub: 'Learning analytics by subject',      bg: 'linear-gradient(135deg,#f0fdf4,#dcfce7)', iconBg: '#16a34a', color: '#14532d', subColor: '#16a34a', action: 'route',    href: '/progress' },
   transcript:  { emoji: '🎓', label: 'Transcript',          sub: 'GPA, courses, college records',      bg: 'linear-gradient(135deg,#fefce8,#fef08a)', iconBg: '#d97706', color: '#78350f', subColor: '#d97706', action: 'route',    href: '/transcript' },
+  mastery:     { emoji: '🏆', label: 'Mastery Tracker',     sub: 'Standards & skill mastery',          bg: 'linear-gradient(135deg,#eff6ff,#dbeafe)', iconBg: '#2563eb', color: '#1e3a5f', subColor: '#3b82f6', action: 'route',    href: '/mastery' },
+  portfolio:   { emoji: '🗂️', label: 'Portfolio',           sub: 'Work samples & highlights',          bg: 'linear-gradient(135deg,#fdf4ff,#fae8ff)', iconBg: '#9333ea', color: '#4a044e', subColor: '#a855f7', action: 'route',    href: '/portfolio' },
 }
 
 const DAY_CARDINAL: Record<number, string> = {
@@ -745,6 +747,69 @@ function DayDrawer({
   )
 }
 
+// ─── Scout Nudge ──────────────────────────────────────────────────────────────
+
+function computeScoutNudge(
+  parentName: string,
+  kidPulses: KidPulse[],
+  weekLessons: Record<string, { lesson: any; kid: Kid }[]>,
+  now: Date,
+): string {
+  const name = parentName ? `, ${parentName}` : ''
+  const dow  = now.getDay()
+
+  // Weekend
+  if (dow === 0 || dow === 6) {
+    return `Enjoy your weekend${name}! 🌿 Your lessons will be waiting on Monday.`
+  }
+
+  // Today's lesson counts
+  const totalToday     = kidPulses.reduce((s, kp) => s + kp.totalToday, 0)
+  const completedToday = kidPulses.reduce((s, kp) => s + kp.completedToday, 0)
+
+  if (totalToday > 0 && completedToday === totalToday) {
+    return `🎉 Every lesson is checked off for today${name}! That's a great school day.`
+  }
+  if (totalToday > 0 && completedToday > 0) {
+    const pct = Math.round((completedToday / totalToday) * 100)
+    const remaining = totalToday - completedToday
+    return `${pct}% done${name}! ${remaining} lesson${remaining > 1 ? 's' : ''} still to go — keep the momentum going 🚀`
+  }
+  if (totalToday > 0 && completedToday === 0) {
+    return `Hey${name}! You've got ${totalToday} lesson${totalToday > 1 ? 's' : ''} on deck today. Ready to kick things off? 📚`
+  }
+
+  // Check for activity gap in last 2 school days
+  function prevSchoolDay(from: Date, offset: number): string {
+    const d = new Date(from)
+    let skipped = 0
+    while (skipped < offset) {
+      d.setDate(d.getDate() - 1)
+      if (d.getDay() !== 0 && d.getDay() !== 6) skipped++
+    }
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  }
+
+  const yesterday    = prevSchoolDay(now, 1)
+  const twoDaysAgo   = prevSchoolDay(now, 2)
+  const hasRecent    = (weekLessons[yesterday]?.length ?? 0) > 0 || (weekLessons[twoDaysAgo]?.length ?? 0) > 0
+  const totalInWeek  = Object.values(weekLessons).flat().length
+
+  if (!hasRecent && totalInWeek > 0) {
+    return `Hey${name}, looks like it's been a couple of school days without any logged lessons. Did you school? Tap any card to catch up 📋`
+  }
+
+  // Day-specific greetings
+  const greetings: Record<number, string> = {
+    1: `Good morning${name}! New week, fresh start — let's make it a great one 🌟`,
+    2: `Hey${name}! Two days in — you're on a roll 💪`,
+    3: `Halfway through the week${name}! Keep it going 🔥`,
+    4: `Almost Friday${name}! Finish strong — you've got this 🏁`,
+    5: `Happy Friday${name}! Your school is ready when you are ☀️`,
+  }
+  return greetings[dow] ?? `Hey${name}! Let me know if I can help with anything today 🐦`
+}
+
 // ─── Dashboard Content ────────────────────────────────────────────────────────
 
 function DashboardContent() {
@@ -793,11 +858,13 @@ function DashboardContent() {
         .maybeSingle()
 
       let orgId: string
+      let localParentName = ''
 
       if (collab) {
         setIsCollaborator(true)
         orgId = collab.organization_id
-        setParentName(collab.name || user.email?.split('@')[0] || '')
+        localParentName = collab.name || user.email?.split('@')[0] || ''
+        setParentName(localParentName)
       } else {
         const { orgId: resolved } = await getOrganizationId(user.id)
         if (!resolved) { router.push('/onboarding'); return }
@@ -812,6 +879,7 @@ function DashboardContent() {
         const profile = (profileRows ?? []).find((r: any) => r.homeschool_style != null)
           ?? profileRows?.[0]
           ?? null
+        localParentName = profile?.first_name ?? user.email?.split('@')[0] ?? ''
         if (profile?.first_name) setParentName(profile.first_name)
         const style = profile?.homeschool_style ?? null
         setHomeschoolStyle(style)
@@ -920,6 +988,13 @@ function DashboardContent() {
     }
     load()
   }, [])
+
+  // Dispatch Scout nudge once data is loaded
+  useEffect(() => {
+    if (loading) return
+    const msg = computeScoutNudge(parentName, kidPulses, weekLessons, now)
+    window.dispatchEvent(new CustomEvent('scout-nudge', { detail: { message: msg } }))
+  }, [loading]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleLessonStatusUpdate = (lessonId: string, kidId: string, newStatus: string) => {
     setTodayLessons(prev => {
@@ -1080,20 +1155,17 @@ function DashboardContent() {
               <span style={css.secTitle}>
                 {homeschoolStyle === 'flexible' ? 'QUICK LOG' : 'QUICK ACTIONS'}
               </span>
-              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                <button
-                  onClick={() => { localStorage.removeItem('hq_tour_done'); setTourAutoStart(false); setShowTour(true) }}
-                  style={{ fontSize: 11, fontWeight: 700, color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}
-                >
-                  ? Tour
-                </button>
-                <button
-                  onClick={() => setShowStylePicker(true)}
-                  style={{ fontSize: 11, fontWeight: 700, color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}
-                >
-                  ✏️ Customize cards
-                </button>
-              </div>
+              <button
+                onClick={() => setShowStylePicker(true)}
+                style={{
+                  fontSize: 12, fontWeight: 700, color: '#6b7280',
+                  background: 'rgba(255,255,255,0.75)', border: '1.5px solid rgba(209,213,219,0.8)',
+                  borderRadius: 20, padding: '5px 12px', cursor: 'pointer',
+                  fontFamily: "'Nunito', sans-serif",
+                }}
+              >
+                ✏️ Customize cards
+              </button>
             </div>
 
             {/* ── Dynamic grid driven by pinnedFeatures ── */}
@@ -1153,13 +1225,28 @@ function DashboardContent() {
             })()}
 
             {/* Life Happens FAB */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, padding: '8px 0 4px' }}>
+            <div id="tour-life-happens" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, padding: '8px 0 4px' }}>
               <button style={css.lifeFab} onClick={() => setShowLifeHappens(true)}>
                 <span style={{ fontSize: 44 }}>🌤️</span>
               </button>
               <span style={{ fontSize: 12, fontWeight: 800, color: '#92400e', fontFamily: "'Nunito', sans-serif", letterSpacing: 0.5 }}>
-                Life Happens?
+                Life Happens
               </span>
+            </div>
+
+            {/* Replay tour — subtle link below Life Happens */}
+            <div style={{ textAlign: 'center', paddingTop: 6, paddingBottom: 4 }}>
+              <button
+                onClick={() => { localStorage.removeItem('hq_tour_done'); setTourAutoStart(false); setShowTour(true) }}
+                style={{
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  fontSize: 12, fontWeight: 700, color: '#9ca3af',
+                  fontFamily: "'Nunito', sans-serif",
+                  letterSpacing: 0.3,
+                }}
+              >
+                🗺️ Replay tour
+              </button>
             </div>
           </section>
 
@@ -1567,7 +1654,8 @@ const css: Record<string, React.CSSProperties> = {
 
   quickGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 200px))',
+    justifyContent: 'center',
     gap: 14,
     marginBottom: 14,
   },

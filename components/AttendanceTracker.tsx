@@ -11,6 +11,7 @@ import AttendanceGoals from './AttendanceGoals'
 import PDFExport from './PDFExport'
 import DayDetails from './DayDetails'
 import ResolveAttendanceModal from './ResolveAttendanceModal'
+import { parseLocalDate } from '@/src/lib/utils'
 
 
 interface AttendanceTrackerProps {
@@ -934,6 +935,9 @@ useEffect(() => {
                   onBulkConfirm={bulkConfirmAttendance}
                   onDismissSuggestion={dismissSuggestion}
                   onDismissAll={dismissAllSuggestions}
+                  onDismissDiscrepancy={(date: string, type: string) => {
+                    setDismissedDiscrepancies(prev => new Set([...prev, date + ':' + type]))
+                  }}
                   onFixDate={(date) => {
                     const discrepancy = discrepancies.find(d => d.date === date)
                     if (discrepancy?.type === 'attendance_no_lessons') {
@@ -1403,7 +1407,7 @@ function MarkAttendanceModal({ date, kids, selectedKid, existingAttendance, defa
       <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] flex flex-col">
         <div className="p-6 overflow-y-auto flex-1">
           <h3 className="text-xl font-bold text-gray-900 mb-4">
-            Mark Attendance for {new Date(date).toLocaleDateString()}
+            Mark Attendance for {parseLocalDate(date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
           </h3>
 
           <form onSubmit={handleSubmit} className="space-y-4">

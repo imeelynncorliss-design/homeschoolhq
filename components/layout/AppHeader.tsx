@@ -628,6 +628,10 @@ export default function AppHeader() {
   const [showFeedback, setShowFeedback] = useState(false)
   const [showCopilot, setShowCopilot] = useState(false)
   const conversationIdRef = useRef<string | null>(null)
+  const [scoutNudge, setScoutNudge] = useState<string | null>(null)
+  const [showScoutBubble, setShowScoutBubble] = useState(false)
+  const [scoutDot, setScoutDot] = useState(false)
+  const bubbleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const betaEnabled = process.env.NEXT_PUBLIC_BETA_FEEDBACK_ENABLED === 'true'
 
@@ -640,16 +644,16 @@ export default function AppHeader() {
 
       const { data: profileRows } = await supabase
         .from('user_profiles')
-        .select('parent_name, homeschool_style')
+        .select('first_name, homeschool_style')
         .eq('user_id', user.id)
         .order('updated_at', { ascending: false })
       const profileData = (profileRows ?? []).find((r: any) => r.homeschool_style != null) ?? profileRows?.[0] ?? null
 
-      const name =
-        (profileData as any)?.parent_name ||
-        (user.user_metadata?.full_name as string) ||
-        user.email?.split('@')[0] ||
-        'there'
+      // Prefer stored first name; fall back to first word of Google display name; never use email
+      const storedFirst = (profileData as any)?.first_name as string | null | undefined
+      const googleFull  = user.user_metadata?.full_name as string | undefined
+      const googleFirst = googleFull && !googleFull.includes('@') ? googleFull.split(' ')[0] : null
+      const name = storedFirst || googleFirst || 'there'
       setDisplayName(name)
       setHomeschoolStyle((profileData as any)?.homeschool_style ?? null)
       setCopilotMessages([{
@@ -707,6 +711,29 @@ export default function AppHeader() {
     const handler = () => setShowCopilot(true)
     window.addEventListener('open-scout-copilot', handler)
     return () => window.removeEventListener('open-scout-copilot', handler)
+  }, [])
+
+  // Scout proactive nudge
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const msg = (e as CustomEvent).detail?.message as string
+      if (!msg) return
+      setScoutNudge(msg)
+      setScoutDot(true)
+      // Auto-pop once per session
+      if (!sessionStorage.getItem('scout_nudge_shown')) {
+        sessionStorage.setItem('scout_nudge_shown', '1')
+        bubbleTimerRef.current = setTimeout(() => {
+          setShowScoutBubble(true)
+          bubbleTimerRef.current = setTimeout(() => setShowScoutBubble(false), 7000)
+        }, 1800)
+      }
+    }
+    window.addEventListener('scout-nudge', handler)
+    return () => {
+      window.removeEventListener('scout-nudge', handler)
+      if (bubbleTimerRef.current) clearTimeout(bubbleTimerRef.current)
+    }
   }, [])
 
   // Auto-save conversation to DB after each AI response
@@ -817,10 +844,88 @@ export default function AppHeader() {
             </button>
           )}
 
-
+          {/* Scout proactive button */}
+          {userId && scoutNudge && (
+            <button
+              onClick={() => { setShowScoutBubble(v => !v); setScoutDot(false) }}
+              style={{
+                position: 'relative', background: 'none', border: 'none',
+                padding: 4, cursor: 'pointer', flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}
+              title="Scout says…"
+            >
+              <img src="/Cardinal_Mascot.png" alt="Scout" style={{ width: 32, height: 32, objectFit: 'contain' }} />
+              {scoutDot && (
+                <span style={{
+                  position: 'absolute', top: 2, right: 2,
+                  width: 10, height: 10, borderRadius: '50%',
+                  background: '#f59e0b', border: '2px solid #7c3aed',
+                  animation: 'scout-dot-pulse 1.8s ease-in-out infinite',
+                }} />
+              )}
+            </button>
+          )}
 
         </div>
       </header>
+
+      {/* Scout nudge bubble */}
+      {scoutNudge && showScoutBubble && (
+        <div style={{
+          position: 'fixed', top: 64, right: 16, zIndex: 9995,
+          width: 290, fontFamily: "'Nunito', sans-serif",
+          animation: 'scout-bubble-in 0.3s ease forwards',
+        }}>
+          {/* Tail pointing up-right */}
+          <div style={{
+            width: 0, height: 0, borderStyle: 'solid',
+            borderWidth: '0 0 10px 10px',
+            borderColor: 'transparent transparent #fff transparent',
+            marginLeft: 'auto', marginRight: 18, marginBottom: -1,
+          }} />
+          <div style={{
+            background: '#fff', borderRadius: 18,
+            boxShadow: '0 16px 48px rgba(0,0,0,0.18), 0 2px 8px rgba(124,58,237,0.12)',
+            border: '1.5px solid rgba(124,58,237,0.15)',
+            overflow: 'hidden',
+          }}>
+            {/* Header strip */}
+            <div style={{
+              background: 'linear-gradient(135deg, #7c3aed, #4f46e5)',
+              padding: '10px 14px',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <img src="/Cardinal_Mascot.png" alt="Scout" style={{ width: 28, height: 28, objectFit: 'contain' }} />
+                <div style={{ fontWeight: 800, fontSize: 13, color: '#fff' }}>Scout</div>
+              </div>
+              <button
+                onClick={() => setShowScoutBubble(false)}
+                style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 6, color: '#fff', fontSize: 13, cursor: 'pointer', padding: '2px 6px', fontWeight: 700 }}
+              >✕</button>
+            </div>
+            {/* Message */}
+            <div style={{ padding: '14px 16px' }}>
+              <p style={{ fontSize: 13, color: '#374151', lineHeight: 1.65, margin: '0 0 14px', fontWeight: 600 }}>
+                {scoutNudge}
+              </p>
+              <button
+                onClick={() => { setShowScoutBubble(false); setShowCopilot(true) }}
+                style={{
+                  width: '100%', padding: '10px 14px', borderRadius: 10, border: 'none',
+                  background: 'linear-gradient(135deg, #7c3aed, #4f46e5)',
+                  color: '#fff', fontWeight: 800, fontSize: 13, cursor: 'pointer',
+                  fontFamily: "'Nunito', sans-serif",
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                }}
+              >
+                Chat with Scout →
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showFeedback && userId && orgId && (
         <FeedbackModal onClose={() => setShowFeedback(false)} userId={userId} orgId={orgId} />
@@ -1092,5 +1197,14 @@ const HEADER_STYLES = `
     .hr-back-label { display: none; }
     .hr-copilot-label { display: none; }
     .hr-btn { padding: 5px 8px; }
+  }
+
+  @keyframes scout-dot-pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.4); opacity: 0.7; }
+  }
+  @keyframes scout-bubble-in {
+    from { opacity: 0; transform: translateY(-8px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
   }
 `

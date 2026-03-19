@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import type { CSSProperties } from 'react'
 import { supabase } from '@/src/lib/supabase'
+import { printHeader, printHeaderCSS } from '@/lib/printHeader'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -490,8 +491,10 @@ export default function LessonViewModal({
   .duration { font-size: 11px; color: #6b7280; font-family: system-ui; margin-left: 6px; }
   hr { border: none; border-top: 1px solid #e5e7eb; margin: 20px 0; }
   @media print { body { margin: 20px; } }
+  ${printHeaderCSS()}
 </style>
 </head><body>
+${printHeader(window.location.origin)}
 <h1>${lesson.title}</h1>
 <div class="meta">
   <span><span class="badge">${lesson.subject}</span></span>

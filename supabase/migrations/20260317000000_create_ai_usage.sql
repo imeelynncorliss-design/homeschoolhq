@@ -11,12 +11,24 @@ CREATE TABLE IF NOT EXISTS ai_usage (
 -- Users can only see their own usage
 ALTER TABLE ai_usage ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Users can view own ai_usage"
-  ON ai_usage FOR SELECT
-  USING (auth.uid() = user_id);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE tablename = 'ai_usage' AND policyname = 'Users can view own ai_usage'
+  ) THEN
+    CREATE POLICY "Users can view own ai_usage"
+      ON ai_usage FOR SELECT
+      USING (auth.uid() = user_id);
+  END IF;
 
--- Service role can read/write (used by API routes)
-CREATE POLICY "Service role has full access to ai_usage"
-  ON ai_usage FOR ALL
-  USING (true)
-  WITH CHECK (true);
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE tablename = 'ai_usage' AND policyname = 'Service role has full access to ai_usage'
+  ) THEN
+    CREATE POLICY "Service role has full access to ai_usage"
+      ON ai_usage FOR ALL
+      USING (true)
+      WITH CHECK (true);
+  END IF;
+END $$;

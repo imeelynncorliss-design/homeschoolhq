@@ -16,6 +16,8 @@ export const STYLE_FEATURES = [
   { id: 'compliance',  emoji: '📋', label: 'Compliance Tracking',      desc: 'Days/hours vs. state requirements' },
   { id: 'progress',    emoji: '📊', label: 'Progress Reports',         desc: 'Learning analytics by subject' },
   { id: 'transcript',  emoji: '🎓', label: 'Transcript Builder',       desc: 'GPA, courses, college-ready records' },
+  { id: 'mastery',     emoji: '🏆', label: 'Mastery Tracker',          desc: 'Standards & skill mastery' },
+  { id: 'portfolio',   emoji: '🗂️', label: 'Portfolio',                desc: 'Work samples & highlights' },
 ]
 
 // ─── Defaults per style ───────────────────────────────────────────────────────

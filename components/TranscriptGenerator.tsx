@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/src/lib/supabase'
+import { printHeader, printHeaderCSS } from '@/lib/printHeader'
 
 interface Course {
   id: string
@@ -296,9 +297,11 @@ export default function TranscriptGenerator({ kidId, userId, kidData }: Transcri
     }
 
     @media print { button { display: none; } }
+    ${printHeaderCSS()}
   </style>
 </head>
 <body>
+${printHeader(window.location.origin)}
   <h1>Official High School Transcript</h1>
   <h2>${settings?.school_name || 'Homeschool'}</h2>
 

@@ -3203,10 +3203,13 @@ export type Database = {
       user_profiles: {
         Row: {
           created_at: string | null
+          first_name: string | null
+          homeschool_style: string | null
           id: string
           organization_id: string | null
           parent_name: string | null
           phone_number: string | null
+          pinned_features: string[] | null
           preferred_contact: string | null
           subscription_tier: string | null
           updated_at: string | null
@@ -3214,10 +3217,13 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          first_name?: string | null
+          homeschool_style?: string | null
           id?: string
           organization_id?: string | null
           parent_name?: string | null
           phone_number?: string | null
+          pinned_features?: string[] | null
           preferred_contact?: string | null
           subscription_tier?: string | null
           updated_at?: string | null
@@ -3225,10 +3231,13 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          first_name?: string | null
+          homeschool_style?: string | null
           id?: string
           organization_id?: string | null
           parent_name?: string | null
           phone_number?: string | null
+          pinned_features?: string[] | null
           preferred_contact?: string | null
           subscription_tier?: string | null
           updated_at?: string | null
