@@ -369,11 +369,12 @@ const s: Record<string, React.CSSProperties> = {
   overlay: {
     position: 'fixed', inset: 0, background: 'rgba(30,20,60,0.55)',
     backdropFilter: 'blur(4px)', zIndex: 10000,
-    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    padding: '16px 16px 96px',
   },
   modal: {
     background: '#fff', borderRadius: 20, width: '100%', maxWidth: 480,
-    maxHeight: '90vh', overflowY: 'auto',
+    maxHeight: 'calc(100vh - 112px)', overflowY: 'auto',
     boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
   },
   header: {
