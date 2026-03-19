@@ -62,6 +62,7 @@ export default function ActivityGenerator({ kids, organizationId, onClose, onSav
   const [selectedKidId, setSelectedKidId] = useState<string>(kids[0]?.id ?? '')
   const [subject, setSubject] = useState('')
   const [topic, setTopic] = useState('')
+  const [scheduledDate, setScheduledDate] = useState(new Date().toISOString().split('T')[0])
   const [activities, setActivities] = useState<GeneratedActivity[]>([])
   const [savedIdx, setSavedIdx] = useState<Set<number>>(new Set())
   const [error, setError] = useState('')
@@ -141,11 +142,46 @@ ${rows}
     setTimeout(() => win.print(), 300)
   }
 
+  const handlePrintOne = (act: GeneratedActivity) => {
+    const stepsHtml = act.steps?.length
+      ? `<h3>Steps</h3><ol>${act.steps.map(s => `<li>${s}</li>`).join('')}</ol>`
+      : ''
+    const haveHtml = act.materials_have?.length
+      ? `<div class="mat-section"><span class="have">✅ You already have:</span> ${act.materials_have.join(', ')}</div>`
+      : ''
+    const needHtml = act.materials_need?.length
+      ? `<div class="mat-section"><span class="need">🛒 Still need:</span> ${act.materials_need.join(', ')}</div>`
+      : ''
+    const html = `<!DOCTYPE html><html><head><title>${act.title}</title>
+<style>
+  body { font-family: Georgia, serif; max-width: 680px; margin: 40px auto; color: #1f2937; font-size: 14px; line-height: 1.6; }
+  h1 { font-size: 22px; font-weight: 900; color: #2d1b69; margin: 0 0 4px; }
+  .meta { font-size: 12px; color: #7c6faa; margin-bottom: 20px; }
+  h3 { font-size: 13px; font-weight: 700; color: #1a1a2e; margin: 16px 0 8px; text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; }
+  p { margin: 0 0 10px; }
+  ol { margin: 0 0 12px; padding-left: 20px; }
+  li { margin-bottom: 5px; }
+  .mat-section { font-size: 13px; margin-top: 8px; }
+  .have { font-weight: 700; color: #059669; }
+  .need { font-weight: 700; color: #dc2626; }
+  @media print { body { margin: 20px; } }
+</style></head><body>
+<h1>${act.emoji} ${act.title}</h1>
+<div class="meta">${subject}${topic ? ` · ${topic}` : ''} · ${act.duration_minutes} min · ${selectedKid?.displayname ?? ''}</div>
+<p>${act.description}</p>
+${stepsHtml}${haveHtml}${needHtml}
+</body></html>`
+    const win = window.open('', '_blank')
+    if (!win) return
+    win.document.write(html)
+    win.document.close()
+    setTimeout(() => win.print(), 300)
+  }
+
   const handleSave = async (idx: number) => {
     if (saving || savedIdx.has(idx)) return
     setSaving(true)
     const act = activities[idx]
-    const today = new Date().toISOString().split('T')[0]
     const { error: dbErr } = await supabase.from('lessons').insert({
       kid_id: selectedKidId,
       organization_id: organizationId,
@@ -156,7 +192,7 @@ ${rows}
         steps: act.steps,
         materials: [...(act.materials_have ?? []), ...(act.materials_need ?? [])],
       }),
-      lesson_date: today,
+      lesson_date: scheduledDate,
       status: 'not_started',
       lesson_source: 'scout_activity',
     })
@@ -218,6 +254,17 @@ ${rows}
               <label style={s.label}>Topic or concept <span style={{ fontWeight: 400, color: '#9ca3af' }}>(optional)</span></label>
               <input style={s.input} placeholder="e.g. fractions, photosynthesis, Civil War…"
                 value={topic} onChange={e => setTopic(e.target.value)} />
+            </div>
+
+            {/* Schedule date */}
+            <div style={s.field}>
+              <label style={s.label}>Schedule for</label>
+              <input
+                type="date"
+                style={s.input}
+                value={scheduledDate}
+                onChange={e => setScheduledDate(e.target.value)}
+              />
             </div>
 
             <button style={{ ...s.primaryBtn, opacity: subject ? 1 : 0.45, cursor: subject ? 'pointer' : 'not-allowed' }}
@@ -292,7 +339,7 @@ ${rows}
         {step === 'results' && (
           <div style={s.body}>
             <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 14 }}>
-              Tap <strong>Save</strong> on any activity to add it to today's schedule.
+              Tap <strong>Save</strong> to schedule for <strong>{new Date(scheduledDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</strong>.
             </div>
             <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 14 }}>
               {activities.map((act, i) => (
@@ -308,6 +355,12 @@ ${rows}
                       onClick={() => handleSave(i)}
                       disabled={savedIdx.has(i)}>
                       {savedIdx.has(i) ? '✓ Saved' : 'Save'}
+                    </button>
+                    <button
+                      style={s.printOneBtn}
+                      onClick={() => handlePrintOne(act)}
+                      title="Print this activity">
+                      🖨️
                     </button>
                   </div>
 
@@ -455,6 +508,10 @@ const s: Record<string, React.CSSProperties> = {
     color: '#fff', fontWeight: 700, fontSize: 12, cursor: 'pointer', whiteSpace: 'nowrap',
   },
   savedBtn: { background: '#d1fae5', color: '#059669', cursor: 'default' },
+  printOneBtn: {
+    padding: '6px 10px', borderRadius: 20, border: '1.5px solid #e5e7eb',
+    background: '#fff', color: '#6b7280', fontSize: 14, cursor: 'pointer',
+  },
   chipHave: {
     padding: '3px 10px', borderRadius: 20, background: '#dcfce7',
     color: '#15803d', fontSize: 11, fontWeight: 600,

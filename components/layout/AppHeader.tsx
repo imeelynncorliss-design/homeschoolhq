@@ -843,9 +843,9 @@ export default function AppHeader() {
 
           {/* Cardinal Copilot button — always visible */}
           {userId && (
-            <button className="hr-btn hr-copilot-btn" onClick={() => setShowCopilot(true)} title="Cardinal — your co-pilot">
+            <button className="hr-btn hr-copilot-btn" onClick={() => setShowCopilot(true)} title="Scout — your co-pilot">
               <CardinalIcon size={18} />
-              <span className="hr-copilot-label">Cardinal</span>
+              <span className="hr-copilot-label">Scout</span>
             </button>
           )}
 

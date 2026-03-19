@@ -5,6 +5,7 @@ interface ResolveAttendanceModalProps {
   attendanceHours: number
   attendanceStatus: string
   onDelete: (date: string) => Promise<void>
+  onDismiss: () => void
   onClose: () => void
 }
 
@@ -13,6 +14,7 @@ export default function ResolveAttendanceModal({
   attendanceHours,
   attendanceStatus,
   onDelete,
+  onDismiss,
   onClose
 }: ResolveAttendanceModalProps) {
   const [yearStr, monthStr, dayStr] = date.split('-')
@@ -35,6 +37,10 @@ export default function ResolveAttendanceModal({
     window.location.href = `/lessons?date=${date}`
   }
 
+  function handleLogActivity() {
+    window.location.href = `/field-trips?date=${date}`
+  }
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl shadow-xl max-w-md w-full overflow-hidden">
@@ -53,36 +59,53 @@ export default function ResolveAttendanceModal({
 
         {/* ── Attendance record ── */}
         <div className="p-6">
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-5">
             <p className="text-sm font-semibold text-amber-800 mb-1">📋 Attendance logged for this day</p>
             <p className="text-sm text-amber-700">
               {statusLabel} · {attendanceHours}h recorded · No lessons found
             </p>
             <p className="text-xs text-amber-600 mt-2">
-              Does this look right? If you taught lessons that day, add them by clicking the "📚 Add lessons for this day" button so your records are complete.
-              If this was logged by mistake, you can delete it.
+              What did you do that day? Add a lesson, log an activity (field trip, project, co-op), or mark it as reviewed if no record is needed.
             </p>
           </div>
 
           {/* ── Actions ── */}
           <div className="space-y-3">
+
             <button
               onClick={handleAddLesson}
               className="w-full py-3 px-4 bg-purple-600 text-white font-semibold rounded-xl hover:bg-purple-700 transition-colors flex items-center justify-center gap-2"
             >
-              📚 Add lessons for this day
+              📚 Add a lesson for this day
             </button>
+
+            <button
+              onClick={handleLogActivity}
+              className="w-full py-3 px-4 bg-teal-600 text-white font-semibold rounded-xl hover:bg-teal-700 transition-colors flex items-center justify-center gap-2"
+            >
+              🎯 Log an activity instead
+              <span className="text-xs font-normal opacity-80">(field trip, project, co-op…)</span>
+            </button>
+
+            <button
+              onClick={onDismiss}
+              className="w-full py-3 px-4 bg-green-50 text-green-700 font-semibold rounded-xl hover:bg-green-100 border border-green-200 transition-colors flex items-center justify-center gap-2"
+            >
+              ✅ Mark as reviewed — no record needed
+            </button>
+
             <button
               onClick={handleDelete}
               className="w-full py-3 px-4 bg-red-50 text-red-600 font-semibold rounded-xl hover:bg-red-100 border border-red-200 transition-colors flex items-center justify-center gap-2"
             >
               🗑️ Delete this attendance record
             </button>
+
             <button
               onClick={onClose}
-              className="w-full py-3 px-4 text-gray-500 hover:text-gray-700 text-sm transition-colors"
+              className="w-full py-3 px-4 text-gray-400 hover:text-gray-600 text-sm transition-colors"
             >
-              Cancel — this will stay in my Reconciliation Panel until I review it.
+              Cancel
             </button>
           </div>
         </div>

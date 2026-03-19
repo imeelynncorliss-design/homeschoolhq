@@ -9,6 +9,7 @@ import { getOrganizationId } from '@/src/lib/getOrganizationId'
 import LessonViewModal, { type LessonViewModalLesson } from '@/components/LessonViewModal'
 import ActivityGenerator from '@/components/ActivityGenerator'
 import LessonGenerator from '@/components/LessonGenerator'
+import WeatherWidget from '@/components/WeatherWidget'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -779,6 +780,9 @@ function DashboardContent() {
         {/* ── Main ── */}
         <main style={css.main}>
 
+          {/* Weather */}
+          <WeatherWidget />
+
           {/* Pulse Check */}
           <section>
             <div style={css.sectionRow}>
@@ -805,16 +809,16 @@ function DashboardContent() {
                     style={{ ...css.pulseCard, cursor: 'pointer' }}
                     onClick={() => setActivePulseKidId(pulse.kid.id)}>
                     {/* Ring */}
-                    <div style={{ position: 'relative', width: 150, height: 150, margin: '0 auto 16px' }}>
-                      <PulseRing pct={pulse.pct} color={pulse.color} size={150} />
+                    <div style={{ position: 'relative', width: 180, height: 180, margin: '0 auto 16px' }}>
+                      <PulseRing pct={pulse.pct} color={pulse.color} size={180} />
                       <div style={css.ringCenter}>
-                        <span style={{ fontSize: 13, fontWeight: 800, color: '#4b5563', marginBottom: 2 }}>{pulse.kid.displayname}</span>
-                        <span style={{ fontSize: 28, fontWeight: 900, color: '#1a1a2e', lineHeight: 1 }}>{pulse.pct}%</span>
-                        <span style={{ fontSize: 11, fontWeight: 700, color: '#4b5563', marginTop: 3 }}>Complete</span>
+                        <span style={{ fontSize: 14, fontWeight: 800, color: '#374151', marginBottom: 2 }}>{pulse.kid.displayname}</span>
+                        <span style={{ fontSize: 34, fontWeight: 900, color: '#1a1a2e', lineHeight: 1 }}>{pulse.pct}%</span>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: '#374151', marginTop: 4 }}>Complete</span>
                       </div>
                     </div>
                     {/* Lessons count */}
-                    <div style={{ fontSize: 12, color: '#374151', textAlign: 'center' as const, marginBottom: 12 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: '#374151', textAlign: 'center' as const, marginBottom: 12 }}>
                       {pulse.totalToday > 0
                         ? `${pulse.completedToday} of ${pulse.totalToday} lessons done today`
                         : 'No lessons scheduled today'}
@@ -822,7 +826,7 @@ function DashboardContent() {
                     {/* Focus subjects — emoji icon tiles */}
                     {pulse.subjectNames.length > 0 && (
                       <>
-                        <div style={{ fontSize: 11, fontWeight: 800, color: '#4b5563', letterSpacing: 0.6, textAlign: 'center' as const, marginBottom: 8 }}>
+                        <div style={{ fontSize: 12, fontWeight: 800, color: '#374151', letterSpacing: 0.6, textAlign: 'center' as const, marginBottom: 8 }}>
                           FOCUS SUBJECTS
                         </div>
                         <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 8, justifyContent: 'center' }}>
@@ -837,7 +841,7 @@ function DashboardContent() {
                               }}>
                                 {subjectEmoji(s)}
                               </div>
-                              <span style={{ fontSize: 10, fontWeight: 700, color: '#374151', textAlign: 'center' as const, maxWidth: 48 }}>
+                              <span style={{ fontSize: 11, fontWeight: 700, color: '#374151', textAlign: 'center' as const, maxWidth: 52 }}>
                                 {s.split('/')[0].trim()}
                               </span>
                             </div>
@@ -1206,7 +1210,7 @@ const css: Record<string, React.CSSProperties> = {
 
   sectionRow: { display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 18 },
   secTitle:   { fontSize: 12, fontWeight: 900, color: '#6d28d9', letterSpacing: 1.2 },
-  secSub:     { fontSize: 12, color: '#c4cdd6', fontWeight: 600 },
+  secSub:     { fontSize: 12, color: '#6b7280', fontWeight: 600 },
 
   pulseCard: {
     display: 'flex',

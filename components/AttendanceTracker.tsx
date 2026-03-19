@@ -106,6 +106,7 @@ export default function AttendanceTracker({ kids, organizationId, userId }: Atte
   const [schoolYearEnd, setSchoolYearEnd] = useState<string>('')
   const [resolveDate, setResolveDate] = useState<string | null>(null)
   const [resolveAttendance, setResolveAttendance] = useState<ManualAttendance | null>(null)
+  const [dismissedDiscrepancies, setDismissedDiscrepancies] = useState<Set<string>>(new Set())
 
   // NEW: Activity filters
   const [filters, setFilters] = useState({
@@ -502,8 +503,10 @@ useEffect(() => {
       }
     })
 
-    return result.sort((a, b) => b.date.localeCompare(a.date))
-  }, [lessons, manualAttendance, selectedKid, schoolYearStart, schoolYearEnd])
+    return result
+      .filter(d => !dismissedDiscrepancies.has(d.date + ':' + d.type))
+      .sort((a, b) => b.date.localeCompare(a.date))
+  }, [lessons, manualAttendance, selectedKid, schoolYearStart, schoolYearEnd, dismissedDiscrepancies])
 
   // Generate suggestions for reconciliation
   const suggestions = useMemo((): SuggestedDay[] => {
@@ -1270,6 +1273,11 @@ useEffect(() => {
       setResolveDate(null)
       setResolveAttendance(null)
     }}
+    onDismiss={() => {
+      setDismissedDiscrepancies(prev => new Set([...prev, resolveDate + ':attendance_no_lessons']))
+      setResolveDate(null)
+      setResolveAttendance(null)
+    }}
     onClose={() => {
       setResolveDate(null)
       setResolveAttendance(null)
@@ -1425,26 +1433,20 @@ function MarkAttendanceModal({ date, kids, selectedKid, existingAttendance, defa
                     type="radio"
                     value="full_day"
                     checked={status === 'full_day'}
-                    onChange={(e) => {
-                      setStatus('full_day')
-                      setHours(4)
-                    }}
+                    onChange={() => setStatus('full_day')}
                     className="mr-2"
                   />
-                  <span className="text-gray-900">Full Day (4 hours)</span>
+                  <span className="text-gray-900">Full Day</span>
                 </label>
                 <label className="flex items-center">
                   <input
                     type="radio"
                     value="half_day"
                     checked={status === 'half_day'}
-                    onChange={(e) => {
-                      setStatus('half_day')
-                      setHours(2)
-                    }}
+                    onChange={() => setStatus('half_day')}
                     className="mr-2"
                   />
-                  <span className="text-gray-900">Half Day (2 hours)</span>
+                  <span className="text-gray-900">Half Day</span>
                 </label>
                 <label className="flex items-center">
                   <input

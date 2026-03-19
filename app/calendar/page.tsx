@@ -4,6 +4,7 @@ import { useEffect, useState, Suspense } from 'react'
 import { supabase } from '@/src/lib/supabase'
 import { useRouter } from 'next/navigation'
 import LessonCalendar from '@/components/LessonCalendar'
+import LessonViewModal, { type LessonViewModalLesson } from '@/components/LessonViewModal'
 import AuthGuard from '@/components/AuthGuard'
 import { syncBetaTier } from '@/lib/tierTesting'
 import { getOrganizationId } from '@/src/lib/getOrganizationId'
@@ -24,6 +25,8 @@ function CalendarContent() {
   const [manualAttendance, setManualAttendance] = useState<any[]>([])
   const [organizationId, setOrganizationId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [selectedLesson, setSelectedLesson] = useState<LessonViewModalLesson | null>(null)
+  const [selectedKidName, setSelectedKidName] = useState('')
 
   useEffect(() => {
     let mounted = true
@@ -137,7 +140,10 @@ function CalendarContent() {
             coopEnrollments={[]}
             manualAttendance={manualAttendance}
             filters={{ showLessons: true, showManualAttendance: false }}
-            onLessonClick={() => {}}
+            onLessonClick={(lesson, child) => {
+              setSelectedLesson(lesson as LessonViewModalLesson)
+              setSelectedKidName(child.displayname ?? '')
+            }}
             userId={user.id}
             organizationId={organizationId}
           />
@@ -151,6 +157,55 @@ function CalendarContent() {
           </div>
         )}
       </div>
+
+      {selectedLesson && (
+        <LessonViewModal
+          lesson={selectedLesson}
+          kidName={selectedKidName}
+          organizationId={organizationId ?? undefined}
+          onClose={() => setSelectedLesson(null)}
+          onEdit={() => {
+            setSelectedLesson(null)
+            router.push(`/subjects?kid=${selectedLesson.kid_id}`)
+          }}
+          onDelete={async () => {
+            await supabase.from('lessons').delete().eq('id', selectedLesson.id)
+            setLessonsByKid(prev => {
+              const updated = { ...prev }
+              for (const kid in updated) {
+                updated[kid] = updated[kid].filter((l: any) => l.id !== selectedLesson.id)
+              }
+              return updated
+            })
+            setSelectedLesson(null)
+          }}
+          onCycleStatus={async (lessonId, currentStatus) => {
+            const next = currentStatus === 'not_started' ? 'in_progress'
+                       : currentStatus === 'in_progress'  ? 'completed'
+                       : 'not_started'
+            await supabase.from('lessons').update({ status: next }).eq('id', lessonId)
+            setLessonsByKid(prev => {
+              const updated = { ...prev }
+              for (const kid in updated) {
+                updated[kid] = updated[kid].map((l: any) => l.id === lessonId ? { ...l, status: next } : l)
+              }
+              return updated
+            })
+            setSelectedLesson(s => s ? { ...s, status: next as LessonViewModalLesson['status'] } : null)
+          }}
+          onSetStatus={async (lessonId, newStatus) => {
+            await supabase.from('lessons').update({ status: newStatus }).eq('id', lessonId)
+            setLessonsByKid(prev => {
+              const updated = { ...prev }
+              for (const kid in updated) {
+                updated[kid] = updated[kid].map((l: any) => l.id === lessonId ? { ...l, status: newStatus } : l)
+              }
+              return updated
+            })
+            setSelectedLesson(s => s ? { ...s, status: newStatus as LessonViewModalLesson['status'] } : null)
+          }}
+        />
+      )}
 
     </div>
   )

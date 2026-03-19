@@ -77,6 +77,7 @@ export default function LessonGenerator({ kids, userId, onClose, initialDate, in
     courseId: '',
     duration: 30,
     startDate: initialDate || new Date().toISOString().split('T')[0],
+    topic: '',
   });
 
   // ── Fetch org ID and existing custom subjects ──────────────────────────────
@@ -205,6 +206,45 @@ export default function LessonGenerator({ kids, userId, onClose, initialDate, in
       setLoading(false);
     }
   };
+
+  const printVariation = (variation: LessonVariation) => {
+    const activitiesHtml = variation.activities?.length
+      ? `<h3>Lesson Steps</h3><ol>${variation.activities.map(a => `
+          <li><strong>${a.name}</strong> <span class="dur">(${a.duration})</span>
+          ${a.description ? `<p>${a.description}</p>` : ''}</li>`).join('')}</ol>`
+      : ''
+    const objectivesHtml = variation.learningObjectives?.length
+      ? `<h3>Learning Objectives</h3><ul>${variation.learningObjectives.map(o => `<li>${o}</li>`).join('')}</ul>`
+      : ''
+    const materialsHtml = variation.materials?.length
+      ? `<h3>Materials</h3><ul>${variation.materials.map(m => `<li>${m}</li>`).join('')}</ul>`
+      : ''
+    const assessmentHtml = variation.assessmentIdeas?.length
+      ? `<h3>Assessment Ideas</h3><ul>${variation.assessmentIdeas.map(a => `<li>${a}</li>`).join('')}</ul>`
+      : ''
+    const html = `<!DOCTYPE html><html><head><title>${variation.title}</title>
+<style>
+  body { font-family: Georgia, serif; max-width: 680px; margin: 40px auto; color: #1f2937; font-size: 14px; line-height: 1.6; }
+  h1 { font-size: 22px; font-weight: 900; color: #2d1b69; margin: 0 0 4px; }
+  .meta { font-size: 12px; color: #6b7280; margin-bottom: 24px; }
+  h3 { font-size: 14px; font-weight: 700; color: #1a1a2e; margin: 18px 0 8px; text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; }
+  ol, ul { margin: 0 0 12px; padding-left: 20px; }
+  li { margin-bottom: 6px; }
+  .dur { font-size: 11px; color: #7c6faa; font-weight: 600; }
+  p { margin: 2px 0 6px; font-size: 13px; color: #4b5563; }
+  @media print { body { margin: 20px; } }
+</style></head><body>
+<h1>${variation.title}</h1>
+<div class="meta">${formData.subject} · ${formData.childName} · ${formData.duration} min · ${new Date(formData.startDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</div>
+${variation.overview ? `<p style="font-size:14px;color:#374151;margin-bottom:16px;">${variation.overview}</p>` : ''}
+${objectivesHtml}${activitiesHtml}${materialsHtml}${assessmentHtml}
+</body></html>`
+    const win = window.open('', '_blank')
+    if (!win) return
+    win.document.write(html)
+    win.document.close()
+    setTimeout(() => win.print(), 300)
+  }
 
   const saveLesson = async (variation: LessonVariation) => {
     if (!formData.childId) { alert('Please select a child first'); return; }
@@ -395,6 +435,20 @@ export default function LessonGenerator({ kids, userId, onClose, initialDate, in
               </div>
             )}
 
+            {/* Goal / Topic */}
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-2">
+                Goal or Topic <span className="text-gray-400 font-normal">(what should this lesson be about?)</span>
+              </label>
+              <input
+                type="text"
+                value={formData.topic}
+                onChange={(e) => setFormData({ ...formData, topic: e.target.value })}
+                placeholder="e.g. Intro to fractions, Chapter 5 vocabulary, American Revolution causes…"
+                className="w-full border rounded-lg px-3 py-2 text-gray-900"
+              />
+            </div>
+
             {/* Duration */}
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-2">Duration</label>
@@ -533,13 +587,20 @@ export default function LessonGenerator({ kids, userId, onClose, initialDate, in
                       </div>
                     )}
                   </div>
-                  <div className="p-4 bg-gray-50 border-t">
+                  <div className="p-4 bg-gray-50 border-t flex gap-2">
                     <button
                       onClick={() => saveLesson(variation)}
                       disabled={loading}
-                      className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 disabled:bg-blue-400 font-semibold transition-colors"
+                      className="flex-1 bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 disabled:bg-blue-400 font-semibold transition-colors"
                     >
                       {loading ? 'Saving…' : 'Schedule This Lesson'}
+                    </button>
+                    <button
+                      onClick={() => printVariation(variation)}
+                      title="Print this lesson plan"
+                      className="px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-100 text-gray-600 text-lg transition-colors"
+                    >
+                      🖨️
                     </button>
                   </div>
                 </div>

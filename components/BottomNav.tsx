@@ -49,7 +49,7 @@ export default function BottomNav() {
             style={{
               flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
               background: 'none', border: 'none', cursor: 'pointer',
-              padding: '6px 0', fontFamily: "'Nunito', sans-serif", gap: 2,
+              padding: '6px 0', fontFamily: "'Nunito', sans-serif", gap: 3,
               color: isActive ? '#7c3aed' : '#9ca3af', position: 'relative',
             }}
             onClick={() => router.push(item.href)}
@@ -60,10 +60,10 @@ export default function BottomNav() {
                 width: 20, height: 3, borderRadius: 2, background: '#7c3aed',
               }} />
             )}
-            <span style={{ fontSize: isActive ? 26 : 22, lineHeight: 1, transition: 'font-size 0.15s' }}>
+            <span style={{ fontSize: isActive ? 30 : 26, lineHeight: 1, transition: 'font-size 0.15s' }}>
               {item.icon}
             </span>
-            <span style={{ fontSize: isActive ? 11 : 10, fontWeight: isActive ? 800 : 500, marginTop: 2, transition: 'all 0.15s' }}>
+            <span style={{ fontSize: isActive ? 12 : 11, fontWeight: isActive ? 800 : 600, marginTop: 2, transition: 'all 0.15s' }}>
               {item.label}
             </span>
           </button>
