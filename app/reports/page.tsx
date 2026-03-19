@@ -96,7 +96,7 @@ function ReportsContent() {
         </p>
 
         {/* Hub cards */}
-        <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 14 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           {hubCards.map(card => (
             <div
               key={card.label}
@@ -104,43 +104,41 @@ function ReportsContent() {
               onClick={card.href ? () => router.push(card.href!) : undefined}
               style={{
                 background: 'rgba(255,255,255,0.82)',
-                borderRadius: 18,
+                borderRadius: 16,
                 border: '1.5px solid rgba(124,58,237,0.13)',
                 backdropFilter: 'blur(8px)',
                 boxShadow: '0 2px 12px rgba(124,58,237,0.08)',
-                padding: '18px 20px',
-                display: 'flex', alignItems: 'center', gap: 16,
+                padding: '14px 16px',
+                display: 'flex', alignItems: 'center', gap: 12,
                 cursor: card.comingSoon ? 'default' : 'pointer',
                 transition: 'transform 0.15s ease, box-shadow 0.15s ease',
                 opacity: card.comingSoon ? 0.75 : 1,
               }}
             >
               <div style={{
-                width: 52, height: 52, borderRadius: 16, flexShrink: 0,
+                width: 40, height: 40, borderRadius: 12, flexShrink: 0,
                 background: 'linear-gradient(135deg, #ede9fe, #dbeafe)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 26,
+                fontSize: 20,
               }}>
                 {card.icon}
               </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 16, fontWeight: 800, color: '#1a1a2e', marginBottom: 3 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 800, color: '#1a1a2e', lineHeight: 1.3 }}>
                   {card.label}
                 </div>
-                <div style={{ fontSize: 13, color: '#4b5563', fontWeight: 600, lineHeight: 1.4 }}>
-                  {card.desc}
-                </div>
+                {card.comingSoon && (
+                  <span style={{
+                    background: 'rgba(124,58,237,0.1)', color: '#7c3aed',
+                    fontSize: 9, fontWeight: 800, padding: '2px 7px', borderRadius: 20,
+                    letterSpacing: 0.5, display: 'inline-block', marginTop: 4,
+                  }}>
+                    Soon
+                  </span>
+                )}
               </div>
-              {card.comingSoon ? (
-                <span style={{
-                  background: 'rgba(124,58,237,0.1)', color: '#7c3aed',
-                  fontSize: 10, fontWeight: 800, padding: '4px 10px', borderRadius: 20,
-                  letterSpacing: 0.5, whiteSpace: 'nowrap' as const, flexShrink: 0,
-                }}>
-                  Coming soon
-                </span>
-              ) : (
-                <span style={{ color: '#c4b5fd', fontSize: 22, fontWeight: 700, flexShrink: 0 }}>›</span>
+              {!card.comingSoon && (
+                <span style={{ color: '#c4b5fd', fontSize: 18, fontWeight: 700, flexShrink: 0 }}>›</span>
               )}
             </div>
           ))}
