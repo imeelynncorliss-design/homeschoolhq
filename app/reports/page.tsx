@@ -59,6 +59,20 @@ function ReportsContent() {
       href: '/standards',
       comingSoon: false,
     },
+    {
+      icon: '📚',
+      label: 'Reading Log',
+      desc: 'Track books read throughout the school year',
+      href: '/reading-log',
+      comingSoon: false,
+    },
+    {
+      icon: '🚌',
+      label: 'Field Trips & Activities',
+      desc: 'Log field trips, co-op classes, museum visits, and extracurriculars',
+      href: '/field-trips',
+      comingSoon: false,
+    },
   ]
 
   return (

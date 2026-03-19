@@ -41,6 +41,8 @@ export default function ProgressDashboard({ userId, organizationId }: ProgressDa
   const [selectedState, setSelectedState] = useState('')
   const [kids, setKids] = useState<Kid[]>([])
   const [selectedKidId, setSelectedKidId] = useState<string | null>(null)
+  const [fieldTripHours, setFieldTripHours] = useState(0)
+  const [booksRead, setBooksRead] = useState(0)
 
   // ── Shared attendance stats (same logic as AttendanceTracker) ──
   const attendanceStats = useAttendanceStats({
@@ -112,6 +114,15 @@ export default function ProgressDashboard({ userId, organizationId }: ProgressDa
           .select('id, kid_id, status, duration_minutes, subject')
           .in('kid_id', kidIds)
         setAllLessons((lessons as LessonRow[]) || [])
+
+        // Field trip hours + books read (org-level totals)
+        const [{ data: tripData }, { data: bookData }] = await Promise.all([
+          supabase.from('field_trips').select('hours').eq('organization_id', organizationId),
+          supabase.from('reading_log').select('id').eq('organization_id', organizationId),
+        ])
+        const hours = (tripData || []).reduce((sum: number, t: any) => sum + (t.hours ?? 0), 0)
+        setFieldTripHours(Math.round(hours * 10) / 10)
+        setBooksRead((bookData || []).length)
       }
     } catch (err) {
       console.error('ProgressDashboard loadSettings error:', err)
@@ -530,6 +541,16 @@ export default function ProgressDashboard({ userId, organizationId }: ProgressDa
               <div className="text-sm text-gray-500 mb-1">Days Remaining</div>
               <div className="text-2xl font-bold text-orange-500">{daysRemaining}</div>
               <div className="text-xs text-gray-400 mt-1">to reach {goal}-day goal</div>
+            </div>
+            <div className="bg-white border border-gray-200 rounded-lg p-4">
+              <div className="text-sm text-gray-500 mb-1">📚 Books Read</div>
+              <div className="text-2xl font-bold text-purple-600">{booksRead}</div>
+              <div className="text-xs text-gray-400 mt-1">this school year</div>
+            </div>
+            <div className="bg-white border border-gray-200 rounded-lg p-4">
+              <div className="text-sm text-gray-500 mb-1">🚌 Field Trip Hours</div>
+              <div className="text-2xl font-bold text-green-600">{fieldTripHours}h</div>
+              <div className="text-xs text-gray-400 mt-1">logged this year</div>
             </div>
           </div>
         </div>

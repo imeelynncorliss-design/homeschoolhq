@@ -14,7 +14,7 @@ const NAV_ITEMS = [
 const ACTIVE_MAP: Record<string, string[]> = {
   home:      ['/dashboard'],
   subjects:  ['/subjects'],
-  records:   ['/reports', '/attendance', '/transcript', '/portfolio', '/compliance', '/progress', '/courses', '/assessments'],
+  records:   ['/reports', '/attendance', '/transcript', '/portfolio', '/compliance', '/progress', '/courses', '/assessments', '/reading-log', '/field-trips'],
   resources: ['/resources', '/materials', '/supply-scout'],
   tools:     ['/tools', '/bulk-schedule', '/lessons', '/calendar'],
   profile:   ['/profile'],
