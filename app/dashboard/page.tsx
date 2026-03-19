@@ -621,11 +621,15 @@ function DashboardContent() {
         if (!resolved) { router.push('/onboarding'); return }
         orgId = resolved
 
-        const { data: profile } = await supabase
+        // Select all rows (guard against accidental duplicates), prefer one with style set
+        const { data: profileRows } = await supabase
           .from('user_profiles')
           .select('first_name, homeschool_style, pinned_features')
           .eq('user_id', user.id)
-          .maybeSingle()
+          .order('updated_at', { ascending: false })
+        const profile = (profileRows ?? []).find((r: any) => r.homeschool_style != null)
+          ?? profileRows?.[0]
+          ?? null
         if (profile?.first_name) setParentName(profile.first_name)
         const style = profile?.homeschool_style ?? null
         setHomeschoolStyle(style)

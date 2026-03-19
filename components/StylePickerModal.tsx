@@ -64,10 +64,8 @@ export default function StylePickerModal({ userId, stateAbbr, isFirstTime, onCom
     const pinnedArray = Array.from(pins)
     const { error } = await supabase
       .from('user_profiles')
-      .upsert(
-        { user_id: userId, homeschool_style: style, pinned_features: pinnedArray },
-        { onConflict: 'user_id' }
-      )
+      .update({ homeschool_style: style, pinned_features: pinnedArray })
+      .eq('user_id', userId)
     setSaving(false)
     if (!error) onComplete(style, pinnedArray)
   }
