@@ -39,17 +39,17 @@ const KID_COLORS = ['#7c3aed', '#0d9488', '#ec4899', '#f59e0b', '#3b82f6']
 const QUICK_ACTION_CONFIG: Record<string, {
   emoji: string; label: string; sub: string
   bg: string; iconBg: string; color: string; subColor: string
-  action: 'route' | 'lesson' | 'activity' | 'stuck' | 'today' | 'scout'
+  action: 'route' | 'lesson' | 'activity' | 'today' | 'scout'
   href?: string
 }> = {
-  attendance:  { emoji: '✅', label: 'Log Attendance',   sub: 'Mark today\'s school day',       bg: 'linear-gradient(135deg,#d1fae5,#a7f3d0)', iconBg: '#059669', color: '#064e3b', subColor: '#059669', action: 'route', href: '/attendance' },
-  reading_log: { emoji: '📚', label: 'Log a Book',       sub: 'Add to reading log',             bg: 'linear-gradient(135deg,#ede9fe,#ddd6fe)', iconBg: '#7c3aed', color: '#4c1d95', subColor: '#7c3aed', action: 'route', href: '/reading-log' },
-  field_trips: { emoji: '🚌', label: 'Log an Activity',  sub: 'Field trip, project, co-op',     bg: 'linear-gradient(135deg,#ccfbf1,#99f6e4)', iconBg: '#0d9488', color: '#134e4a', subColor: '#0d9488', action: 'route', href: '/field-trips' },
-  ai_lessons:  { emoji: '🤖', label: 'Plan a Lesson',    sub: 'Scout generates a full lesson',  bg: 'linear-gradient(135deg,#ede9fe,#ddd6fe)', iconBg: '#7c3aed', color: '#4c1d95', subColor: '#7c3aed', action: 'lesson' },
-  compliance:  { emoji: '📋', label: 'Compliance',       sub: 'Days/hours vs. requirements',    bg: 'linear-gradient(135deg,#fef2f2,#fee2e2)', iconBg: '#dc2626', color: '#7f1d1d', subColor: '#dc2626', action: 'route', href: '/compliance' },
-  progress:    { emoji: '📊', label: 'Progress Reports', sub: 'Learning analytics by subject',  bg: 'linear-gradient(135deg,#f0fdf4,#dcfce7)', iconBg: '#16a34a', color: '#14532d', subColor: '#16a34a', action: 'route', href: '/progress' },
-  transcript:  { emoji: '🎓', label: 'Transcript',       sub: 'GPA, courses, college records',  bg: 'linear-gradient(135deg,#fefce8,#fef08a)', iconBg: '#d97706', color: '#78350f', subColor: '#d97706', action: 'route', href: '/transcript' },
-  scout_chat:  { emoji: '💬', label: 'Ask Scout',        sub: 'Chat with your co-pilot',        bg: 'linear-gradient(135deg,#fef3c7,#fde68a)', iconBg: '#f59e0b', color: '#78350f', subColor: '#d97706', action: 'scout' },
+  attendance:  { emoji: '✅', label: 'Log Attendance',      sub: 'Mark today\'s school day',          bg: 'linear-gradient(135deg,#d1fae5,#a7f3d0)', iconBg: '#059669', color: '#064e3b', subColor: '#059669', action: 'route',    href: '/attendance' },
+  reading_log: { emoji: '📚', label: 'Log a Book',          sub: 'Add to reading log',                bg: 'linear-gradient(135deg,#ede9fe,#ddd6fe)', iconBg: '#7c3aed', color: '#4c1d95', subColor: '#7c3aed', action: 'route',    href: '/reading-log' },
+  field_trips: { emoji: '🚌', label: 'Log an Activity',     sub: 'Field trip, project, co-op',        bg: 'linear-gradient(135deg,#ccfbf1,#99f6e4)', iconBg: '#0d9488', color: '#134e4a', subColor: '#0d9488', action: 'route',    href: '/field-trips' },
+  ai_lessons:  { emoji: '🤖', label: 'Plan a Lesson',       sub: 'Use me if you need a lesson',       bg: 'linear-gradient(135deg,#ede9fe,#ddd6fe)', iconBg: '#7c3aed', color: '#4c1d95', subColor: '#7c3aed', action: 'lesson' },
+  ai_activity: { emoji: '🎯', label: 'Generate Activity',   sub: 'Use me if you need an activity idea', bg: 'linear-gradient(135deg,#ccfbf1,#99f6e4)', iconBg: '#0d9488', color: '#134e4a', subColor: '#0d9488', action: 'activity' },
+  compliance:  { emoji: '📋', label: 'Compliance',          sub: 'Days/hours vs. requirements',        bg: 'linear-gradient(135deg,#fef2f2,#fee2e2)', iconBg: '#dc2626', color: '#7f1d1d', subColor: '#dc2626', action: 'route',    href: '/compliance' },
+  progress:    { emoji: '📊', label: 'Progress Reports',    sub: 'Learning analytics by subject',      bg: 'linear-gradient(135deg,#f0fdf4,#dcfce7)', iconBg: '#16a34a', color: '#14532d', subColor: '#16a34a', action: 'route',    href: '/progress' },
+  transcript:  { emoji: '🎓', label: 'Transcript',          sub: 'GPA, courses, college records',      bg: 'linear-gradient(135deg,#fefce8,#fef08a)', iconBg: '#d97706', color: '#78350f', subColor: '#d97706', action: 'route',    href: '/transcript' },
 }
 
 const DAY_CARDINAL: Record<number, string> = {
@@ -604,7 +604,7 @@ function WeekStrip({
   })
 
   return (
-    <div style={{
+    <div id="tour-week-strip" style={{
       background: 'rgba(255,255,255,0.72)', backdropFilter: 'blur(18px)',
       borderRadius: 20, border: '1.5px solid rgba(124,58,237,0.10)',
       boxShadow: '0 4px 24px rgba(124,58,237,0.07)',
@@ -633,8 +633,8 @@ function WeekStrip({
       </div>
       <button
         onClick={() => router.push('/calendar')}
-        style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 12, color: '#7c3aed', padding: '0 0 0 6px', flexShrink: 0, whiteSpace: 'nowrap' as const }}>
-        →
+        style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 12, color: '#7c3aed', padding: '0 0 0 8px', flexShrink: 0, whiteSpace: 'nowrap' as const }}>
+        View full calendar →
       </button>
     </div>
   )
@@ -1080,12 +1080,20 @@ function DashboardContent() {
               <span style={css.secTitle}>
                 {homeschoolStyle === 'flexible' ? 'QUICK LOG' : 'QUICK ACTIONS'}
               </span>
-              <button
-                onClick={() => setShowStylePicker(true)}
-                style={{ fontSize: 11, fontWeight: 700, color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}
-              >
-                {homeschoolStyle === 'flexible' ? '🌿 Flexible' : homeschoolStyle === 'structured' ? '📐 Structured' : ''} ✏️
-              </button>
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                <button
+                  onClick={() => { localStorage.removeItem('hq_tour_done'); setTourAutoStart(false); setShowTour(true) }}
+                  style={{ fontSize: 11, fontWeight: 700, color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}
+                >
+                  ? Tour
+                </button>
+                <button
+                  onClick={() => setShowStylePicker(true)}
+                  style={{ fontSize: 11, fontWeight: 700, color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}
+                >
+                  ✏️ Customize cards
+                </button>
+              </div>
             </div>
 
             {/* ── Dynamic grid driven by pinnedFeatures ── */}
@@ -1112,12 +1120,12 @@ function DashboardContent() {
                   return { key: fid, ...c, onClick }
                 })
 
-              // Always append Need Help?
+              // Always append Ask Scout (SOS)
               const helpBtn = {
                 key: '__help__',
-                emoji: '🆘', label: 'Need Help?', sub: 'Scout & ideas',
-                bg: 'linear-gradient(135deg,#fce7f3,#fbcfe8)', iconBg: '#ec4899', color: '#831843', subColor: '#ec4899',
-                onClick: () => setShowStuck(true),
+                emoji: null as null, imgSrc: '/Cardinal_Mascot.png', label: 'Ask Scout', sub: 'Ask me anything, anytime',
+                bg: 'linear-gradient(135deg,#fef3c7,#fde68a)', iconBg: '#f59e0b', color: '#78350f', subColor: '#d97706',
+                onClick: () => window.dispatchEvent(new CustomEvent('open-scout-copilot')),
               }
 
               const allBtns = [...todayBtn, ...pinnedBtns, helpBtn]
@@ -1129,7 +1137,10 @@ function DashboardContent() {
                       style={{ ...css.quickCard, background: btn.bg }}
                       onClick={btn.onClick}>
                       <div style={{ ...css.qIcon, background: btn.iconBg }}>
-                        <span style={{ fontSize: 28 }}>{btn.emoji}</span>
+                        {(btn as any).imgSrc
+                          ? <img src={(btn as any).imgSrc} alt={btn.label} style={{ width: 36, height: 36, objectFit: 'contain' }} />
+                          : <span style={{ fontSize: 28 }}>{btn.emoji}</span>
+                        }
                       </div>
                       <div>
                         <div style={{ ...css.qLabel, color: btn.color }}>{btn.label}</div>
@@ -1299,9 +1310,11 @@ function DashboardContent() {
               setHomeschoolStyle(style)
               setPinnedFeatures(pins)
               setShowStylePicker(false)
-              // Auto-launch tour right after first setup
-              setTourAutoStart(true)
-              setShowTour(true)
+              // Only auto-launch tour the very first time a parent sets up
+              if (!localStorage.getItem('hq_tour_done')) {
+                setTourAutoStart(true)
+                setShowTour(true)
+              }
             }}
             onCancel={() => {
               if (homeschoolStyle === null) {

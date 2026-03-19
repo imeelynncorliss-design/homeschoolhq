@@ -7,20 +7,20 @@ import { getRegLevel, REG_LABEL, REG_DESC } from '@/lib/stateRegulation'
 // ─── Feature options ──────────────────────────────────────────────────────────
 
 export const STYLE_FEATURES = [
-  { id: 'pulse_check', emoji: '🎯', label: 'Progress Dials',         desc: 'Daily % completion rings per child' },
-  { id: 'attendance',  emoji: '✅', label: 'Attendance Tracking',    desc: 'Log school days and hours' },
-  { id: 'reading_log', emoji: '📚', label: 'Reading Log',            desc: 'Track books read this year' },
+  { id: 'pulse_check', emoji: '🎯', label: 'Progress Dials',           desc: 'Daily % completion rings per child' },
+  { id: 'attendance',  emoji: '✅', label: 'Attendance Tracking',      desc: 'Log school days and hours' },
+  { id: 'reading_log', emoji: '📚', label: 'Reading Log',              desc: 'Track books read this year' },
   { id: 'field_trips', emoji: '🚌', label: 'Field Trips & Activities', desc: 'Log outings, co-ops, projects' },
-  { id: 'ai_lessons',  emoji: '🤖', label: 'AI Lesson Planning',     desc: 'Scout generates lessons for you' },
-  { id: 'compliance',  emoji: '📋', label: 'Compliance Tracking',    desc: 'Days/hours vs. state requirements' },
-  { id: 'progress',    emoji: '📊', label: 'Progress Reports',       desc: 'Learning analytics by subject' },
-  { id: 'transcript',  emoji: '🎓', label: 'Transcript Builder',     desc: 'GPA, courses, college-ready records' },
-  { id: 'scout_chat',  emoji: '💬', label: 'Scout AI Chat',          desc: 'Ask Scout anything, anytime' },
+  { id: 'ai_lessons',  emoji: '🤖', label: 'Plan a Lesson',            desc: 'Use me if you need a lesson' },
+  { id: 'ai_activity', emoji: '🎯', label: 'Generate Activity',        desc: 'Use me if you need an activity idea' },
+  { id: 'compliance',  emoji: '📋', label: 'Compliance Tracking',      desc: 'Days/hours vs. state requirements' },
+  { id: 'progress',    emoji: '📊', label: 'Progress Reports',         desc: 'Learning analytics by subject' },
+  { id: 'transcript',  emoji: '🎓', label: 'Transcript Builder',       desc: 'GPA, courses, college-ready records' },
 ]
 
 // ─── Defaults per style ───────────────────────────────────────────────────────
 
-export const DEFAULT_FLEXIBLE   = ['attendance', 'reading_log', 'field_trips', 'scout_chat']
+export const DEFAULT_FLEXIBLE   = ['attendance', 'reading_log', 'field_trips']
 export const DEFAULT_STRUCTURED = ['pulse_check', 'attendance', 'compliance', 'ai_lessons', 'progress']
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -152,13 +152,13 @@ export default function StylePickerModal({ userId, stateAbbr, isFirstTime, onCom
                 <div style={hdrTitle}>
                   {style === 'flexible' ? '🌿 Flexible & Relaxed' : '📐 Structured & Planned'}
                 </div>
-                <div style={hdrSub}>Pin what matters most to your home screen</div>
+                <div style={hdrSub}>Choose your Home tab cards</div>
               </div>
               <button onClick={onCancel} style={xBtn} title="Close">✕</button>
             </div>
 
             <div style={{ padding: '4px 24px 12px', fontSize: 13, color: '#6b7280', lineHeight: 1.5 }}>
-              Toggle features on or off — they'll appear as shortcuts on your dashboard.
+              Toggle cards on or off — selected ones appear on your Home tab.
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, padding: '0 24px 16px' }}>

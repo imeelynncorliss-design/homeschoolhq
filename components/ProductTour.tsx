@@ -8,6 +8,7 @@ interface TourStep {
   targetId: string
   title: string
   content: string
+  bullets?: string[]
   position: 'top' | 'bottom' | 'left' | 'right' | 'center'
 }
 
@@ -28,25 +29,33 @@ function buildTourSteps(
 ): TourStep[] {
   const steps: TourStep[] = []
 
+  // Week strip — always first
+  steps.push({
+    targetId: 'tour-week-strip',
+    title: 'Your Week at a Glance',
+    content: "A purple dot means lessons are scheduled that day. Tap any day to see those lessons — and open, edit, check in, or delete right from there. Tap 'View full calendar' to see the full month view.",
+    position: 'bottom',
+  })
+
   // Pulse check — only if structured OR user pinned it
   const hasPulse = homeschoolStyle !== 'flexible' || pinnedFeatures.includes('pulse_check')
   if (hasPulse) {
     steps.push({
       targetId: 'tour-pulse',
-      title: 'Your Daily Pulse Check',
-      content: "These rings show each child's daily progress at a glance. Tap any ring to see their full lesson list and mark things done.",
+      title: 'Daily Progress Rings',
+      content: "Each ring shows how much of today's work a child has completed. Tap a ring to see their full lesson list and mark things done.",
       position: 'bottom',
     })
   }
 
-  // Quick actions — always present, but description changes by mode
+  // Quick actions — always present, copy adapts by mode
   const isFlexible = homeschoolStyle === 'flexible'
   steps.push({
     targetId: 'tour-quick-actions',
     title: isFlexible ? 'Your Quick Log' : 'Your Quick Actions',
     content: isFlexible
-      ? 'These are your shortcuts for logging what you do each day — attendance, books read, activities. Tap any button to jump right in.'
-      : 'Jump to Today\'s Learning, plan a lesson, check compliance, or hit Need Help? and I\'ll step in.',
+      ? "Shortcuts for logging what you do each day. Tap any card to jump right in — and tap 'Ask Scout' anytime I can help."
+      : "Jump to Today's Learning, log attendance, check compliance, or plan a lesson. Tap 'Ask Scout' anytime you have a question.",
     position: 'bottom',
   })
 
@@ -54,16 +63,23 @@ function buildTourSteps(
   steps.push({
     targetId: 'tour-bottom-nav',
     title: 'Navigate Your School',
-    content: 'Use the bottom bar to move between Calendar, Records, Tools, and more. Everything your school needs — one tap away.',
+    content: 'Everything your school needs is one tap away:',
+    bullets: [
+      '📚 Subjects — see what each child is learning and all their scheduled lessons',
+      '📋 Records — attendance, compliance, transcripts, reading logs, and more',
+      '💡 Resources — manage teaching materials and supplies',
+      '🔧 Tools — import curriculum, bulk schedule, plan vacations, add co-teachers',
+      '👤 Profile — your account, children\'s profiles, and teaching style',
+    ],
     position: 'top',
   })
 
-  // Scout button — always
+  // Ask Scout — always last
   steps.push({
-    targetId: 'tour-scout-btn',
-    title: "I'm always here!",
-    content: "Tap the Scout button anytime to plan a lesson, generate an activity, or just ask me a question. I'm your 24/7 co-pilot.",
-    position: 'top',
+    targetId: 'tour-quick-actions',
+    title: "Ask Scout Anything",
+    content: "I'm your 24/7 homeschool co-pilot. Ask me about state requirements, curriculum ideas, how to use any feature in the app — anything. Just tap the Ask Scout card.",
+    position: 'bottom',
   })
 
   return steps
@@ -72,43 +88,56 @@ function buildTourSteps(
 const STORAGE_KEY = 'hq_tour_done'
 
 // ─── Tooltip position helper ──────────────────────────────────────────────────
+// Positions the card adjacent to the target element (below or above),
+// clamped to stay within the viewport. Call after scrollIntoView settles.
 
-function getTooltipStyle(targetId: string, position: TourStep['position']): React.CSSProperties {
-  if (typeof window === 'undefined') return { top: '50%', left: '50%', transform: 'translate(-50%,-50%)' }
+type ArrowDir = 'up' | 'down' | 'none'
+
+function getTooltipPosition(targetId: string): { style: React.CSSProperties; arrow: ArrowDir } {
+  if (typeof window === 'undefined') {
+    return { style: { top: '50%', left: '50%', transform: 'translate(-50%,-50%)' }, arrow: 'none' }
+  }
+
+  const vw  = window.innerWidth
+  const vh  = window.innerHeight
+  const TW  = Math.min(320, vw - 32)
+  const TH  = 260  // generous estimated tooltip height
+  const GAP = 14
+  const M   = 16   // viewport margin
+
   const el = document.getElementById(targetId)
-  if (!el || position === 'center') return { top: '50%', left: '50%', transform: 'translate(-50%,-50%)' }
+  if (!el) {
+    return { style: { bottom: 110, left: Math.max(M, (vw - TW) / 2), width: TW }, arrow: 'none' }
+  }
 
   const rect = el.getBoundingClientRect()
-  const TW = 320 // tooltip width
-  const GAP = 18
+  // Center the tooltip horizontally over the element, clamped to viewport
+  const left = Math.max(M, Math.min(rect.left + rect.width / 2 - TW / 2, vw - TW - M))
 
-  const clampX = (x: number) => Math.max(12, Math.min(x, window.innerWidth - TW - 12))
-
-  switch (position) {
-    case 'bottom':
-      return { top: rect.bottom + GAP, left: clampX(rect.left + rect.width / 2 - TW / 2) }
-    case 'top':
-      return { bottom: window.innerHeight - rect.top + GAP, left: clampX(rect.left + rect.width / 2 - TW / 2) }
-    case 'left':
-      return { top: rect.top, right: window.innerWidth - rect.left + GAP }
-    case 'right':
-      return { top: rect.top, left: rect.right + GAP }
-    default:
-      return { top: '50%', left: '50%', transform: 'translate(-50%,-50%)' }
+  // Prefer placing below the element
+  const topBelow = rect.bottom + GAP
+  if (topBelow + TH <= vh - M) {
+    return { style: { top: topBelow, left, width: TW }, arrow: 'up' }
   }
+
+  // Otherwise place above the element
+  const topAbove = rect.top - TH - GAP
+  if (topAbove >= M) {
+    return { style: { top: Math.max(M, topAbove), left, width: TW }, arrow: 'down' }
+  }
+
+  // Last resort: bottom-center above nav
+  return { style: { bottom: 110, left: Math.max(M, (vw - TW) / 2), width: TW }, arrow: 'up' }
 }
 
-function getArrowStyle(position: TourStep['position']): React.CSSProperties {
+function getArrowStyle(arrow: ArrowDir): React.CSSProperties {
   const base: React.CSSProperties = {
     position: 'absolute', width: 0, height: 0, borderStyle: 'solid',
+    left: '50%', transform: 'translateX(-50%)',
   }
-  switch (position) {
-    case 'bottom': return { ...base, top: -10, left: '50%', transform: 'translateX(-50%)', borderWidth: '0 10px 10px', borderColor: 'transparent transparent #fff transparent' }
-    case 'top':    return { ...base, bottom: -10, left: '50%', transform: 'translateX(-50%)', borderWidth: '10px 10px 0', borderColor: '#fff transparent transparent transparent' }
-    case 'right':  return { ...base, left: -10, top: 20, borderWidth: '10px 10px 10px 0', borderColor: 'transparent #fff transparent transparent' }
-    case 'left':   return { ...base, right: -10, top: 20, borderWidth: '10px 0 10px 10px', borderColor: 'transparent transparent transparent #fff' }
-    default:       return {}
-  }
+  if (arrow === 'up')   return { ...base, top: -10,    borderWidth: '0 10px 10px', borderColor: 'transparent transparent #fff transparent' }
+  if (arrow === 'down') return { ...base, bottom: -10, borderWidth: '10px 10px 0', borderColor: '#fff transparent transparent transparent' }
+  return {}
 }
 
 // ─── Highlight ring around target ─────────────────────────────────────────────
@@ -118,7 +147,10 @@ function HighlightRing({ targetId }: { targetId: string }) {
 
   useEffect(() => {
     const el = document.getElementById(targetId)
-    if (el) setRect(el.getBoundingClientRect())
+    if (el) {
+      // Wait for scroll to settle before measuring
+      setTimeout(() => setRect(el.getBoundingClientRect()), 420)
+    }
   }, [targetId])
 
   if (!rect) return null
@@ -147,6 +179,7 @@ export default function ProductTour({ parentName, autoStart = false, homeschoolS
   const [phase, setPhase]         = useState<'idle' | 'welcome' | 'tour'>('idle')
   const [step, setStep]           = useState(0)
   const [tooltipStyle, setTooltipStyle] = useState<React.CSSProperties>({})
+  const [arrowDir, setArrowDir]         = useState<ArrowDir>('up')
   const [mounted, setMounted]     = useState(false)
 
   // Show welcome bubble after delay
@@ -170,7 +203,19 @@ export default function ProductTour({ parentName, autoStart = false, homeschoolS
   const recalcPosition = useCallback(() => {
     if (phase !== 'tour') return
     const s = tourSteps[step]
-    setTooltipStyle(getTooltipStyle(s.targetId, s.position))
+    const el = document.getElementById(s.targetId)
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      setTimeout(() => {
+        const { style, arrow } = getTooltipPosition(s.targetId)
+        setTooltipStyle(style)
+        setArrowDir(arrow)
+      }, 400)
+    } else {
+      const { style, arrow } = getTooltipPosition(s.targetId)
+      setTooltipStyle(style)
+      setArrowDir(arrow)
+    }
   }, [phase, step])
 
   useEffect(() => {
@@ -316,8 +361,8 @@ export default function ProductTour({ parentName, autoStart = false, homeschoolS
             }}
           >
             {/* Arrow */}
-            {currentTourStep.position !== 'center' && (
-              <div style={getArrowStyle(currentTourStep.position)} />
+            {arrowDir !== 'none' && (
+              <div style={getArrowStyle(arrowDir)} />
             )}
 
             <div style={{
@@ -348,9 +393,16 @@ export default function ProductTour({ parentName, autoStart = false, homeschoolS
 
               {/* Body */}
               <div style={{ padding: '16px 18px 18px' }}>
-                <p style={{ fontSize: 13, color: '#374151', lineHeight: 1.65, margin: '0 0 16px', fontWeight: 600 }}>
+                <p style={{ fontSize: 13, color: '#374151', lineHeight: 1.65, margin: currentTourStep.bullets ? '0 0 10px' : '0 0 16px', fontWeight: 600 }}>
                   {currentTourStep.content}
                 </p>
+                {currentTourStep.bullets && (
+                  <ul style={{ margin: '0 0 16px', padding: '0 0 0 4px', listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 5 }}>
+                    {currentTourStep.bullets.map((b, i) => (
+                      <li key={i} style={{ fontSize: 12, color: '#374151', fontWeight: 600, lineHeight: 1.4 }}>{b}</li>
+                    ))}
+                  </ul>
+                )}
 
                 {/* Progress dots + Next button */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>

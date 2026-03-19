@@ -137,45 +137,6 @@ function featureKeyFromPath(pathname: string): string | null {
 // ─── Cardinal SVG Icon ────────────────────────────────────────────────────────
 // Inline so no image dependency. Swap for <img src="/cardinal.png"> once asset exists.
 
-function CardinalIcon({ size = 36 }: { size?: number }) {
-  return (
-    <svg
-      viewBox="0 0 100 100"
-      width={size}
-      height={size}
-      xmlns="http://www.w3.org/2000/svg"
-      aria-label="Cardinal"
-      style={{ flexShrink: 0 }}
-    >
-      {/* Body */}
-      <ellipse cx="50" cy="62" rx="22" ry="20" fill="#D92B2B" />
-      {/* Head */}
-      <circle cx="50" cy="38" r="16" fill="#D92B2B" />
-      {/* Crest */}
-      <polygon points="50,14 46,26 50,22 54,26" fill="#B01C1C" />
-      <polygon points="50,10 47,22 50,18 53,22" fill="#C62020" />
-      <polygon points="50,7  48,20 50,16 52,20" fill="#D92B2B" />
-      {/* Wing */}
-      <ellipse cx="38" cy="65" rx="10" ry="14" fill="#B01C1C" transform="rotate(-10 38 65)" />
-      {/* Face mask */}
-      <ellipse cx="50" cy="44" rx="11" ry="7" fill="#1a1a1a" />
-      {/* Eye */}
-      <circle cx="54" cy="41" r="3" fill="#1a1a1a" />
-      <circle cx="55" cy="40" r="1" fill="white" />
-      {/* Beak */}
-      <polygon points="60,45 72,43 60,50" fill="#F4A020" />
-      {/* Feet */}
-      <line x1="44" y1="80" x2="40" y2="90" stroke="#F4A020" strokeWidth="2.5" strokeLinecap="round" />
-      <line x1="40" y1="90" x2="36" y2="93" stroke="#F4A020" strokeWidth="2" strokeLinecap="round" />
-      <line x1="40" y1="90" x2="40" y2="95" stroke="#F4A020" strokeWidth="2" strokeLinecap="round" />
-      <line x1="40" y1="90" x2="44" y2="93" stroke="#F4A020" strokeWidth="2" strokeLinecap="round" />
-      <line x1="56" y1="80" x2="60" y2="90" stroke="#F4A020" strokeWidth="2.5" strokeLinecap="round" />
-      <line x1="60" y1="90" x2="56" y2="93" stroke="#F4A020" strokeWidth="2" strokeLinecap="round" />
-      <line x1="60" y1="90" x2="60" y2="95" stroke="#F4A020" strokeWidth="2" strokeLinecap="round" />
-      <line x1="60" y1="90" x2="64" y2="93" stroke="#F4A020" strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  )
-}
 
 // ─── Star Rating ──────────────────────────────────────────────────────────────
 
@@ -845,14 +806,6 @@ export default function AppHeader() {
 
         {/* Right */}
         <div style={s.right}>
-
-          {/* Cardinal Copilot button — always visible */}
-          {userId && (
-            <button id="tour-scout-btn" className="hr-btn hr-copilot-btn" onClick={() => setShowCopilot(true)} title="Scout — your co-pilot">
-              <CardinalIcon size={18} />
-              <span className="hr-copilot-label">Scout</span>
-            </button>
-          )}
 
           {/* Desktop-only: Feedback */}
           {betaEnabled && userId && orgId && (
