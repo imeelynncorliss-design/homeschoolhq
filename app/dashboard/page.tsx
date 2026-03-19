@@ -608,19 +608,10 @@ function WeekStrip({
       background: 'rgba(255,255,255,0.72)', backdropFilter: 'blur(18px)',
       borderRadius: 20, border: '1.5px solid rgba(124,58,237,0.10)',
       boxShadow: '0 4px 24px rgba(124,58,237,0.07)',
-      marginBottom: 20, padding: '14px 18px',
+      marginBottom: 20, padding: '8px 14px',
+      display: 'flex', alignItems: 'center', gap: 6,
     }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-        <span style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 900, fontSize: 11, letterSpacing: 1.2, color: '#7c3aed', textTransform: 'uppercase' as const }}>
-          This Week
-        </span>
-        <button
-          onClick={() => router.push('/calendar')}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 13, color: '#7c3aed', padding: 0 }}>
-          Full calendar →
-        </button>
-      </div>
-      <div style={{ display: 'flex', gap: 4 }}>
+      <div style={{ display: 'flex', flex: 1, gap: 2 }}>
         {days.map(({ key, dayName, dayNum, count }) => {
           const isToday = key === todayKey
           return (
@@ -628,18 +619,23 @@ function WeekStrip({
               key={key}
               onClick={() => onDayClick(key)}
               style={{
-                flex: 1, display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 5,
-                padding: '8px 2px', borderRadius: 12, border: 'none', cursor: 'pointer',
+                flex: 1, display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 3,
+                padding: '5px 2px', borderRadius: 10, border: 'none', cursor: 'pointer',
                 background: isToday ? '#7c3aed' : 'transparent',
                 transition: 'background 0.15s',
               }}>
-              <span style={{ fontFamily: "'Nunito', sans-serif", fontSize: 10, fontWeight: 700, color: isToday ? 'rgba(255,255,255,0.75)' : '#9ca3af', textTransform: 'uppercase' as const }}>{dayName}</span>
-              <span style={{ fontFamily: "'Nunito', sans-serif", fontSize: 18, fontWeight: 900, color: isToday ? '#fff' : '#1a1a2e', lineHeight: 1 }}>{dayNum}</span>
-              <div style={{ width: 6, height: 6, borderRadius: '50%', background: count > 0 ? (isToday ? 'rgba(255,255,255,0.65)' : '#7c3aed') : 'transparent' }} />
+              <span style={{ fontFamily: "'Nunito', sans-serif", fontSize: 9, fontWeight: 700, color: isToday ? 'rgba(255,255,255,0.75)' : '#9ca3af', textTransform: 'uppercase' as const }}>{dayName}</span>
+              <span style={{ fontFamily: "'Nunito', sans-serif", fontSize: 15, fontWeight: 900, color: isToday ? '#fff' : '#1a1a2e', lineHeight: 1 }}>{dayNum}</span>
+              <div style={{ width: 4, height: 4, borderRadius: '50%', background: count > 0 ? (isToday ? 'rgba(255,255,255,0.65)' : '#7c3aed') : 'transparent' }} />
             </button>
           )
         })}
       </div>
+      <button
+        onClick={() => router.push('/calendar')}
+        style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 12, color: '#7c3aed', padding: '0 0 0 6px', flexShrink: 0, whiteSpace: 'nowrap' as const }}>
+        →
+      </button>
     </div>
   )
 }
@@ -1051,55 +1047,27 @@ function DashboardContent() {
                 className="pulse-grid"
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-                  gap: 20,
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
+                  gap: 14,
                 }}
               >
                 {kidPulses.map(pulse => (
                   <div key={pulse.kid.id} className="pulse-card"
                     style={{ ...css.pulseCard, cursor: 'pointer' }}
                     onClick={() => setActivePulseKidId(pulse.kid.id)}>
-                    {/* Ring */}
-                    <div style={{ position: 'relative', width: 200, height: 200, margin: '0 auto 20px' }}>
-                      <PulseRing pct={pulse.pct} color={pulse.color} size={200} />
+                    {/* Compact ring */}
+                    <div style={{ position: 'relative', width: 90, height: 90, margin: '0 auto 8px', flexShrink: 0 }}>
+                      <PulseRing pct={pulse.pct} color={pulse.color} size={90} />
                       <div style={css.ringCenter}>
-                        <span style={{ fontSize: 15, fontWeight: 800, color: '#374151', marginBottom: 2 }}>{pulse.kid.displayname}</span>
-                        <span style={{ fontSize: 42, fontWeight: 900, color: '#1a1a2e', lineHeight: 1 }}>{pulse.pct}%</span>
-                        <span style={{ fontSize: 14, fontWeight: 700, color: '#374151', marginTop: 5 }}>Complete</span>
+                        <span style={{ fontSize: 20, fontWeight: 900, color: '#1a1a2e', lineHeight: 1 }}>{pulse.pct}%</span>
                       </div>
                     </div>
-                    {/* Lessons count */}
-                    <div style={{ fontSize: 14, fontWeight: 700, color: '#374151', textAlign: 'center' as const, marginBottom: 16 }}>
+                    <div style={{ fontSize: 13, fontWeight: 900, color: '#1a1a2e', textAlign: 'center' as const, marginBottom: 4 }}>{pulse.kid.displayname}</div>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: '#6b7280', textAlign: 'center' as const }}>
                       {pulse.totalToday > 0
-                        ? `${pulse.completedToday} of ${pulse.totalToday} lessons done today`
-                        : 'No lessons scheduled today'}
+                        ? `${pulse.completedToday}/${pulse.totalToday} done`
+                        : 'No lessons today'}
                     </div>
-                    {/* Focus subjects — emoji icon tiles */}
-                    {pulse.subjectNames.length > 0 && (
-                      <>
-                        <div style={{ fontSize: 11, fontWeight: 800, color: '#9ca3af', letterSpacing: 1, textAlign: 'center' as const, marginBottom: 12, textTransform: 'uppercase' as const }}>
-                          Focus Subjects
-                        </div>
-                        <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 12, justifyContent: 'center' }}>
-                          {pulse.subjectNames.map(s => (
-                            <div key={s} style={{ display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 6 }}>
-                              <div style={{
-                                width: 52, height: 52, borderRadius: 16,
-                                background: subjectColor(s) + '18',
-                                border: `2px solid ${subjectColor(s)}40`,
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                fontSize: 24,
-                              }}>
-                                {subjectEmoji(s)}
-                              </div>
-                              <span style={{ fontSize: 12, fontWeight: 700, color: '#374151', textAlign: 'center' as const, maxWidth: 72, lineHeight: 1.3 }}>
-                                {s.split('/')[0].trim()}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </>
-                    )}
                   </div>
                 ))}
               </div>
@@ -1552,11 +1520,13 @@ const css: Record<string, React.CSSProperties> = {
     display: 'flex',
     flexDirection: 'column' as const,
     alignItems: 'center',
-    padding: '28px 24px 24px',
-    background: 'rgba(255,255,255,0.82)',
-    borderRadius: 22,
-    border: '1.5px solid rgba(124,58,237,0.13)',
-    backdropFilter: 'blur(8px)',
+    justifyContent: 'center',
+    padding: '18px 12px 16px',
+    minHeight: 140,
+    background: 'rgba(255,255,255,0.18)',
+    borderRadius: 20,
+    border: '1.5px solid rgba(255,255,255,0.45)',
+    backdropFilter: 'blur(20px)',
     boxShadow: '0 2px 16px rgba(124,58,237,0.08)',
   },
   ringCenter: {

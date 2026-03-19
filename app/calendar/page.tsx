@@ -100,29 +100,17 @@ function CalendarContent() {
 
       {/* Top bar */}
       <div className="no-print" style={{ maxWidth: 960, margin: '0 auto', padding: '16px 20px 0', display: 'flex', alignItems: 'center' }}>
-        {/* Lessons / Calendar tabs */}
-        <div style={{ display: 'flex', gap: 6 }}>
-          <button
-            onClick={() => router.push('/lessons')}
-            style={{
-              padding: '7px 14px', borderRadius: 20, border: 'none',
-              background: 'rgba(255,255,255,0.55)', color: '#6b7280',
-              fontSize: 13, fontWeight: 700, cursor: 'pointer',
-              fontFamily: "'Nunito', sans-serif",
-            }}>
-            📚 Lessons
-          </button>
-          <button
-            style={{
-              padding: '7px 14px', borderRadius: 20, border: 'none',
-              background: 'rgba(255,255,255,0.95)', color: '#7c3aed',
-              fontSize: 13, fontWeight: 800, cursor: 'default',
-              fontFamily: "'Nunito', sans-serif",
-              boxShadow: '0 1px 6px rgba(124,58,237,0.15)',
-            }}>
-            📅 Calendar
-          </button>
-        </div>
+        <button
+          onClick={() => router.back()}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            padding: '7px 14px', borderRadius: 20, border: 'none',
+            background: 'rgba(255,255,255,0.7)', color: '#6b7280',
+            fontSize: 13, fontWeight: 700, cursor: 'pointer',
+            fontFamily: "'Nunito', sans-serif",
+          }}>
+          ← Back
+        </button>
       </div>
 
       {/* Page title */}

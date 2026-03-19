@@ -323,8 +323,12 @@ export default function LessonCalendar({
   }
 
   const handleSelectEvent = (event: any) => {
-    setSelectedDate(event.start)
-    setShowDayDetails(true)
+    if (event.activityType === 'lesson' && event.resource?.lesson && event.resource?.child) {
+      onLessonClick(event.resource.lesson, event.resource.child)
+    } else {
+      setSelectedDate(event.start)
+      setShowDayDetails(true)
+    }
   }
 
   return (
