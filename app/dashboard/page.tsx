@@ -11,6 +11,7 @@ import ActivityGenerator from '@/components/ActivityGenerator'
 import LessonGenerator from '@/components/LessonGenerator'
 import WeatherWidget from '@/components/WeatherWidget'
 import StylePickerModal from '@/components/StylePickerModal'
+import ProductTour from '@/components/ProductTour'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -588,6 +589,8 @@ function DashboardContent() {
   const [homeschoolStyle, setHomeschoolStyle] = useState<'flexible' | 'structured' | null | undefined>(undefined)
   const [pinnedFeatures, setPinnedFeatures]   = useState<string[]>([])
   const [showStylePicker, setShowStylePicker] = useState(false)
+  const [showTour, setShowTour]               = useState(false)
+  const [tourAutoStart, setTourAutoStart]     = useState(false)
 
   const now         = new Date()
   const dow         = now.getDay()
@@ -627,7 +630,12 @@ function DashboardContent() {
         const style = profile?.homeschool_style ?? null
         setHomeschoolStyle(style)
         setPinnedFeatures(profile?.pinned_features ?? [])
-        if (style === null && !sessionStorage.getItem('style_picker_dismissed')) setShowStylePicker(true)
+        if (style === null && !sessionStorage.getItem('style_picker_dismissed')) {
+          setShowStylePicker(true)
+        } else if (style !== null && typeof window !== 'undefined' && !localStorage.getItem('hq_tour_done')) {
+          // Returning user who has a style but hasn't taken the tour yet
+          setShowTour(true)
+        }
 
         const { data: sy } = await supabase
           .from('school_year_settings')
@@ -801,7 +809,7 @@ function DashboardContent() {
           <WeatherWidget />
 
           {/* Pulse Check — hidden for flexible users unless pinned */}
-          {(homeschoolStyle !== 'flexible' || pinnedFeatures.includes('pulse_check')) && <section>
+          {(homeschoolStyle !== 'flexible' || pinnedFeatures.includes('pulse_check')) && <section id="tour-pulse">
             <div style={css.sectionRow}>
               <span style={css.secTitle}>PULSE CHECK</span>
               <span style={css.secSub}>Tap a child to see their lessons</span>
@@ -873,7 +881,7 @@ function DashboardContent() {
           </section>}
 
           {/* Quick Actions — style-aware */}
-          <section>
+          <section id="tour-quick-actions">
             <div style={{ ...css.sectionRow, justifyContent: 'space-between' }}>
               <span style={css.secTitle}>
                 {homeschoolStyle === 'flexible' ? 'QUICK LOG' : 'QUICK ACTIONS'}
@@ -1124,6 +1132,9 @@ function DashboardContent() {
               setHomeschoolStyle(style)
               setPinnedFeatures(pins)
               setShowStylePicker(false)
+              // Auto-launch tour right after first setup
+              setTourAutoStart(true)
+              setShowTour(true)
             }}
             onCancel={() => {
               if (homeschoolStyle === null) {
@@ -1131,6 +1142,15 @@ function DashboardContent() {
               }
               setShowStylePicker(false)
             }}
+          />
+        )}
+
+        {/* ── Product Tour ── */}
+        {showTour && (
+          <ProductTour
+            parentName={parentName || undefined}
+            autoStart={tourAutoStart}
+            onDone={() => { setShowTour(false); setTourAutoStart(false) }}
           />
         )}
 
