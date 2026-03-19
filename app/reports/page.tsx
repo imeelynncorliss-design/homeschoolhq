@@ -98,10 +98,12 @@ function ReportsContent() {
         {/* Hub cards */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           {hubCards.map(card => (
-            <div
+            <button
               key={card.label}
               className={card.comingSoon ? '' : 'hub-card'}
               onClick={card.href ? () => router.push(card.href!) : undefined}
+              disabled={card.comingSoon}
+              aria-label={card.comingSoon ? `${card.label} — coming soon` : card.label}
               style={{
                 background: 'rgba(255,255,255,0.82)',
                 borderRadius: 16,
@@ -113,6 +115,7 @@ function ReportsContent() {
                 cursor: card.comingSoon ? 'default' : 'pointer',
                 transition: 'transform 0.15s ease, box-shadow 0.15s ease',
                 opacity: card.comingSoon ? 0.75 : 1,
+                textAlign: 'left', fontFamily: "'Nunito', sans-serif", width: '100%',
               }}
             >
               <div style={{
@@ -140,7 +143,7 @@ function ReportsContent() {
               {!card.comingSoon && (
                 <span style={{ color: '#c4b5fd', fontSize: 18, fontWeight: 700, flexShrink: 0 }}>›</span>
               )}
-            </div>
+            </button>
           ))}
         </div>
       </div>

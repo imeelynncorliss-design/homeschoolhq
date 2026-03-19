@@ -265,8 +265,8 @@ export default function FieldTripLog({ organizationId, kids }: FieldTripLogProps
                       {trip.description && <div style={{ fontSize: 12, color: '#6b7280', marginTop: 6 }}>{trip.description}</div>}
                     </div>
                     <div className="no-print" style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                      <button onClick={() => openEdit(trip)} style={btn.icon}>✏️</button>
-                      <button onClick={() => handleDelete(trip.id)} style={btn.iconRed}>🗑</button>
+                      <button onClick={() => openEdit(trip)} style={btn.icon} aria-label={`Edit ${trip.title}`}>✏️</button>
+                      <button onClick={() => handleDelete(trip.id)} style={btn.iconRed} aria-label={`Delete ${trip.title}`}>🗑</button>
                     </div>
                   </div>
                 )
@@ -278,10 +278,10 @@ export default function FieldTripLog({ organizationId, kids }: FieldTripLogProps
 
       {/* Add/Edit Modal */}
       {showForm && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+        <div role="dialog" aria-modal="true" aria-labelledby="field-trip-form-title" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
           <div style={{ background: '#fff', borderRadius: 24, width: '100%', maxWidth: 480, maxHeight: '90vh', overflowY: 'auto', padding: 28, boxShadow: '0 24px 64px rgba(0,0,0,0.18)', position: 'relative' }}>
-            <button onClick={() => { setShowForm(false); resetForm() }} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', fontSize: 18, color: '#9ca3af', cursor: 'pointer' }}>✕</button>
-            <h3 style={{ fontSize: 18, fontWeight: 800, color: '#111827', margin: '0 0 20px' }}>
+            <button onClick={() => { setShowForm(false); resetForm() }} aria-label="Close form" style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', fontSize: 18, color: '#9ca3af', cursor: 'pointer' }}>✕</button>
+            <h3 id="field-trip-form-title" style={{ fontSize: 18, fontWeight: 800, color: '#111827', margin: '0 0 20px' }}>
               {editingTrip ? 'Edit Trip' : 'Add Field Trip'}
             </h3>
             <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>

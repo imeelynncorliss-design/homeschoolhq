@@ -236,19 +236,19 @@ function FeedbackModal({ onClose, userId, orgId }: FeedbackModalProps) {
   }, [valid, ease, useful, text, userId, orgId])
 
   return (
-    <div style={s.overlay} onClick={onClose} role="dialog" aria-modal="true">
+    <div style={s.overlay} onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="feedback-modal-title">
       <div style={s.modal} onClick={e => e.stopPropagation()}>
         <div style={s.modalHeader}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <span style={s.betaBadge}>BETA</span>
             <div>
-              <div style={s.modalTitle}>Share Feedback</div>
+              <div id="feedback-modal-title" style={s.modalTitle}>Share Feedback</div>
               <div style={s.modalSub}>
                 {typeof window !== 'undefined' ? window.location.pathname : ''}
               </div>
             </div>
           </div>
-          <button style={s.modalClose} onClick={onClose}>×</button>
+          <button style={s.modalClose} onClick={onClose} aria-label="Close feedback modal">×</button>
         </div>
 
         {phase === 'success' ? (

@@ -267,11 +267,11 @@ ${childSections}
   }
 
   return (
-    <div style={css.overlay} onClick={onClose}>
+    <div style={css.overlay} onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="todays-learning-title">
       <div style={{ ...css.modalBox, maxWidth: 640, maxHeight: '80vh', overflowY: 'auto' as const }}
         onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22 }}>
-          <div style={{ fontWeight: 900, fontSize: 20, color: '#2d1b69' }}>Today's Learning</div>
+          <div id="todays-learning-title" style={{ fontWeight: 900, fontSize: 20, color: '#2d1b69' }}>Today's Learning</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <button
               onClick={() => { onClose(); router.push('/calendar') }}
@@ -287,7 +287,7 @@ ${childSections}
             >
               🖨️ Print
             </button>
-            <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: '#4b5563', lineHeight: 1 }}>✕</button>
+            <button onClick={onClose} aria-label="Close today's learning" style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: '#4b5563', lineHeight: 1 }}>✕</button>
           </div>
         </div>
 
@@ -321,13 +321,15 @@ ${childSections}
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6, paddingLeft: 20 }}>
                       {group.items.map((l: any) => (
-                        <div key={l.id}
+                        <button key={l.id}
                           onClick={() => onLessonClick(l, pulse.kid.displayname)}
+                          aria-label={`View lesson: ${l.title}`}
                           style={{
                             display: 'flex', alignItems: 'center', gap: 10,
                             background: 'rgba(255,255,255,0.75)', borderRadius: 10,
                             padding: '9px 14px', border: '1px solid rgba(0,0,0,0.06)',
-                            cursor: 'pointer',
+                            cursor: 'pointer', width: '100%', textAlign: 'left',
+                            fontFamily: "'Nunito', sans-serif",
                           }}>
                           <div style={{ width: 9, height: 9, borderRadius: '50%', background: group.dot, flexShrink: 0 }} />
                           <div style={{ flex: 1 }}>
@@ -337,7 +339,7 @@ ${childSections}
                             </div>
                           </div>
                           <span style={{ fontSize: 16, color: '#c4b5fd' }}>›</span>
-                        </div>
+                        </button>
                       ))}
                     </div>
                   </div>
@@ -404,12 +406,12 @@ function LifeHappensModal({ todayLessons, kidPulses, cardinalSrc, onClose, onRes
   }
 
   return (
-    <div style={lh.overlay} onClick={onClose}>
+    <div style={lh.overlay} onClick={onClose} role="dialog" aria-modal="true" aria-label="Life Happens">
       <div style={lh.modal} onClick={e => e.stopPropagation()}>
 
         {step === 'scout' && (
           <>
-            <button style={lh.closeBtn} onClick={onClose}>×</button>
+            <button style={lh.closeBtn} onClick={onClose} aria-label="Close">×</button>
             <div style={lh.cardinalWrap}>
               <img src={cardinalSrc} alt="Scout" style={{ width: 120, height: 'auto' }} />
             </div>

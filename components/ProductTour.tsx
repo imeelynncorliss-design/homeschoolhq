@@ -359,6 +359,9 @@ export default function ProductTour({ parentName, autoStart = false, homeschoolS
           <div
             className="tour-card"
             key={step}
+            role="dialog"
+            aria-modal="true"
+            aria-label={`Product tour step ${step + 1} of ${tourSteps.length}: ${currentTourStep.title}`}
             style={{
               position: 'fixed',
               ...tooltipStyle,
@@ -390,7 +393,7 @@ export default function ProductTour({ parentName, autoStart = false, homeschoolS
                     <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)', fontWeight: 600 }}>Scout • Step {step + 1} of {tourSteps.length}</div>
                   </div>
                 </div>
-                <button onClick={finish} style={{
+                <button onClick={finish} aria-label="Close tour" style={{
                   background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 8,
                   color: '#fff', fontSize: 14, cursor: 'pointer', padding: '3px 7px',
                   fontFamily: "'Nunito', sans-serif", fontWeight: 700,

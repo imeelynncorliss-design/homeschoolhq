@@ -73,7 +73,7 @@ export default function StylePickerModal({ userId, stateAbbr, isFirstTime, onCom
   }
 
   return (
-    <div style={ov} onClick={isFirstTime ? undefined : onCancel}>
+    <div style={ov} onClick={isFirstTime ? undefined : onCancel} role="dialog" aria-modal="true" aria-labelledby="style-picker-title">
       <div style={modal} onClick={e => e.stopPropagation()}>
         <style>{`@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');`}</style>
 
@@ -84,10 +84,10 @@ export default function StylePickerModal({ userId, stateAbbr, isFirstTime, onCom
             <div style={hdr}>
               <img src="/Cardinal_Mascot.png" alt="Scout" style={{ width: 48, height: 48, objectFit: 'contain' }} />
               <div style={{ flex: 1 }}>
-                <div style={hdrTitle}>Let's set up your home screen 🏡</div>
+                <div id="style-picker-title" style={hdrTitle}>Let's set up your home screen 🏡</div>
                 <div style={hdrSub}>Quick question before we dive in</div>
               </div>
-              <button onClick={onCancel} style={xBtn} title="Close">✕</button>
+              <button onClick={onCancel} style={xBtn} aria-label="Close" title="Close">✕</button>
             </div>
 
             {/* State context */}
@@ -156,7 +156,7 @@ export default function StylePickerModal({ userId, stateAbbr, isFirstTime, onCom
                 </div>
                 <div style={hdrSub}>Choose your Home tab cards</div>
               </div>
-              <button onClick={onCancel} style={xBtn} title="Close">✕</button>
+              <button onClick={onCancel} style={xBtn} aria-label="Close" title="Close">✕</button>
             </div>
 
             <div style={{ padding: '4px 24px 12px', fontSize: 13, color: '#6b7280', lineHeight: 1.5 }}>
