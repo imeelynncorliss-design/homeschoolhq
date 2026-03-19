@@ -548,7 +548,7 @@ function CopilotPanel({ onClose, organizationId, userId, userName, userState, ho
                         <div style={cp.historyDate}>{formatDate(conv.last_message_at)}</div>
                       </div>
                       <button
-                        style={{ ...cp.starBtn, color: conv.starred ? '#fbbf24' : '#d1d5db' }}
+                        style={{ ...cp.starBtn, color: conv.starred ? '#fbbf24' : '#9ca3af' }}
                         onClick={e => { e.stopPropagation(); onStarConversation(conv.id, conv.starred); setHistoryList(prev => prev.map(c => c.id === conv.id ? { ...c, starred: !c.starred } : c)) }}
                         title={conv.starred ? 'Unstar' : 'Star'}
                       >
@@ -1104,7 +1104,7 @@ const cp: Record<string, CSSProperties> = {
     cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
   },
   footer: {
-    textAlign: 'center', fontSize: 10, color: '#d1d5db',
+    textAlign: 'center', fontSize: 10, color: '#9ca3af',
     padding: '6px 16px 10px', background: '#fff', fontFamily: 'system-ui, sans-serif',
   },
   headIconBtn: {

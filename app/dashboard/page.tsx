@@ -312,7 +312,7 @@ ${childSections}
               </div>
 
               {lessons.length === 0 ? (
-                <div style={{ fontSize: 13, color: '#b5bec9', paddingLeft: 20 }}>No lessons scheduled today</div>
+                <div style={{ fontSize: 13, color: '#6b7280', paddingLeft: 20 }}>No lessons scheduled today</div>
               ) : (
                 grouped.map(group => (
                   <div key={group.label} style={{ marginBottom: 10 }}>

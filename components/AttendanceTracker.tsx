@@ -965,8 +965,9 @@ useEffect(() => {
                 
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-3">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Child</label>
+                    <label htmlFor="filter-child" className="block text-sm font-medium text-gray-700 mb-1">Child</label>
                     <select
+                      id="filter-child"
                       value={selectedKid}
                       onChange={(e) => setSelectedKid(e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900"
@@ -979,8 +980,9 @@ useEffect(() => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                    <label htmlFor="filter-start-date" className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
                     <input
+                      id="filter-start-date"
                       type="date"
                       value={startDateFilter}
                       onChange={(e) => setStartDateFilter(e.target.value)}
@@ -989,8 +991,9 @@ useEffect(() => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                    <label htmlFor="filter-end-date" className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
                     <input
+                      id="filter-end-date"
                       type="date"
                       value={endDateFilter}
                       onChange={(e) => setEndDateFilter(e.target.value)}
@@ -999,8 +1002,9 @@ useEffect(() => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Search Date</label>
+                    <label htmlFor="filter-search" className="block text-sm font-medium text-gray-700 mb-1">Search Date</label>
                     <input
+                      id="filter-search"
                       type="text"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
@@ -1403,10 +1407,10 @@ function MarkAttendanceModal({ date, kids, selectedKid, existingAttendance, defa
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div role="dialog" aria-modal="true" aria-labelledby="mark-attendance-title" className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] flex flex-col">
         <div className="p-6 overflow-y-auto flex-1">
-          <h3 className="text-xl font-bold text-gray-900 mb-4">
+          <h3 id="mark-attendance-title" className="text-xl font-bold text-gray-900 mb-4">
             Mark Attendance for {parseLocalDate(date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
           </h3>
 
@@ -1414,8 +1418,9 @@ function MarkAttendanceModal({ date, kids, selectedKid, existingAttendance, defa
             {/* Child Selection */}
             {kids.length > 1 && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Child</label>
+                <label htmlFor="attendance-child" className="block text-sm font-medium text-gray-700 mb-1">Child</label>
                 <select
+                  id="attendance-child"
                   value={kidId || 'all'}
                   onChange={(e) => setKidId(e.target.value === 'all' ? null : e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded text-gray-900"
@@ -1470,8 +1475,9 @@ function MarkAttendanceModal({ date, kids, selectedKid, existingAttendance, defa
 
             {/* Hours */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Hours</label>
+              <label htmlFor="attendance-hours" className="block text-sm font-medium text-gray-700 mb-1">Hours</label>
               <input
+                id="attendance-hours"
                 type="number"
                 step="0.5"
                 min="0"
@@ -1483,8 +1489,9 @@ function MarkAttendanceModal({ date, kids, selectedKid, existingAttendance, defa
 
             {/* Notes */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Notes (optional)</label>
+              <label htmlFor="attendance-notes" className="block text-sm font-medium text-gray-700 mb-1">Notes (optional)</label>
               <textarea
+                id="attendance-notes"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 rows={3}

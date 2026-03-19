@@ -139,8 +139,9 @@ export default function ReconciliationPanel({
             {selectedDates.size > 0 && (
               <>
                 <div className="h-4 w-px bg-gray-300" />
-                <span className="text-sm text-gray-900">Mark as:</span>
+                <label htmlFor="bulk-status" className="text-sm text-gray-900">Mark as:</label>
                 <select
+                  id="bulk-status"
                   value={bulkStatus}
                   onChange={(e) => setBulkStatus(e.target.value as 'full_day' | 'half_day')}
                   className="text-sm px-2 py-1 border border-gray-300 rounded text-gray-900"
@@ -148,8 +149,9 @@ export default function ReconciliationPanel({
                   <option value="full_day">Full Day</option>
                   <option value="half_day">Half Day</option>
                 </select>
-                <span className="text-sm text-gray-700">Hours:</span>
+                <label htmlFor="bulk-hours" className="text-sm text-gray-700">Hours:</label>
                 <input
+                  id="bulk-hours"
                   type="number"
                   value={bulkHours}
                   onChange={(e) => setBulkHours(parseFloat(e.target.value))}
@@ -173,6 +175,10 @@ export default function ReconciliationPanel({
               <div
                 key={s.date}
                 onClick={() => toggleDate(s.date)}
+                onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && toggleDate(s.date)}
+                role="checkbox"
+                aria-checked={selectedDates.has(s.date)}
+                tabIndex={0}
                 className={`bg-white rounded-lg p-3 border-2 transition-all cursor-pointer ${
                   selectedDates.has(s.date) ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-300'
                 }`}
@@ -202,7 +208,7 @@ export default function ReconciliationPanel({
                   </div>
                   <button
                     onClick={(e) => { e.stopPropagation(); onDismissSuggestion(s.date) }}
-                    className="text-xs text-gray-400 hover:text-gray-600 ml-2"
+                    className="text-xs text-gray-500 hover:text-gray-700 ml-2"
                   >
                     Dismiss
                   </button>
@@ -285,7 +291,7 @@ export default function ReconciliationPanel({
                       {meta.canDismiss && (
                         <button
                           onClick={() => onDismissDiscrepancy(d.date, d.type)}
-                          className="text-xs text-gray-400 hover:text-gray-600 font-medium whitespace-nowrap"
+                          className="text-xs text-gray-500 hover:text-gray-700 font-medium whitespace-nowrap"
                         >
                           Dismiss
                         </button>
