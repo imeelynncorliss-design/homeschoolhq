@@ -627,7 +627,7 @@ function DashboardContent() {
         const style = profile?.homeschool_style ?? null
         setHomeschoolStyle(style)
         setPinnedFeatures(profile?.pinned_features ?? [])
-        if (style === null) setShowStylePicker(true)
+        if (style === null && !sessionStorage.getItem('style_picker_dismissed')) setShowStylePicker(true)
 
         const { data: sy } = await supabase
           .from('school_year_settings')
@@ -802,8 +802,8 @@ function DashboardContent() {
           {/* Weather */}
           <WeatherWidget />
 
-          {/* Pulse Check */}
-          <section>
+          {/* Pulse Check — hidden for flexible users unless pinned */}
+          {(homeschoolStyle !== 'flexible' || pinnedFeatures.includes('pulse_check')) && <section>
             <div style={css.sectionRow}>
               <span style={css.secTitle}>PULSE CHECK</span>
               <span style={css.secSub}>Tap a child to see their lessons</span>
@@ -872,7 +872,7 @@ function DashboardContent() {
                 ))}
               </div>
             )}
-          </section>
+          </section>}
 
           {/* Quick Actions — style-aware */}
           <section>
@@ -1121,9 +1121,17 @@ function DashboardContent() {
           <StylePickerModal
             userId={user.id}
             stateAbbr={schoolState}
+            isFirstTime={homeschoolStyle === null}
             onComplete={(style, pins) => {
               setHomeschoolStyle(style)
               setPinnedFeatures(pins)
+              sessionStorage.removeItem('style_picker_dismissed')
+              setShowStylePicker(false)
+            }}
+            onCancel={() => {
+              if (homeschoolStyle === null) {
+                sessionStorage.setItem('style_picker_dismissed', '1')
+              }
               setShowStylePicker(false)
             }}
           />
