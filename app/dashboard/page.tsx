@@ -571,6 +571,184 @@ const lh: Record<string, import('react').CSSProperties> = {
   },
 }
 
+// ─── Week Strip ───────────────────────────────────────────────────────────────
+
+function toDateKey(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+function WeekStrip({
+  weekLessons, today, onDayClick,
+}: {
+  weekLessons: Record<string, { lesson: any; kid: Kid }[]>
+  today: Date
+  onDayClick: (dateKey: string) => void
+}) {
+  const router = useRouter()
+  const todayKey = toDateKey(today)
+
+  const dow = today.getDay()
+  const weekStart = new Date(today)
+  weekStart.setDate(today.getDate() - (dow === 0 ? 6 : dow - 1))
+
+  const days = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(weekStart)
+    d.setDate(weekStart.getDate() + i)
+    const key = toDateKey(d)
+    return {
+      key,
+      dayName: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()],
+      dayNum: d.getDate(),
+      count: weekLessons[key]?.length ?? 0,
+    }
+  })
+
+  return (
+    <div style={{
+      background: 'rgba(255,255,255,0.72)', backdropFilter: 'blur(18px)',
+      borderRadius: 20, border: '1.5px solid rgba(124,58,237,0.10)',
+      boxShadow: '0 4px 24px rgba(124,58,237,0.07)',
+      marginBottom: 20, padding: '14px 18px',
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+        <span style={{ fontFamily: "'Nunito', sans-serif", fontWeight: 900, fontSize: 11, letterSpacing: 1.2, color: '#7c3aed', textTransform: 'uppercase' as const }}>
+          This Week
+        </span>
+        <button
+          onClick={() => router.push('/calendar')}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 13, color: '#7c3aed', padding: 0 }}>
+          Full calendar →
+        </button>
+      </div>
+      <div style={{ display: 'flex', gap: 4 }}>
+        {days.map(({ key, dayName, dayNum, count }) => {
+          const isToday = key === todayKey
+          return (
+            <button
+              key={key}
+              onClick={() => onDayClick(key)}
+              style={{
+                flex: 1, display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 5,
+                padding: '8px 2px', borderRadius: 12, border: 'none', cursor: 'pointer',
+                background: isToday ? '#7c3aed' : 'transparent',
+                transition: 'background 0.15s',
+              }}>
+              <span style={{ fontFamily: "'Nunito', sans-serif", fontSize: 10, fontWeight: 700, color: isToday ? 'rgba(255,255,255,0.75)' : '#9ca3af', textTransform: 'uppercase' as const }}>{dayName}</span>
+              <span style={{ fontFamily: "'Nunito', sans-serif", fontSize: 18, fontWeight: 900, color: isToday ? '#fff' : '#1a1a2e', lineHeight: 1 }}>{dayNum}</span>
+              <div style={{ width: 6, height: 6, borderRadius: '50%', background: count > 0 ? (isToday ? 'rgba(255,255,255,0.65)' : '#7c3aed') : 'transparent' }} />
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// ─── Day Drawer ───────────────────────────────────────────────────────────────
+
+const STATUS_DOT: Record<string, { bg: string; label: string }> = {
+  completed:   { bg: '#16a34a', label: 'Done' },
+  in_progress: { bg: '#2563eb', label: 'In Progress' },
+  not_started: { bg: '#d1d5db', label: 'Not Started' },
+}
+
+function DayDrawer({
+  dateKey, entries, onClose, onLessonClick,
+}: {
+  dateKey: string
+  entries: { lesson: any; kid: Kid }[]
+  onClose: () => void
+  onLessonClick: (lesson: any, kidName: string) => void
+}) {
+  const [localDate] = dateKey.split('T')
+  const d = new Date(localDate + 'T12:00:00')
+  const label = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+
+  // Group by kid
+  const byKid: Record<string, { kid: Kid; lessons: any[] }> = {}
+  for (const { lesson, kid } of entries) {
+    if (!byKid[kid.id]) byKid[kid.id] = { kid, lessons: [] }
+    byKid[kid.id].lessons.push(lesson)
+  }
+  const groups = Object.values(byKid)
+
+  return (
+    <div
+      style={{ position: 'fixed', inset: 0, zIndex: 1200, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'flex-end' }}
+      onClick={onClose}
+    >
+      <div
+        style={{
+          width: '100%', maxWidth: 540, margin: '0 auto',
+          background: '#fff', borderRadius: '24px 24px 0 0',
+          boxShadow: '0 -8px 40px rgba(0,0,0,0.18)',
+          maxHeight: '80vh', display: 'flex', flexDirection: 'column' as const,
+          fontFamily: "'Nunito', sans-serif",
+        }}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 20px 12px' }}>
+          <div>
+            <div style={{ fontWeight: 900, fontSize: 18, color: '#1a1a2e' }}>📅 {label}</div>
+            <div style={{ fontSize: 13, color: '#6b7280', marginTop: 2 }}>
+              {entries.length === 0 ? 'No lessons scheduled' : `${entries.length} lesson${entries.length !== 1 ? 's' : ''}`}
+            </div>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: '#9ca3af', padding: '0 4px' }}>×</button>
+        </div>
+
+        {/* Drag handle */}
+        <div style={{ width: 40, height: 4, borderRadius: 2, background: '#e5e7eb', margin: '-8px auto 12px' }} />
+
+        {/* Lesson list */}
+        <div style={{ overflowY: 'auto' as const, flex: 1, padding: '0 16px 24px' }}>
+          {entries.length === 0 ? (
+            <div style={{ textAlign: 'center' as const, padding: '32px 0', color: '#9ca3af', fontSize: 14 }}>
+              Nothing scheduled — free day! 🎉
+            </div>
+          ) : (
+            groups.map(({ kid, lessons }) => (
+              <div key={kid.id} style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 11, fontWeight: 900, color: '#7c3aed', letterSpacing: 1, textTransform: 'uppercase' as const, marginBottom: 8 }}>
+                  {kid.displayname}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 8 }}>
+                  {lessons.map((lesson: any) => {
+                    const dot = STATUS_DOT[lesson.status] ?? STATUS_DOT.not_started
+                    return (
+                      <button
+                        key={lesson.id}
+                        onClick={() => onLessonClick(lesson, kid.displayname)}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 12,
+                          background: '#f9fafb', borderRadius: 14,
+                          padding: '12px 14px', border: '1.5px solid #f3f4f6',
+                          cursor: 'pointer', textAlign: 'left' as const,
+                          transition: 'background 0.12s',
+                          width: '100%',
+                        }}
+                      >
+                        <div style={{ width: 10, height: 10, borderRadius: '50%', background: dot.bg, flexShrink: 0 }} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontWeight: 800, fontSize: 14, color: '#1a1a2e', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{lesson.title}</div>
+                          {lesson.subject && <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>{lesson.subject}</div>}
+                        </div>
+                        <div style={{ fontSize: 11, color: dot.bg, fontWeight: 700, flexShrink: 0 }}>{dot.label}</div>
+                        <span style={{ color: '#9ca3af', fontSize: 16 }}>›</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Dashboard Content ────────────────────────────────────────────────────────
 
 function DashboardContent() {
@@ -597,6 +775,8 @@ function DashboardContent() {
   const [showStylePicker, setShowStylePicker] = useState(false)
   const [showTour, setShowTour]               = useState(false)
   const [tourAutoStart, setTourAutoStart]     = useState(false)
+  const [weekLessons, setWeekLessons]           = useState<Record<string, { lesson: any; kid: Kid }[]>>({})
+  const [selectedWeekDay, setSelectedWeekDay]   = useState<string | null>(null)
 
   const now         = new Date()
   const dow         = now.getDay()
@@ -706,6 +886,38 @@ function DashboardContent() {
 
         setKidPulses(pulses)
         setTodayLessons(lessonsMap)
+
+        // Fetch full lesson data for the whole week (Mon–Sun)
+        const weekStart2 = new Date(now)
+        const wDow = now.getDay()
+        weekStart2.setDate(now.getDate() - (wDow === 0 ? 6 : wDow - 1))
+        const weekDays = Array.from({ length: 7 }, (_, i) => {
+          const d = new Date(weekStart2)
+          d.setDate(weekStart2.getDate() + i)
+          return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+        })
+        const kidIds = kidsData.map((k: any) => k.id)
+        if (kidIds.length > 0) {
+          const { data: weekData } = await supabase
+            .from('lessons')
+            .select('id, title, status, subject, start_time, lesson_date, duration_minutes, kid_id, description, lesson_source')
+            .in('kid_id', kidIds)
+            .in('lesson_date', weekDays)
+            .order('start_time', { ascending: true })
+          const byDate: Record<string, { lesson: any; kid: Kid }[]> = {}
+          for (const d of weekDays) byDate[d] = []
+          for (const lesson of weekData ?? []) {
+            if (!lesson.lesson_date) continue
+            const kid = kidsData.find((k: any) => k.id === lesson.kid_id)
+            if (kid && byDate[lesson.lesson_date]) {
+              byDate[lesson.lesson_date].push({
+                lesson,
+                kid: { id: kid.id, displayname: kid.displayname, grade_level: kid.grade_level, learning_style: kid.learning_style },
+              })
+            }
+          }
+          setWeekLessons(byDate)
+        }
       }
 
       setLoading(false)
@@ -765,11 +977,8 @@ function DashboardContent() {
         .quick-btn:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.11) !important; }
         .quick-btn:active { transform: scale(0.97); }
         .nav-btn:hover { opacity: 0.8; }
-        @media (max-width: 700px) {
+        @media (max-width: 400px) {
           .quick-grid { grid-template-columns: repeat(2, 1fr) !important; }
-        }
-        @media (max-width: 480px) {
-          .quick-grid { grid-template-columns: 1fr !important; }
         }
       `}</style>
 
@@ -817,6 +1026,13 @@ function DashboardContent() {
 
           {/* Weather */}
           <WeatherWidget />
+
+          {/* Week Strip */}
+          <WeekStrip
+            weekLessons={weekLessons}
+            today={now}
+            onDayClick={key => setSelectedWeekDay(key)}
+          />
 
           {/* Pulse Check — hidden for flexible users unless pinned */}
           {(homeschoolStyle !== 'flexible' || pinnedFeatures.includes('pulse_check')) && <section id="tour-pulse">
@@ -1002,6 +1218,7 @@ function DashboardContent() {
           <LessonGenerator
             kids={kidPulses.map(p => ({ id: p.kid.id, displayname: p.kid.displayname, grade: p.kid.grade_level }))}
             userId={user?.id ?? ''}
+            homeschoolStyle={homeschoolStyle ?? null}
             onClose={() => setShowGenerator(false)}
           />
         )}
@@ -1009,6 +1226,7 @@ function DashboardContent() {
           <ActivityGenerator
             kids={kidPulses.map(p => p.kid)}
             organizationId={organizationId}
+            homeschoolStyle={homeschoolStyle ?? null}
             onClose={() => setShowActivity(false)}
             onSaved={() => {}}
           />
@@ -1025,6 +1243,19 @@ function DashboardContent() {
             }}
           />
         )}
+        {/* Day Drawer — opened from week strip */}
+        {selectedWeekDay && (
+          <DayDrawer
+            dateKey={selectedWeekDay}
+            entries={weekLessons[selectedWeekDay] ?? []}
+            onClose={() => setSelectedWeekDay(null)}
+            onLessonClick={(lesson, kidName) => {
+              setSelectedKidName(kidName)
+              setSelectedLesson(lesson as LessonViewModalLesson)
+            }}
+          />
+        )}
+
         {selectedLesson && (
           <LessonViewModal
             lesson={selectedLesson}
@@ -1037,12 +1268,16 @@ function DashboardContent() {
               router.push(`/subjects?kid=${selectedLesson.kid_id}`)
             }}
             onDelete={async () => {
-              await supabase.from('lessons').delete().eq('id', selectedLesson.id)
+              const id = selectedLesson.id
+              await supabase.from('lessons').delete().eq('id', id)
               setTodayLessons(prev => {
                 const updated = { ...prev }
-                for (const kid in updated) {
-                  updated[kid] = updated[kid].filter(l => l.id !== selectedLesson.id)
-                }
+                for (const kid in updated) updated[kid] = updated[kid].filter(l => l.id !== id)
+                return updated
+              })
+              setWeekLessons(prev => {
+                const updated = { ...prev }
+                for (const day in updated) updated[day] = updated[day].filter(e => e.lesson.id !== id)
                 return updated
               })
               setSelectedLesson(null)
@@ -1053,19 +1288,32 @@ function DashboardContent() {
                          : 'not_started'
               await supabase.from('lessons').update({ status: next }).eq('id', lessonId)
               handleLessonStatusUpdate(lessonId, selectedLesson!.kid_id, next)
+              setWeekLessons(prev => {
+                const updated = { ...prev }
+                for (const day in updated) updated[day] = updated[day].map(e => e.lesson.id === lessonId ? { ...e, lesson: { ...e.lesson, status: next } } : e)
+                return updated
+              })
               setSelectedLesson(s => s ? { ...s, status: next as LessonViewModalLesson['status'] } : null)
             }}
             onSetStatus={async (lessonId, newStatus) => {
               await supabase.from('lessons').update({ status: newStatus }).eq('id', lessonId)
               handleLessonStatusUpdate(lessonId, selectedLesson!.kid_id, newStatus)
+              setWeekLessons(prev => {
+                const updated = { ...prev }
+                for (const day in updated) updated[day] = updated[day].map(e => e.lesson.id === lessonId ? { ...e, lesson: { ...e.lesson, status: newStatus } } : e)
+                return updated
+              })
               setSelectedLesson(s => s ? { ...s, status: newStatus as LessonViewModalLesson['status'] } : null)
             }}
             onSave={(lessonId, updates) => {
               setTodayLessons(prev => {
                 const updated = { ...prev }
-                for (const kid in updated) {
-                  updated[kid] = updated[kid].map(l => l.id === lessonId ? { ...l, ...updates } : l)
-                }
+                for (const kid in updated) updated[kid] = updated[kid].map(l => l.id === lessonId ? { ...l, ...updates } : l)
+                return updated
+              })
+              setWeekLessons(prev => {
+                const updated = { ...prev }
+                for (const day in updated) updated[day] = updated[day].map(e => e.lesson.id === lessonId ? { ...e, lesson: { ...e.lesson, ...updates } } : e)
                 return updated
               })
               setSelectedLesson(s => s ? { ...s, ...updates } : null)
@@ -1336,33 +1584,36 @@ const css: Record<string, React.CSSProperties> = {
 
   quickGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-    gap: 18,
+    gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
+    gap: 14,
     marginBottom: 14,
   },
   quickCard: {
     display: 'flex',
+    flexDirection: 'column' as const,
     alignItems: 'center',
-    gap: 18,
+    justifyContent: 'center',
+    gap: 10,
     borderRadius: 20,
     border: '1.5px solid rgba(255,255,255,0.9)',
-    padding: '24px 22px',
+    padding: '22px 14px 20px',
+    minHeight: 140,
     boxShadow: '0 2px 16px rgba(0,0,0,0.07)',
-    textAlign: 'left' as const,
+    textAlign: 'center' as const,
     fontFamily: "'Nunito', sans-serif",
     width: '100%',
   },
   qIcon: {
-    width: 62,
-    height: 62,
-    borderRadius: 18,
+    width: 56,
+    height: 56,
+    borderRadius: 16,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
   },
-  qLabel: { fontWeight: 900, fontSize: 16, marginBottom: 4 },
-  qSub:   { fontSize: 13, fontWeight: 600, lineHeight: 1.4 },
+  qLabel: { fontWeight: 900, fontSize: 15, marginBottom: 3, lineHeight: 1.2 },
+  qSub:   { fontSize: 12, fontWeight: 600, lineHeight: 1.4 },
 
   lifeFab: {
     width: 100, height: 100, borderRadius: '50%',

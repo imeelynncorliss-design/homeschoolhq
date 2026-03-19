@@ -19,7 +19,7 @@ export async function POST(request: Request) {
     )
 
     const formData = await request.json();
-    const { userId, childId, subject, gradeLevel, duration, topic } = formData;
+    const { userId, childId, subject, gradeLevel, duration, topic, homeschoolStyle } = formData;
     console.log('generate-lesson: childId=', childId, 'subject=', subject)
 
     if (!childId) {
@@ -78,6 +78,13 @@ Each lesson plan must include:
 - Connect to their interests: ${kid.current_hook || 'general topics'}
 - Align with their current focus: ${kid.current_focus || 'broad learning goals'}
 ${kid.curriculum === 'Eclectic / Mix' ? '- Family uses an eclectic mix of curricula — use flexible, subject-appropriate structure rather than any single curriculum\'s approach' : kid.curriculum && kid.curriculum !== 'Custom' ? `- Align lesson structure and terminology with ${kid.curriculum} (e.g. match its sequence, vocabulary, and teaching approach)` : ''}
+
+**TEACHING STYLE:**
+${homeschoolStyle === 'flexible'
+  ? '- This family takes a flexible, relaxed approach to homeschooling. Keep lesson plans open-ended and adaptable — no rigid timing or rigid structure. Prioritize discovery and interest-led learning. Steps should feel like loose guides the parent can adjust on the fly, not a strict script.'
+  : homeschoolStyle === 'structured'
+  ? '- This family uses a structured, planned approach. Lessons should be clearly sequenced with defined objectives, explicit step timing, and measurable outcomes. Include concrete assessment ideas and clear success criteria the parent can track and record.'
+  : '- Teaching style not specified — provide a balanced lesson plan.'}
 
 Return ONLY valid JSON:
 {

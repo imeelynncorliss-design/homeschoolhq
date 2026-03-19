@@ -11,7 +11,7 @@ export async function POST(request: Request) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    const { userId, kidId, organizationId, subject, topic, vibe } = await request.json()
+    const { userId, kidId, organizationId, subject, topic, vibe, homeschoolStyle } = await request.json()
 
     // Usage guardrail — enforce monthly tier limits
     if (userId) {
@@ -59,6 +59,7 @@ ${kid.curriculum === 'Eclectic / Mix' ? 'Curriculum: Eclectic mix — use flexib
 Subject: ${subject}
 ${topic ? `Topic/focus: ${topic}` : ''}
 Activity vibe: ${vibeDesc[vibe] || vibe}
+Teaching approach: ${homeschoolStyle === 'flexible' ? 'Flexible and relaxed — activities should feel spontaneous and low-pressure, not like extra school work. Open-ended is better.' : homeschoolStyle === 'structured' ? 'Structured and intentional — activities can reinforce specific skills with clear, observable outcomes the parent can note.' : 'Not specified.'}
 ${materialsSection}
 
 Each activity should:

@@ -38,9 +38,10 @@ type LessonGeneratorProps = {
   initialDate?: string;
   initialKidId?: string;
   initialSubject?: string;
+  homeschoolStyle?: 'flexible' | 'structured' | null;
 };
 
-export default function LessonGenerator({ kids, userId, onClose, initialDate, initialKidId, initialSubject }: LessonGeneratorProps) {
+export default function LessonGenerator({ kids, userId, onClose, initialDate, initialKidId, initialSubject, homeschoolStyle }: LessonGeneratorProps) {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [variations, setVariations] = useState<LessonVariation[]>([]);
@@ -189,7 +190,7 @@ export default function LessonGenerator({ kids, userId, onClose, initialDate, in
       const response = await fetch('/api/generate-lesson', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...formData, subject: resolved }),
+        body: JSON.stringify({ ...formData, subject: resolved, homeschoolStyle }),
       });
 
       if (!response.ok) {

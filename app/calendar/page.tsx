@@ -204,6 +204,16 @@ function CalendarContent() {
             })
             setSelectedLesson(s => s ? { ...s, status: newStatus as LessonViewModalLesson['status'] } : null)
           }}
+          onSave={(lessonId, updates) => {
+            setLessonsByKid(prev => {
+              const updated = { ...prev }
+              for (const kid in updated) {
+                updated[kid] = updated[kid].map((l: any) => l.id === lessonId ? { ...l, ...updates } : l)
+              }
+              return updated
+            })
+            setSelectedLesson(s => s ? { ...s, ...updates } : null)
+          }}
         />
       )}
 

@@ -28,6 +28,7 @@ interface ActivityGeneratorProps {
   organizationId?: string | null
   onClose: () => void
   onSaved?: () => void
+  homeschoolStyle?: 'flexible' | 'structured' | null
 }
 
 // ─── Vibe Options ─────────────────────────────────────────────────────────────
@@ -57,7 +58,7 @@ const STYLE_LABEL: Record<string, string> = {
 
 // ─── ActivityGenerator ────────────────────────────────────────────────────────
 
-export default function ActivityGenerator({ kids, organizationId, onClose, onSaved }: ActivityGeneratorProps) {
+export default function ActivityGenerator({ kids, organizationId, onClose, onSaved, homeschoolStyle }: ActivityGeneratorProps) {
   const [step, setStep] = useState<'setup' | 'vibe' | 'loading' | 'results'>('setup')
   const [selectedKidId, setSelectedKidId] = useState<string>(kids[0]?.id ?? '')
   const [subject, setSubject] = useState('')
@@ -81,7 +82,7 @@ export default function ActivityGenerator({ kids, organizationId, onClose, onSav
       const res = await fetch('/api/generate-activity', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ kidId: selectedKidId, organizationId, subject, topic, vibe: chosenVibe }),
+        body: JSON.stringify({ kidId: selectedKidId, organizationId, subject, topic, vibe: chosenVibe, homeschoolStyle }),
       })
       const data = await res.json()
       if (!res.ok || !data.activities?.length) throw new Error(data.error || 'No activities returned')

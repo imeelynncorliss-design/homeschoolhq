@@ -67,6 +67,7 @@ interface CopilotPanelProps {
   userId?: string
   userName?: string
   userState?: string | null
+  homeschoolStyle?: string | null
   messages: CopilotMessage[]
   setMessages: Dispatch<SetStateAction<CopilotMessage[]>>
   isStarred: boolean
@@ -379,7 +380,7 @@ function KidAvatar({ kid, size = 30 }: KidAvatarProps) {
 
 // ─── Copilot Panel ────────────────────────────────────────────────────────────
 
-function CopilotPanel({ onClose, organizationId, userId, userName, userState, messages, setMessages, isStarred, onStar, onNewChat, loadHistory, onStarConversation }: CopilotPanelProps) {
+function CopilotPanel({ onClose, organizationId, userId, userName, userState, homeschoolStyle, messages, setMessages, isStarred, onStar, onNewChat, loadHistory, onStarConversation }: CopilotPanelProps) {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
@@ -418,6 +419,7 @@ function CopilotPanel({ onClose, organizationId, userId, userName, userState, me
           userId,
           userName,
           userState,
+          homeschoolStyle,
         }),
       })
 
@@ -657,6 +659,7 @@ export default function AppHeader() {
   const [orgId, setOrgId] = useState<string | null>(null)
   const [displayName, setDisplayName] = useState('')
   const [userState, setUserState] = useState<string | null>(null)
+  const [homeschoolStyle, setHomeschoolStyle] = useState<string | null>(null)
   const [email, setEmail] = useState('')
   const [kids, setKids] = useState<Kid[]>([])
   const [copilotMessages, setCopilotMessages] = useState<CopilotMessage[]>([])
@@ -674,18 +677,20 @@ export default function AppHeader() {
       setUserId(user.id)
       setEmail(user.email ?? '')
 
-      const { data: profileData } = await supabase
+      const { data: profileRows } = await supabase
         .from('user_profiles')
-        .select('parent_name')
+        .select('parent_name, homeschool_style')
         .eq('user_id', user.id)
-        .maybeSingle()
+        .order('updated_at', { ascending: false })
+      const profileData = (profileRows ?? []).find((r: any) => r.homeschool_style != null) ?? profileRows?.[0] ?? null
 
       const name =
-        profileData?.parent_name ||
+        (profileData as any)?.parent_name ||
         (user.user_metadata?.full_name as string) ||
         user.email?.split('@')[0] ||
         'there'
       setDisplayName(name)
+      setHomeschoolStyle((profileData as any)?.homeschool_style ?? null)
       setCopilotMessages([{
         role: 'assistant',
         content: `Hi ${name}! I'm Scout, your HomeschoolReady co-pilot 🐦 I'm here to keep you on course — lesson planning, scheduling, compliance, and whatever else comes up. What can I help you with today?`,
@@ -875,6 +880,7 @@ export default function AppHeader() {
           userId={userId ?? undefined}
           userName={displayName || undefined}
           userState={userState}
+          homeschoolStyle={homeschoolStyle}
           messages={copilotMessages}
           setMessages={setCopilotMessages}
           isStarred={copilotStarred}

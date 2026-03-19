@@ -486,19 +486,6 @@ function LessonsContent() {
               }}>
               📚 Subjects
             </button>
-            <button
-              className="cal-btn"
-              onClick={() => router.push('/calendar')}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 6,
-                padding: '7px 14px', borderRadius: 20,
-                border: '1.5px solid rgba(124,58,237,0.25)',
-                background: 'rgba(255,255,255,0.7)', color: '#7c3aed',
-                fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 13,
-                cursor: 'pointer',
-              }}>
-              📅 Calendar
-            </button>
           </div>
         </div>
         <p style={{ fontSize: 14, color: '#6b7280', fontWeight: 600, margin: '0 0 20px' }}>
