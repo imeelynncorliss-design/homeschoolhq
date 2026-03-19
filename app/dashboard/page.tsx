@@ -747,13 +747,11 @@ function DashboardContent() {
         .quick-btn:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.11) !important; }
         .quick-btn:active { transform: scale(0.97); }
         .nav-btn:hover { opacity: 0.8; }
-        @media (max-width: 900px) {
+        @media (max-width: 700px) {
           .quick-grid { grid-template-columns: repeat(2, 1fr) !important; }
-          .pulse-grid { grid-template-columns: repeat(2, 1fr) !important; }
         }
-        @media (max-width: 580px) {
+        @media (max-width: 480px) {
           .quick-grid { grid-template-columns: 1fr !important; }
-          .pulse-grid { grid-template-columns: 1fr !important; }
         }
       `}</style>
 
@@ -819,8 +817,8 @@ function DashboardContent() {
                 className="pulse-grid"
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: `repeat(${Math.min(kidPulses.length, 4)}, 1fr)`,
-                  gap: 18,
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+                  gap: 20,
                 }}
               >
                 {kidPulses.map(pulse => (
@@ -828,16 +826,16 @@ function DashboardContent() {
                     style={{ ...css.pulseCard, cursor: 'pointer' }}
                     onClick={() => setActivePulseKidId(pulse.kid.id)}>
                     {/* Ring */}
-                    <div style={{ position: 'relative', width: 180, height: 180, margin: '0 auto 16px' }}>
-                      <PulseRing pct={pulse.pct} color={pulse.color} size={180} />
+                    <div style={{ position: 'relative', width: 200, height: 200, margin: '0 auto 20px' }}>
+                      <PulseRing pct={pulse.pct} color={pulse.color} size={200} />
                       <div style={css.ringCenter}>
-                        <span style={{ fontSize: 14, fontWeight: 800, color: '#374151', marginBottom: 2 }}>{pulse.kid.displayname}</span>
-                        <span style={{ fontSize: 34, fontWeight: 900, color: '#1a1a2e', lineHeight: 1 }}>{pulse.pct}%</span>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: '#374151', marginTop: 4 }}>Complete</span>
+                        <span style={{ fontSize: 15, fontWeight: 800, color: '#374151', marginBottom: 2 }}>{pulse.kid.displayname}</span>
+                        <span style={{ fontSize: 42, fontWeight: 900, color: '#1a1a2e', lineHeight: 1 }}>{pulse.pct}%</span>
+                        <span style={{ fontSize: 14, fontWeight: 700, color: '#374151', marginTop: 5 }}>Complete</span>
                       </div>
                     </div>
                     {/* Lessons count */}
-                    <div style={{ fontSize: 13, fontWeight: 600, color: '#374151', textAlign: 'center' as const, marginBottom: 12 }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: '#374151', textAlign: 'center' as const, marginBottom: 16 }}>
                       {pulse.totalToday > 0
                         ? `${pulse.completedToday} of ${pulse.totalToday} lessons done today`
                         : 'No lessons scheduled today'}
@@ -845,22 +843,22 @@ function DashboardContent() {
                     {/* Focus subjects — emoji icon tiles */}
                     {pulse.subjectNames.length > 0 && (
                       <>
-                        <div style={{ fontSize: 12, fontWeight: 800, color: '#374151', letterSpacing: 0.6, textAlign: 'center' as const, marginBottom: 8 }}>
-                          FOCUS SUBJECTS
+                        <div style={{ fontSize: 11, fontWeight: 800, color: '#9ca3af', letterSpacing: 1, textAlign: 'center' as const, marginBottom: 12, textTransform: 'uppercase' as const }}>
+                          Focus Subjects
                         </div>
-                        <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 8, justifyContent: 'center' }}>
+                        <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 12, justifyContent: 'center' }}>
                           {pulse.subjectNames.map(s => (
-                            <div key={s} style={{ display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 4 }}>
+                            <div key={s} style={{ display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 6 }}>
                               <div style={{
-                                width: 40, height: 40, borderRadius: 12,
+                                width: 52, height: 52, borderRadius: 16,
                                 background: subjectColor(s) + '18',
-                                border: `1.5px solid ${subjectColor(s)}40`,
+                                border: `2px solid ${subjectColor(s)}40`,
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                fontSize: 18,
+                                fontSize: 24,
                               }}>
                                 {subjectEmoji(s)}
                               </div>
-                              <span style={{ fontSize: 11, fontWeight: 700, color: '#374151', textAlign: 'center' as const, maxWidth: 52 }}>
+                              <span style={{ fontSize: 12, fontWeight: 700, color: '#374151', textAlign: 'center' as const, maxWidth: 72, lineHeight: 1.3 }}>
                                 {s.split('/')[0].trim()}
                               </span>
                             </div>
@@ -893,7 +891,7 @@ function DashboardContent() {
               <div className="quick-grid" style={css.quickGrid}>
                 <button className="quick-btn" style={{ ...css.quickCard, background: 'linear-gradient(135deg, #d1fae5, #a7f3d0)' }}
                   onClick={() => router.push('/attendance')}>
-                  <div style={{ ...css.qIcon, background: '#059669' }}><span style={{ fontSize: 22 }}>✅</span></div>
+                  <div style={{ ...css.qIcon, background: '#059669' }}><span style={{ fontSize: 28 }}>✅</span></div>
                   <div>
                     <div style={{ ...css.qLabel, color: '#064e3b' }}>Log Attendance</div>
                     <div style={{ ...css.qSub, color: '#059669' }}>Mark today's school day</div>
@@ -902,7 +900,7 @@ function DashboardContent() {
 
                 <button className="quick-btn" style={{ ...css.quickCard, background: 'linear-gradient(135deg, #ede9fe, #ddd6fe)' }}
                   onClick={() => router.push('/reading-log')}>
-                  <div style={{ ...css.qIcon, background: '#7c3aed' }}><span style={{ fontSize: 22 }}>📚</span></div>
+                  <div style={{ ...css.qIcon, background: '#7c3aed' }}><span style={{ fontSize: 28 }}>📚</span></div>
                   <div>
                     <div style={{ ...css.qLabel, color: '#4c1d95' }}>Log a Book</div>
                     <div style={{ ...css.qSub, color: '#7c3aed' }}>Add to reading log</div>
@@ -911,7 +909,7 @@ function DashboardContent() {
 
                 <button className="quick-btn" style={{ ...css.quickCard, background: 'linear-gradient(135deg, #ccfbf1, #99f6e4)' }}
                   onClick={() => router.push('/field-trips')}>
-                  <div style={{ ...css.qIcon, background: '#0d9488' }}><span style={{ fontSize: 22 }}>🚌</span></div>
+                  <div style={{ ...css.qIcon, background: '#0d9488' }}><span style={{ fontSize: 28 }}>🚌</span></div>
                   <div>
                     <div style={{ ...css.qLabel, color: '#134e4a' }}>Log an Activity</div>
                     <div style={{ ...css.qSub, color: '#0d9488' }}>Field trip, project, co-op</div>
@@ -920,7 +918,7 @@ function DashboardContent() {
 
                 <button className="quick-btn" style={{ ...css.quickCard, background: 'linear-gradient(135deg, #fce7f3, #fbcfe8)' }}
                   onClick={() => setShowStuck(true)}>
-                  <div style={{ ...css.qIcon, background: '#ec4899' }}><span style={{ fontSize: 22 }}>🆘</span></div>
+                  <div style={{ ...css.qIcon, background: '#ec4899' }}><span style={{ fontSize: 28 }}>🆘</span></div>
                   <div>
                     <div style={{ ...css.qLabel, color: '#831843' }}>Need Help?</div>
                     <div style={{ ...css.qSub, color: '#ec4899' }}>Scout & ideas</div>
@@ -932,7 +930,7 @@ function DashboardContent() {
               <div className="quick-grid" style={css.quickGrid}>
                 <button className="quick-btn" style={{ ...css.quickCard, background: 'linear-gradient(135deg, #ede9fe, #ddd6fe)' }}
                   onClick={() => setShowToday(true)}>
-                  <div style={{ ...css.qIcon, background: '#7c3aed' }}><span style={{ fontSize: 22 }}>📝</span></div>
+                  <div style={{ ...css.qIcon, background: '#7c3aed' }}><span style={{ fontSize: 28 }}>📝</span></div>
                   <div>
                     <div style={{ ...css.qLabel, color: '#4c1d95' }}>Today's Learning</div>
                     <div style={{ ...css.qSub, color: '#7c3aed' }}>All children's agenda</div>
@@ -941,7 +939,7 @@ function DashboardContent() {
 
                 <button className="quick-btn" style={{ ...css.quickCard, background: 'linear-gradient(135deg, #fce7f3, #fbcfe8)' }}
                   onClick={() => setShowStuck(true)}>
-                  <div style={{ ...css.qIcon, background: '#ec4899' }}><span style={{ fontSize: 22 }}>🆘</span></div>
+                  <div style={{ ...css.qIcon, background: '#ec4899' }}><span style={{ fontSize: 28 }}>🆘</span></div>
                   <div>
                     <div style={{ ...css.qLabel, color: '#831843' }}>The Stuck Button</div>
                     <div style={{ ...css.qSub, color: '#ec4899' }}>Need help? Tap me.</div>
@@ -950,7 +948,7 @@ function DashboardContent() {
 
                 <button className="quick-btn" style={{ ...css.quickCard, background: 'linear-gradient(135deg, #ccfbf1, #99f6e4)' }}
                   onClick={() => router.push('/supply-scout')}>
-                  <div style={{ ...css.qIcon, background: '#5eead4' }}><span style={{ fontSize: 22 }}>🛒</span></div>
+                  <div style={{ ...css.qIcon, background: '#5eead4' }}><span style={{ fontSize: 28 }}>🛒</span></div>
                   <div>
                     <div style={{ ...css.qLabel, color: '#134e4a' }}>Supply Scout</div>
                     <div style={{ ...css.qSub, color: '#0d9488' }}>Materials for your lessons</div>
@@ -959,7 +957,7 @@ function DashboardContent() {
 
                 <button className="quick-btn" style={{ ...css.quickCard, background: 'linear-gradient(135deg, #d1fae5, #a7f3d0)' }}
                   onClick={() => router.push('/attendance')}>
-                  <div style={{ ...css.qIcon, background: '#059669' }}><span style={{ fontSize: 22 }}>✅</span></div>
+                  <div style={{ ...css.qIcon, background: '#059669' }}><span style={{ fontSize: 28 }}>✅</span></div>
                   <div>
                     <div style={{ ...css.qLabel, color: '#064e3b' }}>Attendance Tracker</div>
                     <div style={{ ...css.qSub, color: '#059669' }}>{attendanceNote}</div>
@@ -1333,7 +1331,12 @@ const css: Record<string, React.CSSProperties> = {
     display: 'flex',
     flexDirection: 'column' as const,
     alignItems: 'center',
-    padding: '8px 12px 16px',
+    padding: '28px 24px 24px',
+    background: 'rgba(255,255,255,0.82)',
+    borderRadius: 22,
+    border: '1.5px solid rgba(124,58,237,0.13)',
+    backdropFilter: 'blur(8px)',
+    boxShadow: '0 2px 16px rgba(124,58,237,0.08)',
   },
   ringCenter: {
     position: 'absolute' as const,
@@ -1360,33 +1363,33 @@ const css: Record<string, React.CSSProperties> = {
 
   quickGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(4, 1fr)',
-    gap: 16,
+    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+    gap: 18,
     marginBottom: 14,
   },
   quickCard: {
     display: 'flex',
     alignItems: 'center',
-    gap: 16,
+    gap: 18,
     borderRadius: 20,
     border: '1.5px solid rgba(255,255,255,0.9)',
-    padding: '20px 18px',
+    padding: '24px 22px',
     boxShadow: '0 2px 16px rgba(0,0,0,0.07)',
     textAlign: 'left' as const,
     fontFamily: "'Nunito', sans-serif",
     width: '100%',
   },
   qIcon: {
-    width: 52,
-    height: 52,
-    borderRadius: 16,
+    width: 62,
+    height: 62,
+    borderRadius: 18,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
   },
-  qLabel: { fontWeight: 900, fontSize: 14, marginBottom: 3 },
-  qSub:   { fontSize: 12, fontWeight: 600, lineHeight: 1.4 },
+  qLabel: { fontWeight: 900, fontSize: 16, marginBottom: 4 },
+  qSub:   { fontSize: 13, fontWeight: 600, lineHeight: 1.4 },
 
   lifeFab: {
     width: 100, height: 100, borderRadius: '50%',
