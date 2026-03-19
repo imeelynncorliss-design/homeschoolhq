@@ -57,6 +57,23 @@ export default function ProgressDashboard({ userId, organizationId }: ProgressDa
     if (organizationId) loadSettings()
   }, [organizationId])
 
+  useEffect(() => {
+    if (!organizationId) return
+    const fetchKidStats = async () => {
+      let tripQuery = supabase.from('field_trips').select('hours').eq('organization_id', organizationId)
+      let bookQuery = supabase.from('reading_log').select('id').eq('organization_id', organizationId)
+      if (selectedKidId) {
+        tripQuery = tripQuery.eq('kid_id', selectedKidId)
+        bookQuery = bookQuery.eq('kid_id', selectedKidId)
+      }
+      const [{ data: tripData }, { data: bookData }] = await Promise.all([tripQuery, bookQuery])
+      const hours = (tripData || []).reduce((sum: number, t: any) => sum + (t.hours ?? 0), 0)
+      setFieldTripHours(Math.round(hours * 10) / 10)
+      setBooksRead((bookData || []).length)
+    }
+    fetchKidStats()
+  }, [organizationId, selectedKidId])
+
   const loadSettings = async () => {
     setLoading(true)
     try {
@@ -115,14 +132,6 @@ export default function ProgressDashboard({ userId, organizationId }: ProgressDa
           .in('kid_id', kidIds)
         setAllLessons((lessons as LessonRow[]) || [])
 
-        // Field trip hours + books read (org-level totals)
-        const [{ data: tripData }, { data: bookData }] = await Promise.all([
-          supabase.from('field_trips').select('hours').eq('organization_id', organizationId),
-          supabase.from('reading_log').select('id').eq('organization_id', organizationId),
-        ])
-        const hours = (tripData || []).reduce((sum: number, t: any) => sum + (t.hours ?? 0), 0)
-        setFieldTripHours(Math.round(hours * 10) / 10)
-        setBooksRead((bookData || []).length)
       }
     } catch (err) {
       console.error('ProgressDashboard loadSettings error:', err)
