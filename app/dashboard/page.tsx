@@ -10,6 +10,7 @@ import LessonViewModal, { type LessonViewModalLesson } from '@/components/Lesson
 import ActivityGenerator from '@/components/ActivityGenerator'
 import LessonGenerator from '@/components/LessonGenerator'
 import WeatherWidget from '@/components/WeatherWidget'
+import StylePickerModal from '@/components/StylePickerModal'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -32,6 +33,17 @@ interface KidPulse {
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const KID_COLORS = ['#7c3aed', '#0d9488', '#ec4899', '#f59e0b', '#3b82f6']
+
+const PINNED_FEATURE_MAP: Record<string, { emoji: string; label: string; href: string }> = {
+  attendance:  { emoji: '✅', label: 'Attendance',   href: '/attendance' },
+  reading_log: { emoji: '📚', label: 'Reading Log',  href: '/reading-log' },
+  field_trips: { emoji: '🚌', label: 'Activities',   href: '/field-trips' },
+  ai_lessons:  { emoji: '🤖', label: 'Lesson Planner', href: '/lessons' },
+  compliance:  { emoji: '📋', label: 'Compliance',   href: '/compliance' },
+  progress:    { emoji: '📊', label: 'Progress',     href: '/progress' },
+  transcript:  { emoji: '🎓', label: 'Transcript',   href: '/transcript' },
+  scout_chat:  { emoji: '💬', label: 'Scout Chat',   href: '/scout' },
+}
 
 const DAY_CARDINAL: Record<number, string> = {
   0: '/cardinal-sunday.png',
@@ -573,6 +585,9 @@ function DashboardContent() {
   const [showActivity, setShowActivity]       = useState(false)
   const [showGenerator, setShowGenerator]     = useState(false)
   const [activePulseKidId, setActivePulseKidId] = useState<string | null>(null)
+  const [homeschoolStyle, setHomeschoolStyle] = useState<'flexible' | 'structured' | null | undefined>(undefined)
+  const [pinnedFeatures, setPinnedFeatures]   = useState<string[]>([])
+  const [showStylePicker, setShowStylePicker] = useState(false)
 
   const now         = new Date()
   const dow         = now.getDay()
@@ -605,10 +620,14 @@ function DashboardContent() {
 
         const { data: profile } = await supabase
           .from('user_profiles')
-          .select('first_name')
+          .select('first_name, homeschool_style, pinned_features')
           .eq('user_id', user.id)
           .maybeSingle()
         if (profile?.first_name) setParentName(profile.first_name)
+        const style = profile?.homeschool_style ?? null
+        setHomeschoolStyle(style)
+        setPinnedFeatures(profile?.pinned_features ?? [])
+        if (style === null) setShowStylePicker(true)
 
         const { data: sy } = await supabase
           .from('school_year_settings')
@@ -855,53 +874,131 @@ function DashboardContent() {
             )}
           </section>
 
-          {/* Quick Actions */}
+          {/* Quick Actions — style-aware */}
           <section>
-            <div style={css.sectionRow}>
-              <span style={css.secTitle}>QUICK ACTIONS</span>
+            <div style={{ ...css.sectionRow, justifyContent: 'space-between' }}>
+              <span style={css.secTitle}>
+                {homeschoolStyle === 'flexible' ? 'QUICK LOG' : 'QUICK ACTIONS'}
+              </span>
+              <button
+                onClick={() => setShowStylePicker(true)}
+                style={{ fontSize: 11, fontWeight: 700, color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}
+              >
+                {homeschoolStyle === 'flexible' ? '🌿 Flexible' : homeschoolStyle === 'structured' ? '📐 Structured' : ''} ✏️
+              </button>
             </div>
 
-            <div className="quick-grid" style={css.quickGrid}>
-
-              <button className="quick-btn" style={{ ...css.quickCard, background: 'linear-gradient(135deg, #ede9fe, #ddd6fe)' }}
-                onClick={() => setShowToday(true)}>
-                <div style={{ ...css.qIcon, background: '#7c3aed' }}><span style={{ fontSize: 22 }}>📝</span></div>
-                <div>
-                  <div style={{ ...css.qLabel, color: '#4c1d95' }}>Today's Learning</div>
-                  <div style={{ ...css.qSub, color: '#7c3aed' }}>All children's agenda</div>
-                </div>
-              </button>
-
-              <button className="quick-btn" style={{ ...css.quickCard, background: 'linear-gradient(135deg, #fce7f3, #fbcfe8)' }}
-                onClick={() => setShowStuck(true)}>
-                <div style={{ ...css.qIcon, background: '#ec4899' }}><span style={{ fontSize: 22 }}>🆘</span></div>
-                <div>
-                  <div style={{ ...css.qLabel, color: '#831843' }}>The Stuck Button</div>
-                  <div style={{ ...css.qSub, color: '#ec4899' }}>Need help? Tap me.</div>
-                </div>
-              </button>
-
-              <button className="quick-btn" style={{ ...css.quickCard, background: 'linear-gradient(135deg, #ccfbf1, #99f6e4)' }}
-                onClick={() => router.push('/supply-scout')}>
-                <div style={{ ...css.qIcon, background: '#5eead4' }}><span style={{ fontSize: 22 }}>🛒</span></div>
-                <div>
-                  <div style={{ ...css.qLabel, color: '#134e4a' }}>Supply Scout</div>
-                  <div style={{ ...css.qSub, color: '#0d9488' }}>
-                    {"Materials needed for your lessons"}
+            {homeschoolStyle === 'flexible' ? (
+              /* ── Flexible mode: big quick-log tiles ── */
+              <div className="quick-grid" style={css.quickGrid}>
+                <button className="quick-btn" style={{ ...css.quickCard, background: 'linear-gradient(135deg, #d1fae5, #a7f3d0)' }}
+                  onClick={() => router.push('/attendance')}>
+                  <div style={{ ...css.qIcon, background: '#059669' }}><span style={{ fontSize: 22 }}>✅</span></div>
+                  <div>
+                    <div style={{ ...css.qLabel, color: '#064e3b' }}>Log Attendance</div>
+                    <div style={{ ...css.qSub, color: '#059669' }}>Mark today's school day</div>
                   </div>
-                </div>
-              </button>
+                </button>
 
-              <button className="quick-btn" style={{ ...css.quickCard, background: 'linear-gradient(135deg, #d1fae5, #a7f3d0)' }}
-                onClick={() => router.push('/attendance')}>
-                <div style={{ ...css.qIcon, background: '#059669' }}><span style={{ fontSize: 22 }}>✅</span></div>
-                <div>
-                  <div style={{ ...css.qLabel, color: '#064e3b' }}>Attendance Tracker</div>
-                  <div style={{ ...css.qSub, color: '#059669' }}>{attendanceNote}</div>
-                </div>
-              </button>
+                <button className="quick-btn" style={{ ...css.quickCard, background: 'linear-gradient(135deg, #ede9fe, #ddd6fe)' }}
+                  onClick={() => router.push('/reading-log')}>
+                  <div style={{ ...css.qIcon, background: '#7c3aed' }}><span style={{ fontSize: 22 }}>📚</span></div>
+                  <div>
+                    <div style={{ ...css.qLabel, color: '#4c1d95' }}>Log a Book</div>
+                    <div style={{ ...css.qSub, color: '#7c3aed' }}>Add to reading log</div>
+                  </div>
+                </button>
 
-            </div>
+                <button className="quick-btn" style={{ ...css.quickCard, background: 'linear-gradient(135deg, #ccfbf1, #99f6e4)' }}
+                  onClick={() => router.push('/field-trips')}>
+                  <div style={{ ...css.qIcon, background: '#0d9488' }}><span style={{ fontSize: 22 }}>🚌</span></div>
+                  <div>
+                    <div style={{ ...css.qLabel, color: '#134e4a' }}>Log an Activity</div>
+                    <div style={{ ...css.qSub, color: '#0d9488' }}>Field trip, project, co-op</div>
+                  </div>
+                </button>
+
+                <button className="quick-btn" style={{ ...css.quickCard, background: 'linear-gradient(135deg, #fce7f3, #fbcfe8)' }}
+                  onClick={() => setShowStuck(true)}>
+                  <div style={{ ...css.qIcon, background: '#ec4899' }}><span style={{ fontSize: 22 }}>🆘</span></div>
+                  <div>
+                    <div style={{ ...css.qLabel, color: '#831843' }}>Need Help?</div>
+                    <div style={{ ...css.qSub, color: '#ec4899' }}>Scout & ideas</div>
+                  </div>
+                </button>
+              </div>
+            ) : (
+              /* ── Structured mode: current quick actions ── */
+              <div className="quick-grid" style={css.quickGrid}>
+                <button className="quick-btn" style={{ ...css.quickCard, background: 'linear-gradient(135deg, #ede9fe, #ddd6fe)' }}
+                  onClick={() => setShowToday(true)}>
+                  <div style={{ ...css.qIcon, background: '#7c3aed' }}><span style={{ fontSize: 22 }}>📝</span></div>
+                  <div>
+                    <div style={{ ...css.qLabel, color: '#4c1d95' }}>Today's Learning</div>
+                    <div style={{ ...css.qSub, color: '#7c3aed' }}>All children's agenda</div>
+                  </div>
+                </button>
+
+                <button className="quick-btn" style={{ ...css.quickCard, background: 'linear-gradient(135deg, #fce7f3, #fbcfe8)' }}
+                  onClick={() => setShowStuck(true)}>
+                  <div style={{ ...css.qIcon, background: '#ec4899' }}><span style={{ fontSize: 22 }}>🆘</span></div>
+                  <div>
+                    <div style={{ ...css.qLabel, color: '#831843' }}>The Stuck Button</div>
+                    <div style={{ ...css.qSub, color: '#ec4899' }}>Need help? Tap me.</div>
+                  </div>
+                </button>
+
+                <button className="quick-btn" style={{ ...css.quickCard, background: 'linear-gradient(135deg, #ccfbf1, #99f6e4)' }}
+                  onClick={() => router.push('/supply-scout')}>
+                  <div style={{ ...css.qIcon, background: '#5eead4' }}><span style={{ fontSize: 22 }}>🛒</span></div>
+                  <div>
+                    <div style={{ ...css.qLabel, color: '#134e4a' }}>Supply Scout</div>
+                    <div style={{ ...css.qSub, color: '#0d9488' }}>Materials for your lessons</div>
+                  </div>
+                </button>
+
+                <button className="quick-btn" style={{ ...css.quickCard, background: 'linear-gradient(135deg, #d1fae5, #a7f3d0)' }}
+                  onClick={() => router.push('/attendance')}>
+                  <div style={{ ...css.qIcon, background: '#059669' }}><span style={{ fontSize: 22 }}>✅</span></div>
+                  <div>
+                    <div style={{ ...css.qLabel, color: '#064e3b' }}>Attendance Tracker</div>
+                    <div style={{ ...css.qSub, color: '#059669' }}>{attendanceNote}</div>
+                  </div>
+                </button>
+              </div>
+            )}
+
+            {/* Pinned features */}
+            {pinnedFeatures.length > 0 && (
+              <div style={{ marginTop: 16 }}>
+                <div style={{ fontSize: 11, fontWeight: 800, color: '#9ca3af', letterSpacing: 1, marginBottom: 10, textTransform: 'uppercase' }}>
+                  YOUR PINNED FEATURES
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {pinnedFeatures.map(fid => {
+                    const feat = PINNED_FEATURE_MAP[fid]
+                    if (!feat) return null
+                    return (
+                      <button
+                        key={fid}
+                        onClick={() => router.push(feat.href)}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 7,
+                          padding: '8px 14px', borderRadius: 20,
+                          background: 'rgba(255,255,255,0.82)',
+                          border: '1.5px solid rgba(124,58,237,0.15)',
+                          fontSize: 13, fontWeight: 700, color: '#374151',
+                          cursor: 'pointer', fontFamily: "'Nunito', sans-serif",
+                        }}
+                      >
+                        <span>{feat.emoji}</span>
+                        <span>{feat.label}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Life Happens FAB */}
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, padding: '8px 0 4px' }}>
@@ -1015,6 +1112,19 @@ function DashboardContent() {
                 return updated
               })
               setSelectedLesson(s => s ? { ...s, ...updates } : null)
+            }}
+          />
+        )}
+
+        {/* ── Homeschool Style Picker ── */}
+        {showStylePicker && user && (
+          <StylePickerModal
+            userId={user.id}
+            stateAbbr={schoolState}
+            onComplete={(style, pins) => {
+              setHomeschoolStyle(style)
+              setPinnedFeatures(pins)
+              setShowStylePicker(false)
             }}
           />
         )}
