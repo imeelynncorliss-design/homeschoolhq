@@ -1125,7 +1125,6 @@ function DashboardContent() {
             onComplete={(style, pins) => {
               setHomeschoolStyle(style)
               setPinnedFeatures(pins)
-              sessionStorage.removeItem('style_picker_dismissed')
               setShowStylePicker(false)
             }}
             onCancel={() => {
