@@ -922,7 +922,6 @@ export default function OnboardingPage() {
   const [ageConfirmed, setAgeConfirmed]   = useState(false)
   const [tosConfirmed, setTosConfirmed]   = useState(false)
   const [agreementSaving, setAgreementSaving] = useState(false)
-  const [showSkipWarning, setShowSkipWarning] = useState(false)
 
   // Step 1 has two sub-steps: school name → state picker
   const [step1Sub, setStep1Sub] = useState<'name' | 'state'>('name')
@@ -1404,27 +1403,6 @@ export default function OnboardingPage() {
         </div>
       )}
 
-      {/* Skip warning modal */}
-      {showSkipWarning && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 text-center">
-            <div className="text-4xl mb-3">⏱️</div>
-            <h3 className="text-lg font-black text-gray-900 mb-2">Skip Setup?</h3>
-            <p className="text-sm text-gray-600 mb-6 leading-relaxed">
-              This 4-step setup takes less than 4 minutes and saves you hours later —
-              it seeds your compliance tracking, adds your child, and creates your first lesson.
-            </p>
-            <div className="flex gap-3">
-              <button onClick={() => setShowSkipWarning(false)} className="flex-1 px-4 py-2 border-2 border-gray-200 rounded-xl text-gray-700 font-semibold hover:bg-gray-50 text-sm">
-                Keep Going
-              </button>
-              <button onClick={() => completeOnboarding()} className="flex-1 px-4 py-2 bg-gray-800 text-white rounded-xl font-semibold hover:bg-gray-900 text-sm">
-                Skip Anyway
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Top bar */}
       <div className="bg-white border-b border-gray-100 px-6 py-4 sticky top-0 z-30">
@@ -1433,9 +1411,6 @@ export default function OnboardingPage() {
             <span className="font-black text-xl text-indigo-700 tracking-tight">Homeschool</span>
             <span className="font-black text-xl text-purple-500 tracking-tight">Ready</span>
           </div>
-          <button onClick={() => setShowSkipWarning(true)} className="text-xs text-gray-400 hover:text-gray-600 transition-colors">
-            Skip for now
-          </button>
         </div>
       </div>
 
@@ -2171,12 +2146,15 @@ export default function OnboardingPage() {
             >
               Go to my Dashboard →
             </button>
-            <p className="text-center text-sm text-gray-400 mt-3">
-              Have more than one child?{' '}
-              <span className="text-purple-500 font-semibold">
-                You can add them from your dashboard.
-              </span>
-            </p>
+
+            {/* Add more children reminder */}
+            <div className="mt-4 flex items-start gap-3 bg-purple-50 border border-purple-200 rounded-xl px-4 py-3 text-left">
+              <span className="text-xl flex-shrink-0">👨‍👩‍👧‍👦</span>
+              <p className="text-sm text-purple-800 leading-relaxed">
+                <strong>Have more than one child?</strong> Head to{' '}
+                <strong>Profile → Children</strong> after setup to add them — each gets their own progress rings, lessons, and records.
+              </p>
+            </div>
           </div>
         )}
 
