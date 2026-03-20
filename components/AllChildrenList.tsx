@@ -698,7 +698,7 @@ export default function AllChildrenList({
 
       {/* ── Bulk Copy Modal ──────────────────────────────────────────── */}
       {showCopyModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4 pt-4 pb-24">
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
             <div className="text-center mb-4">
               <div className="text-4xl mb-2">📋</div>
@@ -741,7 +741,7 @@ export default function AllChildrenList({
 
       {/* ── Bulk Shift Modal ─────────────────────────────────────────── */}
       {showBulkShiftModal && pendingShift && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] px-4 pt-4 pb-24">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
             <div className="bg-gradient-to-r from-yellow-400 to-orange-500 px-6 py-4 rounded-t-lg">
               <h3 className="text-xl font-bold text-white flex items-center gap-2">

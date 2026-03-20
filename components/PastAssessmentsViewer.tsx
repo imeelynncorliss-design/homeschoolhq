@@ -185,7 +185,7 @@ export default function PastAssessmentsViewer({ kidId, kidName, onClose }: PastA
   }
 
   return (
-    <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 p-4 backdrop-blur-md">
+    <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 px-4 pt-4 pb-24 backdrop-blur-md">
       <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden border border-slate-200">
         <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-8 text-white">
           <div className="flex justify-between items-center mb-8">

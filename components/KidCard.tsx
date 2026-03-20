@@ -178,7 +178,7 @@ export default function KidCard({ kid, isSelected, onSelect, onEdit, onDelete }:
       {/* Vibe Update Modal */}
       {showVibeModal && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4 pt-4 pb-24"
           onClick={() => setShowVibeModal(false)}
         >
           <div 

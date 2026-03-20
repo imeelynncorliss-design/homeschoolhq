@@ -117,8 +117,8 @@ export default function KidProfileForm({ kid, onSave, onCancel }: KidProfileForm
   ]
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[200] p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[92vh] flex flex-col overflow-hidden">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[200] px-4 pt-4 pb-24">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full flex flex-col overflow-hidden" style={{ maxHeight: 'calc(100vh - 104px)' }}>
 
         {/* Header */}
         <div className="bg-gradient-to-r from-purple-700 to-pink-500 px-6 py-5 flex-shrink-0">

@@ -280,8 +280,8 @@ export default function FieldTripLog({ organizationId, kids }: FieldTripLogProps
 
       {/* Add/Edit Modal */}
       {showForm && (
-        <div role="dialog" aria-modal="true" aria-labelledby="field-trip-form-title" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div ref={trapRef} style={{ background: '#fff', borderRadius: 24, width: '100%', maxWidth: 480, maxHeight: '90vh', overflowY: 'auto', padding: 28, boxShadow: '0 24px 64px rgba(0,0,0,0.18)', position: 'relative' }}>
+        <div role="dialog" aria-modal="true" aria-labelledby="field-trip-form-title" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px 16px 88px' }}>
+          <div ref={trapRef} style={{ background: '#fff', borderRadius: 24, width: '100%', maxWidth: 480, maxHeight: 'calc(100vh - 104px)', overflowY: 'auto', padding: 28, boxShadow: '0 24px 64px rgba(0,0,0,0.18)', position: 'relative' }}>
             <button onClick={() => { setShowForm(false); resetForm() }} aria-label="Close form" style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', fontSize: 18, color: '#9ca3af', cursor: 'pointer' }}>✕</button>
             <h3 id="field-trip-form-title" style={{ fontSize: 18, fontWeight: 800, color: '#111827', margin: '0 0 20px' }}>
               {editingTrip ? 'Edit Trip' : 'Add Field Trip'}

@@ -1191,11 +1191,11 @@ const vw: Record<string, CSSProperties> = {
   overlay: {
     position: 'fixed', inset: 0, zIndex: 9999,
     background: 'rgba(15,10,40,0.55)', backdropFilter: 'blur(4px)',
-    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
+    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px 20px 88px',
   },
   modal: {
     background: '#fff', borderRadius: 18,
-    width: '100%', maxWidth: 500, maxHeight: '90vh',
+    width: '100%', maxWidth: 500, maxHeight: 'calc(100vh - 108px)',
     boxShadow: '0 24px 64px rgba(0,0,0,0.22)',
     overflow: 'hidden', display: 'flex', flexDirection: 'column',
   },

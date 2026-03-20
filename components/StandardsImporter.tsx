@@ -58,7 +58,7 @@ export default function StandardsImporter({ onClose, onImport}: StandardsImporte
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4 pt-4 pb-24">
     <div className="max-w-4xl w-full bg-white rounded-[2.5rem] shadow-2xl overflow-hidden relative border border-slate-100">
       
       {/* 1. LOADING OVERLAY */}

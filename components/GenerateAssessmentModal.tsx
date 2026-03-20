@@ -108,7 +108,7 @@ export default function GenerateAssessmentModal({ lesson, kids, onClose }: Gener
 
   return (
     <div
-      className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 px-4 pt-4 pb-24"
       onClick={onClose}
     >
       <div

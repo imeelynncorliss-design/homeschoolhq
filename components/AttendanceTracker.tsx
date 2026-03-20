@@ -1407,7 +1407,7 @@ function MarkAttendanceModal({ date, kids, selectedKid, existingAttendance, defa
   }
 
   return (
-    <div role="dialog" aria-modal="true" aria-labelledby="mark-attendance-title" className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div role="dialog" aria-modal="true" aria-labelledby="mark-attendance-title" className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4 pt-4 pb-24">
       <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] flex flex-col">
         <div className="p-6 overflow-y-auto flex-1">
           <h3 id="mark-attendance-title" className="text-xl font-bold text-gray-900 mb-4">
