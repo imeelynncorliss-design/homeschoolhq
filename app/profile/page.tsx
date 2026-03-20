@@ -88,6 +88,8 @@ function ProfileContent() {
   const [tier,           setTier]           = useState<UserTier>('FREE')
   const [renewDate,      setRenewDate]      = useState<string | null>(null)
   const [editingKid,     setEditingKid]     = useState<any | null>(null)
+  const [addingKid,      setAddingKid]      = useState(false)
+  const [orgId,          setOrgId]          = useState<string | null>(null)
 
   useEffect(() => {
     const init = async () => {
@@ -108,6 +110,7 @@ function ProfileContent() {
 
       const { orgId } = await getOrganizationId(user.id)
       if (!orgId) { setLoading(false); return }
+      setOrgId(orgId)
 
       // Parallel data fetches
       const [orgRes, syRes, kidsRes, coRes, subRes] = await Promise.all([
@@ -227,6 +230,27 @@ function ProfileContent() {
     // Update local state so name/grade reflects immediately
     setKids(prev => prev.map(k => k.id === data.id ? { ...k, displayname: fields.displayname, grade: fields.grade } : k))
     setEditingKid(null)
+  }
+
+  const handleAddKid = async (data: any) => {
+    if (!orgId) return
+    const { photoFile, id: _id, ...fields } = data
+    const { data: newKid } = await supabase
+      .from('kids')
+      .insert({ ...fields, organization_id: orgId })
+      .select('id, displayname, grade')
+      .single()
+    if (newKid && photoFile) {
+      const ext  = photoFile.name.split('.').pop()
+      const path = `kids/${newKid.id}/avatar.${ext}`
+      await supabase.storage.from('avatars').upload(path, photoFile, { upsert: true })
+      const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path)
+      await supabase.from('kids').update({ photo_url: publicUrl }).eq('id', newKid.id)
+    }
+    if (newKid) {
+      setKids(prev => [...prev, { id: newKid.id, displayname: newKid.displayname, grade: newKid.grade, subjects: [] }])
+    }
+    setAddingKid(false)
   }
 
   const tierInfo  = TIER_INFO[tier]
@@ -442,7 +466,7 @@ function ProfileContent() {
               display: 'flex', alignItems: 'center', gap: 14,
               padding: '14px 20px', cursor: 'pointer',
             }}
-            onClick={() => router.push('/onboarding')}>
+            onClick={() => setAddingKid(true)}>
             <div style={{
               width: 42, height: 42, borderRadius: '50%', flexShrink: 0,
               border: '2px dashed #7c3aed',
@@ -512,6 +536,12 @@ function ProfileContent() {
         kid={editingKid}
         onSave={handleSaveKid}
         onCancel={() => setEditingKid(null)}
+      />
+    )}
+    {addingKid && (
+      <KidProfileForm
+        onSave={handleAddKid}
+        onCancel={() => setAddingKid(false)}
       />
     )}
     </>

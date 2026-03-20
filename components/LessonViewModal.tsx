@@ -143,6 +143,7 @@ interface ScoutLessonPlan {
   approach?: string
   overview?: string
   description?: string
+  steps?: string[]
   materials?: string[]
   activities?: Array<{ name: string; duration: string; description: string }>
   assessment?: string
@@ -152,8 +153,8 @@ interface ScoutLessonPlan {
 }
 
 function parseScoutPlan(lesson: { description?: string; lesson_source?: string | null }): ScoutLessonPlan | null {
-  // Primary: trust the explicit source column
-  if (lesson.lesson_source === 'scout') {
+  // Primary: trust the explicit source column (scout = lesson, scout_activity = activity)
+  if (lesson.lesson_source === 'scout' || lesson.lesson_source === 'scout_activity') {
     if (!lesson.description) return {} as ScoutLessonPlan
     try { return JSON.parse(lesson.description) as ScoutLessonPlan } catch (_e) { return {} as ScoutLessonPlan }
   }
@@ -199,6 +200,7 @@ export default function LessonViewModal({
   // isScoutLesson also catches legacy plain-text Scout format (contains "Materials:")
   const isScoutLesson = lessonPlan !== null
     || lesson.lesson_source === 'scout'
+    || lesson.lesson_source === 'scout_activity'
     || /materials:/i.test(lesson.description ?? '')
 
   // Check-in
@@ -726,6 +728,14 @@ ${overviewHtml}${objectivesHtml}${materialsHtml}${activitiesHtml}${assessmentHtm
                     <ul style={vw.planList}>
                       {lessonPlan.learningObjectives.map((o, i) => <li key={i}>{o}</li>)}
                     </ul>
+                  </div>
+                )}
+                {lessonPlan.steps && lessonPlan.steps.length > 0 && (
+                  <div>
+                    <div style={vw.planLabel}>Steps</div>
+                    <ol style={{ ...vw.planList, paddingLeft: 20 }}>
+                      {lessonPlan.steps.map((s, i) => <li key={i}>{s}</li>)}
+                    </ol>
                   </div>
                 )}
                 {lessonPlan.materials && lessonPlan.materials.length > 0 && (
