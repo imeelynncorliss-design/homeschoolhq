@@ -312,20 +312,22 @@ export default function ProductTour({ parentName, autoStart = false, homeschoolS
                 >
                   Show me around →
                 </button>
-                <button
-                  onClick={finish}
-                  style={{
-                    padding: '10px 14px', borderRadius: 12,
-                    border: '1.5px solid #e5e7eb',
-                    background: '#fafafa', color: '#6b7280',
-                    fontWeight: 700, fontSize: 13, cursor: 'pointer',
-                    fontFamily: "'Nunito', sans-serif",
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  }}
-                >
-                  I'll explore on my own
-                  <span style={{ fontSize: 11 }}>skip</span>
-                </button>
+                {autoStart && (
+                  <button
+                    onClick={finish}
+                    style={{
+                      padding: '10px 14px', borderRadius: 12,
+                      border: '1.5px solid #e5e7eb',
+                      background: '#fafafa', color: '#6b7280',
+                      fontWeight: 700, fontSize: 13, cursor: 'pointer',
+                      fontFamily: "'Nunito', sans-serif",
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    }}
+                  >
+                    I'll explore on my own
+                    <span style={{ fontSize: 11 }}>skip</span>
+                  </button>
+                )}
               </div>
             </div>
           </div>
