@@ -476,7 +476,7 @@ const s: Record<string, React.CSSProperties> = {
   input: {
     width: '100%', padding: '10px 12px', borderRadius: 10,
     border: '1.5px solid #e5e7eb', fontSize: 14, color: '#111827',
-    outline: 'none', boxSizing: 'border-box',
+    background: '#fff', outline: 'none', boxSizing: 'border-box',
   },
   primaryBtn: {
     padding: '12px 20px', borderRadius: 12, border: 'none',

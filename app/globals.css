@@ -184,6 +184,17 @@ body {
 .dark input::placeholder, .dark textarea::placeholder {
   color: var(--hr-text-muted);
 }
+/* Inputs inside white-background modals (Tailwind bg-white or modal-light class) stay light */
+.dark .bg-white input, .dark .bg-white select, .dark .bg-white textarea,
+.dark .modal-light input, .dark .modal-light select, .dark .modal-light textarea {
+  background-color: #ffffff;
+  color: #111827;
+  border-color: #e5e7eb;
+}
+.dark .bg-white input::placeholder, .dark .bg-white textarea::placeholder,
+.dark .modal-light input::placeholder, .dark .modal-light textarea::placeholder {
+  color: #9ca3af;
+}
 @keyframes shimmer {
   0%   { background-position: 200% 0; }
   100% { background-position: -200% 0; }
