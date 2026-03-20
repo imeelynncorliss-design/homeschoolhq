@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/src/lib/supabase'
 import { CANONICAL_SUBJECTS } from '@/src/constants/subjects'
+import { DEFAULT_FLEXIBLE, DEFAULT_STRUCTURED } from '@/components/StylePickerModal'
 
 // ── State Data ────────────────────────────────────────────────────────────────
 
@@ -1059,14 +1060,32 @@ export default function OnboardingPage() {
 
   const completeOnboarding = async (destination = '/dashboard') => {
     if (!user) return
+    // Auto-set home layout based on teaching style chosen during onboarding
+    const structuredStyles = ['traditional', 'classical', 'charlotte_mason']
+    const homeStyle: 'structured' | 'flexible' = structuredStyles.includes(teachingStyle) ? 'structured' : 'flexible'
+    const pins = homeStyle === 'structured' ? DEFAULT_STRUCTURED : DEFAULT_FLEXIBLE
+
     await Promise.all([
       supabase.from('user_profiles')
-        .update({ onboarding_completed_at: new Date().toISOString() })
+        .update({
+          onboarding_completed_at: new Date().toISOString(),
+          homeschool_style: homeStyle,
+          pinned_features: pins,
+        })
         .eq('user_id', user.id),
       supabase.from('organizations')
         .update({ onboarding_completed: true, updated_at: new Date().toISOString() })
         .eq('user_id', user.id),
     ])
+
+    // Signal dashboard: first-time user, show welcome + optional curriculum nudge
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('hq_just_onboarded', '1')
+      if (homeStyle === 'structured') {
+        localStorage.setItem('hq_curriculum_nudge_pending', '1')
+      }
+    }
+
     router.push(destination)
   }
 

@@ -839,6 +839,9 @@ function DashboardContent() {
   const [homeschoolStyle, setHomeschoolStyle] = useState<'flexible' | 'structured' | null | undefined>(undefined)
   const [pinnedFeatures, setPinnedFeatures]   = useState<string[]>([])
   const [showStylePicker, setShowStylePicker] = useState(false)
+  const [orgTeachingStyle,    setOrgTeachingStyle]    = useState<string | null>(null)
+  const [showWelcome,         setShowWelcome]         = useState(false)
+  const [showCurriculumNudge, setShowCurriculumNudge] = useState(false)
   const [showTour, setShowTour]               = useState(false)
   const [tourAutoStart, setTourAutoStart]     = useState(false)
   const [weekLessons, setWeekLessons]           = useState<Record<string, { lesson: any; kid: Kid }[]>>({})
@@ -891,9 +894,12 @@ function DashboardContent() {
         setPinnedFeatures(profile?.pinned_features ?? [])
         if (style === null && !sessionStorage.getItem('style_picker_dismissed')) {
           setShowStylePicker(true)
-        } else if (style !== null && typeof window !== 'undefined' && !localStorage.getItem('hq_tour_done')) {
-          // Returning user who has a style but hasn't taken the tour yet
-          setShowTour(true)
+        } else if (style !== null) {
+          if (typeof window !== 'undefined' && localStorage.getItem('hq_just_onboarded') && !localStorage.getItem('hq_welcome_done')) {
+            setShowWelcome(true)
+          } else if (typeof window !== 'undefined' && !localStorage.getItem('hq_tour_done')) {
+            setShowTour(true)
+          }
         }
 
         const { data: sy } = await supabase
@@ -906,6 +912,12 @@ function DashboardContent() {
           if (sy.required_days)   setRequiredDays(`${sy.required_days} days / year`)
           else if (sy.required_months) setRequiredDays(`${sy.required_months} months / year`)
         }
+        const { data: orgData } = await supabase
+          .from('organizations')
+          .select('teaching_style')
+          .eq('id', orgId)
+          .maybeSingle()
+        if (orgData?.teaching_style) setOrgTeachingStyle(orgData.teaching_style)
       }
 
       setOrganizationId(orgId)
@@ -1393,6 +1405,125 @@ function DashboardContent() {
           />
         )}
 
+        {/* ── First-time Welcome Modal ── */}
+        {showWelcome && (() => {
+          const STYLE_DISPLAY: Record<string, string> = {
+            traditional: 'Traditional', classical: 'Classical',
+            charlotte_mason: 'Charlotte Mason', eclectic: 'Eclectic',
+            montessori: 'Montessori', waldorf: 'Waldorf',
+            unit_studies: 'Unit Studies', unschooling: 'Unschooling',
+          }
+          const styleName = STYLE_DISPLAY[orgTeachingStyle ?? ''] ?? orgTeachingStyle ?? 'your teaching style'
+          const handleDismiss = () => {
+            localStorage.setItem('hq_welcome_done', '1')
+            localStorage.removeItem('hq_just_onboarded')
+            setShowWelcome(false)
+            if (!localStorage.getItem('hq_tour_done')) {
+              setTourAutoStart(true)
+              setShowTour(true)
+            }
+          }
+          return (
+            <div style={{
+              position: 'fixed', inset: 0, zIndex: 9998,
+              background: 'rgba(10,5,30,0.7)', backdropFilter: 'blur(6px)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              padding: '20px 20px 88px',
+            }}>
+              <div style={{
+                background: '#fff', borderRadius: 24, width: '100%', maxWidth: 460,
+                padding: '32px 28px 28px', fontFamily: "'Nunito', sans-serif",
+                boxShadow: '0 32px 80px rgba(0,0,0,0.3)', textAlign: 'center',
+              }}>
+                <img src="/Cardinal_Mascot.png" alt="Scout" style={{ width: 72, height: 72, objectFit: 'contain', marginBottom: 16 }} />
+                <div style={{ fontSize: 22, fontWeight: 900, color: '#1a1a2e', marginBottom: 10, lineHeight: 1.25 }}>
+                  Welcome to your Home page! 🏡
+                </div>
+                <div style={{ fontSize: 14, color: '#4b5563', lineHeight: 1.7, marginBottom: 8 }}>
+                  Your layout has been set up based on your
+                </div>
+                <div style={{
+                  display: 'inline-block', background: '#ede9fe', borderRadius: 20,
+                  padding: '4px 16px', fontSize: 14, fontWeight: 800, color: '#7c3aed', marginBottom: 16,
+                }}>
+                  {styleName} style
+                </div>
+                <div style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.65, marginBottom: 24 }}>
+                  Look around — this is your command center. You can customize which cards appear anytime using the{' '}
+                  <span style={{ fontWeight: 800, color: '#7c3aed' }}>✏️ Customize</span> pill.
+                </div>
+                <button
+                  onClick={handleDismiss}
+                  style={{
+                    width: '100%', padding: '14px 20px', borderRadius: 14, border: 'none',
+                    background: 'linear-gradient(135deg, #7c3aed, #4f46e5)',
+                    color: '#fff', fontWeight: 800, fontSize: 15,
+                    cursor: 'pointer', fontFamily: "'Nunito', sans-serif",
+                  }}
+                >
+                  Let's take a tour →
+                </button>
+              </div>
+            </div>
+          )
+        })()}
+
+        {/* ── Curriculum Import Nudge (structured users, post-tour, one-time) ── */}
+        {showCurriculumNudge && (
+          <div style={{
+            position: 'fixed', inset: 0, zIndex: 9998,
+            background: 'rgba(10,5,30,0.7)', backdropFilter: 'blur(6px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '20px 20px 88px',
+          }}>
+            <div style={{
+              background: '#fff', borderRadius: 24, width: '100%', maxWidth: 460,
+              padding: '32px 28px 28px', fontFamily: "'Nunito', sans-serif",
+              boxShadow: '0 32px 80px rgba(0,0,0,0.3)', textAlign: 'center',
+            }}>
+              <div style={{ fontSize: 44, marginBottom: 12 }}>📚</div>
+              <div style={{ fontSize: 20, fontWeight: 900, color: '#1a1a2e', marginBottom: 10, lineHeight: 1.25 }}>
+                Ready to import your curriculum?
+              </div>
+              <div style={{ fontSize: 13, color: '#4b5563', lineHeight: 1.7, marginBottom: 24 }}>
+                Since you use a structured curriculum, you can import your lessons directly into HomeschoolReady — saving hours of manual entry.
+                Head to <strong>Tools → Import Curriculum</strong> to get started.
+              </div>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button
+                  onClick={() => {
+                    localStorage.removeItem('hq_curriculum_nudge_pending')
+                    setShowCurriculumNudge(false)
+                  }}
+                  style={{
+                    flex: 1, padding: '12px 16px', borderRadius: 12,
+                    border: '1.5px solid #e5e7eb', background: '#fff',
+                    color: '#6b7280', fontWeight: 700, fontSize: 13,
+                    cursor: 'pointer', fontFamily: "'Nunito', sans-serif",
+                  }}
+                >
+                  Maybe later
+                </button>
+                <button
+                  onClick={() => {
+                    localStorage.removeItem('hq_curriculum_nudge_pending')
+                    setShowCurriculumNudge(false)
+                    router.push('/curriculum/import')
+                  }}
+                  style={{
+                    flex: 2, padding: '12px 16px', borderRadius: 12, border: 'none',
+                    background: 'linear-gradient(135deg, #7c3aed, #4f46e5)',
+                    color: '#fff', fontWeight: 800, fontSize: 14,
+                    cursor: 'pointer', fontFamily: "'Nunito', sans-serif",
+                  }}
+                >
+                  Import my curriculum →
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ── Homeschool Style Picker ── */}
         {showStylePicker && user && (
           <StylePickerModal
@@ -1425,7 +1556,13 @@ function DashboardContent() {
             autoStart={tourAutoStart}
             homeschoolStyle={homeschoolStyle ?? null}
             pinnedFeatures={pinnedFeatures}
-            onDone={() => { setShowTour(false); setTourAutoStart(false) }}
+            onDone={() => {
+              setShowTour(false)
+              setTourAutoStart(false)
+              if (typeof window !== 'undefined' && localStorage.getItem('hq_curriculum_nudge_pending')) {
+                setShowCurriculumNudge(true)
+              }
+            }}
           />
         )}
 
