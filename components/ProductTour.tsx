@@ -155,9 +155,18 @@ function HighlightRing({ targetId }: { targetId: string }) {
 
   useEffect(() => {
     const el = document.getElementById(targetId)
-    if (el) {
-      // Wait for scroll to settle before measuring
-      setTimeout(() => setRect(el.getBoundingClientRect()), 420)
+    if (!el) return
+
+    const measure = () => setRect(el.getBoundingClientRect())
+
+    // Initial measurement — wait for smooth scroll to fully settle
+    const t = setTimeout(measure, 600)
+
+    // Keep ring locked to element if page continues scrolling after measurement
+    window.addEventListener('scroll', measure, { passive: true })
+    return () => {
+      clearTimeout(t)
+      window.removeEventListener('scroll', measure)
     }
   }, [targetId])
 
@@ -218,7 +227,7 @@ export default function ProductTour({ parentName, autoStart = false, homeschoolS
         const { style, arrow } = getTooltipPosition(s.targetId)
         setTooltipStyle(style)
         setArrowDir(arrow)
-      }, 400)
+      }, 600)
     } else {
       const { style, arrow } = getTooltipPosition(s.targetId)
       setTooltipStyle(style)
