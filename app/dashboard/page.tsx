@@ -1127,7 +1127,8 @@ function DashboardContent() {
                 className="pulse-grid"
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 200px))',
+                  justifyContent: 'center',
                   gap: 14,
                 }}
               >
