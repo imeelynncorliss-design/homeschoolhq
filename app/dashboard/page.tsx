@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense } from 'react'
 import { useFocusTrap } from '@/hooks/useFocusTrap'
 import { supabase } from '@/src/lib/supabase'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import AuthGuard from '@/components/AuthGuard'
 import DevTierToggle from '@/components/DevTierToggle'
 import { getOrganizationId } from '@/src/lib/getOrganizationId'
@@ -818,7 +818,8 @@ function computeScoutNudge(
 // ─── Dashboard Content ────────────────────────────────────────────────────────
 
 function DashboardContent() {
-  const router = useRouter()
+  const router       = useRouter()
+  const searchParams = useSearchParams()
   const [user, setUser]                     = useState<any>(null)
   const [loading, setLoading]               = useState(true)
   const [kidPulses, setKidPulses]           = useState<KidPulse[]>([])
@@ -840,8 +841,8 @@ function DashboardContent() {
   const [pinnedFeatures, setPinnedFeatures]   = useState<string[]>([])
   const [showStylePicker, setShowStylePicker] = useState(false)
   const [orgTeachingStyle,    setOrgTeachingStyle]    = useState<string | null>(null)
-  const [showWelcome,         setShowWelcome]         = useState(false)
-  const [showCurriculumNudge, setShowCurriculumNudge] = useState(false)
+  const [showWelcome,         setShowWelcome]         = useState(() => searchParams?.get('preview') === 'welcome')
+  const [showCurriculumNudge, setShowCurriculumNudge] = useState(() => searchParams?.get('preview') === 'curriculum')
   const [showTour, setShowTour]               = useState(false)
   const [tourAutoStart, setTourAutoStart]     = useState(false)
   const [weekLessons, setWeekLessons]           = useState<Record<string, { lesson: any; kid: Kid }[]>>({})
@@ -852,6 +853,13 @@ function DashboardContent() {
   const greeting    = DAY_GREETINGS[dow]
   const cardinalSrc = DAY_CARDINAL[dow]
   const dateStr     = `${DAYS_SHORT[dow]} · ${MONTHS[now.getMonth()]} ${now.getDate()}`
+
+  // Seed preview state from URL params (for design review)
+  useEffect(() => {
+    const preview = searchParams?.get('preview')
+    if (preview === 'welcome' && !orgTeachingStyle) setOrgTeachingStyle('traditional')
+    if (preview === 'curriculum') setShowCurriculumNudge(true)
+  }, [searchParams])
 
   useEffect(() => {
     const load = async () => {
