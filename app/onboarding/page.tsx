@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/src/lib/supabase'
 import { CANONICAL_SUBJECTS } from '@/src/constants/subjects'
@@ -210,7 +210,7 @@ const QUIZ_QUESTIONS = [
   },
   {
     id: 3, emoji: '📈',
-    question: 'How do you want to know your child is learning?',
+    question: 'How would you like to track your child\'s learning progress?',
     tip: "Most states don't require formal grades or standardized tests for homeschoolers. You get to define what 'progress' means for your child.",
     answers: [
       { id: 'a', emoji: '📊', text: 'Tests, grades, and clear benchmarks',                  scores: { traditional: 2, classical: 1 } },
@@ -976,6 +976,35 @@ export default function OnboardingPage() {
     )
   }
 
+  // ── Browser back button interception ─────────────────────────────────────
+  const navRef = useRef({ step, step1Sub, quizQuestion, curriculumSub })
+
+  useEffect(() => {
+    navRef.current = { step, step1Sub, quizQuestion, curriculumSub }
+    window.history.pushState({ onboarding: true }, '')
+  }, [step, step1Sub, quizQuestion, curriculumSub])
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const nav = navRef.current
+      if (nav.step === 1) {
+        if (nav.step1Sub === 'state') setStep1Sub('name')
+      } else if (nav.step === 2) {
+        if (nav.quizQuestion === 1) { setStep(1); setStep1Sub('state') }
+        else setQuizQuestion(nav.quizQuestion - 1)
+      } else if (nav.step === 3) {
+        if (nav.curriculumSub !== 'choice') setCurriculumSub('choice')
+        else { setStep(2); setQuizQuestion(4) }
+      } else if (nav.step === 4) {
+        setStep(3)
+      } else if (nav.step === 5) {
+        setStep(4)
+      }
+    }
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [])
+
   const saveSubjects = async () => {
     if (!orgId || !kidId || selectedSubjects.length === 0) { setStep(6); return }
     setSubjectsSaving(true)
@@ -1530,9 +1559,19 @@ export default function OnboardingPage() {
                   </div>
 
                   {/* Curriculum suggestions */}
-                  <p className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-3">
-                    Suggested Curriculum
-                  </p>
+                  <div className="mb-4">
+                    <p className="text-sm font-semibold text-gray-800 mb-2">
+                      If you don't have a curriculum, here are some suggestions that align with your school's teaching style.
+                    </p>
+                    <div className="flex items-start gap-2 p-3 bg-purple-50 rounded-xl border border-purple-100">
+                      <svg className="w-4 h-4 text-purple-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <p className="text-xs text-purple-700 leading-relaxed">
+                        These choices shown are places where you can obtain curriculum that aligns with your school's teaching style. Note: HomeschoolReady does not provide curriculum.
+                      </p>
+                    </div>
+                  </div>
                   <div className="space-y-2 mb-8">
                     {result.curriculum.map(c => (
                       <a
