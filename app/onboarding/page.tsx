@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTheme } from '@/contexts/ThemeContext'
 import { supabase } from '@/src/lib/supabase'
 import { CANONICAL_SUBJECTS } from '@/src/constants/subjects'
 import { DEFAULT_FLEXIBLE, DEFAULT_STRUCTURED } from '@/components/StylePickerModal'
@@ -916,6 +917,7 @@ function StatePicker({
 
 export default function OnboardingPage() {
   const router = useRouter()
+  const { isDark, toggleTheme } = useTheme()
   const [user, setUser]             = useState<any>(null)
   const [step, setStep]             = useState(0)
   const [saving, setSaving]         = useState(false)
@@ -1232,9 +1234,10 @@ export default function OnboardingPage() {
     }
 
     return (
-      <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #ede9fe 0%, #fce7f3 50%, #dbeafe 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 16px', fontFamily: "'Nunito', sans-serif" }}>
+      <div style={{ minHeight: '100vh', background: isDark ? 'linear-gradient(135deg, #1a0533 0%, #2d1b69 50%, #1e1b4b 100%)' : 'linear-gradient(135deg, #ede9fe 0%, #fce7f3 50%, #dbeafe 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 16px', fontFamily: "'Nunito', sans-serif", position: 'relative' }}>
         <style>{`@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');`}</style>
-        <div style={{ background: '#fff', borderRadius: 28, boxShadow: '0 24px 64px rgba(124,58,237,0.12)', padding: '48px 40px', maxWidth: 520, width: '100%' }}>
+        <button onClick={toggleTheme} aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'} style={{ position: 'fixed', top: 16, right: 16, zIndex: 100, background: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.08)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 8, fontSize: 18, padding: '5px 8px', cursor: 'pointer', lineHeight: 1 }}>{isDark ? '☀️' : '🌙'}</button>
+        <div style={{ background: isDark ? 'var(--hr-bg-card)' : '#fff', borderRadius: 28, boxShadow: '0 24px 64px rgba(124,58,237,0.12)', padding: '48px 40px', maxWidth: 520, width: '100%' }}>
 
           {/* Logo */}
           <div style={{ textAlign: 'center', marginBottom: 32 }}>
@@ -1338,7 +1341,8 @@ export default function OnboardingPage() {
   const isStatePicker = step === 1 && step1Sub === 'state'
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#f0edfd' }}>
+    <div className="min-h-screen" style={{ backgroundColor: isDark ? '#1a1535' : '#f0edfd', position: 'relative' }}>
+      <button onClick={toggleTheme} aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'} style={{ position: 'fixed', top: 16, right: 16, zIndex: 100, background: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.08)', border: '1px solid rgba(124,58,237,0.3)', borderRadius: 8, fontSize: 18, padding: '5px 8px', cursor: 'pointer', lineHeight: 1 }}>{isDark ? '☀️' : '🌙'}</button>
 
       {/* Teaching Style Browser Modal */}
       {showStyleBrowser && (
