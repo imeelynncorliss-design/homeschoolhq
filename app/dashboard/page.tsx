@@ -12,7 +12,7 @@ import LessonViewModal, { type LessonViewModalLesson } from '@/components/Lesson
 import ActivityGenerator from '@/components/ActivityGenerator'
 import LessonGenerator from '@/components/LessonGenerator'
 import WeatherWidget from '@/components/WeatherWidget'
-import StylePickerModal from '@/components/StylePickerModal'
+import StylePickerModal, { DEFAULT_STRUCTURED, DEFAULT_FLEXIBLE } from '@/components/StylePickerModal'
 import ProductTour from '@/components/ProductTour'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -980,14 +980,23 @@ function DashboardContent() {
         const style = profile?.homeschool_style ?? null
         setHomeschoolStyle(style)
         setPinnedFeatures(profile?.pinned_features ?? [])
-        if (style === null && !sessionStorage.getItem('style_picker_dismissed')) {
-          setShowStylePicker(true)
-        } else if (style !== null) {
-          if (typeof window !== 'undefined' && localStorage.getItem('hq_just_onboarded') && !localStorage.getItem('hq_welcome_done')) {
-            setShowWelcome(true)
-          } else if (typeof window !== 'undefined' && !localStorage.getItem('hq_tour_done')) {
-            setShowTour(true)
+        const justOnboarded = typeof window !== 'undefined'
+          && !!localStorage.getItem('hq_just_onboarded')
+          && !localStorage.getItem('hq_welcome_done')
+
+        if (justOnboarded) {
+          // Coming straight from onboarding — show welcome regardless of DB lag
+          setShowWelcome(true)
+          // If pinned features didn't make it into DB yet, derive from style
+          if ((profile?.pinned_features ?? []).length === 0) {
+            const structuredStyles = ['traditional', 'classical', 'charlotte_mason']
+            const resolvedStyle = style ?? ''
+            setPinnedFeatures(structuredStyles.includes(resolvedStyle) ? DEFAULT_STRUCTURED : DEFAULT_FLEXIBLE)
           }
+        } else if (style === null && !sessionStorage.getItem('style_picker_dismissed')) {
+          setShowStylePicker(true)
+        } else if (style !== null && !localStorage.getItem('hq_tour_done')) {
+          setShowTour(true)
         }
 
         const { data: sy } = await supabase
@@ -1692,7 +1701,8 @@ function DashboardContent() {
             montessori: 'Montessori', waldorf: 'Waldorf',
             unit_studies: 'Unit Studies', unschooling: 'Unschooling',
           }
-          const styleName = STYLE_DISPLAY[orgTeachingStyle ?? ''] ?? orgTeachingStyle ?? 'your teaching style'
+          const styleKey = orgTeachingStyle ?? homeschoolStyle ?? ''
+          const styleName = STYLE_DISPLAY[styleKey] ?? styleKey ?? 'your teaching style'
           const handleDismiss = () => {
             localStorage.setItem('hq_welcome_done', '1')
             localStorage.removeItem('hq_just_onboarded')

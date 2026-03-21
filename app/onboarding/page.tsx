@@ -1118,12 +1118,12 @@ export default function OnboardingPage() {
 
     await Promise.all([
       supabase.from('user_profiles')
-        .update({
+        .upsert({
+          user_id: user.id,
           onboarding_completed_at: new Date().toISOString(),
           homeschool_style: homeStyle,
           pinned_features: pins,
-        })
-        .eq('user_id', user.id),
+        }, { onConflict: 'user_id' }),
       supabase.from('organizations')
         .update({ onboarding_completed: true, updated_at: new Date().toISOString() })
         .eq('user_id', user.id),
