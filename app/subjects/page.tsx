@@ -6,6 +6,7 @@ import { createClient } from '@/src/lib/supabase/client'
 import AuthGuard from '@/components/AuthGuard'
 import LessonViewModal, { type LessonViewModalLesson } from '@/components/LessonViewModal'
 import LessonGenerator from '@/components/LessonGenerator'
+import { useTheme } from '@/contexts/ThemeContext'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -119,22 +120,23 @@ function getThisWeekBounds(): { mon: string; sun: string } {
   return { mon: fmt(mon), sun: fmt(sun) }
 }
 
-// ─── CSS ─────────────────────────────────────────────────────────────────────
-
-const css = {
-  root: {
-    minHeight: '100vh',
-    background: 'linear-gradient(135deg, #ede9fe 0%, #dbeafe 50%, #d1fae5 100%)',
-    fontFamily: "'Nunito', sans-serif",
-    paddingBottom: 88,
-  },
-}
-
 // ─── Subject Content ──────────────────────────────────────────────────────────
 
 function SubjectsContent() {
   const router   = useRouter()
   const supabase = createClient()
+  const { isDark } = useTheme()
+
+  const css = {
+    root: {
+      minHeight: '100vh',
+      background: isDark
+        ? 'linear-gradient(135deg, #1a0533 0%, #2d1b69 50%, #1e1b4b 100%)'
+        : 'linear-gradient(135deg, #ede9fe 0%, #dbeafe 50%, #d1fae5 100%)',
+      fontFamily: "'Nunito', sans-serif",
+      paddingBottom: 88,
+    },
+  }
 
   const [loading, setLoading]           = useState(true)
   const [kids, setKids]                 = useState<Kid[]>([])

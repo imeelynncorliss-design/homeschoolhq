@@ -188,8 +188,8 @@ export default function TranscriptsPage() {
 const css: Record<string, React.CSSProperties> = {
   ...pageShell,
   banner: {
-    background: '#eef2ff',
-    border: '1px solid #c7d2fe',
+    background: 'var(--hr-bg-surface)',
+    border: '1px solid var(--hr-border)',
     borderRadius: 12,
     padding: '14px 20px',
     display: 'flex',

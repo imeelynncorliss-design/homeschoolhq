@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, Suspense } from 'react'
+import { useTheme } from '@/contexts/ThemeContext'
 import { useFocusTrap } from '@/hooks/useFocusTrap'
 import { supabase } from '@/src/lib/supabase'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -135,6 +136,61 @@ function StuckModal({ onClose, onGenerateLesson, onGenerateActivity, onAskScout 
   onGenerateActivity: () => void
   onAskScout: () => void
 }) {
+  const { isDark } = useTheme()
+  const css = {
+    overlay: {
+      position: 'fixed' as const,
+      inset: 0,
+      background: 'rgba(45,27,105,0.38)',
+      backdropFilter: 'blur(8px)',
+      zIndex: 200,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 24,
+    },
+    modalBox: {
+      background: isDark ? '#251e4a' : 'linear-gradient(160deg, #faf5ff 0%, #ede9fe 40%, #e0f2fe 100%)',
+      borderRadius: 26,
+      padding: '30px 26px 26px',
+      width: '100%',
+      maxWidth: 460,
+      boxShadow: '0 24px 64px rgba(45,27,105,0.22)',
+      border: '1px solid rgba(255,255,255,0.85)',
+    },
+    modalHead: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 18,
+      marginBottom: 24,
+      paddingBottom: 20,
+      borderBottom: '1px solid rgba(124,58,237,0.12)',
+    },
+    modalAction: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 16,
+      background: 'rgba(255,255,255,0.84)',
+      border: '1.5px solid',
+      borderRadius: 16,
+      padding: '15px 18px',
+      cursor: 'pointer',
+      width: '100%',
+      fontFamily: "'Nunito', sans-serif",
+    },
+    modalClose: {
+      marginTop: 20,
+      width: '100%',
+      background: 'none',
+      border: 'none',
+      color: '#4b5563',
+      fontSize: 14,
+      fontWeight: 600,
+      cursor: 'pointer',
+      padding: '8px 0',
+      fontFamily: "'Nunito', sans-serif",
+    },
+  }
   const actions = [
     {
       icon: '📚', label: 'Generate a Lesson', sub: 'Scout writes a full lesson plan',
@@ -196,6 +252,29 @@ function TodaysLearningModal({
 }) {
   const router = useRouter()
   const trapRef = useFocusTrap(true)
+  const { isDark } = useTheme()
+  const css = {
+    overlay: {
+      position: 'fixed' as const,
+      inset: 0,
+      background: 'rgba(45,27,105,0.38)',
+      backdropFilter: 'blur(8px)',
+      zIndex: 200,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 24,
+    },
+    modalBox: {
+      background: isDark ? '#251e4a' : 'linear-gradient(160deg, #faf5ff 0%, #ede9fe 40%, #e0f2fe 100%)',
+      borderRadius: 26,
+      padding: '30px 26px 26px',
+      width: '100%',
+      maxWidth: 460,
+      boxShadow: '0 24px 64px rgba(45,27,105,0.22)',
+      border: '1px solid rgba(255,255,255,0.85)',
+    },
+  }
   const handlePrintDailyPlan = () => {
     const today = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
 
@@ -820,6 +899,7 @@ function computeScoutNudge(
 function DashboardContent() {
   const router       = useRouter()
   const searchParams = useSearchParams()
+  const { isDark }   = useTheme()
   const [user, setUser]                     = useState<any>(null)
   const [loading, setLoading]               = useState(true)
   const [kidPulses, setKidPulses]           = useState<KidPulse[]>([])
@@ -1046,6 +1126,197 @@ function DashboardContent() {
   )
 
   const attendanceNote = [schoolState, requiredDays].filter(Boolean).join(': ') || 'Daily check-in'
+
+  const css = {
+    root: {
+      fontFamily: "'Nunito', sans-serif",
+      minHeight: '100vh',
+      background: isDark
+        ? 'linear-gradient(135deg, #1a0533 0%, #2d1b69 50%, #1e1b4b 100%)'
+        : 'linear-gradient(135deg, #c4b5fd 0%, #e879f9 18%, #f0abfc 36%, #fbcfe8 54%, #bae6fd 76%, #6ee7b7 100%)',
+    },
+    header: {
+      background: 'transparent',
+      padding: '0 40px',
+    },
+    headerInner: {
+      maxWidth: 1200,
+      margin: '0 auto',
+      padding: '28px 0 20px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 24,
+    },
+    headerLeft: { display: 'flex', flexDirection: 'column' as const, gap: 4 },
+    logo: { display: 'flex', flexDirection: 'column' as const, lineHeight: 1, gap: 1 },
+    logoH: { fontWeight: 900, fontSize: 26, color: '#7c3aed', letterSpacing: 0.5 },
+    logoR: { fontWeight: 800, fontSize: 13, color: '#0d9488', letterSpacing: 2, paddingLeft: 24 },
+    dateStr: { fontSize: 13, color: isDark ? '#c4b5fd' : '#4b5563', fontWeight: 600 },
+
+    cardinalWrap: { display: 'flex', alignItems: 'flex-end', gap: 12, flexShrink: 0 },
+    bubble: {
+      background: isDark ? 'rgba(45,27,105,0.92)' : 'rgba(255,255,255,0.92)',
+      borderRadius: '16px 16px 0 16px',
+      padding: '14px 18px',
+      boxShadow: '0 4px 20px rgba(0,0,0,0.10)',
+      maxWidth: 280,
+      border: isDark ? '1px solid rgba(124,58,237,0.4)' : '1px solid rgba(255,255,255,0.95)',
+    },
+    bubbleBold: { fontWeight: 900, fontSize: 15, color: isDark ? '#f3f4f6' : '#1a1a2e' },
+    bubbleSub:  { fontSize: 13, color: isDark ? '#c4b5fd' : '#374151', marginTop: 4, lineHeight: 1.45 },
+    cardinal: {
+      width: 130,
+      height: 130,
+      objectFit: 'contain' as const,
+    },
+
+    main: {
+      maxWidth: 1200,
+      margin: '0 auto',
+      padding: '0 40px 20px',
+      display: 'flex',
+      flexDirection: 'column' as const,
+      gap: 36,
+    },
+
+    sectionRow: { display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 18 },
+    secTitle:   { fontSize: 12, fontWeight: 900, color: '#6d28d9', letterSpacing: 1.2 },
+    secSub:     { fontSize: 12, color: isDark ? '#c4b5fd' : '#6b7280', fontWeight: 600 },
+
+    pulseCard: {
+      display: 'flex',
+      flexDirection: 'column' as const,
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '18px 12px 16px',
+      minHeight: 140,
+      background: isDark ? 'rgba(45,27,105,0.45)' : 'rgba(255,255,255,0.18)',
+      borderRadius: 20,
+      border: isDark ? '1.5px solid rgba(124,58,237,0.35)' : '1.5px solid rgba(255,255,255,0.45)',
+      backdropFilter: 'blur(20px)',
+      boxShadow: '0 2px 16px rgba(124,58,237,0.08)',
+    },
+    ringCenter: {
+      position: 'absolute' as const,
+      inset: 0,
+      display: 'flex',
+      flexDirection: 'column' as const,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    pill: {
+      fontSize: 11,
+      fontWeight: 700,
+      padding: '3px 12px',
+      borderRadius: 20,
+      border: '1.5px solid',
+    },
+    emptyCard: {
+      background: isDark ? 'rgba(45,27,105,0.7)' : 'rgba(255,255,255,0.7)',
+      borderRadius: 22,
+      padding: '48px 32px',
+      textAlign: 'center' as const,
+      border: isDark ? '2px dashed rgba(124,58,237,0.4)' : '2px dashed #d1d5db',
+    },
+
+    quickGrid: {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 200px))',
+      justifyContent: 'center',
+      gap: 14,
+      marginBottom: 14,
+    },
+    quickCard: {
+      display: 'flex',
+      flexDirection: 'column' as const,
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 10,
+      borderRadius: 20,
+      border: '1.5px solid rgba(255,255,255,0.9)',
+      padding: '22px 14px 20px',
+      minHeight: 140,
+      boxShadow: '0 2px 16px rgba(0,0,0,0.07)',
+      textAlign: 'center' as const,
+      fontFamily: "'Nunito', sans-serif",
+      width: '100%',
+    },
+    qIcon: {
+      width: 56,
+      height: 56,
+      borderRadius: 16,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexShrink: 0,
+    },
+    qLabel: { fontWeight: 900, fontSize: 15, marginBottom: 3, lineHeight: 1.2 },
+    qSub:   { fontSize: 12, fontWeight: 600, lineHeight: 1.4 },
+
+    lifeFab: {
+      width: 100, height: 100, borderRadius: '50%',
+      background: 'linear-gradient(135deg, #fde68a 0%, #fbbf24 60%, #f59e0b 100%)',
+      border: '3px solid rgba(255,255,255,0.85)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      cursor: 'pointer',
+      boxShadow: '0 6px 24px rgba(251,191,36,0.45), 0 2px 8px rgba(0,0,0,0.1)',
+      transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+    },
+
+    overlay: {
+      position: 'fixed' as const,
+      inset: 0,
+      background: 'rgba(45,27,105,0.38)',
+      backdropFilter: 'blur(8px)',
+      zIndex: 200,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 24,
+    },
+    modalBox: {
+      background: isDark ? '#251e4a' : 'linear-gradient(160deg, #faf5ff 0%, #ede9fe 40%, #e0f2fe 100%)',
+      borderRadius: 26,
+      padding: '30px 26px 26px',
+      width: '100%',
+      maxWidth: 460,
+      boxShadow: '0 24px 64px rgba(45,27,105,0.22)',
+      border: '1px solid rgba(255,255,255,0.85)',
+    },
+    modalHead: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 18,
+      marginBottom: 24,
+      paddingBottom: 20,
+      borderBottom: '1px solid rgba(124,58,237,0.12)',
+    },
+    modalAction: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 16,
+      background: 'rgba(255,255,255,0.84)',
+      border: '1.5px solid',
+      borderRadius: 16,
+      padding: '15px 18px',
+      cursor: 'pointer',
+      width: '100%',
+      fontFamily: "'Nunito', sans-serif",
+    },
+    modalClose: {
+      marginTop: 20,
+      width: '100%',
+      background: 'none',
+      border: 'none',
+      color: '#4b5563',
+      fontSize: 14,
+      fontWeight: 600,
+      cursor: 'pointer',
+      padding: '8px 0',
+      fontFamily: "'Nunito', sans-serif",
+    },
+  }
 
   return (
     <>
@@ -1710,193 +1981,3 @@ export default function DashboardPage() {
   )
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
-
-const css: Record<string, React.CSSProperties> = {
-  root: {
-    fontFamily: "'Nunito', sans-serif",
-    minHeight: '100vh',
-    background: 'linear-gradient(135deg, #c4b5fd 0%, #e879f9 18%, #f0abfc 36%, #fbcfe8 54%, #bae6fd 76%, #6ee7b7 100%)',
-  },
-  header: {
-    background: 'transparent',
-    padding: '0 40px',
-  },
-  headerInner: {
-    maxWidth: 1200,
-    margin: '0 auto',
-    padding: '28px 0 20px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 24,
-  },
-  headerLeft: { display: 'flex', flexDirection: 'column' as const, gap: 4 },
-  logo: { display: 'flex', flexDirection: 'column', lineHeight: 1, gap: 1 },
-  logoH: { fontWeight: 900, fontSize: 26, color: '#7c3aed', letterSpacing: 0.5 },
-  logoR: { fontWeight: 800, fontSize: 13, color: '#0d9488', letterSpacing: 2, paddingLeft: 24 },
-  dateStr: { fontSize: 13, color: '#4b5563', fontWeight: 600 },
-
-  cardinalWrap: { display: 'flex', alignItems: 'flex-end', gap: 12, flexShrink: 0 },
-  bubble: {
-    background: 'rgba(255,255,255,0.92)',
-    borderRadius: '16px 16px 0 16px',
-    padding: '14px 18px',
-    boxShadow: '0 4px 20px rgba(0,0,0,0.10)',
-    maxWidth: 280,
-    border: '1px solid rgba(255,255,255,0.95)',
-  },
-  bubbleBold: { fontWeight: 900, fontSize: 15, color: '#1a1a2e' },
-  bubbleSub:  { fontSize: 13, color: '#374151', marginTop: 4, lineHeight: 1.45 },
-  cardinal: {
-    width: 130,
-    height: 130,
-    objectFit: 'contain' as const,
-  },
-
-  main: {
-    maxWidth: 1200,
-    margin: '0 auto',
-    padding: '0 40px 20px',
-    display: 'flex',
-    flexDirection: 'column' as const,
-    gap: 36,
-  },
-
-  sectionRow: { display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 18 },
-  secTitle:   { fontSize: 12, fontWeight: 900, color: '#6d28d9', letterSpacing: 1.2 },
-  secSub:     { fontSize: 12, color: '#6b7280', fontWeight: 600 },
-
-  pulseCard: {
-    display: 'flex',
-    flexDirection: 'column' as const,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: '18px 12px 16px',
-    minHeight: 140,
-    background: 'rgba(255,255,255,0.18)',
-    borderRadius: 20,
-    border: '1.5px solid rgba(255,255,255,0.45)',
-    backdropFilter: 'blur(20px)',
-    boxShadow: '0 2px 16px rgba(124,58,237,0.08)',
-  },
-  ringCenter: {
-    position: 'absolute' as const,
-    inset: 0,
-    display: 'flex',
-    flexDirection: 'column' as const,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  pill: {
-    fontSize: 11,
-    fontWeight: 700,
-    padding: '3px 12px',
-    borderRadius: 20,
-    border: '1.5px solid',
-  },
-  emptyCard: {
-    background: 'rgba(255,255,255,0.7)',
-    borderRadius: 22,
-    padding: '48px 32px',
-    textAlign: 'center' as const,
-    border: '2px dashed #d1d5db',
-  },
-
-  quickGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 200px))',
-    justifyContent: 'center',
-    gap: 14,
-    marginBottom: 14,
-  },
-  quickCard: {
-    display: 'flex',
-    flexDirection: 'column' as const,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    borderRadius: 20,
-    border: '1.5px solid rgba(255,255,255,0.9)',
-    padding: '22px 14px 20px',
-    minHeight: 140,
-    boxShadow: '0 2px 16px rgba(0,0,0,0.07)',
-    textAlign: 'center' as const,
-    fontFamily: "'Nunito', sans-serif",
-    width: '100%',
-  },
-  qIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  qLabel: { fontWeight: 900, fontSize: 15, marginBottom: 3, lineHeight: 1.2 },
-  qSub:   { fontSize: 12, fontWeight: 600, lineHeight: 1.4 },
-
-  lifeFab: {
-    width: 100, height: 100, borderRadius: '50%',
-    background: 'linear-gradient(135deg, #fde68a 0%, #fbbf24 60%, #f59e0b 100%)',
-    border: '3px solid rgba(255,255,255,0.85)',
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    cursor: 'pointer',
-    boxShadow: '0 6px 24px rgba(251,191,36,0.45), 0 2px 8px rgba(0,0,0,0.1)',
-    transition: 'transform 0.15s ease, box-shadow 0.15s ease',
-  },
-
-  overlay: {
-    position: 'fixed' as const,
-    inset: 0,
-    background: 'rgba(45,27,105,0.38)',
-    backdropFilter: 'blur(8px)',
-    zIndex: 200,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-  },
-  modalBox: {
-    background: 'linear-gradient(160deg, #faf5ff 0%, #ede9fe 40%, #e0f2fe 100%)',
-    borderRadius: 26,
-    padding: '30px 26px 26px',
-    width: '100%',
-    maxWidth: 460,
-    boxShadow: '0 24px 64px rgba(45,27,105,0.22)',
-    border: '1px solid rgba(255,255,255,0.85)',
-  },
-  modalHead: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 18,
-    marginBottom: 24,
-    paddingBottom: 20,
-    borderBottom: '1px solid rgba(124,58,237,0.12)',
-  },
-  modalAction: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 16,
-    background: 'rgba(255,255,255,0.84)',
-    border: '1.5px solid',
-    borderRadius: 16,
-    padding: '15px 18px',
-    cursor: 'pointer',
-    width: '100%',
-    fontFamily: "'Nunito', sans-serif",
-  },
-  modalClose: {
-    marginTop: 20,
-    width: '100%',
-    background: 'none',
-    border: 'none',
-    color: '#4b5563',
-    fontSize: 14,
-    fontWeight: 600,
-    cursor: 'pointer',
-    padding: '8px 0',
-    fontFamily: "'Nunito', sans-serif",
-  },
-}

@@ -7,6 +7,7 @@ import { supabase } from '@/src/lib/supabase'
 import { getOrganizationId } from '@/src/lib/getOrganizationId'
 import { useAppHeader } from '@/components/layout/AppHeader'
 import MaterialsHelpModal from '@/components/MaterialsHelpModal'
+import { useTheme } from '@/contexts/ThemeContext'
 
 // ─── Static Data ──────────────────────────────────────────────────────────────
 
@@ -339,6 +340,7 @@ function TeachingStylesTab({
   userStyle: string | null
   onViewCurriculum: (styleId: string) => void
 }) {
+  const { isDark } = useTheme()
   const [expanded, setExpanded] = useState<string | null>(userStyle || 'charlotte')
 
   return (
@@ -360,7 +362,7 @@ function TeachingStylesTab({
             <div
               key={style.id}
               style={{
-                background: '#fff',
+                background: isDark ? 'var(--hr-bg-card)' : '#fff',
                 borderRadius: 14,
                 border: `2px solid ${isOpen ? style.color : '#e5e7eb'}`,
                 overflow: 'hidden',
@@ -382,7 +384,7 @@ function TeachingStylesTab({
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
-                    <span style={{ fontSize: 15, fontWeight: 700, color: '#111827' }}>{style.name}</span>
+                    <span style={{ fontSize: 15, fontWeight: 700, color: isDark ? 'var(--hr-text-primary)' : '#111827' }}>{style.name}</span>
                     {isUserStyle && (
                       <span style={{
                         background: G.full, color: '#fff',
@@ -392,7 +394,7 @@ function TeachingStylesTab({
                       </span>
                     )}
                   </div>
-                  <div style={{ fontSize: 12, color: '#9ca3af', fontStyle: 'italic' }}>"{style.tagline}"</div>
+                  <div style={{ fontSize: 12, color: isDark ? 'var(--hr-text-muted)' : '#9ca3af', fontStyle: 'italic' }}>"{style.tagline}"</div>
                 </div>
                 <span style={{
                   color: '#9ca3af', fontSize: 14,
@@ -407,7 +409,7 @@ function TeachingStylesTab({
               {/* Accordion Body */}
               {isOpen && (
                 <div style={{ padding: '0 18px 18px', borderTop: '1px solid #f3f4f6' }}>
-                  <p style={{ fontSize: 13, color: '#4b5563', lineHeight: 1.7, margin: '14px 0' }}>{style.desc}</p>
+                  <p style={{ fontSize: 13, color: isDark ? 'var(--hr-text-secondary)' : '#4b5563', lineHeight: 1.7, margin: '14px 0' }}>{style.desc}</p>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
                     <div style={{
                       background: `${style.color}0f`,
@@ -418,15 +420,15 @@ function TeachingStylesTab({
                         ✦ Strengths
                       </div>
                       {style.strengths.map(s => (
-                        <div key={s} style={{ fontSize: 12, color: '#4b5563', marginBottom: 4 }}>→ {s}</div>
+                        <div key={s} style={{ fontSize: 12, color: isDark ? 'var(--hr-text-secondary)' : '#4b5563', marginBottom: 4 }}>→ {s}</div>
                       ))}
                     </div>
-                    <div style={{ background: '#f5f3ff', borderRadius: 10, padding: '12px 14px' }}>
+                    <div style={{ background: isDark ? 'var(--hr-bg-surface)' : '#f5f3ff', borderRadius: 10, padding: '12px 14px' }}>
                       <div style={{ fontSize: 10, fontWeight: 700, color: '#7c3aed', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 8 }}>
                         📚 Often paired with
                       </div>
                       {style.curricula.map(c => (
-                        <div key={c} style={{ fontSize: 12, color: '#4b5563', marginBottom: 4 }}>→ {c}</div>
+                        <div key={c} style={{ fontSize: 12, color: isDark ? 'var(--hr-text-secondary)' : '#4b5563', marginBottom: 4 }}>→ {c}</div>
                       ))}
                     </div>
                   </div>
@@ -449,6 +451,7 @@ function TeachingStylesTab({
 // ─── Curriculum Tab ───────────────────────────────────────────────────────────
 
 function CurriculumTab({ initialStyle }: { initialStyle: string }) {
+  const { isDark } = useTheme()
   const [activeStyle, setActiveStyle] = useState(initialStyle)
   const curricula = CURRICULUM_DETAILS[activeStyle] ?? []
 
@@ -465,8 +468,8 @@ function CurriculumTab({ initialStyle }: { initialStyle: string }) {
               style={{
                 padding: '6px 14px', borderRadius: 20, cursor: 'pointer',
                 fontSize: 12, fontWeight: 700, transition: 'all 0.15s',
-                background: isActive ? `linear-gradient(135deg, ${s.color}, #ec4899)` : '#fff',
-                color: isActive ? '#fff' : '#6b7280',
+                background: isActive ? `linear-gradient(135deg, ${s.color}, #ec4899)` : isDark ? 'var(--hr-bg-card)' : '#fff',
+                color: isActive ? '#fff' : isDark ? 'var(--hr-text-secondary)' : '#6b7280',
                 border: isActive ? 'none' : '1px solid #e5e7eb',
                 boxShadow: isActive ? '0 3px 10px rgba(124,58,237,0.3)' : 'none',
               }}
@@ -483,29 +486,29 @@ function CurriculumTab({ initialStyle }: { initialStyle: string }) {
       </div>
 
       <div style={{
-        background: '#fff',
+        background: isDark ? 'var(--hr-bg-card)' : '#fff',
         border: '1px solid #e5e7eb',
         borderLeft: '3px solid #d1d5db',
         borderRadius: 10,
         padding: '11px 16px',
         marginBottom: 18,
         fontSize: 12,
-        color: '#9ca3af',
+        color: isDark ? 'var(--hr-text-muted)' : '#9ca3af',
         lineHeight: 1.6,
       }}>
-        <strong style={{ color: '#6b7280' }}>Disclosure:</strong> The resources listed here are for informational purposes only. HomeschoolReady does not endorse, recommend, or receive any compensation in connection with any curriculum or product listed. We have no affiliate relationships with these providers. Always do your own research to find what's right for your family.
+        <strong style={{ color: isDark ? 'var(--hr-text-secondary)' : '#6b7280' }}>Disclosure:</strong> The resources listed here are for informational purposes only. HomeschoolReady does not endorse, recommend, or receive any compensation in connection with any curriculum or product listed. We have no affiliate relationships with these providers. Always do your own research to find what's right for your family.
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {curricula.map(item => (
           <div key={item.name} style={{
-            background: '#fff', borderRadius: 14, padding: '16px 18px',
+            background: isDark ? 'var(--hr-bg-card)' : '#fff', borderRadius: 14, padding: '16px 18px',
             border: '1px solid #e5e7eb',
             display: 'flex', alignItems: 'flex-start', gap: 14,
           }}>
             <div style={{ flex: 1 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-                <span style={{ fontSize: 15, fontWeight: 700, color: '#111827' }}>{item.name}</span>
+                <span style={{ fontSize: 15, fontWeight: 700, color: isDark ? 'var(--hr-text-primary)' : '#111827' }}>{item.name}</span>
                 <span style={{
                   background: item.type === 'free' ? '#fef9c3' : '#ede9fe',
                   color: item.type === 'free' ? '#78350f' : '#7c3aed',
@@ -514,7 +517,7 @@ function CurriculumTab({ initialStyle }: { initialStyle: string }) {
                   {item.type === 'free' ? '✓ Free' : 'Paid'}
                 </span>
               </div>
-              <p style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.6, margin: 0 }}>{item.desc}</p>
+              <p style={{ fontSize: 13, color: isDark ? 'var(--hr-text-secondary)' : '#6b7280', lineHeight: 1.6, margin: 0 }}>{item.desc}</p>
             </div>
             <a
               href={item.url}
@@ -542,16 +545,17 @@ function CurriculumTab({ initialStyle }: { initialStyle: string }) {
 // ─── Compliance Tab ───────────────────────────────────────────────────────────
 
 function ComplianceTab() {
+  const { isDark } = useTheme()
   return (
     <div>
       <div style={{
-        background: '#fff', borderRadius: 14, padding: '18px 20px',
+        background: isDark ? 'var(--hr-bg-card)' : '#fff', borderRadius: 14, padding: '18px 20px',
         border: '1px solid #e5e7eb', marginBottom: 14,
       }}>
-        <div style={{ fontSize: 17, fontWeight: 700, color: '#111827', marginBottom: 6 }}>
+        <div style={{ fontSize: 17, fontWeight: 700, color: isDark ? 'var(--hr-text-primary)' : '#111827', marginBottom: 6 }}>
           What is homeschool compliance?
         </div>
-        <p style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.7, margin: 0 }}>
+        <p style={{ fontSize: 13, color: isDark ? 'var(--hr-text-secondary)' : '#6b7280', lineHeight: 1.7, margin: 0 }}>
           Every state has different laws governing homeschooling — some require almost nothing, others
           require annual filings, testing, and portfolio reviews. Compliance means meeting your state's
           specific requirements each year. HomeschoolReady tracks all of this automatically once your
@@ -561,11 +565,11 @@ function ComplianceTab() {
 
       {COMPLIANCE_TERMS.map(item => (
         <div key={item.term} style={{
-          background: '#fff', borderRadius: 14, padding: '15px 18px',
+          background: isDark ? 'var(--hr-bg-card)' : '#fff', borderRadius: 14, padding: '15px 18px',
           border: '1px solid #e5e7eb', marginBottom: 10,
         }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: '#111827', marginBottom: 5 }}>{item.term}</div>
-          <p style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.6, margin: 0 }}>{item.def}</p>
+          <div style={{ fontSize: 13, fontWeight: 700, color: isDark ? 'var(--hr-text-primary)' : '#111827', marginBottom: 5 }}>{item.term}</div>
+          <p style={{ fontSize: 13, color: isDark ? 'var(--hr-text-secondary)' : '#6b7280', lineHeight: 1.6, margin: 0 }}>{item.def}</p>
         </div>
       ))}
 
@@ -588,6 +592,7 @@ function ComplianceTab() {
 // ─── Guides Tab ───────────────────────────────────────────────────────────────
 
 function GuidesTab() {
+  const { isDark } = useTheme()
   const [activeGuide, setActiveGuide] = useState<'deschooling' | 'portfolio'>('deschooling')
   const [showPhilosophy, setShowPhilosophy] = useState(false)
   const [showHoursGuide, setShowHoursGuide] = useState(false)
@@ -611,8 +616,8 @@ function GuidesTab() {
               style={{
                 padding: '9px 20px', borderRadius: 12, cursor: 'pointer', border: 'none',
                 fontSize: 13, fontWeight: 700, transition: 'all 0.15s',
-                background: activeGuide === g.id ? '#fff' : 'transparent',
-                color: activeGuide === g.id ? '#4f46e5' : '#9ca3af',
+                background: activeGuide === g.id ? (isDark ? 'var(--hr-bg-surface)' : '#fff') : 'transparent',
+                color: activeGuide === g.id ? '#4f46e5' : isDark ? 'var(--hr-text-muted)' : '#9ca3af',
                 boxShadow: activeGuide === g.id ? '0 2px 8px rgba(0,0,0,0.08)' : 'none',
               }}
             >
@@ -623,9 +628,9 @@ function GuidesTab() {
 
         {/* Intro blurb — swaps with active guide */}
         {activeGuide === 'deschooling' ? (
-          <div style={{ background: '#f5f3ff', borderRadius: 14, padding: '16px 20px', border: '1px solid #ede9fe', marginBottom: 16 }}>
-            <div style={{ fontSize: 14, fontWeight: 800, color: '#1e1b4b', marginBottom: 6 }}>🌱 What is deschooling?</div>
-            <p style={{ fontSize: 13, color: '#4b5563', lineHeight: 1.7, margin: '0 0 10px' }}>
+          <div style={{ background: isDark ? 'var(--hr-bg-surface)' : '#f5f3ff', borderRadius: 14, padding: '16px 20px', border: '1px solid #ede9fe', marginBottom: 16 }}>
+            <div style={{ fontSize: 14, fontWeight: 800, color: isDark ? 'var(--hr-text-primary)' : '#1e1b4b', marginBottom: 6 }}>🌱 What is deschooling?</div>
+            <p style={{ fontSize: 13, color: isDark ? 'var(--hr-text-secondary)' : '#4b5563', lineHeight: 1.7, margin: '0 0 10px' }}>
               Deschooling is the intentional transition period between traditional school and homeschooling. It's not a break from learning — it's a reset. Children (and parents) need time to shed the habits and expectations of institutional school before a new rhythm can take hold.
             </p>
             <a
@@ -640,7 +645,7 @@ function GuidesTab() {
         ) : (
           <div style={{ background: '#f0fdf4', borderRadius: 14, padding: '16px 20px', border: '1px solid #d1fae5', marginBottom: 16 }}>
             <div style={{ fontSize: 14, fontWeight: 800, color: '#14532d', marginBottom: 6 }}>📋 What is a portfolio?</div>
-            <p style={{ fontSize: 13, color: '#4b5563', lineHeight: 1.7, margin: 0 }}>
+            <p style={{ fontSize: 13, color: isDark ? 'var(--hr-text-secondary)' : '#4b5563', lineHeight: 1.7, margin: 0 }}>
               A homeschool portfolio is an organized collection of your child's work — attendance records, photos, projects, and samples that document learning over time. Many states accept a portfolio as proof of compliance, and it doubles as a meaningful keepsake. Start simple: a folder, a calendar, and a few photos go a long way.
             </p>
           </div>
@@ -650,16 +655,16 @@ function GuidesTab() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {tasks.map(task => (
             <div key={task.id} style={{
-              background: '#fff', borderRadius: 16, padding: '18px 20px',
+              background: isDark ? 'var(--hr-bg-card)' : '#fff', borderRadius: 16, padding: '18px 20px',
               border: '1px solid #e5e7eb', boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
             }}>
               <div style={{ fontSize: 10, fontWeight: 800, color: '#7c3aed', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: 3 }}>
                 {task.phase}
               </div>
-              <div style={{ fontSize: 15, fontWeight: 700, color: '#111827', marginBottom: 4 }}>
+              <div style={{ fontSize: 15, fontWeight: 700, color: isDark ? 'var(--hr-text-primary)' : '#111827', marginBottom: 4 }}>
                 {task.title}
               </div>
-              <div style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.6 }}>{task.desc}</div>
+              <div style={{ fontSize: 13, color: isDark ? 'var(--hr-text-secondary)' : '#6b7280', lineHeight: 1.6 }}>{task.desc}</div>
             </div>
           ))}
         </div>
@@ -696,8 +701,8 @@ function GuidesTab() {
         </div>
 
         {/* Quick Resources */}
-        <div style={{ background: '#fff', borderRadius: 20, padding: '20px 18px', border: '1px solid #e5e7eb', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
-          <div style={{ fontSize: 13, fontWeight: 800, color: '#111827', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ background: isDark ? 'var(--hr-bg-card)' : '#fff', borderRadius: 20, padding: '20px 18px', border: '1px solid #e5e7eb', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+          <div style={{ fontSize: 13, fontWeight: 800, color: isDark ? 'var(--hr-text-primary)' : '#111827', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
             📄 Quick Resources
           </div>
           {[
@@ -740,13 +745,13 @@ function GuidesTab() {
       {/* ── Philosophy Modal ── */}
       {showPhilosophy && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,14,46,0.6)', backdropFilter: 'blur(4px)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div style={{ background: '#fff', borderRadius: 28, width: '100%', maxWidth: 560, maxHeight: '80vh', overflowY: 'auto', padding: 36, boxShadow: '0 24px 64px rgba(0,0,0,0.18)', position: 'relative' }}>
+          <div style={{ background: isDark ? 'var(--hr-bg-card)' : '#fff', borderRadius: 28, width: '100%', maxWidth: 560, maxHeight: '80vh', overflowY: 'auto', padding: 36, boxShadow: '0 24px 64px rgba(0,0,0,0.18)', position: 'relative' }}>
             <button onClick={() => setShowPhilosophy(false)} style={{ position: 'absolute', top: 20, right: 20, background: 'none', border: 'none', fontSize: 18, color: '#9ca3af', cursor: 'pointer' }}>✕</button>
-            <h2 style={{ fontSize: 26, fontWeight: 800, color: '#1e1b4b', marginBottom: 20 }}>Deschooling Philosophy</h2>
-            <div style={{ color: '#4b5563', lineHeight: 1.8, fontSize: 14 }}>
+            <h2 style={{ fontSize: 26, fontWeight: 800, color: isDark ? 'var(--hr-text-primary)' : '#1e1b4b', marginBottom: 20 }}>Deschooling Philosophy</h2>
+            <div style={{ color: isDark ? 'var(--hr-text-secondary)' : '#4b5563', lineHeight: 1.8, fontSize: 14 }}>
               <p style={{ fontWeight: 700, color: '#6366f1', fontStyle: 'italic', marginBottom: 16 }}>"The first step to homeschooling isn't teaching; it's unlearning."</p>
               <p style={{ marginBottom: 16 }}>For working parents, the instinct is to immediately fill the child's time. However, jumping straight into a rigid curriculum can lead to burnout.</p>
-              <p style={{ fontWeight: 700, color: '#111827', marginBottom: 10 }}>Why the 1-month-per-year rule?</p>
+              <p style={{ fontWeight: 700, color: isDark ? 'var(--hr-text-primary)' : '#111827', marginBottom: 10 }}>Why the 1-month-per-year rule?</p>
               <ul style={{ paddingLeft: 20, marginBottom: 16 }}>
                 <li style={{ marginBottom: 8 }}><strong>Reclaiming Curiosity:</strong> Help them find their own "inner engine."</li>
                 <li style={{ marginBottom: 8 }}><strong>Stress Reduction:</strong> Shed the anxiety of bells and rigid schedules.</li>
@@ -763,12 +768,12 @@ function GuidesTab() {
       {/* ── Hours Guide Modal ── */}
       {showHoursGuide && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,14,46,0.6)', backdropFilter: 'blur(4px)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div style={{ background: '#fff', borderRadius: 28, width: '100%', maxWidth: 560, maxHeight: '80vh', overflowY: 'auto', padding: 36, boxShadow: '0 24px 64px rgba(0,0,0,0.18)', position: 'relative' }}>
+          <div style={{ background: isDark ? 'var(--hr-bg-card)' : '#fff', borderRadius: 28, width: '100%', maxWidth: 560, maxHeight: '80vh', overflowY: 'auto', padding: 36, boxShadow: '0 24px 64px rgba(0,0,0,0.18)', position: 'relative' }}>
             <button onClick={() => setShowHoursGuide(false)} style={{ position: 'absolute', top: 20, right: 20, background: 'none', border: 'none', fontSize: 18, color: '#9ca3af', cursor: 'pointer' }}>✕</button>
-            <h2 style={{ fontSize: 26, fontWeight: 800, color: '#1e1b4b', marginBottom: 20 }}>What Counts as "School"?</h2>
-            <div style={{ color: '#4b5563', lineHeight: 1.8, fontSize: 14 }}>
-              <p style={{ marginBottom: 16, color: '#6b7280', fontSize: 15 }}>
-                One of the biggest hurdles for new homeschoolers is the <strong style={{ color: '#1e1b4b' }}>"Desk Trap."</strong> You do not need to sit at a desk for 6 hours a day.
+            <h2 style={{ fontSize: 26, fontWeight: 800, color: isDark ? 'var(--hr-text-primary)' : '#1e1b4b', marginBottom: 20 }}>What Counts as "School"?</h2>
+            <div style={{ color: isDark ? 'var(--hr-text-secondary)' : '#4b5563', lineHeight: 1.8, fontSize: 14 }}>
+              <p style={{ marginBottom: 16, color: isDark ? 'var(--hr-text-secondary)' : '#6b7280', fontSize: 15 }}>
+                One of the biggest hurdles for new homeschoolers is the <strong style={{ color: isDark ? 'var(--hr-text-primary)' : '#1e1b4b' }}>"Desk Trap."</strong> You do not need to sit at a desk for 6 hours a day.
               </p>
               <div style={{ background: '#eef2ff', borderRadius: 16, padding: 20, border: '1px solid #e0e7ff', marginBottom: 16 }}>
                 <p style={{ fontWeight: 700, color: '#3730a3', marginBottom: 14 }}>The "Everyday" Education List:</p>
@@ -779,11 +784,11 @@ function GuidesTab() {
                     { emoji: '🎧', label: 'Audio', sub: 'Podcasts or audiobooks on the go.' },
                     { emoji: '🌲', label: 'PE/Science', sub: 'Nature walks or park play.' },
                   ].map(item => (
-                    <div key={item.label} style={{ background: '#fff', borderRadius: 12, padding: '12px 14px', display: 'flex', gap: 10, border: '1px solid #e0e7ff' }}>
+                    <div key={item.label} style={{ background: isDark ? 'var(--hr-bg-surface)' : '#fff', borderRadius: 12, padding: '12px 14px', display: 'flex', gap: 10, border: '1px solid #e0e7ff' }}>
                       <span style={{ fontSize: 20 }}>{item.emoji}</span>
                       <div>
-                        <span style={{ fontWeight: 700, color: '#374151', fontSize: 13, display: 'block' }}>{item.label}</span>
-                        <span style={{ color: '#6b7280', fontSize: 12 }}>{item.sub}</span>
+                        <span style={{ fontWeight: 700, color: isDark ? 'var(--hr-text-primary)' : '#374151', fontSize: 13, display: 'block' }}>{item.label}</span>
+                        <span style={{ color: isDark ? 'var(--hr-text-secondary)' : '#6b7280', fontSize: 12 }}>{item.sub}</span>
                       </div>
                     </div>
                   ))}
@@ -803,6 +808,7 @@ function GuidesTab() {
 type MaterialType = 'textbook' | 'subscription' | 'physical' | 'digital'
 
 function MaterialsTab({ organizationId }: { organizationId: string }) {
+  const { isDark } = useTheme()
   const [materials, setMaterials]         = useState<any[]>([])
   const [loadingMats, setLoadingMats]     = useState(true)
   const [filterType, setFilterType]       = useState<MaterialType | 'all'>('all')
@@ -900,11 +906,11 @@ function MaterialsTab({ organizationId }: { organizationId: string }) {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <h2 style={{ fontSize: 18, fontWeight: 800, color: '#111827', margin: 0 }}>Materials & Resources</h2>
-          <p style={{ fontSize: 13, color: '#6b7280', margin: '4px 0 0' }}>Track your curriculum, logins, and supplies</p>
+          <h2 style={{ fontSize: 18, fontWeight: 800, color: isDark ? 'var(--hr-text-primary)' : '#111827', margin: 0 }}>Materials & Resources</h2>
+          <p style={{ fontSize: 13, color: isDark ? 'var(--hr-text-secondary)' : '#6b7280', margin: '4px 0 0' }}>Track your curriculum, logins, and supplies</p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={() => setShowHelpModal(true)} style={{ background: '#fff', border: '2px solid #e5e7eb', color: '#6b7280', padding: '8px 14px', borderRadius: 10, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}>
+          <button onClick={() => setShowHelpModal(true)} style={{ background: isDark ? 'var(--hr-bg-card)' : '#fff', border: '2px solid #e5e7eb', color: isDark ? 'var(--hr-text-secondary)' : '#6b7280', padding: '8px 14px', borderRadius: 10, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}>
             💡 How this works
           </button>
           <button onClick={() => { resetForm(); setShowAddForm(true) }} style={{ background: '#4f46e5', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: 10, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}>
@@ -916,18 +922,18 @@ function MaterialsTab({ organizationId }: { organizationId: string }) {
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 18 }}>
         {(['textbook', 'subscription', 'physical', 'digital'] as MaterialType[]).map(type => (
-          <div key={type} style={{ background: '#fff', padding: '14px 16px', borderRadius: 14, border: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div key={type} style={{ background: isDark ? 'var(--hr-bg-card)' : '#fff', padding: '14px 16px', borderRadius: 14, border: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', gap: 10 }}>
             <span style={{ fontSize: 22 }}>{ICONS[type]}</span>
             <div>
-              <div style={{ fontSize: 9, fontWeight: 800, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.07em' }}>{type}s</div>
-              <div style={{ fontSize: 22, fontWeight: 900, color: '#111827' }}>{materials.filter(m => m.material_type === type).length}</div>
+              <div style={{ fontSize: 9, fontWeight: 800, color: isDark ? 'var(--hr-text-muted)' : '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.07em' }}>{type}s</div>
+              <div style={{ fontSize: 22, fontWeight: 900, color: isDark ? 'var(--hr-text-primary)' : '#111827' }}>{materials.filter(m => m.material_type === type).length}</div>
             </div>
           </div>
         ))}
       </div>
 
       {/* Search + filter */}
-      <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e5e7eb', padding: 14, marginBottom: 18, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+      <div style={{ background: isDark ? 'var(--hr-bg-card)' : '#fff', borderRadius: 14, border: '1px solid #e5e7eb', padding: 14, marginBottom: 18, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
         <input type="text" placeholder="🔍 Search materials..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
           style={{ flex: 1, minWidth: 180, padding: '10px 14px', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 10, fontSize: 13, fontWeight: 600, outline: 'none', color: '#111827', fontFamily: "'Nunito', sans-serif" }} />
         <select value={filterType} onChange={e => setFilterType(e.target.value as any)}
@@ -947,7 +953,7 @@ function MaterialsTab({ organizationId }: { organizationId: string }) {
           if (typeMats.length === 0) return null
           const isCollapsed = collapsed.has(type)
           return (
-            <div key={type} style={{ background: '#fff', borderRadius: 14, border: '1px solid #e5e7eb', overflow: 'hidden' }}>
+            <div key={type} style={{ background: isDark ? 'var(--hr-bg-card)' : '#fff', borderRadius: 14, border: '1px solid #e5e7eb', overflow: 'hidden' }}>
               <div
                 onClick={() => toggleCollapse(type)}
                 style={{ background: '#f9fafb', padding: '10px 18px', borderBottom: isCollapsed ? 'none' : '1px solid #e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', userSelect: 'none' }}
@@ -960,7 +966,7 @@ function MaterialsTab({ organizationId }: { organizationId: string }) {
               {!isCollapsed && typeMats.map(m => (
                 <div key={m.id} style={{ padding: '14px 18px', borderBottom: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 15, fontWeight: 800, color: '#111827' }}>{m.name}</div>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: isDark ? 'var(--hr-text-primary)' : '#111827' }}>{m.name}</div>
                     <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 3 }}>
                       {m.subject || 'General'} · {m.grade_level || 'All Grades'}
                       {m.url && <a href={m.url} target="_blank" rel="noopener noreferrer" style={{ color: '#7c3aed', marginLeft: 10, fontWeight: 700, textDecoration: 'none' }}>🔗 Open</a>}
@@ -978,10 +984,10 @@ function MaterialsTab({ organizationId }: { organizationId: string }) {
         })}
 
         {materials.length === 0 && (
-          <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e5e7eb', padding: '48px 24px', textAlign: 'center' }}>
+          <div style={{ background: isDark ? 'var(--hr-bg-card)' : '#fff', borderRadius: 14, border: '1px solid #e5e7eb', padding: '48px 24px', textAlign: 'center' }}>
             <div style={{ fontSize: 48, marginBottom: 12 }}>📦</div>
-            <div style={{ fontSize: 16, fontWeight: 800, color: '#111827', marginBottom: 8 }}>No Materials Yet</div>
-            <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 16 }}>Start building your resource library by adding your first material.</p>
+            <div style={{ fontSize: 16, fontWeight: 800, color: isDark ? 'var(--hr-text-primary)' : '#111827', marginBottom: 8 }}>No Materials Yet</div>
+            <p style={{ fontSize: 13, color: isDark ? 'var(--hr-text-secondary)' : '#6b7280', marginBottom: 16 }}>Start building your resource library by adding your first material.</p>
             <button onClick={() => { resetForm(); setShowAddForm(true) }} style={{ background: '#4f46e5', color: '#fff', border: 'none', padding: '10px 24px', borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}>
               + Add Your First Material
             </button>
@@ -994,8 +1000,8 @@ function MaterialsTab({ organizationId }: { organizationId: string }) {
       {/* Add / Edit modal */}
       {showAddForm && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,14,46,0.6)', backdropFilter: 'blur(4px)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div style={{ background: '#fff', borderRadius: 24, padding: 32, maxWidth: 540, width: '100%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 24px 64px rgba(0,0,0,0.18)' }}>
-            <h2 style={{ fontSize: 20, fontWeight: 800, color: '#111827', marginBottom: 24 }}>{editingMaterial ? 'Edit' : 'Add New'} Material</h2>
+          <div style={{ background: isDark ? 'var(--hr-bg-card)' : '#fff', borderRadius: 24, padding: 32, maxWidth: 540, width: '100%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 24px 64px rgba(0,0,0,0.18)' }}>
+            <h2 style={{ fontSize: 20, fontWeight: 800, color: isDark ? 'var(--hr-text-primary)' : '#111827', marginBottom: 24 }}>{editingMaterial ? 'Edit' : 'Add New'} Material</h2>
             <form onSubmit={handleSubmit}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 <div>
@@ -1081,6 +1087,7 @@ function MaterialsTab({ organizationId }: { organizationId: string }) {
 // ─── State Laws Tab ───────────────────────────────────────────────────────────
 
 function StateLawsTab() {
+  const { isDark } = useTheme()
   const [search, setSearch] = useState('')
   const [levelFilter, setLevelFilter] = useState<RegLevel | 'all'>('all')
   const [expanded, setExpanded] = useState<string | null>(null)
@@ -1110,7 +1117,7 @@ function StateLawsTab() {
           placeholder="🔍 Search state..."
           value={search}
           onChange={e => setSearch(e.target.value)}
-          style={{ flex: 1, minWidth: 160, padding: '9px 14px', background: '#fff', border: '1px solid #e5e7eb', borderRadius: 10, fontSize: 13, fontWeight: 600, outline: 'none', color: '#111827', fontFamily: "'Nunito', sans-serif" }}
+          style={{ flex: 1, minWidth: 160, padding: '9px 14px', background: isDark ? 'var(--hr-bg-card)' : '#fff', border: '1px solid #e5e7eb', borderRadius: 10, fontSize: 13, fontWeight: 600, outline: 'none', color: isDark ? 'var(--hr-text-primary)' : '#111827', fontFamily: "'Nunito', sans-serif" }}
         />
         {(['all', 'low', 'moderate', 'high'] as const).map(lvl => {
           const active = levelFilter === lvl
@@ -1122,8 +1129,8 @@ function StateLawsTab() {
               style={{
                 padding: '9px 16px', borderRadius: 20, cursor: 'pointer',
                 fontSize: 12, fontWeight: 700, transition: 'all 0.15s',
-                background: active ? (meta ? meta.bg : G.full) : '#fff',
-                color: active ? (meta ? meta.color : '#fff') : '#6b7280',
+                background: active ? (meta ? meta.bg : G.full) : isDark ? 'var(--hr-bg-card)' : '#fff',
+                color: active ? (meta ? meta.color : '#fff') : isDark ? 'var(--hr-text-secondary)' : '#6b7280',
                 border: active ? `2px solid ${meta ? meta.dot : 'transparent'}` : '1px solid #e5e7eb',
                 fontFamily: "'Nunito', sans-serif",
               }}
@@ -1157,19 +1164,19 @@ function StateLawsTab() {
           const meta = LEVEL_META[state.level]
           const isOpen = expanded === state.abbr
           return (
-            <div key={state.abbr} style={{ background: '#fff', borderRadius: 14, border: `2px solid ${isOpen ? meta.dot : '#e5e7eb'}`, overflow: 'hidden', transition: 'border-color 0.2s' }}>
+            <div key={state.abbr} style={{ background: isDark ? 'var(--hr-bg-card)' : '#fff', borderRadius: 14, border: `2px solid ${isOpen ? meta.dot : '#e5e7eb'}`, overflow: 'hidden', transition: 'border-color 0.2s' }}>
               <div onClick={() => setExpanded(isOpen ? null : state.abbr)} style={{ padding: '14px 18px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 14 }}>
                 <div style={{ width: 44, height: 44, borderRadius: 10, background: meta.bg, border: `2px solid ${meta.dot}33`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <span style={{ fontSize: 13, fontWeight: 900, color: meta.color }}>{state.abbr}</span>
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
-                    <span style={{ fontSize: 15, fontWeight: 700, color: '#111827' }}>{state.name}</span>
+                    <span style={{ fontSize: 15, fontWeight: 700, color: isDark ? 'var(--hr-text-primary)' : '#111827' }}>{state.name}</span>
                     <span style={{ background: meta.bg, color: meta.color, fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 10, border: `1px solid ${meta.dot}44` }}>
                       {meta.label.toUpperCase()} REGULATION
                     </span>
                   </div>
-                  <div style={{ fontSize: 12, color: '#9ca3af' }}>{state.requirements[0]}</div>
+                  <div style={{ fontSize: 12, color: isDark ? 'var(--hr-text-muted)' : '#9ca3af' }}>{state.requirements[0]}</div>
                 </div>
                 <span style={{ color: '#9ca3af', fontSize: 14, transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }}>▾</span>
               </div>
@@ -1180,13 +1187,13 @@ function StateLawsTab() {
                     {state.requirements.map((r, i) => (
                       <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 6, alignItems: 'flex-start' }}>
                         <span style={{ color: meta.dot, marginTop: 1, flexShrink: 0 }}>✓</span>
-                        <span style={{ fontSize: 13, color: '#4b5563', lineHeight: 1.5 }}>{r}</span>
+                        <span style={{ fontSize: 13, color: isDark ? 'var(--hr-text-secondary)' : '#4b5563', lineHeight: 1.5 }}>{r}</span>
                       </div>
                     ))}
                   </div>
                   <div style={{ background: meta.bg, borderRadius: 10, padding: '11px 14px', border: `1px solid ${meta.dot}22` }}>
                     <span style={{ fontSize: 10, fontWeight: 800, color: meta.color, textTransform: 'uppercase', letterSpacing: '0.06em' }}>💡 Note  </span>
-                    <span style={{ fontSize: 12, color: '#4b5563', lineHeight: 1.5 }}>{state.notes}</span>
+                    <span style={{ fontSize: 12, color: isDark ? 'var(--hr-text-secondary)' : '#4b5563', lineHeight: 1.5 }}>{state.notes}</span>
                   </div>
                 </div>
               )}
@@ -1205,6 +1212,7 @@ function StateLawsTab() {
 // ─── High School Tab ──────────────────────────────────────────────────────────
 
 function HighSchoolTab() {
+  const { isDark } = useTheme()
   const [expanded, setExpanded] = useState<string | null>('credits')
 
   return (
@@ -1217,7 +1225,7 @@ function HighSchoolTab() {
         {HS_SECTIONS.map(section => {
           const isOpen = expanded === section.id
           return (
-            <div key={section.id} style={{ background: '#fff', borderRadius: 14, border: `2px solid ${isOpen ? section.color : '#e5e7eb'}`, overflow: 'hidden', transition: 'border-color 0.2s' }}>
+            <div key={section.id} style={{ background: isDark ? 'var(--hr-bg-card)' : '#fff', borderRadius: 14, border: `2px solid ${isOpen ? section.color : '#e5e7eb'}`, overflow: 'hidden', transition: 'border-color 0.2s' }}>
               <div onClick={() => setExpanded(isOpen ? null : section.id)} style={{ padding: '16px 18px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 14 }}>
                 <div style={{
                   width: 44, height: 44, borderRadius: 10, flexShrink: 0,
@@ -1228,8 +1236,8 @@ function HighSchoolTab() {
                   {section.emoji}
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 15, fontWeight: 700, color: '#111827', marginBottom: 2 }}>{section.title}</div>
-                  <div style={{ fontSize: 12, color: '#9ca3af', fontStyle: 'italic' }}>{section.summary}</div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: isDark ? 'var(--hr-text-primary)' : '#111827', marginBottom: 2 }}>{section.title}</div>
+                  <div style={{ fontSize: 12, color: isDark ? 'var(--hr-text-muted)' : '#9ca3af', fontStyle: 'italic' }}>{section.summary}</div>
                 </div>
                 <span style={{ color: '#9ca3af', fontSize: 14, transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }}>▾</span>
               </div>
@@ -1238,7 +1246,7 @@ function HighSchoolTab() {
                   {section.content.map((item, i) => (
                     <div key={i} style={{ marginTop: 16, paddingBottom: 16, borderBottom: i < section.content.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
                       <div style={{ fontSize: 12, fontWeight: 800, color: section.color, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>{item.label}</div>
-                      <div style={{ fontSize: 13, color: '#4b5563', lineHeight: 1.7, whiteSpace: 'pre-line' }}>{item.text}</div>
+                      <div style={{ fontSize: 13, color: isDark ? 'var(--hr-text-secondary)' : '#4b5563', lineHeight: 1.7, whiteSpace: 'pre-line' }}>{item.text}</div>
                     </div>
                   ))}
                 </div>
@@ -1257,7 +1265,7 @@ function HighSchoolTab() {
             { name: 'ACT for Homeschoolers', url: 'https://act.org' },
             { name: 'Common App Homeschool FAQ', url: 'https://commonapp.org' },
           ].map(link => (
-            <a key={link.name} href={link.url} {...(link.url.startsWith('/') ? {} : { target: '_blank', rel: 'noopener noreferrer' })} style={{ background: '#fff', borderRadius: 10, padding: '10px 14px', fontSize: 12, fontWeight: 700, color: '#7c3aed', textDecoration: 'none', border: '1px solid #e5e7eb', display: 'block' }}>
+            <a key={link.name} href={link.url} {...(link.url.startsWith('/') ? {} : { target: '_blank', rel: 'noopener noreferrer' })} style={{ background: isDark ? 'var(--hr-bg-card)' : '#fff', borderRadius: 10, padding: '10px 14px', fontSize: 12, fontWeight: 700, color: '#7c3aed', textDecoration: 'none', border: '1px solid #e5e7eb', display: 'block' }}>
               → {link.name}
             </a>
           ))}
@@ -1271,6 +1279,7 @@ function HighSchoolTab() {
 
 function ResourcesContent() {
   const router = useRouter()
+  const { isDark } = useTheme()
   useAppHeader({ title: '💡 Resources' })
   const [activeTab, setActiveTab] = useState<'styles' | 'curriculum' | 'compliance' | 'guides' | 'materials' | 'statelaws' | 'highschool'>('styles')
   const [curriculumStyle, setCurriculumStyle] = useState('charlotte')
@@ -1328,21 +1337,21 @@ function ResourcesContent() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f5f3ff' }}>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: isDark ? 'var(--hr-bg-page)' : '#f5f3ff' }}>
         <div style={{ color: '#7c3aed', fontWeight: 700, fontSize: 16 }}>Loading...</div>
       </div>
     )
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #c4b5fd 0%, #e879f9 18%, #f0abfc 36%, #fbcfe8 54%, #bae6fd 76%, #6ee7b7 100%)', fontFamily: "'Nunito', sans-serif", paddingBottom: 80 }}>
+    <div style={{ minHeight: '100vh', background: isDark ? 'linear-gradient(135deg, #1a0533 0%, #2d1b69 50%, #1e1b4b 100%)' : 'linear-gradient(135deg, #c4b5fd 0%, #e879f9 18%, #f0abfc 36%, #fbcfe8 54%, #bae6fd 76%, #6ee7b7 100%)', fontFamily: "'Nunito', sans-serif", paddingBottom: 80 }}>
 
       <div style={{ maxWidth: (activeTab === 'guides' || activeTab === 'materials' || activeTab === 'statelaws') ? 1060 : 860, margin: '0 auto', padding: '24px 24px 48px' }}>
 
         {/* Page title row */}
         <div style={{ marginBottom: 20 }}>
-          <h1 style={{ fontSize: 22, fontWeight: 800, color: '#1e1060', margin: 0 }}>Your Homeschool Library</h1>
-          <p style={{ fontSize: 13, color: '#6b7280', margin: '4px 0 0' }}>Teaching styles, state laws, high school planning, curriculum guides, and your materials.</p>
+          <h1 style={{ fontSize: 22, fontWeight: 800, color: isDark ? 'var(--hr-text-primary)' : '#1e1060', margin: 0 }}>Your Homeschool Library</h1>
+          <p style={{ fontSize: 13, color: isDark ? 'var(--hr-text-secondary)' : '#6b7280', margin: '4px 0 0' }}>Teaching styles, state laws, high school planning, curriculum guides, and your materials.</p>
         </div>
 
         {/* Tab pills */}
@@ -1355,8 +1364,8 @@ function ResourcesContent() {
                 display: 'flex', alignItems: 'center', gap: 7,
                 padding: '9px 18px', borderRadius: 20, cursor: 'pointer',
                 fontSize: 13, fontWeight: 700, transition: 'all 0.15s',
-                background: activeTab === tab.id ? G.full : '#fff',
-                color: activeTab === tab.id ? '#fff' : '#6b7280',
+                background: activeTab === tab.id ? G.full : isDark ? 'var(--hr-bg-card)' : '#fff',
+                color: activeTab === tab.id ? '#fff' : isDark ? 'var(--hr-text-secondary)' : '#6b7280',
                 border: activeTab === tab.id ? 'none' : '1px solid #e5e7eb',
                 boxShadow: activeTab === tab.id ? '0 4px 14px rgba(124,58,237,0.3)' : 'none',
               }}
