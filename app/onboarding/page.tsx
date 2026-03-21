@@ -357,9 +357,26 @@ const ONBOARDING_SUBJECTS = [
 ]
 const DEFAULT_SUBJECTS = ['Mathematics', 'Reading', 'Language Arts', 'Science', 'Social Studies']
 
-function StepIndicator({ currentStep }: { currentStep: number }) {
+function StepIndicator({ currentStep, onBack }: { currentStep: number; onBack?: () => void }) {
+  const canGoBack = !!onBack && currentStep > 1
   return (
-    <div className="flex items-start justify-center gap-0 mb-12">
+    <div className="flex items-center justify-center gap-2 mb-12">
+      <button
+        onClick={onBack}
+        disabled={!canGoBack}
+        aria-label="Go back"
+        className="flex items-center justify-center w-8 h-8 rounded-full border-2 transition-all flex-shrink-0"
+        style={{
+          borderColor: canGoBack ? '#7c3aed' : '#e5e7eb',
+          color: canGoBack ? '#7c3aed' : '#d1d5db',
+          background: 'transparent',
+          cursor: canGoBack ? 'pointer' : 'not-allowed',
+          opacity: canGoBack ? 1 : 0.4,
+        }}
+      >
+        ←
+      </button>
+      <div className="flex items-start gap-0">
       {STEP_LABELS.map((label, i) => {
         const stepNum    = i + 1
         const isCompleted = stepNum < currentStep
@@ -387,6 +404,9 @@ function StepIndicator({ currentStep }: { currentStep: number }) {
           </div>
         )
       })}
+      </div>
+      {/* spacer to balance the back button */}
+      <div className="w-8 flex-shrink-0" />
     </div>
   )
 }
@@ -986,25 +1006,26 @@ export default function OnboardingPage() {
     window.history.pushState({ onboarding: true }, '')
   }, [step, step1Sub, quizQuestion, curriculumSub])
 
-  useEffect(() => {
-    const handlePopState = () => {
-      const nav = navRef.current
-      if (nav.step === 1) {
-        if (nav.step1Sub === 'state') setStep1Sub('name')
-      } else if (nav.step === 2) {
-        if (nav.quizQuestion === 1) { setStep(1); setStep1Sub('state') }
-        else setQuizQuestion(nav.quizQuestion - 1)
-      } else if (nav.step === 3) {
-        if (nav.curriculumSub !== 'choice') setCurriculumSub('choice')
-        else { setStep(2); setQuizQuestion(4) }
-      } else if (nav.step === 4) {
-        setStep(3)
-      } else if (nav.step === 5) {
-        setStep(4)
-      }
+  const goBack = () => {
+    const nav = navRef.current
+    if (nav.step === 1) {
+      if (nav.step1Sub === 'state') setStep1Sub('name')
+    } else if (nav.step === 2) {
+      if (nav.quizQuestion === 1) { setStep(1); setStep1Sub('state') }
+      else setQuizQuestion(nav.quizQuestion - 1)
+    } else if (nav.step === 3) {
+      if (nav.curriculumSub !== 'choice') setCurriculumSub('choice')
+      else { setStep(2); setQuizQuestion(4) }
+    } else if (nav.step === 4) {
+      setStep(3)
+    } else if (nav.step === 5) {
+      setStep(4)
     }
-    window.addEventListener('popstate', handlePopState)
-    return () => window.removeEventListener('popstate', handlePopState)
+  }
+
+  useEffect(() => {
+    window.addEventListener('popstate', goBack)
+    return () => window.removeEventListener('popstate', goBack)
   }, [])
 
   const saveSubjects = async () => {
@@ -1449,7 +1470,7 @@ export default function OnboardingPage() {
 
       {/* Main content — wider container on state picker */}
       <div className={`mx-auto px-6 py-10 ${isStatePicker ? 'max-w-4xl' : 'max-w-2xl'}`}>
-        <StepIndicator currentStep={step} />
+        <StepIndicator currentStep={step} onBack={step > 1 ? goBack : undefined} />
 
         {/* ══════════════════════════════════════════════════════
             STEP 1a — School Name

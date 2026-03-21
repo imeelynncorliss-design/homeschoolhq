@@ -195,6 +195,12 @@ body {
 .dark .modal-light input::placeholder, .dark .modal-light textarea::placeholder {
   color: #9ca3af;
 }
+/* Soften text selection highlight in dark mode — default bright blue is too jarring */
+.dark ::selection {
+  background-color: rgba(124, 58, 237, 0.45);
+  color: #f3f4f6;
+}
+
 @keyframes shimmer {
   0%   { background-position: 200% 0; }
   100% { background-position: -200% 0; }

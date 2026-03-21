@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useTheme } from '@/contexts/ThemeContext'
 import { supabase } from '@/src/lib/supabase'
 import { CANONICAL_SUBJECTS } from '@/src/constants/subjects'
 import { printHeader, printHeaderCSS } from '@/lib/printHeader'
@@ -60,6 +61,7 @@ const STYLE_LABEL: Record<string, string> = {
 // ─── ActivityGenerator ────────────────────────────────────────────────────────
 
 export default function ActivityGenerator({ kids, organizationId, onClose, onSaved, homeschoolStyle }: ActivityGeneratorProps) {
+  const { isDark } = useTheme()
   const [step, setStep] = useState<'setup' | 'vibe' | 'loading' | 'results'>('setup')
   const [selectedKidId, setSelectedKidId] = useState<string>(kids[0]?.id ?? '')
   const [subject, setSubject] = useState('')
@@ -214,6 +216,132 @@ ${stepsHtml}${haveHtml}${needHtml}
     if (dbErr) { setError('Failed to save activity'); return }
     setSavedIdx(prev => new Set([...prev, idx]))
     onSaved?.()
+  }
+
+  // ── Styles (dark-mode aware) ─────────────────────────────────────────────────
+  const s: Record<string, React.CSSProperties> = {
+    overlay: {
+      position: 'fixed', inset: 0, background: 'rgba(30,20,60,0.55)',
+      backdropFilter: 'blur(4px)', zIndex: 10000,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      padding: '16px 16px 96px',
+    },
+    modal: {
+      background: isDark ? 'var(--hr-bg-card)' : '#fff', borderRadius: 20, width: '100%', maxWidth: 480,
+      maxHeight: 'calc(100vh - 112px)', overflowY: 'auto',
+      boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
+    },
+    header: {
+      display: 'flex', alignItems: 'center', gap: 12,
+      padding: '20px 20px 0', position: 'relative',
+    },
+    cardinal: { width: 52, height: 52, objectFit: 'contain' as const },
+    title: { fontWeight: 900, fontSize: 18, color: isDark ? 'var(--hr-text-primary)' : '#2d1b69' },
+    sub: { fontSize: 13, color: isDark ? 'var(--hr-text-secondary)' : '#7c6faa', marginTop: 2 },
+    closeBtn: {
+      position: 'absolute', right: 16, top: 16,
+      background: 'none', border: 'none', fontSize: 18,
+      color: '#9ca3af', cursor: 'pointer', lineHeight: 1,
+    },
+    body: {
+      display: 'flex', flexDirection: 'column' as const,
+      padding: '18px 20px 24px',
+    },
+    field: { marginBottom: 16 },
+    label: { display: 'block', fontWeight: 700, fontSize: 13, color: isDark ? 'var(--hr-text-secondary)' : '#374151', marginBottom: 6 },
+    kidRow: { display: 'flex', flexWrap: 'wrap' as const, gap: 8 },
+    kidBtn: {
+      padding: '6px 14px', borderRadius: 20, border: '2px solid',
+      borderColor: isDark ? 'var(--hr-border)' : '#e5e7eb',
+      background: isDark ? 'var(--hr-bg-surface)' : '#f9fafb',
+      fontWeight: 600, fontSize: 13,
+      color: isDark ? 'var(--hr-text-secondary)' : '#374151', cursor: 'pointer',
+    },
+    kidBtnActive: { borderColor: '#7c3aed', background: '#ede9fe', color: '#7c3aed' },
+    select: {
+      width: '100%', padding: '10px 12px', borderRadius: 10,
+      border: `1.5px solid ${isDark ? 'var(--hr-border)' : '#e5e7eb'}`,
+      fontSize: 14, color: isDark ? 'var(--hr-text-primary)' : '#111827',
+      background: isDark ? 'var(--hr-input-bg)' : '#fff', outline: 'none',
+    },
+    input: {
+      width: '100%', padding: '10px 12px', borderRadius: 10,
+      border: `1.5px solid ${isDark ? 'var(--hr-border)' : '#e5e7eb'}`,
+      fontSize: 14, color: isDark ? 'var(--hr-text-primary)' : '#111827',
+      background: isDark ? 'var(--hr-input-bg)' : '#fff', outline: 'none', boxSizing: 'border-box' as const,
+    },
+    primaryBtn: {
+      padding: '12px 20px', borderRadius: 12, border: 'none',
+      background: 'linear-gradient(135deg,#7c3aed,#4f46e5)',
+      color: '#fff', fontWeight: 800, fontSize: 15, cursor: 'pointer',
+      alignSelf: 'stretch',
+    },
+    backBtn: {
+      padding: '10px 16px', borderRadius: 10,
+      border: `1.5px solid ${isDark ? 'var(--hr-border)' : '#e5e7eb'}`,
+      background: isDark ? 'var(--hr-bg-surface)' : '#f9fafb',
+      color: isDark ? 'var(--hr-text-secondary)' : '#6b7280',
+      fontSize: 13, fontWeight: 600, cursor: 'pointer', alignSelf: 'flex-start' as const,
+    },
+    styleCallout: {
+      background: isDark ? 'rgba(45,27,105,0.4)' : 'linear-gradient(135deg, #eff6ff, #f5f3ff)',
+      border: `1.5px solid ${isDark ? 'var(--hr-border)' : '#c7d2fe'}`,
+      borderRadius: 14, padding: '14px 16px',
+      display: 'flex', flexDirection: 'column' as const, alignItems: 'flex-start' as const, gap: 2,
+    },
+    useRecommendedBtn: {
+      marginTop: 10, padding: '9px 18px', borderRadius: 10, border: 'none',
+      background: 'linear-gradient(135deg,#4f46e5,#7c3aed)',
+      color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer',
+    },
+    vibeGrid: {
+      display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20,
+    },
+    vibeBtn: {
+      display: 'flex', flexDirection: 'column' as const, alignItems: 'center',
+      padding: '18px 12px', borderRadius: 14,
+      border: `2px solid ${isDark ? 'var(--hr-border)' : '#e5e7eb'}`,
+      background: isDark ? 'var(--hr-bg-surface)' : '#fafafa',
+      cursor: 'pointer', transition: 'border-color 0.15s',
+    },
+    vibeBtnRecommended: {
+      borderColor: '#7c3aed', background: isDark ? 'rgba(124,58,237,0.2)' : '#faf5ff',
+    },
+    activityCard: {
+      border: `1.5px solid ${isDark ? 'var(--hr-border)' : '#e5e7eb'}`, borderRadius: 14, padding: '14px 16px',
+      background: isDark ? 'var(--hr-bg-surface)' : '#fafafa',
+    },
+    actCardTop: { display: 'flex', alignItems: 'flex-start', gap: 10 },
+    saveBtn: {
+      padding: '6px 14px', borderRadius: 20, border: 'none',
+      background: 'linear-gradient(135deg,#7c3aed,#4f46e5)',
+      color: '#fff', fontWeight: 700, fontSize: 12, cursor: 'pointer', whiteSpace: 'nowrap' as const,
+    },
+    savedBtn: { background: '#d1fae5', color: '#059669', cursor: 'default' },
+    printOneBtn: {
+      padding: '6px 10px', borderRadius: 20,
+      border: `1.5px solid ${isDark ? 'var(--hr-border)' : '#e5e7eb'}`,
+      background: isDark ? 'var(--hr-bg-surface)' : '#fff',
+      color: isDark ? 'var(--hr-text-secondary)' : '#6b7280', fontSize: 14, cursor: 'pointer',
+    },
+    chipHave: {
+      padding: '3px 10px', borderRadius: 20, background: '#dcfce7',
+      color: '#15803d', fontSize: 11, fontWeight: 600,
+    },
+    chipNeed: {
+      padding: '3px 10px', borderRadius: 20, background: '#fee2e2',
+      color: '#dc2626', fontSize: 11, fontWeight: 600,
+    },
+    error: {
+      background: isDark ? 'rgba(220,38,38,0.15)' : '#fef2f2',
+      border: `1px solid ${isDark ? 'rgba(220,38,38,0.4)' : '#fecaca'}`,
+      borderRadius: 8, padding: '10px 14px', fontSize: 13, color: '#dc2626',
+    },
+    spinner: {
+      width: 44, height: 44,
+      border: '4px solid #ede9fe', borderTopColor: '#7c3aed',
+      borderRadius: '50%', animation: 'spin 0.8s linear infinite',
+    },
   }
 
   // ── Overlay wrapper ──────────────────────────────────────────────────────────
@@ -430,117 +558,3 @@ ${stepsHtml}${haveHtml}${needHtml}
   )
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
-
-const s: Record<string, React.CSSProperties> = {
-  overlay: {
-    position: 'fixed', inset: 0, background: 'rgba(30,20,60,0.55)',
-    backdropFilter: 'blur(4px)', zIndex: 10000,
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    padding: '16px 16px 96px',
-  },
-  modal: {
-    background: '#fff', borderRadius: 20, width: '100%', maxWidth: 480,
-    maxHeight: 'calc(100vh - 112px)', overflowY: 'auto',
-    boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
-  },
-  header: {
-    display: 'flex', alignItems: 'center', gap: 12,
-    padding: '20px 20px 0', position: 'relative',
-  },
-  cardinal: { width: 52, height: 52, objectFit: 'contain' },
-  title: { fontWeight: 900, fontSize: 18, color: '#2d1b69' },
-  sub: { fontSize: 13, color: '#7c6faa', marginTop: 2 },
-  closeBtn: {
-    position: 'absolute', right: 16, top: 16,
-    background: 'none', border: 'none', fontSize: 18,
-    color: '#9ca3af', cursor: 'pointer', lineHeight: 1,
-  },
-  body: {
-    display: 'flex', flexDirection: 'column',
-    padding: '18px 20px 24px',
-  },
-  field: { marginBottom: 16 },
-  label: { display: 'block', fontWeight: 700, fontSize: 13, color: '#374151', marginBottom: 6 },
-  kidRow: { display: 'flex', flexWrap: 'wrap', gap: 8 },
-  kidBtn: {
-    padding: '6px 14px', borderRadius: 20, border: '2px solid #e5e7eb',
-    background: '#f9fafb', fontWeight: 600, fontSize: 13, color: '#374151', cursor: 'pointer',
-  },
-  kidBtnActive: { borderColor: '#7c3aed', background: '#ede9fe', color: '#7c3aed' },
-  select: {
-    width: '100%', padding: '10px 12px', borderRadius: 10,
-    border: '1.5px solid #e5e7eb', fontSize: 14, color: '#111827',
-    background: '#fff', outline: 'none',
-  },
-  input: {
-    width: '100%', padding: '10px 12px', borderRadius: 10,
-    border: '1.5px solid #e5e7eb', fontSize: 14, color: '#111827',
-    background: '#fff', outline: 'none', boxSizing: 'border-box',
-  },
-  primaryBtn: {
-    padding: '12px 20px', borderRadius: 12, border: 'none',
-    background: 'linear-gradient(135deg,#7c3aed,#4f46e5)',
-    color: '#fff', fontWeight: 800, fontSize: 15, cursor: 'pointer',
-    alignSelf: 'stretch',
-  },
-  backBtn: {
-    padding: '10px 16px', borderRadius: 10, border: '1.5px solid #e5e7eb',
-    background: '#f9fafb', color: '#6b7280', fontSize: 13, fontWeight: 600, cursor: 'pointer',
-    alignSelf: 'flex-start',
-  },
-  styleCallout: {
-    background: 'linear-gradient(135deg, #eff6ff, #f5f3ff)',
-    border: '1.5px solid #c7d2fe',
-    borderRadius: 14, padding: '14px 16px',
-    display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2,
-  },
-  useRecommendedBtn: {
-    marginTop: 10, padding: '9px 18px', borderRadius: 10, border: 'none',
-    background: 'linear-gradient(135deg,#4f46e5,#7c3aed)',
-    color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer',
-  },
-  vibeGrid: {
-    display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20,
-  },
-  vibeBtn: {
-    display: 'flex', flexDirection: 'column', alignItems: 'center',
-    padding: '18px 12px', borderRadius: 14, border: '2px solid #e5e7eb',
-    background: '#fafafa', cursor: 'pointer', transition: 'border-color 0.15s',
-  },
-  vibeBtnRecommended: {
-    borderColor: '#7c3aed', background: '#faf5ff',
-  },
-  activityCard: {
-    border: '1.5px solid #e5e7eb', borderRadius: 14, padding: '14px 16px',
-    background: '#fafafa',
-  },
-  actCardTop: { display: 'flex', alignItems: 'flex-start', gap: 10 },
-  saveBtn: {
-    padding: '6px 14px', borderRadius: 20, border: 'none',
-    background: 'linear-gradient(135deg,#7c3aed,#4f46e5)',
-    color: '#fff', fontWeight: 700, fontSize: 12, cursor: 'pointer', whiteSpace: 'nowrap',
-  },
-  savedBtn: { background: '#d1fae5', color: '#059669', cursor: 'default' },
-  printOneBtn: {
-    padding: '6px 10px', borderRadius: 20, border: '1.5px solid #e5e7eb',
-    background: '#fff', color: '#6b7280', fontSize: 14, cursor: 'pointer',
-  },
-  chipHave: {
-    padding: '3px 10px', borderRadius: 20, background: '#dcfce7',
-    color: '#15803d', fontSize: 11, fontWeight: 600,
-  },
-  chipNeed: {
-    padding: '3px 10px', borderRadius: 20, background: '#fee2e2',
-    color: '#dc2626', fontSize: 11, fontWeight: 600,
-  },
-  error: {
-    background: '#fef2f2', border: '1px solid #fecaca',
-    borderRadius: 8, padding: '10px 14px', fontSize: 13, color: '#dc2626',
-  },
-  spinner: {
-    width: 44, height: 44,
-    border: '4px solid #ede9fe', borderTopColor: '#7c3aed',
-    borderRadius: '50%', animation: 'spin 0.8s linear infinite',
-  },
-}
