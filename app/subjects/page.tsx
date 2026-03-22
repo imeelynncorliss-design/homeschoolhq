@@ -505,7 +505,7 @@ function SubjectsContent() {
                               : thisWeekCount >= target ? 'Target met! 🎉' : 'In progress'
                             return (
                               <div style={{ marginBottom: 6 }}>
-                                <div style={{ fontSize: 9, fontWeight: 800, color: 'rgba(255,255,255,0.55)', letterSpacing: 0.4, textTransform: 'uppercase', marginBottom: 2 }}>
+                                <div style={{ fontSize: 9, fontWeight: 800, color: '#9ca3af', letterSpacing: 0.4, textTransform: 'uppercase', marginBottom: 2 }}>
                                   This week's lessons
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
@@ -513,7 +513,7 @@ function SubjectsContent() {
                                     {thisWeekCount} of {target} {statusLabel}
                                   </span>
                                 </div>
-                                <div style={{ height: 4, borderRadius: 4, background: 'rgba(255,255,255,0.15)', overflow: 'hidden' }}>
+                                <div style={{ height: 4, borderRadius: 4, background: '#e5e7eb', overflow: 'hidden' }}>
                                   <div style={{
                                     height: '100%', borderRadius: 4,
                                     width: `${pct * 100}%`,
@@ -530,13 +530,13 @@ function SubjectsContent() {
                               <div style={{ fontSize: 9, fontWeight: 800, color: '#9ca3af', letterSpacing: 0.4, textTransform: 'uppercase', marginBottom: 2 }}>
                                 This week's lessons
                               </div>
-                              <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.6)' }}>
+                              <div style={{ fontSize: 10, fontWeight: 700, color: '#9ca3af' }}>
                                 {thisWeekCount > 0 ? `${thisWeekCount} scheduled` : 'None scheduled'}
                               </div>
                             </div>
                           )
                         })()}
-                        <div style={{ fontSize: 11, fontWeight: 700, color: subj.lessons.length === 0 ? 'rgba(255,255,255,0.5)' : subj.color, display: 'block' }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: subj.lessons.length === 0 ? '#9ca3af' : '#7c3aed', display: 'block' }}>
                           {subj.lessons.length === 0 ? 'No lessons yet' : `${subj.lessons.length} lesson${subj.lessons.length !== 1 ? 's' : ''}`}
                         </div>
                       </div>
