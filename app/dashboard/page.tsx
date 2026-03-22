@@ -1135,7 +1135,16 @@ function DashboardContent() {
           setPinnedFeatures(savedPins.length > 0 ? savedPins : DEFAULT_UNSTYLED)
           setShowDefaultNudge(true)
         } else {
-          setPinnedFeatures(savedPins)
+          // If pins are missing from DB, derive from style and persist so they survive navigation
+          if (savedPins.length === 0) {
+            const defaultPins = style === 'structured' ? DEFAULT_STRUCTURED : DEFAULT_FLEXIBLE
+            setPinnedFeatures(defaultPins)
+            supabase.from('user_profiles')
+              .update({ pinned_features: defaultPins })
+              .eq('user_id', user.id)
+          } else {
+            setPinnedFeatures(savedPins)
+          }
         }
         // Show welcome + tour if onboarding is complete but welcome hasn't been shown yet.
         // Uses DB so it works across devices and survives browser/tab interruptions.
@@ -1143,14 +1152,6 @@ function DashboardContent() {
 
         if (needsWelcome) {
           setShowWelcome(true)
-          // If pinned features didn't make it into DB yet, derive from style and persist them
-          if ((profile?.pinned_features ?? []).length === 0) {
-            const defaultPins = style === 'structured' ? DEFAULT_STRUCTURED : DEFAULT_FLEXIBLE
-            setPinnedFeatures(defaultPins)
-            supabase.from('user_profiles')
-              .update({ pinned_features: defaultPins })
-              .eq('user_id', user.id)
-          }
         } else if (style === null && !localStorage.getItem('style_picker_dismissed')) {
           setShowStylePicker(true)
         } else if (style !== null && !localStorage.getItem('hq_tour_done')) {
