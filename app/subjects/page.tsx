@@ -439,16 +439,16 @@ function SubjectsContent() {
                         className="subj-card"
                         onClick={() => setSelected({ kidId: kid.id, subjectName: subj.subject })}
                         style={{
-                          background: subj.lessons.length === 0
-                            ? 'rgba(255,255,255,0.6)'
-                            : 'rgba(255,255,255,0.88)',
+                          background: 'rgba(255,255,255,0.82)',
+                          backdropFilter: 'blur(18px)',
+                          WebkitBackdropFilter: 'blur(18px)',
                           border: subj.lessons.length === 0
-                            ? `1.5px dashed ${subj.color}50`
-                            : `1.5px solid ${subj.color}30`,
+                            ? `1.5px dashed rgba(124,58,237,0.2)`
+                            : `1.5px solid rgba(124,58,237,0.1)`,
                           borderRadius: 18, padding: '20px 16px',
                           cursor: 'pointer', textAlign: 'left' as const,
                           transition: 'transform 0.15s, box-shadow 0.15s',
-                          boxShadow: '0 2px 8px rgba(0,0,0,0.07)',
+                          boxShadow: '0 4px 24px rgba(124,58,237,0.07)',
                           fontFamily: "'Nunito', sans-serif",
                           position: 'relative' as const,
                         }}>
@@ -603,7 +603,7 @@ function SubjectsContent() {
                     style={{
                       display: 'flex', alignItems: 'center', gap: 5,
                       padding: '7px 13px', borderRadius: 18, border: 'none',
-                      background: color + '18', color,
+                      background: 'rgba(124,58,237,0.12)', color: '#7c3aed',
                       fontFamily: "'Nunito', sans-serif", fontSize: 13, fontWeight: 800,
                       cursor: 'pointer',
                     }}>
@@ -636,7 +636,7 @@ function SubjectsContent() {
                       }}
                       style={{
                         padding: '10px 20px', borderRadius: 20, border: 'none',
-                        background: color, color: '#fff',
+                        background: 'linear-gradient(135deg, #7c3aed, #a855f7)', color: '#fff',
                         fontFamily: "'Nunito', sans-serif", fontSize: 14, fontWeight: 800,
                         cursor: 'pointer',
                       }}>
