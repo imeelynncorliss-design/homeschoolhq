@@ -179,7 +179,7 @@ export default function CoTeachersPage() {
 
   const rowStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, padding: '14px 20px', borderBottom: '1px solid rgba(0,0,0,0.06)' };
   const labelStyle: React.CSSProperties = { fontSize: 12, fontWeight: 700, color: '#1a1a2e', marginBottom: 2 };
-  const subStyle: React.CSSProperties = { fontSize: 12, color: 'rgba(255,255,255,0.6)', fontWeight: 600 };
+  const subStyle: React.CSSProperties = { fontSize: 12, color: '#6b7280', fontWeight: 600 };
 const inputStyle: React.CSSProperties = { width: '100%', padding: '9px 12px', borderRadius: 10, border: '1.5px solid #e5e7eb', fontSize: 13, color: '#1f2937', background: '#fff', fontFamily: "'Nunito', sans-serif", boxSizing: 'border-box' };
   const dangerBtn: React.CSSProperties = { background: 'none', border: 'none', fontSize: 12, fontWeight: 700, color: '#ef4444', cursor: 'pointer', fontFamily: "'Nunito', sans-serif", flexShrink: 0 };
 
@@ -212,7 +212,7 @@ const inputStyle: React.CSSProperties = { width: '100%', padding: '9px 12px', bo
         <div className="hr-section-label" style={{ marginBottom: 8 }}>ACTIVE MEMBERS</div>
         <div className="hr-card" style={{ marginBottom: 20, overflow: 'hidden' }}>
           {collaborators.length === 0 ? (
-            <div style={{ padding: '32px 20px', textAlign: 'center', color: 'rgba(255,255,255,0.6)', fontSize: 13, fontWeight: 600 }}>
+            <div style={{ padding: '32px 20px', textAlign: 'center', color: '#6b7280', fontSize: 13, fontWeight: 600 }}>
               No co-teachers yet. Generate an invite code below to get started.
             </div>
           ) : (

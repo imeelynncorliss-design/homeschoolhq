@@ -430,8 +430,8 @@ function SubjectsContent() {
                 ) : (
                   <div style={{
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
-                    gap: 12,
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+                    gap: 14,
                   }}>
                     {subjects.map(subj => (
                       <div
@@ -445,15 +445,15 @@ function SubjectsContent() {
                           border: subj.lessons.length === 0
                             ? `1.5px dashed ${subj.color}50`
                             : `1.5px solid ${subj.color}30`,
-                          borderRadius: 16, padding: '16px 14px',
+                          borderRadius: 18, padding: '20px 16px',
                           cursor: 'pointer', textAlign: 'left' as const,
                           transition: 'transform 0.15s, box-shadow 0.15s',
                           boxShadow: '0 2px 8px rgba(0,0,0,0.07)',
                           fontFamily: "'Nunito', sans-serif",
                           position: 'relative' as const,
                         }}>
-                        <div style={{ fontSize: 28, marginBottom: 8, lineHeight: 1 }}>{subj.emoji}</div>
-                        <div style={{ fontSize: 13, fontWeight: 800, color: '#1e1b4b', marginBottom: 6, lineHeight: 1.3 }}>
+                        <div style={{ fontSize: 34, marginBottom: 10, lineHeight: 1 }}>{subj.emoji}</div>
+                        <div style={{ fontSize: 15, fontWeight: 800, color: '#1e1b4b', marginBottom: 8, lineHeight: 1.3 }}>
                           {subj.subject}
                         </div>
                         {/* Frequency badge — tappable for all subjects */}
@@ -465,9 +465,9 @@ function SubjectsContent() {
                             }}
                             style={{
                               display: 'inline-flex', alignItems: 'center', gap: 4,
-                              fontSize: 10, fontWeight: 900,
+                              fontSize: 11, fontWeight: 900,
                               color: '#7c3aed', background: 'rgba(124,58,237,0.12)',
-                              borderRadius: 8, padding: '3px 8px', marginBottom: 6,
+                              borderRadius: 8, padding: '4px 9px', marginBottom: 8,
                               border: '1px solid rgba(124,58,237,0.25)',
                               cursor: 'pointer', fontFamily: "'Nunito', sans-serif",
                             }}>
@@ -949,18 +949,18 @@ function SubjectsContent() {
           }} />
           <div style={{
             position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 401,
-            background: '#fff', borderRadius: '24px 24px 0 0',
-            boxShadow: '0 -8px 40px rgba(0,0,0,0.2)',
+            background: '#2d2b3d', borderRadius: '24px 24px 0 0',
+            boxShadow: '0 -8px 40px rgba(0,0,0,0.4)',
             fontFamily: "'Nunito', sans-serif",
           }}>
             <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 0' }}>
-              <div style={{ width: 40, height: 4, borderRadius: 2, background: '#e5e7eb' }} />
+              <div style={{ width: 40, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.2)' }} />
             </div>
             <div style={{ padding: '16px 20px 40px' }}>
-              <div style={{ fontSize: 18, fontWeight: 900, color: '#1e1b4b', marginBottom: 4 }}>
+              <div style={{ fontSize: 18, fontWeight: 900, color: '#c4b5fd', marginBottom: 4 }}>
                 Add a {addLessonSubject} Lesson
               </div>
-              <div style={{ fontSize: 13, color: '#6b7280', fontWeight: 600, marginBottom: 20 }}>
+              <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', fontWeight: 600, marginBottom: 20 }}>
                 How would you like to create this lesson?
               </div>
               {/* Write your own */}
@@ -973,12 +973,12 @@ function SubjectsContent() {
                   setShowQuickLesson(true)
                 }}
                 style={{
-                  width: '100%', padding: '16px', borderRadius: 14, border: '1.5px solid #e5e7eb',
-                  background: '#f9fafb', textAlign: 'left' as const, cursor: 'pointer',
+                  width: '100%', padding: '16px', borderRadius: 14, border: '1.5px solid rgba(255,255,255,0.15)',
+                  background: 'rgba(255,255,255,0.07)', textAlign: 'left' as const, cursor: 'pointer',
                   marginBottom: 10, fontFamily: "'Nunito', sans-serif",
                 }}>
-                <div style={{ fontSize: 15, fontWeight: 800, color: '#1e1b4b', marginBottom: 3 }}>✏️ Write your own</div>
-                <div style={{ fontSize: 12, fontWeight: 600, color: '#6b7280' }}>Add a custom lesson with your own title and notes</div>
+                <div style={{ fontSize: 15, fontWeight: 800, color: '#fff', marginBottom: 3 }}>✏️ Write your own</div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.55)' }}>Add a custom lesson with your own title and notes</div>
               </button>
               {/* Generate with Scout */}
               <button
@@ -987,12 +987,12 @@ function SubjectsContent() {
                   setShowLessonGenerator(true)
                 }}
                 style={{
-                  width: '100%', padding: '16px', borderRadius: 14, border: '1.5px solid #ede9fe',
-                  background: '#faf5ff', textAlign: 'left' as const, cursor: 'pointer',
+                  width: '100%', padding: '16px', borderRadius: 14, border: '1.5px solid rgba(124,58,237,0.4)',
+                  background: 'rgba(124,58,237,0.15)', textAlign: 'left' as const, cursor: 'pointer',
                   marginBottom: 10, fontFamily: "'Nunito', sans-serif",
                 }}>
-                <div style={{ fontSize: 15, fontWeight: 800, color: '#7c3aed', marginBottom: 3 }}>✨ Generate with Scout</div>
-                <div style={{ fontSize: 12, fontWeight: 600, color: '#6b7280' }}>Let Scout create a lesson plan for you</div>
+                <div style={{ fontSize: 15, fontWeight: 800, color: '#c4b5fd', marginBottom: 3 }}>✨ Generate with Scout</div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.55)' }}>Let Scout create a lesson plan for you</div>
               </button>
               {/* From curriculum */}
               <button
@@ -1001,12 +1001,12 @@ function SubjectsContent() {
                   router.push('/lessons')
                 }}
                 style={{
-                  width: '100%', padding: '16px', borderRadius: 14, border: '1.5px solid #e5e7eb',
-                  background: '#f9fafb', textAlign: 'left' as const, cursor: 'pointer',
+                  width: '100%', padding: '16px', borderRadius: 14, border: '1.5px solid rgba(255,255,255,0.15)',
+                  background: 'rgba(255,255,255,0.07)', textAlign: 'left' as const, cursor: 'pointer',
                   fontFamily: "'Nunito', sans-serif",
                 }}>
-                <div style={{ fontSize: 15, fontWeight: 800, color: '#1e1b4b', marginBottom: 3 }}>📋 From curriculum</div>
-                <div style={{ fontSize: 12, fontWeight: 600, color: '#6b7280' }}>Import from your curriculum or add a pre-planned lesson</div>
+                <div style={{ fontSize: 15, fontWeight: 800, color: '#fff', marginBottom: 3 }}>📋 From curriculum</div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.55)' }}>Import from your curriculum or add a pre-planned lesson</div>
               </button>
             </div>
           </div>
@@ -1021,56 +1021,56 @@ function SubjectsContent() {
           }} />
           <div style={{
             position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 401,
-            background: '#fff', borderRadius: '24px 24px 0 0',
-            boxShadow: '0 -8px 40px rgba(0,0,0,0.2)',
+            background: '#2d2b3d', borderRadius: '24px 24px 0 0',
+            boxShadow: '0 -8px 40px rgba(0,0,0,0.4)',
             fontFamily: "'Nunito', sans-serif",
           }}>
             <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 0' }}>
-              <div style={{ width: 40, height: 4, borderRadius: 2, background: '#e5e7eb' }} />
+              <div style={{ width: 40, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.2)' }} />
             </div>
             <div style={{ padding: '16px 20px 40px' }}>
-              <div style={{ fontSize: 18, fontWeight: 900, color: '#1e1b4b', marginBottom: 20 }}>
+              <div style={{ fontSize: 18, fontWeight: 900, color: '#c4b5fd', marginBottom: 20 }}>
                 New {addLessonSubject} Lesson
               </div>
               {/* Title */}
               <div style={{ marginBottom: 16 }}>
-                <div style={{ fontSize: 12, fontWeight: 800, color: '#374151', marginBottom: 6, letterSpacing: 0.5 }}>LESSON TITLE</div>
+                <div style={{ fontSize: 12, fontWeight: 800, color: 'rgba(255,255,255,0.6)', marginBottom: 6, letterSpacing: 0.5 }}>LESSON TITLE</div>
                 <input
                   value={quickTitle}
                   onChange={e => setQuickTitle(e.target.value)}
                   placeholder={`e.g. ${addLessonSubject} — Chapter 1`}
                   style={{
                     width: '100%', padding: '11px 14px', borderRadius: 12,
-                    border: '1.5px solid #e5e7eb', fontSize: 15, fontWeight: 600,
-                    fontFamily: "'Nunito', sans-serif", color: '#1e1b4b', outline: 'none',
+                    border: '1.5px solid rgba(255,255,255,0.15)', fontSize: 15, fontWeight: 600,
+                    fontFamily: "'Nunito', sans-serif", color: '#1e1b4b', outline: 'none', background: '#fff',
                   }}
                 />
               </div>
               {/* Date */}
               <div style={{ marginBottom: 16 }}>
-                <div style={{ fontSize: 12, fontWeight: 800, color: '#374151', marginBottom: 6, letterSpacing: 0.5 }}>DATE</div>
+                <div style={{ fontSize: 12, fontWeight: 800, color: 'rgba(255,255,255,0.6)', marginBottom: 6, letterSpacing: 0.5 }}>DATE</div>
                 <input
                   type="date"
                   value={quickDate}
                   onChange={e => setQuickDate(e.target.value)}
                   style={{
                     width: '100%', padding: '11px 14px', borderRadius: 12,
-                    border: '1.5px solid #e5e7eb', fontSize: 15, fontWeight: 600,
-                    fontFamily: "'Nunito', sans-serif", color: '#1e1b4b', outline: 'none',
+                    border: '1.5px solid rgba(255,255,255,0.15)', fontSize: 15, fontWeight: 600,
+                    fontFamily: "'Nunito', sans-serif", color: '#1e1b4b', outline: 'none', background: '#fff',
                   }}
                 />
               </div>
               {/* Duration */}
               <div style={{ marginBottom: 24 }}>
-                <div style={{ fontSize: 12, fontWeight: 800, color: '#374151', marginBottom: 6, letterSpacing: 0.5 }}>DURATION (MINUTES)</div>
+                <div style={{ fontSize: 12, fontWeight: 800, color: 'rgba(255,255,255,0.6)', marginBottom: 6, letterSpacing: 0.5 }}>DURATION (MINUTES)</div>
                 <div style={{ display: 'flex', gap: 8 }}>
                   {[15, 30, 45, 60, 90].map(d => (
                     <button key={d} onClick={() => setQuickDuration(d)}
                       style={{
                         flex: 1, padding: '10px 0', borderRadius: 10,
-                        border: quickDuration === d ? '2px solid #7c3aed' : '1.5px solid #e5e7eb',
-                        background: quickDuration === d ? '#ede9fe' : '#f9fafb',
-                        color: quickDuration === d ? '#7c3aed' : '#374151',
+                        border: quickDuration === d ? '2px solid #a78bfa' : '1.5px solid rgba(255,255,255,0.15)',
+                        background: quickDuration === d ? 'rgba(124,58,237,0.3)' : 'rgba(255,255,255,0.08)',
+                        color: quickDuration === d ? '#c4b5fd' : 'rgba(255,255,255,0.8)',
                         fontWeight: 800, fontSize: 13, cursor: 'pointer',
                         fontFamily: "'Nunito', sans-serif",
                       }}>{d}</button>
