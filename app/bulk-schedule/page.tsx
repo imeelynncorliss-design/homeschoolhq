@@ -23,18 +23,10 @@ function BulkScheduleContent() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/'); return }
 
-      // ── Co-teacher guard — bulk scheduling is admin-only ──────────────────
-      const { data: collaboration } = await supabase
-        .from('family_collaborators')
-        .select('organization_id')
-        .eq('user_id', user.id)
-        .maybeSingle()
-
-      if (collaboration) { router.push('/dashboard'); return }
-
-      // ── Resolve org ───────────────────────────────────────────────────────
-      const { orgId } = await getOrganizationId(user.id)
+      // ── Resolve org + co-teacher guard (admin-only) ───────────────────────
+      const { orgId, isCoTeacher } = await getOrganizationId(user.id)
       if (!orgId) { router.push('/onboarding'); return }
+      if (isCoTeacher) { router.push('/dashboard'); return }
 
       setUser(user)
       setLoading(false)

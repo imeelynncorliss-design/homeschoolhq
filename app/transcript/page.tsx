@@ -29,18 +29,10 @@ function TranscriptsContent() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/'); return }
 
-      // ── Co-teacher guard — transcripts is admin-only ───────────────────
-      const { data: collaboration } = await supabase
-        .from('family_collaborators')
-        .select('organization_id')
-        .eq('user_id', user.id)
-        .maybeSingle()
-
-      if (collaboration) { router.push('/dashboard'); return }
-
-      // ── Resolve org ─────────────────────────────────────────────────────
-      const { orgId } = await getOrganizationId(user.id)
+      // ── Resolve org + co-teacher guard (admin-only) ─────────────────────
+      const { orgId, isCoTeacher } = await getOrganizationId(user.id)
       if (!orgId) { router.push('/onboarding'); return }
+      if (isCoTeacher) { router.push('/dashboard'); return }
 
       // ── Load kids ────────────────────────────────────────────────────────
       const { data: kidsData } = await supabase
@@ -87,13 +79,13 @@ function TranscriptsContent() {
 
       {/* ── Main ─────────────────────────────────────────────────────────────── */}
       <main style={{ ...css.main, paddingBottom: 100 }}>
-        <div style={css.sectionLabel}>CREATE OFFICIAL TRANSCRIPTS WITH GPA CALCULATIONS</div>
+        <div className="hr-section-label" style={{ marginBottom: 14, marginTop: 8 }}>CREATE OFFICIAL TRANSCRIPTS WITH GPA CALCULATIONS</div>
 
         {/* Courses callout banner */}
         <div style={css.banner}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <span style={{ fontSize: 20 }}>📚</span>
-            <p style={{ fontSize: 13, color: colors.purpleDark, margin: 0 }}>
+            <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.9)', margin: 0 }}>
               <strong>Need to add or manage courses?</strong> Courses now have their own dedicated section.
             </p>
           </div>
@@ -104,7 +96,7 @@ function TranscriptsContent() {
 
         {/* Empty state */}
         {kids.length === 0 ? (
-          <div style={css.emptyCard}>
+          <div className="hr-card" style={{ padding: '48px 24px', textAlign: 'center' as const }}>
             <div style={{ fontSize: 48, marginBottom: 12 }}>🤷‍♀️</div>
             <h2 style={{ fontSize: 18, fontWeight: 800, color: colors.textPrimary, marginBottom: 8 }}>No students found</h2>
             <p style={{ fontSize: 13, color: colors.textSecondary, marginBottom: 20 }}>
@@ -117,8 +109,8 @@ function TranscriptsContent() {
         ) : (
           <>
             {/* Kid selector */}
-            <div style={css.kidSelector}>
-              <label style={{ fontSize: 10, fontWeight: 800, color: colors.textMuted, letterSpacing: 1, textTransform: 'uppercase' as const, display: 'block', marginBottom: 6 }}>
+            <div className="hr-card" style={{ padding: '16px 20px', marginBottom: 20 }}>
+              <label style={{ fontSize: 10, fontWeight: 800, color: colors.textSecondary, letterSpacing: 1, textTransform: 'uppercase' as const, display: 'block', marginBottom: 6 }}>
                 Active Student
               </label>
               <select
@@ -133,18 +125,12 @@ function TranscriptsContent() {
             </div>
 
             {/* Tabs */}
-            <div style={css.tabRow}>
+            <div className="hr-pill-row" style={{ marginBottom: 16 }}>
               {tabs.map(tab => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  style={{
-                    ...css.tab,
-                    background: activeTab === tab.id ? colors.white : 'transparent',
-                    color: activeTab === tab.id ? colors.purple : colors.textMuted,
-                    boxShadow: activeTab === tab.id ? '0 2px 8px rgba(124,58,237,0.12)' : 'none',
-                    transform: activeTab === tab.id ? 'translateY(-2px)' : 'none',
-                  }}
+                  className={`hr-pill${activeTab === tab.id ? ' active' : ''}`}
                 >
                   {tab.label}
                 </button>
@@ -152,7 +138,7 @@ function TranscriptsContent() {
             </div>
 
             {/* Tab content */}
-            <div style={css.tabContent}>
+            <div className="hr-card" style={{ padding: '16px', minHeight: 500 }}>
               {activeTab === 'gradebook' && selectedKid && user &&
                 <GradeBook kidId={selectedKid} userId={user.id} />}
               {activeTab === 'descriptions' && selectedKid &&
@@ -210,13 +196,7 @@ const css: Record<string, React.CSSProperties> = {
     border: 'none',
     cursor: 'pointer',
   },
-  emptyCard: {
-    background: colors.white,
-    borderRadius: 16,
-    padding: '48px 24px',
-    textAlign: 'center' as const,
-    boxShadow: '0 4px 16px rgba(124,58,237,0.08)',
-  },
+
   emptyBtn: {
     padding: '10px 24px',
     background: colors.purple,
@@ -226,14 +206,6 @@ const css: Record<string, React.CSSProperties> = {
     borderRadius: 8,
     border: 'none',
     cursor: 'pointer',
-  },
-  kidSelector: {
-    background: colors.white,
-    borderRadius: 14,
-    padding: '16px 20px',
-    marginBottom: 20,
-    boxShadow: '0 2px 8px rgba(124,58,237,0.06)',
-    border: `1px solid ${colors.purpleBorder}`,
   },
   kidSelect: {
     padding: '8px 16px',
@@ -247,30 +219,5 @@ const css: Record<string, React.CSSProperties> = {
     width: '100%',
     maxWidth: 320,
     fontSize: 13,
-  },
-  tabRow: {
-    display: 'flex',
-    gap: 8,
-    marginBottom: 16,
-    overflowX: 'auto' as const,
-    WebkitOverflowScrolling: 'touch' as any,
-    paddingBottom: 4,
-  },
-  tab: {
-    padding: '12px 24px',
-    borderRadius: 10,
-    fontWeight: 700,
-    fontSize: 13,
-    border: 'none',
-    cursor: 'pointer',
-    transition: 'all 0.15s ease',
-  },
-  tabContent: {
-    background: colors.white,
-    borderRadius: 14,
-    padding: '16px',
-    minHeight: 500,
-    boxShadow: '0 4px 16px rgba(124,58,237,0.08)',
-    border: `1px solid ${colors.purpleBorder}`,
   },
 }

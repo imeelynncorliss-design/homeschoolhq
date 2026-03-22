@@ -25,6 +25,7 @@ export const STYLE_FEATURES = [
 
 export const DEFAULT_FLEXIBLE   = ['attendance', 'reading_log', 'field_trips']
 export const DEFAULT_STRUCTURED = ['pulse_check', 'attendance', 'compliance', 'ai_lessons', 'progress']
+export const DEFAULT_UNSTYLED   = ['ai_lessons', 'ai_activity', 'attendance', 'reading_log']
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -68,8 +69,10 @@ export default function StylePickerModal({ userId, stateAbbr, isFirstTime, onCom
     const pinnedArray = Array.from(pins)
     const { error } = await supabase
       .from('user_profiles')
-      .update({ homeschool_style: style, pinned_features: pinnedArray })
-      .eq('user_id', userId)
+      .upsert(
+        { user_id: userId, homeschool_style: style, pinned_features: pinnedArray },
+        { onConflict: 'user_id' }
+      )
     setSaving(false)
     if (!error) onComplete(style, pinnedArray)
   }

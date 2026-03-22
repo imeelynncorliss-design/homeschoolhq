@@ -5,10 +5,6 @@ import { Suspense } from 'react'
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/src/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
 import {
   Calendar,
   AlertCircle,
@@ -24,8 +20,26 @@ import type { CalendarConnection } from '@/src/types/calendar';
 import { useAppHeader } from '@/components/layout/AppHeader';
 import { supabase } from '@/src/lib/supabase';
 import { getOrganizationId } from '@/src/lib/getOrganizationId';
+import { pageShell } from '@/src/lib/designTokens';
 
-// Renamed from CalendarConnectPage to CalendarConnectContent
+const btnPrimary: React.CSSProperties = {
+  display: 'inline-flex', alignItems: 'center', gap: 8,
+  padding: '11px 20px', background: 'linear-gradient(135deg, #7c3aed, #a855f7)',
+  color: '#fff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 800,
+  cursor: 'pointer', fontFamily: "'Nunito', sans-serif",
+};
+const btnGhost: React.CSSProperties = {
+  display: 'inline-flex', alignItems: 'center', gap: 6,
+  padding: '9px 16px', background: 'rgba(255,255,255,0.7)',
+  border: '2px solid rgba(124,58,237,0.3)', borderRadius: 10,
+  fontSize: 13, fontWeight: 700, color: '#7c3aed', cursor: 'pointer',
+  fontFamily: "'Nunito', sans-serif",
+};
+const btnIcon: React.CSSProperties = {
+  background: 'none', border: 'none', cursor: 'pointer', padding: 8,
+  borderRadius: 8, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+};
+
 function CalendarConnectContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -41,16 +55,14 @@ function CalendarConnectContent() {
     message: string;
   }>>({});
 
-  // Handle OAuth callback messages
   useEffect(() => {
     const oauthError = searchParams.get('error');
     const oauthSuccess = searchParams.get('success');
-
     if (oauthError) {
       setError(`Connection failed: ${oauthError}`);
     } else if (oauthSuccess) {
       setSuccess('Calendar connected successfully!');
-      loadConnections();  // orgId already set by init
+      loadConnections();
     }
   }, [searchParams]);
 
@@ -74,7 +86,7 @@ function CalendarConnectContent() {
       const response = await fetch(`/api/calendar/connections?organizationId=${id}`);
       const data = await response.json();
       setConnections(data.connections || []);
-    } catch (err: any) {
+    } catch {
       setError('Failed to load calendar connections');
     } finally {
       setLoading(false);
@@ -82,485 +94,272 @@ function CalendarConnectContent() {
   };
 
   const connectGoogle = () => {
-    // Just navigate to the OAuth endpoint - it will handle the redirect to Google
     window.location.href = '/api/calendar/oauth/google';
   };
 
   const syncConnection = async (connectionId: string) => {
     try {
       setSyncing(connectionId);
-      setSyncFeedback(prev => ({
-        ...prev,
-        [connectionId]: { type: null, message: '' }
-      }));
-  
+      setSyncFeedback(prev => ({ ...prev, [connectionId]: { type: null, message: '' } }));
       const response = await fetch('/api/calendar/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ connectionId }),
       });
-      
       const data = await response.json();
-  
-      if (!response.ok) {
-        throw new Error(data.message || 'Sync failed');
-      }
-      
+      if (!response.ok) throw new Error(data.message || 'Sync failed');
       setSyncFeedback(prev => ({
         ...prev,
-        [connectionId]: {
-          type: 'success',
-          message: data.message || `Successfully synced! Processed ${data.eventsProcessed || 0} events.`
-        }
+        [connectionId]: { type: 'success', message: data.message || `Successfully synced! Processed ${data.eventsProcessed || 0} events.` }
       }));
-      
       await loadConnections();
-      
-      setTimeout(() => {
-        setSyncFeedback(prev => ({
-          ...prev,
-          [connectionId]: { type: null, message: '' }
-        }));
-      }, 5000);
-  
+      setTimeout(() => setSyncFeedback(prev => ({ ...prev, [connectionId]: { type: null, message: '' } })), 5000);
     } catch (err: any) {
       setSyncFeedback(prev => ({
         ...prev,
-        [connectionId]: {
-          type: 'error',
-          message: err.message || 'Failed to sync calendar. Please try again.'
-        }
+        [connectionId]: { type: 'error', message: err.message || 'Failed to sync calendar. Please try again.' }
       }));
-  
-      setTimeout(() => {
-        setSyncFeedback(prev => ({
-          ...prev,
-          [connectionId]: { type: null, message: '' }
-        }));
-      }, 5000);
+      setTimeout(() => setSyncFeedback(prev => ({ ...prev, [connectionId]: { type: null, message: '' } })), 5000);
     } finally {
       setSyncing(null);
     }
   };
 
   const disconnectCalendar = async (connectionId: string) => {
-    if (!confirm('Are you sure you want to disconnect this calendar?')) {
-      return;
-    }
-
+    if (!confirm('Are you sure you want to disconnect this calendar?')) return;
     try {
-      const response = await fetch(`/api/calendar/connections/${connectionId}`, {
-        method: 'DELETE',
-      });
-      
+      const response = await fetch(`/api/calendar/connections/${connectionId}`, { method: 'DELETE' });
       if (!response.ok) throw new Error('Failed to disconnect');
-      
       setSuccess('Calendar disconnected');
       loadConnections();
-    } catch (err: any) {
+    } catch {
       setError('Failed to disconnect calendar');
     }
   };
 
-  const getProviderIcon = (provider: string) => {
-    return provider === 'google' ? (
-      <div className="w-5 h-5 bg-blue-500 rounded" />
-    ) : (
-      <div className="w-5 h-5 bg-blue-600 rounded" />
-    );
-  };
-
-  const getStatusBadge = (status: string) => {
-    const variants: Record<string, { color: string; label: string }> = {
-      completed: { color: 'bg-green-100 text-green-800', label: 'Active' },
-      failed: { color: 'bg-red-100 text-red-800', label: 'Error' },
-      pending: { color: 'bg-yellow-100 text-yellow-800', label: 'Pending' },
-      syncing: { color: 'bg-blue-100 text-blue-800', label: 'Syncing' },
+  const getStatusPill = (status: string) => {
+    const variants: Record<string, React.CSSProperties> = {
+      completed: { background: '#ecfdf5', color: '#059669', border: '1px solid #a7f3d0' },
+      failed:    { background: '#fef2f2', color: '#ef4444', border: '1px solid #fca5a5' },
+      pending:   { background: '#fffbeb', color: '#d97706', border: '1px solid #fde68a' },
+      syncing:   { background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe' },
     };
-  
-    const variant = variants[status] || variants.pending;
+    const labels: Record<string, string> = { completed: 'Active', failed: 'Error', pending: 'Pending', syncing: 'Syncing' };
+    const s = variants[status] ?? variants.pending;
     return (
-      <Badge className={variant.color}>
-        {variant.label}
-      </Badge>
+      <span style={{ ...s, fontSize: 11, fontWeight: 700, padding: '2px 10px', borderRadius: 20, whiteSpace: 'nowrap' as const }}>
+        {labels[status] ?? 'Pending'}
+      </span>
     );
   };
-  
+
   return (
-    <div className="max-w-6xl mx-auto p-6 space-y-6">
-      {/* Page description */}
-      <div>
-        <p className="text-gray-600">
-          Connect your Google Calendar to automatically detect conflicts
-          with your homeschool schedule.
+    <div style={{ ...pageShell.root, paddingBottom: 100 }}>
+      <main style={pageShell.main}>
+
+        {/* Description */}
+        <p style={{ color: 'rgba(255,255,255,0.75)', fontWeight: 600, fontSize: 14, margin: '0 0 20px', lineHeight: 1.5 }}>
+          Connect your Google Calendar to automatically detect conflicts with your homeschool schedule.
         </p>
-      </div>
-  
-      {/* Alerts */}
-      {error && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-  
-      {success && !connections.length && (
-        <Alert className="border-green-200 bg-green-50">
-          <CheckCircle className="h-4 w-4 text-green-600" />
-          <AlertDescription className="text-green-800">{success}</AlertDescription>
-        </Alert>
-      )}
 
-      {/* Success Guide */}
-      {success && connections.length > 0 && (
-        <Card className="border-green-200 bg-green-50">
-          <CardHeader>
-            <CardTitle className="text-green-800 flex items-center gap-2">
-              <CheckCircle className="h-5 w-5" />
-              🎉 Calendar Connected Successfully!
-            </CardTitle>
-            <CardDescription className="text-green-700">
+        {/* Error */}
+        {error && (
+          <div style={{ margin: '0 0 16px', padding: '12px 16px', background: '#fef2f2', border: '1.5px solid #fca5a5', borderRadius: 10, fontSize: 13, color: '#dc2626', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <AlertCircle size={16} /> {error}
+          </div>
+        )}
+
+        {/* Success (no connections yet) */}
+        {success && !connections.length && (
+          <div style={{ margin: '0 0 16px', padding: '12px 16px', background: '#ecfdf5', border: '1.5px solid #a7f3d0', borderRadius: 10, fontSize: 13, color: '#059669', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <CheckCircle size={16} /> {success}
+          </div>
+        )}
+
+        {/* Success guide (with connections) */}
+        {success && connections.length > 0 && (
+          <div className="hr-card" style={{ marginBottom: 20, padding: '20px 24px' }}>
+            <div style={{ fontSize: 16, fontWeight: 900, color: '#059669', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <CheckCircle size={18} /> 🎉 Calendar Connected Successfully!
+            </div>
+            <p style={{ fontSize: 13, color: '#4b5563', fontWeight: 600, margin: '0 0 16px' }}>
               Your work calendar is now connected. Here&apos;s what happens next:
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex gap-4">
-              <div className="flex-shrink-0 w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center font-bold">
-                1
+            </p>
+            {[
+              { n: 1, title: 'Automatic Sync', desc: 'Your work calendar syncs every 15 minutes. You can also click "Sync Now" below anytime.' },
+              { n: 2, title: 'Create Your Lessons', desc: 'Go to your lesson planner and schedule your homeschool lessons for the week.' },
+              { n: 3, title: 'Check for Conflicts', desc: "We'll automatically detect when work meetings conflict with lessons and help you resolve them." },
+            ].map(({ n, title, desc }) => (
+              <div key={n} style={{ display: 'flex', gap: 14, marginBottom: 14 }}>
+                <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg, #7c3aed, #a855f7)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 14, flexShrink: 0 }}>{n}</div>
+                <div>
+                  <div style={{ fontWeight: 800, fontSize: 14, color: '#1a1a2e' }}>{title}</div>
+                  <div style={{ fontSize: 13, color: '#4b5563', fontWeight: 600 }}>{desc}</div>
+                </div>
               </div>
-              <div>
-                <h3 className="font-medium text-green-900">Automatic Sync</h3>
-                <p className="text-sm text-green-700">
-                  Your work calendar syncs every 15 minutes. You can also click &quot;Sync Now&quot; below anytime.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex gap-4">
-              <div className="flex-shrink-0 w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center font-bold">
-                2
-              </div>
-              <div>
-                <h3 className="font-medium text-green-900">Create Your Lessons</h3>
-                <p className="text-sm text-green-700">
-                  Go to your lesson planner and schedule your homeschool lessons for the week.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex gap-4">
-              <div className="flex-shrink-0 w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center font-bold">
-                3
-              </div>
-              <div>
-                <h3 className="font-medium text-green-900">Check for Conflicts</h3>
-                <p className="text-sm text-green-700">
-                  We&apos;ll automatically detect when work meetings conflict with lessons and help you resolve them.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex gap-3 pt-4 border-t border-green-200">
-              <Button 
-                onClick={() => router.push('/dashboard')}
-                className="bg-green-600 hover:bg-green-700 text-white"
-              >
-                Go to Dashboard
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-              <Button 
-                onClick={() => router.push('/calendar/conflicts')}
-                variant="outline"
-                className="border-green-600 text-green-700 hover:bg-green-50"
-              >
+            ))}
+            <div style={{ display: 'flex', gap: 10, marginTop: 8, paddingTop: 16, borderTop: '1px solid rgba(0,0,0,0.06)' }}>
+              <button onClick={() => router.push('/dashboard')} style={btnPrimary}>
+                Go to Dashboard <ArrowRight size={16} />
+              </button>
+              <button onClick={() => router.push('/calendar/conflicts')} style={btnGhost}>
                 View Conflicts
-              </Button>
+              </button>
             </div>
-          </CardContent>
-        </Card>
-      )}
+          </div>
+        )}
 
-      {/* Connect New Calendar */}
-      {connections.length === 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Connect Calendar</CardTitle>
-            <CardDescription>
-              Add a work calendar to enable automatic conflict detection
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button onClick={connectGoogle} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white">
-              <Calendar className="w-4 h-4" />
-              Connect Google Calendar
-            </Button>
-          </CardContent>
-        </Card>
-      )}
+        {/* Connect section (no connections) */}
+        {connections.length === 0 && (
+          <>
+            <div className="hr-section-label" style={{ marginBottom: 8 }}>CONNECT CALENDAR</div>
+            <div className="hr-card" style={{ padding: '20px 24px', marginBottom: 20 }}>
+              <div style={{ fontSize: 15, fontWeight: 800, color: '#1a1a2e', marginBottom: 4 }}>Connect Calendar</div>
+              <div style={{ fontSize: 13, color: '#6b7280', fontWeight: 600, marginBottom: 16 }}>
+                Add a work calendar to enable automatic conflict detection
+              </div>
+              <button onClick={connectGoogle} style={btnPrimary}>
+                <Calendar size={18} /> Connect Google Calendar
+              </button>
+            </div>
+          </>
+        )}
 
-      {/* Connected Calendars */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Connected Calendars</CardTitle>
-          <CardDescription>
-            Manage your connected work calendars
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+        {/* Connected Calendars */}
+        <div className="hr-section-label" style={{ marginBottom: 8 }}>CONNECTED CALENDARS</div>
+        <div className="hr-card" style={{ marginBottom: 20, overflow: 'hidden' }}>
           {loading ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="w-6 h-6 animate-spin" />
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '32px 0' }}>
+              <Loader2 size={24} style={{ color: '#7c3aed' }} className="animate-spin" />
             </div>
           ) : connections.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
+            <div style={{ textAlign: 'center', padding: '32px 20px', color: '#6b7280', fontSize: 13, fontWeight: 600 }}>
               No calendars connected yet. Connect your work calendar above to get started.
             </div>
           ) : (
-            <div className="space-y-4">
-              {connections.map((connection) => (
-                <div key={connection.id} className="space-y-3">
-                  <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center gap-4">
-                    {getProviderIcon(connection.provider)}
-                    <div>
-                      <div className="font-medium">{connection.calendar_name}</div>
-                      <div className="text-sm text-gray-600">
-                        {connection.provider_account_email}
-                      </div>
+            connections.map((connection) => (
+              <div key={connection.id}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1, minWidth: 0 }}>
+                    <div style={{ width: 36, height: 36, borderRadius: 10, background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <Calendar size={18} style={{ color: '#2563eb' }} />
+                    </div>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontWeight: 800, fontSize: 14, color: '#1a1a2e' }}>{connection.calendar_name}</div>
+                      <div style={{ fontSize: 12, color: '#6b7280', fontWeight: 600 }}>{connection.provider_account_email}</div>
                       {connection.last_sync_at && (
-                        <div className="text-xs text-gray-500 mt-1">
+                        <div style={{ fontSize: 11, color: '#9ca3af', fontWeight: 600, marginTop: 2 }}>
                           Last synced: {new Date(connection.last_sync_at).toLocaleString()}
                         </div>
                       )}
                     </div>
                   </div>
-
-                  <div className="flex items-center gap-3">
-                    {getStatusBadge(connection.last_sync_status)}
-                    
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => syncConnection(connection.id)}
-                      disabled={syncing === connection.id}
-                    >
-                      {syncing === connection.id ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <RefreshCw className="w-4 h-4" />
-                      )}
-                    </Button>
-
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => router.push(`/calendar/settings/${connection.id}`)}
-                    >
-                      <Settings className="w-4 h-4" />
-                    </Button>
-
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => disconnectCalendar(connection.id)}
-                    >
-                      <Trash2 className="w-4 h-4 text-red-600" />
-                      </Button>
-            </div>
-          </div>
-
-          {connection.last_sync_status === 'pending' && (
-            <div className="ml-4 p-4 bg-yellow-50 border-l-4 border-yellow-400 rounded-r-lg">
-              <div className="flex items-start gap-3">
-                <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5 flex-shrink-0" />
-                <div className="flex-1">
-                  <h3 className="font-semibold text-yellow-900 mb-1">
-                    Initial Sync Required
-                  </h3>
-                  <p className="text-sm text-yellow-800 mb-3">
-                    Your calendar is connected but needs to complete its first sync to activate. 
-                    This will fetch your work events and enable conflict detection.
-                  </p>
-                  
-                  <Button
-                    onClick={() => syncConnection(connection.id)}
-                    disabled={syncing === connection.id}
-                    className="bg-blue-600 hover:bg-blue-700 text-white"
-                  >
-                    {syncing === connection.id ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                        Syncing...
-                      </>
-                    ) : (
-                      <>
-                        <RefreshCw className="w-4 h-4 mr-2" />
-                        Sync Now
-                      </>
-                    )}
-                  </Button>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                    {getStatusPill(connection.last_sync_status)}
+                    <button style={btnIcon} onClick={() => syncConnection(connection.id)} disabled={syncing === connection.id} title="Sync now">
+                      {syncing === connection.id
+                        ? <Loader2 size={16} style={{ color: '#7c3aed' }} className="animate-spin" />
+                        : <RefreshCw size={16} style={{ color: '#7c3aed' }} />}
+                    </button>
+                    <button style={btnIcon} onClick={() => router.push(`/calendar/settings/${connection.id}`)} title="Settings">
+                      <Settings size={16} style={{ color: '#7c3aed' }} />
+                    </button>
+                    <button style={btnIcon} onClick={() => disconnectCalendar(connection.id)} title="Disconnect">
+                      <Trash2 size={16} style={{ color: '#ef4444' }} />
+                    </button>
+                  </div>
                 </div>
-              </div>
-            </div>
-          )}
 
-          {syncFeedback[connection.id]?.type && (
-            <div
-              className={`ml-4 flex items-start gap-2 p-3 rounded-lg border ${
-                syncFeedback[connection.id].type === 'success'
-                  ? 'bg-green-50 border-green-200'
-                  : 'bg-red-50 border-red-200'
-              }`}
-              role="alert"
-            >
-              {syncFeedback[connection.id].type === 'success' ? (
-                <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-              ) : (
-                <XCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
-              )}
-              <p
-                className={`text-sm ${
-                  syncFeedback[connection.id].type === 'success'
-                    ? 'text-green-800'
-                    : 'text-red-800'
-                }`}
-              >
-                {syncFeedback[connection.id].message}
-              </p>
-            </div>
+                {connection.last_sync_status === 'pending' && (
+                  <div style={{ margin: '0 20px 16px', padding: '14px 16px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10 }}>
+                    <div style={{ display: 'flex', gap: 10 }}>
+                      <AlertCircle size={18} style={{ color: '#d97706', flexShrink: 0, marginTop: 2 }} />
+                      <div>
+                        <div style={{ fontWeight: 800, fontSize: 14, color: '#92400e', marginBottom: 4 }}>Initial Sync Required</div>
+                        <p style={{ fontSize: 13, color: '#78350f', fontWeight: 600, margin: '0 0 12px' }}>
+                          Your calendar is connected but needs to complete its first sync to activate.
+                        </p>
+                        <button onClick={() => syncConnection(connection.id)} disabled={syncing === connection.id} style={{ ...btnPrimary, opacity: syncing === connection.id ? 0.6 : 1, cursor: syncing === connection.id ? 'not-allowed' : 'pointer' }}>
+                          {syncing === connection.id ? <><Loader2 size={14} className="animate-spin" /> Syncing...</> : <><RefreshCw size={14} /> Sync Now</>}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {syncFeedback[connection.id]?.type && (
+                  <div style={{
+                    margin: '0 20px 16px', padding: '12px 16px', borderRadius: 10,
+                    display: 'flex', alignItems: 'flex-start', gap: 8,
+                    background: syncFeedback[connection.id].type === 'success' ? '#ecfdf5' : '#fef2f2',
+                    border: `1px solid ${syncFeedback[connection.id].type === 'success' ? '#a7f3d0' : '#fca5a5'}`,
+                  }}>
+                    {syncFeedback[connection.id].type === 'success'
+                      ? <CheckCircle size={16} style={{ color: '#059669', flexShrink: 0, marginTop: 2 }} />
+                      : <XCircle size={16} style={{ color: '#ef4444', flexShrink: 0, marginTop: 2 }} />}
+                    <span style={{ fontSize: 13, fontWeight: 700, color: syncFeedback[connection.id].type === 'success' ? '#059669' : '#dc2626' }}>
+                      {syncFeedback[connection.id].message}
+                    </span>
+                  </div>
+                )}
+              </div>
+            ))
           )}
         </div>
-      ))}
-    </div>
-  )}
-</CardContent>
-</Card>
 
-      {/* What You'll See Section */}
-      {connections.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <span className="text-2xl">👀</span>
-              What You&apos;ll See
-            </CardTitle>
-            <CardDescription>
-              Here&apos;s what happens after connecting your work calendar
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex gap-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <div className="text-3xl">🔄</div>
-              <div className="flex-1">
-                <h3 className="font-semibold text-blue-900 mb-1">Automatic Sync (Every 15 Minutes)</h3>
-                <p className="text-sm text-blue-800">
-                  Your work events sync automatically in the background. You don&apos;t need to do anything!
-                </p>
-              </div>
-            </div>
-
-            <div className="flex gap-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-              <div className="text-3xl">⚠️</div>
-              <div className="flex-1">
-                <h3 className="font-semibold text-yellow-900 mb-1">Conflict Warnings</h3>
-                <p className="text-sm text-yellow-800 mb-2">
-                  When you schedule a lesson that conflicts with a work meeting, you&apos;ll see a warning like:
-                </p>
-                <div className="bg-white p-3 rounded border border-yellow-300 text-sm">
-                  <span className="font-semibold text-red-600">⚠️ Conflict:</span> This lesson overlaps with &quot;Team Meeting&quot; (2:00 PM - 3:00 PM)
+        {/* What You'll See */}
+        {connections.length > 0 && (
+          <>
+            <div className="hr-section-label" style={{ marginBottom: 8 }}>WHAT YOU&apos;LL SEE</div>
+            <div className="hr-card" style={{ padding: '20px 24px', marginBottom: 20 }}>
+              {[
+                { emoji: '🔄', title: 'Automatic Sync (Every 15 Minutes)', desc: "Your work events sync automatically in the background. You don't need to do anything!", accent: '#ede9fe' },
+                { emoji: '⚠️', title: 'Conflict Warnings', desc: 'When you schedule a lesson that conflicts with a work meeting, you\'ll see a warning.', accent: '#fffbeb' },
+                { emoji: '🚫', title: 'Auto-Block Work Time (Optional)', desc: 'Click the ⚙️ gear icon next to your calendar to enable "Auto-Block Work Events" and automatically block work meeting times.', accent: '#f0fdf4' },
+              ].map(({ emoji, title, desc, accent }) => (
+                <div key={title} style={{ display: 'flex', gap: 14, marginBottom: 16 }}>
+                  <div style={{ width: 40, height: 40, borderRadius: 12, background: accent, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>{emoji}</div>
+                  <div>
+                    <div style={{ fontWeight: 800, fontSize: 14, color: '#1a1a2e', marginBottom: 2 }}>{title}</div>
+                    <div style={{ fontSize: 13, color: '#4b5563', fontWeight: 600 }}>{desc}</div>
+                  </div>
                 </div>
+              ))}
+              <div style={{ paddingTop: 12, borderTop: '1px solid rgba(0,0,0,0.06)', marginTop: 4 }}>
+                <Link href="/calendar/conflicts" style={{ fontSize: 14, fontWeight: 700, color: '#7c3aed', textDecoration: 'none' }}>
+                  View All Conflicts →
+                </Link>
               </div>
             </div>
+          </>
+        )}
 
-            <div className="flex gap-4 p-4 bg-purple-50 rounded-lg border border-purple-200">
-              <div className="text-3xl">🚫</div>
-              <div className="flex-1">
-                <h3 className="font-semibold text-purple-900 mb-1">Auto-Block Work Time (Optional)</h3>
-                <p className="text-sm text-purple-800 mb-2">
-                Click the gear icon (⚙️) next to your connected calendar above to access settings. 
-                Enable "Auto-Block Work Events" to automatically block work meeting times in your homeschool calendar.
-                </p>
-                <div className="bg-white p-3 rounded border border-purple-300 text-sm">
-                  Calendar will show: <span className="font-semibold">🚫 Team Meeting (Work)</span> - preventing lesson scheduling during that time
-                </div>
+        {/* How It Works */}
+        <div className="hr-section-label" style={{ marginBottom: 8 }}>HOW IT WORKS</div>
+        <div className="hr-card" style={{ padding: '20px 24px' }}>
+          {[
+            { n: 1, title: 'Connect Your Work Calendar', desc: 'Securely connect Google Calendar to HomeschoolReady' },
+            { n: 2, title: 'Automatic Sync Every 15 Minutes', desc: 'Work events sync automatically in the background — no manual action needed' },
+            { n: 3, title: 'Get Conflict Warnings', desc: 'See alerts when scheduling lessons during work meetings — helping you avoid double-booking' },
+          ].map(({ n, title, desc }) => (
+            <div key={n} style={{ display: 'flex', gap: 14, marginBottom: n < 3 ? 16 : 0 }}>
+              <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg, #ede9fe, #dbeafe)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 15, color: '#7c3aed', flexShrink: 0 }}>{n}</div>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: 14, color: '#1a1a2e', marginBottom: 2 }}>{title}</div>
+                <div style={{ fontSize: 13, color: '#4b5563', fontWeight: 600 }}>{desc}</div>
               </div>
             </div>
+          ))}
+        </div>
 
-            <div className="flex gap-4 p-4 bg-gray-50 rounded-lg border border-gray-300">
-              <div className="text-3xl">ℹ️</div>
-              <div className="flex-1">
-                <h3 className="font-semibold text-gray-900 mb-1">What You WON&apos;T See</h3>
-                <ul className="text-sm text-gray-700 space-y-1 list-disc list-inside">
-                  <li>Work events won&apos;t appear as regular lessons in your schedule</li>
-                  <li>Your work calendar won&apos;t be changed or modified in any way</li>
-                  <li>HomeschoolReady lessons won&apos;t be added to your work calendar</li>
-                </ul>
-              </div>
-            </div>
-
-            <div className="pt-2 border-t">
-              <Link 
-                href="/calendar/conflicts"
-                className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium"
-              >
-                View All Conflicts →
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Feature Info */}
-      <Card>
-        <CardHeader>
-          <CardTitle>How It Works</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="flex gap-4">
-            <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center font-bold text-blue-600">
-              1
-            </div>
-            <div>
-              <h3 className="font-semibold mb-1">Connect Your Work Calendar</h3>
-              <p className="text-sm text-gray-600">
-                Securely connect Google Calendar to HomeschoolReady
-              </p>
-            </div>
-          </div>
-
-          <div className="flex gap-4">
-            <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center font-bold text-blue-600">
-              2
-            </div>
-            <div>
-              <h3 className="font-semibold mb-1">Automatic Sync Every 15 Minutes</h3>
-              <p className="text-sm text-gray-600">
-                Work events sync automatically in the background - no manual action needed
-              </p>
-            </div>
-          </div>
-
-          <div className="flex gap-4">
-            <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center font-bold text-blue-600">
-              3
-            </div>
-            <div>
-              <h3 className="font-semibold mb-1">Get Conflict Warnings</h3>
-              <p className="text-sm text-gray-600">
-                See alerts when scheduling lessons during work meetings - helping you avoid double-booking
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      </main>
     </div>
   );
 }
 
-// NEW: Wrapper component that exports and wraps in Suspense
 export default function CalendarConnectPage() {
   return (
-    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><Loader2 className="w-8 h-8 animate-spin" /></div>}>
+    <Suspense fallback={<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: '#3d3a52' }}><Loader2 size={32} style={{ color: '#7c3aed' }} className="animate-spin" /></div>}>
       <CalendarConnectContent />
     </Suspense>
   )

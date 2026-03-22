@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/src/lib/supabase'
+import { getOrganizationId } from '@/src/lib/getOrganizationId'
 import AuthGuard from '@/components/AuthGuard'
 import { useAppHeader } from '@/components/layout/AppHeader'
 
@@ -275,14 +276,7 @@ function TeachingScheduleContent() {
     if (!user) { router.push('/'); return }
     setUser(user)
 
-    let orgId: string | null = null
-    const { data: collab } = await supabase.from('family_collaborators').select('organization_id').eq('user_id', user.id).maybeSingle()
-    if (collab) {
-      orgId = collab.organization_id
-    } else {
-      const { data: membership } = await supabase.from('user_organizations').select('organization_id').eq('user_id', user.id).maybeSingle()
-      orgId = membership?.organization_id || null
-    }
+    const { orgId } = await getOrganizationId(user.id)
 
     if (!orgId) { setLoading(false); return }
 

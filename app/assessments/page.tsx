@@ -85,16 +85,9 @@ function AssessmentsContent() {
       if (!user) { router.push('/'); return }
 
       // Co-teacher guard — assessments is admin-only
-      const { data: collaboration } = await supabase
-        .from('family_collaborators')
-        .select('organization_id')
-        .eq('user_id', user.id)
-        .maybeSingle()
-
-      if (collaboration) { router.push('/dashboard'); return }
-
-      const { orgId } = await getOrganizationId(user.id)
+      const { orgId, isCoTeacher } = await getOrganizationId(user.id)
       if (!orgId) { router.push('/onboarding'); return }
+      if (isCoTeacher) { router.push('/dashboard'); return }
 
       setOrganizationId(orgId)
     }
@@ -257,47 +250,30 @@ function AssessmentsContent() {
   return (
     <div style={css.root}>
 
-      {/* ── Header ───────────────────────────────────────────────────────────── */}
-      <header style={css.topBar}>
-      <div style={css.topBarLeft}>
-          <button style={css.headerBtn} onClick={() => router.push('/dashboard')}>
-            ← Dashboard
-          </button>
-          <div style={css.pageTitle}> 📊  Completed Assessments & Standards </div>
-        </div>
-        <div style={css.topBarRight}>
-          <button style={css.headerBtn} onClick={() => router.push('/calendar')}>
-            📅 Calendar
-          </button>
-        </div>
-      </header>
-
       {/* ── Main ─────────────────────────────────────────────────────────────── */}
       <main style={css.main}>
-        <div style={css.sectionLabel}>TRACK ASSESSMENTS & MANAGE STANDARDS</div>
+        <div className="hr-section-label" style={{ marginBottom: 14, marginTop: 8 }}>TRACK ASSESSMENTS & MANAGE STANDARDS</div>
 
-        {/* ── Inner content — keeps its own Tailwind styling ────────────────── */}
-        <div className="min-h-screen bg-transparent pb-20">
-          <div className="max-w-7xl mx-auto">
+        <div className="max-w-7xl mx-auto" style={{ paddingBottom: 80 }}>
 
             {/* View Toggle */}
-            <div className="flex flex-wrap gap-3 mb-8">
-              <button
-                onClick={() => setCurrentView('results')}
-                className={`flex-1 min-w-[140px] px-4 py-3 rounded-2xl font-bold transition-all shadow-sm text-sm ${
-                  currentView === 'results' ? 'bg-white text-purple-600 scale-105' : 'bg-white/50 text-slate-500 hover:bg-white'
-                }`}
-              >
-                📊 Assessment Results
-              </button>
-              <button
-                onClick={() => setCurrentView('standards')}
-                className={`flex-1 min-w-[140px] px-4 py-3 rounded-2xl font-bold transition-all shadow-sm text-sm ${
-                  currentView === 'standards' ? 'bg-white text-purple-600 scale-105' : 'bg-white/50 text-slate-500 hover:bg-white'
-                }`}
-              >
-                📚 Standards Tracking
-              </button>
+            <div style={{ marginBottom: 24 }}>
+              <div className="hr-pill-row">
+                <button
+                  onClick={() => setCurrentView('results')}
+                  className={`hr-pill${currentView === 'results' ? ' active' : ''}`}
+                  style={{ fontFamily: "'Nunito', sans-serif" }}
+                >
+                  📊 Assessment Results
+                </button>
+                <button
+                  onClick={() => setCurrentView('standards')}
+                  className={`hr-pill${currentView === 'standards' ? ' active' : ''}`}
+                  style={{ fontFamily: "'Nunito', sans-serif" }}
+                >
+                  📚 Standards Tracking
+                </button>
+              </div>
             </div>
 
             {/* Tips */}
@@ -520,7 +496,6 @@ function AssessmentsContent() {
               </div>
             )}
           </div>
-        </div>
       </main>
 
       {/* ── Modals ────────────────────────────────────────────────────────────── */}

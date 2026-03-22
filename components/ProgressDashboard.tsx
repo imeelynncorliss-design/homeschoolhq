@@ -278,51 +278,41 @@ export default function ProgressDashboard({ userId, organizationId }: ProgressDa
 
   const KID_COLORS = ['#7c3aed', '#0d9488', '#ec4899', '#f59e0b', '#3b82f6']
 
+  const statCard = (icon: string, value: string | number, label: string, valueColor = '#7c3aed') => (
+    <div key={label} style={{ background: '#f5f3ff', border: '1.5px solid rgba(124,58,237,0.12)', borderRadius: 14, padding: '16px 18px' }}>
+      <div style={{ fontSize: 26, marginBottom: 6 }}>{icon}</div>
+      <div style={{ fontSize: 22, fontWeight: 900, color: valueColor, fontFamily: "'Nunito', sans-serif" }}>{value}</div>
+      <div style={{ fontSize: 12, color: '#6b7280', fontWeight: 600, marginTop: 2 }}>{label}</div>
+    </div>
+  )
+
+  const infoBox = (content: React.ReactNode, accent = '#ede9fe', border = 'rgba(124,58,237,0.2)') => (
+    <div style={{ background: accent, border: `1.5px solid ${border}`, borderRadius: 12, padding: '14px 16px', fontSize: 13, color: '#374151', fontWeight: 600, lineHeight: 1.6 }}>
+      {content}
+    </div>
+  )
+
   return (
-    <div className="space-y-6">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+      {/* Header */}
       <div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Progress Tracking</h2>
-        <p className="text-gray-600">Monitor your annual learning goals and stay on track</p>
+        <h2 style={{ fontSize: 20, fontWeight: 900, color: '#1a1a2e', margin: '0 0 4px', fontFamily: "'Nunito', sans-serif" }}>Progress Tracking</h2>
+        <p style={{ fontSize: 13, color: '#6b7280', fontWeight: 600, margin: 0 }}>Monitor your annual learning goals and stay on track</p>
       </div>
 
       {/* Kid filter pills — Insights only */}
       {kids.length > 1 && activeTab === 'insights' && (
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' as const }}>
-          <button
-            onClick={() => setSelectedKidId(null)}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 8,
-              padding: '7px 16px', borderRadius: 999, fontFamily: "'Nunito', sans-serif",
-              fontWeight: 700, fontSize: 14, cursor: 'pointer', transition: 'all 0.15s',
-              border: selectedKidId === null ? '2px solid #7c3aed' : '2px solid #e5e7eb',
-              background: selectedKidId === null ? '#ede9fe' : '#fff',
-              color: selectedKidId === null ? '#7c3aed' : '#6b7280',
-            }}
-          >
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button onClick={() => setSelectedKidId(null)} style={{ padding: '7px 16px', borderRadius: 999, fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 13, cursor: 'pointer', border: selectedKidId === null ? '2px solid #7c3aed' : '2px solid #e5e7eb', background: selectedKidId === null ? '#ede9fe' : '#fff', color: selectedKidId === null ? '#7c3aed' : '#6b7280' }}>
             All kids
           </button>
           {kids.map((kid, idx) => {
             const color = KID_COLORS[idx % KID_COLORS.length]
             const isActive = kid.id === selectedKidId
             return (
-              <button
-                key={kid.id}
-                onClick={() => setSelectedKidId(isActive ? null : kid.id)}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 8,
-                  padding: '7px 16px 7px 10px', borderRadius: 999, fontFamily: "'Nunito', sans-serif",
-                  fontWeight: 700, fontSize: 14, cursor: 'pointer', transition: 'all 0.15s',
-                  border: `2px solid ${isActive ? color : '#e5e7eb'}`,
-                  background: isActive ? `${color}18` : '#fff',
-                  color: isActive ? color : '#6b7280',
-                }}
-              >
-                <div style={{
-                  width: 24, height: 24, borderRadius: '50%',
-                  background: isActive ? color : '#d1d5db',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: '#fff', fontSize: 12, fontWeight: 800, flexShrink: 0,
-                }}>
+              <button key={kid.id} onClick={() => setSelectedKidId(isActive ? null : kid.id)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 14px 7px 10px', borderRadius: 999, fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 13, cursor: 'pointer', border: `2px solid ${isActive ? color : '#e5e7eb'}`, background: isActive ? `${color}18` : '#fff', color: isActive ? color : '#6b7280' }}>
+                <div style={{ width: 22, height: 22, borderRadius: '50%', background: isActive ? color : '#d1d5db', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 11, fontWeight: 800, flexShrink: 0 }}>
                   {kid.displayname.charAt(0).toUpperCase()}
                 </div>
                 {kid.displayname}
@@ -332,388 +322,251 @@ export default function ProgressDashboard({ userId, organizationId }: ProgressDa
         </div>
       )}
 
-
-      {/* Days breakdown notice — surfaces confirmed vs inferred split */}
-      {attendanceStats.lessonInferredDays > 0 && (
-  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800 flex items-start gap-2">
-    <span>⚠️</span>
-    <span>
-      <strong>{attendanceStats.lessonInferredDays} school days</strong> have lessons logged but no attendance record.
-      These days count toward your total now but aren't officially confirmed yet. Once you review and confirm them in the Attendance Tracker, your numbers here will match.{' '}
-  <a href="/attendance" className="underline font-semibold">Go to Attendance Tracker →</a>
-    </span>
-  </div>
-)}
+      {/* Inferred days notice */}
+      {attendanceStats.lessonInferredDays > 0 && infoBox(
+        <><span>⚠️ </span><strong>{attendanceStats.lessonInferredDays} school days</strong> have lessons logged but no attendance record. These count toward your total but aren't officially confirmed.{' '}<a href="/attendance" style={{ color: '#7c3aed', fontWeight: 700 }}>Go to Attendance Tracker →</a></>,
+        '#fffbeb', '#fde68a'
+      )}
 
       {/* Top progress bar */}
-      <div className="bg-white rounded-lg border border-gray-200 p-4">
-        <div className="flex justify-between text-sm text-gray-600 mb-2">
-          <span className="font-semibold">Progress to {goal} days</span>
-          <span>{completed} days completed</span>
+      <div style={{ background: '#f5f3ff', border: '1.5px solid rgba(124,58,237,0.15)', borderRadius: 14, padding: '14px 18px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 700, color: '#1a1a2e', marginBottom: 8 }}>
+          <span>Progress to {goal} days</span>
+          <span style={{ color: '#7c3aed' }}>{completed} days completed</span>
         </div>
-        <div className="bg-gray-100 rounded-full h-3 overflow-hidden">
-          <div
-            className={`h-full rounded-full transition-all duration-500 ${
-              progressStatus === 'ahead' ? 'bg-green-500' :
-              progressStatus === 'behind' ? 'bg-red-500' : 'bg-blue-500'
-            }`}
-            style={{ width: `${Math.min(percentComplete, 100)}%` }}
-          />
+        <div style={{ background: 'rgba(124,58,237,0.1)', borderRadius: 99, height: 10, overflow: 'hidden' }}>
+          <div style={{ height: '100%', borderRadius: 99, transition: 'all 0.5s', width: `${Math.min(percentComplete, 100)}%`, background: progressStatus === 'ahead' ? '#10b981' : progressStatus === 'behind' ? '#ef4444' : 'linear-gradient(90deg, #7c3aed, #a855f7)' }} />
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-gray-200">
-        <div className="flex gap-1 overflow-x-auto">
-          {TABS.map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-3 text-sm font-semibold border-b-2 whitespace-nowrap transition-colors ${
-                activeTab === tab.id
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              {tab.icon} {tab.label}
-            </button>
-          ))}
-        </div>
+      <div style={{ display: 'flex', gap: 4, background: 'rgba(255,255,255,0.7)', borderRadius: 12, padding: 4, border: '1.5px solid rgba(124,58,237,0.1)', overflowX: 'auto' }}>
+        {TABS.map(tab => (
+          <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{ flex: 1, padding: '8px 10px', borderRadius: 9, border: 'none', cursor: 'pointer', fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 13, whiteSpace: 'nowrap', background: activeTab === tab.id ? 'linear-gradient(135deg, #7c3aed, #a855f7)' : 'transparent', color: activeTab === tab.id ? '#fff' : '#6b7280' }}>
+            {tab.icon} {tab.label}
+          </button>
+        ))}
       </div>
 
       {/* ── Overview ── */}
       {activeTab === 'overview' && (
-        <div className="space-y-6">
-          <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg p-6 text-white">
-            <div className="flex items-center justify-between mb-4">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {/* Hero */}
+          <div style={{ background: 'linear-gradient(135deg, #7c3aed, #a855f7)', borderRadius: 16, padding: '24px 20px', color: '#fff' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
               <div>
-                <h3 className="text-2xl font-bold mb-1">{completed} / {goal} Days</h3>
-                <p className="text-blue-100">Annual Compliance Progress</p>
+                <div style={{ fontSize: 26, fontWeight: 900, fontFamily: "'Nunito', sans-serif" }}>{completed} / {goal} Days</div>
+                <div style={{ fontSize: 13, opacity: 0.85, marginTop: 2 }}>Annual Compliance Progress</div>
               </div>
-              <div className="text-right">
-                <div className="text-4xl font-bold">{percentComplete}%</div>
-                <div className="text-sm text-blue-100">Complete</div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: 40, fontWeight: 900, fontFamily: "'Nunito', sans-serif", lineHeight: 1 }}>{percentComplete}%</div>
+                <div style={{ fontSize: 12, opacity: 0.85 }}>Complete</div>
               </div>
             </div>
-            <div className="bg-white/20 rounded-full h-4 mb-2">
-              <div className="bg-white rounded-full h-4 transition-all duration-500" style={{ width: `${Math.min(percentComplete, 100)}%` }} />
+            <div style={{ background: 'rgba(255,255,255,0.25)', borderRadius: 99, height: 10, marginBottom: 10 }}>
+              <div style={{ background: '#fff', borderRadius: 99, height: '100%', width: `${Math.min(percentComplete, 100)}%`, transition: 'all 0.5s' }} />
             </div>
-            <div className="flex justify-between text-sm text-blue-100">
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, opacity: 0.85 }}>
               <span>Started: {settings?.school_year_start ? moment(settings.school_year_start).format('MMM D, YYYY') : 'Not set'}</span>
               <span>Ends: {settings?.school_year_end ? moment(settings.school_year_end).format('MMM D, YYYY') : 'Not set'}</span>
             </div>
           </div>
 
-          <div className={`rounded-lg p-6 border-2 ${
-            progressStatus === 'ahead' ? 'bg-green-50 border-green-500' :
-            progressStatus === 'behind' ? 'bg-red-50 border-red-500' :
-            'bg-blue-50 border-blue-500'
-          }`}>
-            <div className="flex items-center gap-4">
-              <div className="text-5xl">
-                {progressStatus === 'ahead' ? '🚀' : progressStatus === 'behind' ? '⚠️' : '✅'}
-              </div>
-              <div className="flex-1">
-                <h3 className={`text-xl font-bold mb-1 ${
-                  progressStatus === 'ahead' ? 'text-green-800' :
-                  progressStatus === 'behind' ? 'text-red-800' : 'text-blue-800'
-                }`}>
-                  {progressStatus === 'ahead' ? 'Ahead of Schedule!' :
-                   progressStatus === 'behind' ? 'Behind Schedule' : 'Right on Track!'}
-                </h3>
-                <p className={`text-sm ${
-                  progressStatus === 'ahead' ? 'text-green-700' :
-                  progressStatus === 'behind' ? 'text-red-700' : 'text-blue-700'
-                }`}>
-                  {progressStatus === 'ahead'
-                    ? `You're ${percentComplete - expectedProgress}% ahead of where you should be. Great work!`
-                    : progressStatus === 'behind'
-                    ? `You're ${expectedProgress - percentComplete}% behind. Consider adjusting your schedule.`
-                    : `You're progressing exactly as planned for this time of year.`}
-                </p>
-              </div>
-            </div>
-            <div className="mt-4">
-              <div className="flex justify-between text-xs mb-1">
-                <span className="font-bold text-gray-900 bg-white/70 px-2 py-0.5 rounded">Expected: {expectedProgress}%</span>
-                <span className="font-bold text-gray-900 bg-white/70 px-2 py-0.5 rounded">Actual: {percentComplete}%</span>
-              </div>
-              <div className="relative h-8 bg-white rounded-lg overflow-hidden">
-                <div className="absolute top-0 h-full w-0.5 bg-gray-800 z-10" style={{ left: `${expectedProgress}%` }} />
-                <div className={`absolute top-0 left-0 h-full transition-all duration-500 ${
-                  progressStatus === 'ahead' ? 'bg-green-500' :
-                  progressStatus === 'behind' ? 'bg-red-500' : 'bg-blue-500'
-                }`} style={{ width: `${Math.min(percentComplete, 100)}%` }} />
-              </div>
-            </div>
-          </div>
-
-          <div className="grid md:grid-cols-4 gap-4">
-            {[
-              { icon: '📅', value: attendanceStats.confirmedDays,           label: 'Confirmed Days',    color: 'text-gray-900'   },
-              { icon: '📚', value: attendanceStats.lessonInferredDays,       label: 'Lesson-Only Days',  color: 'text-amber-600'  },
-              { icon: '✅', value: completedLessons,                         label: 'Lessons Completed', color: 'text-green-600'  },
-              { icon: '⏰', value: `${completedHours.toFixed(1)}h`,          label: 'Hours Logged',      color: 'text-blue-600'   },
-            ].map(s => (
-              <div key={s.label} className="bg-white border border-gray-200 rounded-lg p-4">
-                <div className="text-3xl mb-2">{s.icon}</div>
-                <div className={`text-2xl font-bold ${s.color}`}>{s.value}</div>
-                <div className="text-sm text-gray-600">{s.label}</div>
-              </div>
-            ))}
-          </div>
-
-          {progressStatus === 'behind' && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-              <div className="flex items-start gap-3">
-                <span className="text-2xl">💡</span>
-                <div>
-                  <p className="font-semibold text-gray-900 mb-2">Recommendations to Get Back on Track:</p>
-                  <ul className="list-disc list-inside text-sm text-gray-700 space-y-1">
-                    <li>Add an extra study session each week</li>
-                    <li>Extend daily lessons by 15–30 minutes</li>
-                    <li>Review and adjust vacation plans if possible</li>
-                    <li>Focus on completing scheduled lessons before adding new ones</li>
-                  </ul>
+          {/* Status card */}
+          <div style={{ background: progressStatus === 'ahead' ? '#ecfdf5' : progressStatus === 'behind' ? '#fef2f2' : '#f5f3ff', border: `2px solid ${progressStatus === 'ahead' ? '#a7f3d0' : progressStatus === 'behind' ? '#fca5a5' : 'rgba(124,58,237,0.25)'}`, borderRadius: 14, padding: '20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16 }}>
+              <div style={{ fontSize: 40 }}>{progressStatus === 'ahead' ? '🚀' : progressStatus === 'behind' ? '⚠️' : '✅'}</div>
+              <div>
+                <div style={{ fontSize: 17, fontWeight: 900, color: progressStatus === 'ahead' ? '#059669' : progressStatus === 'behind' ? '#dc2626' : '#7c3aed', fontFamily: "'Nunito', sans-serif", marginBottom: 4 }}>
+                  {progressStatus === 'ahead' ? 'Ahead of Schedule!' : progressStatus === 'behind' ? 'Behind Schedule' : 'Right on Track!'}
+                </div>
+                <div style={{ fontSize: 13, color: '#4b5563', fontWeight: 600 }}>
+                  {progressStatus === 'ahead' ? `You're ${percentComplete - expectedProgress}% ahead of where you should be. Great work!` : progressStatus === 'behind' ? `You're ${expectedProgress - percentComplete}% behind. Consider adjusting your schedule.` : `You're progressing exactly as planned for this time of year.`}
                 </div>
               </div>
             </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, fontWeight: 700, marginBottom: 6 }}>
+              <span style={{ background: 'rgba(255,255,255,0.8)', padding: '2px 8px', borderRadius: 6, color: '#374151' }}>Expected: {expectedProgress}%</span>
+              <span style={{ background: 'rgba(255,255,255,0.8)', padding: '2px 8px', borderRadius: 6, color: '#374151' }}>Actual: {percentComplete}%</span>
+            </div>
+            <div style={{ position: 'relative', height: 24, background: '#fff', borderRadius: 8, overflow: 'hidden' }}>
+              <div style={{ position: 'absolute', top: 0, height: '100%', width: 2, background: '#1a1a2e', zIndex: 10, left: `${expectedProgress}%` }} />
+              <div style={{ position: 'absolute', top: 0, left: 0, height: '100%', transition: 'all 0.5s', borderRadius: 8, width: `${Math.min(percentComplete, 100)}%`, background: progressStatus === 'ahead' ? '#10b981' : progressStatus === 'behind' ? '#ef4444' : 'linear-gradient(90deg, #7c3aed, #a855f7)' }} />
+            </div>
+          </div>
+
+          {/* Stat cards */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
+            {statCard('📅', attendanceStats.confirmedDays, 'Confirmed Days', '#1a1a2e')}
+            {statCard('📚', attendanceStats.lessonInferredDays, 'Lesson-Only Days', '#d97706')}
+            {statCard('✅', completedLessons, 'Lessons Completed', '#059669')}
+            {statCard('⏰', `${completedHours.toFixed(1)}h`, 'Hours Logged', '#7c3aed')}
+          </div>
+
+          {progressStatus === 'behind' && infoBox(
+            <><p style={{ fontWeight: 800, color: '#1a1a2e', marginBottom: 8 }}>💡 Recommendations to Get Back on Track:</p><ul style={{ paddingLeft: 20, margin: 0, lineHeight: 2 }}><li>Add an extra study session each week</li><li>Extend daily lessons by 15–30 minutes</li><li>Review and adjust vacation plans if possible</li><li>Focus on completing scheduled lessons before adding new ones</li></ul></>,
+            '#fffbeb', '#fde68a'
           )}
 
-          {!settings?.school_year_start && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <div className="flex items-start gap-3">
-                <span className="text-2xl">ℹ️</span>
-                <div>
-                  <p className="font-semibold text-gray-900 mb-1">Configure Your School Year</p>
-                  <p className="text-sm text-gray-700">
-                    Set up your school year dates in{' '}
-                    <button onClick={() => router.push('/school-year')} className="text-blue-600 font-semibold hover:underline">
-                      School Year &amp; Compliance
-                    </button>{' '}
-                    to see accurate progress tracking.
-                  </p>
-                </div>
-              </div>
-            </div>
+          {!settings?.school_year_start && infoBox(
+            <><p style={{ fontWeight: 800, color: '#1a1a2e', margin: '0 0 4px' }}>ℹ️ Configure Your School Year</p><p style={{ margin: 0 }}>Set up your school year dates in{' '}<button onClick={() => router.push('/school-year')} style={{ background: 'none', border: 'none', color: '#7c3aed', fontWeight: 700, cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>School Year &amp; Compliance</button>{' '}to see accurate progress tracking.</p></>
           )}
         </div>
       )}
 
       {/* ── Insights ── */}
       {activeTab === 'insights' && (
-        <div className="space-y-6">
-          <div className="bg-white rounded-lg border border-gray-200 p-6">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">📊 Subject Breakdown</h3>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ background: '#f5f3ff', border: '1.5px solid rgba(124,58,237,0.12)', borderRadius: 14, padding: '20px' }}>
+            <div style={{ fontSize: 15, fontWeight: 900, color: '#1a1a2e', marginBottom: 16, fontFamily: "'Nunito', sans-serif" }}>📊 Subject Breakdown</div>
             {getSubjectBreakdown().length === 0 ? (
-              <p className="text-sm text-gray-500">No lesson data yet. Start adding lessons to see subject insights.</p>
+              <p style={{ fontSize: 13, color: '#6b7280', fontWeight: 600, margin: 0 }}>No lesson data yet. Start adding lessons to see subject insights.</p>
             ) : (
-              <div className="space-y-3">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {getSubjectBreakdown().map(({ subject, total, completed: subDone }) => {
                   const pct = total > 0 ? Math.round((subDone / total) * 100) : 0
                   return (
                     <div key={subject}>
-                      <div className="flex justify-between text-sm mb-1">
-                        <span className="font-semibold text-gray-700">{subject}</span>
-                        <span className="text-gray-500">{subDone}/{total} · {pct}%</span>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 4 }}>
+                        <span style={{ fontWeight: 700, color: '#1a1a2e' }}>{subject}</span>
+                        <span style={{ color: '#6b7280', fontWeight: 600 }}>{subDone}/{total} · {pct}%</span>
                       </div>
-                      <div className="bg-gray-100 rounded-full h-2 overflow-hidden">
-                        <div className="bg-purple-500 h-full rounded-full" style={{ width: `${pct}%` }} />
+                      <div style={{ background: 'rgba(124,58,237,0.1)', borderRadius: 99, height: 8, overflow: 'hidden' }}>
+                        <div style={{ background: 'linear-gradient(90deg, #7c3aed, #a855f7)', height: '100%', borderRadius: 99, width: `${pct}%` }} />
                       </div>
                     </div>
                   )
                 })}
-                <div className="flex justify-between text-sm pt-3 mt-1 border-t border-gray-200">
-                  <span className="font-bold text-gray-700">Total</span>
-                  <span className="font-bold text-gray-900">{completedLessons} of {totalLessons} lessons completed</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, paddingTop: 12, borderTop: '1px solid rgba(124,58,237,0.1)', marginTop: 4 }}>
+                  <span style={{ fontWeight: 800, color: '#1a1a2e' }}>Total</span>
+                  <span style={{ fontWeight: 700, color: '#7c3aed' }}>{completedLessons} of {totalLessons} lessons completed</span>
                 </div>
               </div>
             )}
           </div>
 
-          <div className="grid md:grid-cols-3 gap-4">
-            <div className="bg-white border border-gray-200 rounded-lg p-4">
-              <div className="text-sm text-gray-500 mb-1">Completion Rate</div>
-              <div className="text-2xl font-bold text-purple-600">
-                {totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0}%
-              </div>
-              <div className="text-xs text-gray-400 mt-1">{completedLessons} of {totalLessons} lessons</div>
-            </div>
-            <div className="bg-white border border-gray-200 rounded-lg p-4">
-              <div className="text-sm text-gray-500 mb-1">Avg. Hours / Day</div>
-              <div className="text-2xl font-bold text-blue-600">
-                {attendanceStats.totalDays > 0 ? (attendanceStats.totalHours / attendanceStats.totalDays).toFixed(1) : '0'}h
-              </div>
-              <div className="text-xs text-gray-400 mt-1">across {attendanceStats.totalDays} logged days</div>
-            </div>
-            <div className="bg-white border border-gray-200 rounded-lg p-4">
-              <div className="text-sm text-gray-500 mb-1">Days Remaining</div>
-              <div className="text-2xl font-bold text-orange-500">{daysRemaining}</div>
-              <div className="text-xs text-gray-400 mt-1">to reach {goal}-day goal</div>
-            </div>
-            <div className="bg-white border border-gray-200 rounded-lg p-4">
-              <div className="text-sm text-gray-500 mb-1">📚 Books Read</div>
-              <div className="text-2xl font-bold text-purple-600">{booksRead}</div>
-              <div className="text-xs text-gray-400 mt-1">this school year</div>
-            </div>
-            <div className="bg-white border border-gray-200 rounded-lg p-4">
-              <div className="text-sm text-gray-500 mb-1">🚌 Field Trip Hours</div>
-              <div className="text-2xl font-bold text-green-600">{fieldTripHours}h</div>
-              <div className="text-xs text-gray-400 mt-1">logged this year</div>
-            </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
+            {statCard('📈', `${totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0}%`, 'Completion Rate')}
+            {statCard('⏱️', `${attendanceStats.totalDays > 0 ? (attendanceStats.totalHours / attendanceStats.totalDays).toFixed(1) : '0'}h`, 'Avg. Hours / Day', '#2563eb')}
+            {statCard('📅', daysRemaining, 'Days Remaining', '#f59e0b')}
+            {statCard('📚', booksRead, 'Books Read')}
+            {statCard('🚌', `${fieldTripHours}h`, 'Field Trip Hours', '#059669')}
           </div>
         </div>
       )}
 
       {/* ── Goals ── */}
       {activeTab === 'goals' && (
-        <div className="space-y-6">
-          <div className="bg-white rounded-lg border border-gray-200 p-6">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h3 className="text-lg font-bold text-gray-900">Attendance Goals</h3>
-                <p className="text-sm text-gray-500">Set targets and track your progress</p>
-              </div>
-              <button
-                onClick={() => router.push('/school-year')}
-                className="px-4 py-2 text-sm font-semibold text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                Edit Goals
-              </button>
+        <div style={{ background: '#f5f3ff', border: '1.5px solid rgba(124,58,237,0.12)', borderRadius: 14, padding: '20px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+            <div>
+              <div style={{ fontSize: 15, fontWeight: 900, color: '#1a1a2e', fontFamily: "'Nunito', sans-serif" }}>Attendance Goals</div>
+              <div style={{ fontSize: 12, color: '#6b7280', fontWeight: 600, marginTop: 2 }}>Set targets and track your progress</div>
             </div>
+            <button onClick={() => router.push('/school-year')} style={{ padding: '8px 16px', background: 'rgba(255,255,255,0.7)', border: '2px solid rgba(124,58,237,0.3)', borderRadius: 10, fontSize: 13, fontWeight: 700, color: '#7c3aed', cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}>
+              Edit Goals
+            </button>
+          </div>
 
-            <div className="mb-6">
-              <div className="flex justify-between text-sm mb-2">
-                <span className="font-semibold text-gray-700">School Days Goal</span>
-                <span className="text-gray-500">{completed} / {goal} days</span>
-              </div>
-              <div className="bg-gray-100 rounded-full h-4 overflow-hidden mb-1">
-                <div className="bg-blue-500 h-full rounded-full transition-all duration-500" style={{ width: `${Math.min(percentComplete, 100)}%` }} />
-              </div>
-              <div className="flex justify-between text-xs text-gray-500">
-                <span>{percentComplete}% complete</span>
-                <span>{daysRemaining} days to go</span>
-              </div>
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 700, color: '#1a1a2e', marginBottom: 6 }}>
+              <span>School Days Goal</span>
+              <span style={{ color: '#7c3aed' }}>{completed} / {goal} days</span>
             </div>
+            <div style={{ background: 'rgba(124,58,237,0.1)', borderRadius: 99, height: 10, overflow: 'hidden', marginBottom: 4 }}>
+              <div style={{ background: 'linear-gradient(90deg, #7c3aed, #a855f7)', height: '100%', borderRadius: 99, width: `${Math.min(percentComplete, 100)}%`, transition: 'all 0.5s' }} />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#6b7280', fontWeight: 600 }}>
+              <span>{percentComplete}% complete</span>
+              <span>{daysRemaining} days to go</span>
+            </div>
+          </div>
 
-            <div className="mb-6">
-              <div className="flex justify-between text-sm mb-2">
-                <span className="font-semibold text-gray-700">Hours Logged</span>
-                <span className="text-gray-500">{attendanceStats.totalHours.toFixed(1)} hours</span>
-              </div>
-              <div className="bg-gray-100 rounded-full h-4 overflow-hidden">
-                <div
-                  className="bg-purple-500 h-full rounded-full transition-all duration-500"
-                  style={{ width: `${Math.min((attendanceStats.totalHours / (goal * 4)) * 100, 100)}%` }}
-                />
-              </div>
-              <p className="text-xs text-gray-400 mt-1">Based on 4 hrs/day target</p>
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 700, color: '#1a1a2e', marginBottom: 6 }}>
+              <span>Hours Logged</span>
+              <span style={{ color: '#7c3aed' }}>{attendanceStats.totalHours.toFixed(1)} hours</span>
             </div>
+            <div style={{ background: 'rgba(124,58,237,0.1)', borderRadius: 99, height: 10, overflow: 'hidden' }}>
+              <div style={{ background: 'linear-gradient(90deg, #a855f7, #ec4899)', height: '100%', borderRadius: 99, width: `${Math.min((attendanceStats.totalHours / (goal * 4)) * 100, 100)}%`, transition: 'all 0.5s' }} />
+            </div>
+            <div style={{ fontSize: 11, color: '#6b7280', fontWeight: 600, marginTop: 4 }}>Based on 4 hrs/day target</div>
+          </div>
 
-            <div className="bg-gray-50 rounded-lg p-4 flex items-center justify-between">
-              <span className="text-sm text-gray-600">Estimated Completion:</span>
-              <span className="font-bold text-gray-900">
-                {estimatedCompletion ? estimatedCompletion.format('MMM D, YYYY') : '—'}
-              </span>
-            </div>
+          <div style={{ background: 'rgba(255,255,255,0.6)', borderRadius: 10, padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: 13, color: '#4b5563', fontWeight: 600 }}>Estimated Completion:</span>
+            <span style={{ fontSize: 14, fontWeight: 900, color: '#1a1a2e', fontFamily: "'Nunito', sans-serif" }}>
+              {estimatedCompletion ? estimatedCompletion.format('MMM D, YYYY') : '—'}
+            </span>
           </div>
         </div>
       )}
 
       {/* ── Compliance ── */}
       {activeTab === 'compliance' && (
-        <div className="space-y-6">
-          <div className="bg-white rounded-lg border border-gray-200 p-6">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">✅ Compliance Status</h3>
-            {!selectedState ? (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <p className="text-sm text-gray-700">
-                  No state selected.{' '}
-                  <button onClick={() => router.push('/school-year')} className="text-blue-600 font-semibold hover:underline">
-                    Set your state in School Year settings
-                  </button>{' '}
-                  to see compliance requirements.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div className={`rounded-lg p-4 border-2 flex items-center gap-4 ${
-                  percentComplete >= 80 ? 'bg-green-50 border-green-300' :
-                  percentComplete >= 40 ? 'bg-amber-50 border-amber-300' :
-                  'bg-red-50 border-red-300'
-                }`}>
-                  <div className="text-4xl">
-                    {percentComplete >= 80 ? '✅' : percentComplete >= 40 ? '⚠️' : '🚨'}
-                  </div>
-                  <div>
-                    <div className="font-bold text-gray-900">{selectedState} Compliance</div>
-                    <div className="text-sm text-gray-600">
-                      {completed} of {goal} required days logged · {percentComplete}% complete
-                    </div>
-                    {attendanceStats.lessonInferredDays > 0 && (
-                      <div className="text-xs text-amber-700 mt-1">
-                        ⚠️ {attendanceStats.lessonInferredDays} days are lesson-inferred and not yet manually confirmed.
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="border border-gray-200 rounded-lg p-4">
-                    <div className="text-sm text-gray-500 mb-1">Days Logged</div>
-                    <div className="text-2xl font-bold text-gray-900">{completed}</div>
-                    <div className="text-xs text-gray-400">of {goal} required</div>
-                  </div>
-                  <div className="border border-gray-200 rounded-lg p-4">
-                    <div className="text-sm text-gray-500 mb-1">Days Remaining</div>
-                    <div className="text-2xl font-bold text-orange-500">{daysRemaining}</div>
-                    <div className="text-xs text-gray-400">
-                      {settings?.school_year_end ? `by ${moment(settings.school_year_end).format('MMM D, YYYY')}` : 'no end date set'}
-                    </div>
-                  </div>
-                </div>
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-gray-700">
-                  💡 HomeschoolReady is not a legal advisor. Always verify requirements at{' '}
-                  <a href="https://hslda.org" target="_blank" rel="noopener noreferrer" className="text-blue-600 font-semibold hover:underline">HSLDA.org</a>
-                  {' '}or your state's Department of Education.
+        <div style={{ background: '#f5f3ff', border: '1.5px solid rgba(124,58,237,0.12)', borderRadius: 14, padding: '20px' }}>
+          <div style={{ fontSize: 15, fontWeight: 900, color: '#1a1a2e', marginBottom: 16, fontFamily: "'Nunito', sans-serif" }}>✅ Compliance Status</div>
+          {!selectedState ? infoBox(
+            <><span style={{ fontWeight: 800, color: '#1a1a2e' }}>No state selected.</span>{' '}
+            <button onClick={() => router.push('/school-year')} style={{ background: 'none', border: 'none', color: '#7c3aed', fontWeight: 700, cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>Set your state in School Year settings</button>{' '}to see compliance requirements.</>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ background: percentComplete >= 80 ? '#ecfdf5' : percentComplete >= 40 ? '#fffbeb' : '#fef2f2', border: `2px solid ${percentComplete >= 80 ? '#a7f3d0' : percentComplete >= 40 ? '#fde68a' : '#fca5a5'}`, borderRadius: 12, padding: '16px', display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div style={{ fontSize: 36 }}>{percentComplete >= 80 ? '✅' : percentComplete >= 40 ? '⚠️' : '🚨'}</div>
+                <div>
+                  <div style={{ fontWeight: 800, fontSize: 14, color: '#1a1a2e' }}>{selectedState} Compliance</div>
+                  <div style={{ fontSize: 13, color: '#4b5563', fontWeight: 600 }}>{completed} of {goal} required days logged · {percentComplete}% complete</div>
+                  {attendanceStats.lessonInferredDays > 0 && <div style={{ fontSize: 11, color: '#92400e', fontWeight: 600, marginTop: 4 }}>⚠️ {attendanceStats.lessonInferredDays} days are lesson-inferred and not yet manually confirmed.</div>}
                 </div>
               </div>
-            )}
-          </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <div style={{ background: 'rgba(255,255,255,0.7)', border: '1.5px solid rgba(124,58,237,0.1)', borderRadius: 12, padding: '14px 16px' }}>
+                  <div style={{ fontSize: 11, color: '#6b7280', fontWeight: 700, marginBottom: 4 }}>Days Logged</div>
+                  <div style={{ fontSize: 24, fontWeight: 900, color: '#1a1a2e', fontFamily: "'Nunito', sans-serif" }}>{completed}</div>
+                  <div style={{ fontSize: 11, color: '#9ca3af', fontWeight: 600 }}>of {goal} required</div>
+                </div>
+                <div style={{ background: 'rgba(255,255,255,0.7)', border: '1.5px solid rgba(124,58,237,0.1)', borderRadius: 12, padding: '14px 16px' }}>
+                  <div style={{ fontSize: 11, color: '#6b7280', fontWeight: 700, marginBottom: 4 }}>Days Remaining</div>
+                  <div style={{ fontSize: 24, fontWeight: 900, color: '#f59e0b', fontFamily: "'Nunito', sans-serif" }}>{daysRemaining}</div>
+                  <div style={{ fontSize: 11, color: '#9ca3af', fontWeight: 600 }}>{settings?.school_year_end ? `by ${moment(settings.school_year_end).format('MMM D, YYYY')}` : 'no end date set'}</div>
+                </div>
+              </div>
+              {infoBox(<>💡 HomeschoolReady is not a legal advisor. Always verify requirements at{' '}<a href="https://hslda.org" target="_blank" rel="noopener noreferrer" style={{ color: '#7c3aed', fontWeight: 700 }}>HSLDA.org</a>{' '}or your state's Department of Education.</>)}
+            </div>
+          )}
         </div>
       )}
 
       {/* ── Reports ── */}
       {activeTab === 'reports' && (
-        <div className="space-y-6">
-          <div className="bg-white rounded-lg border border-gray-200 p-6">
-            <h3 className="text-lg font-bold text-gray-900 mb-2">📄 Compliance Report</h3>
-            <p className="text-sm text-gray-500 mb-6">
-              Generate a PDF compliance report showing attendance, lesson completion, and health scores for each student.
-            </p>
-            <div className="bg-gray-50 rounded-lg p-4 mb-6 space-y-2 text-sm">
-              {[
-                { label: 'School Year', value: settings?.school_year_start ? `${moment(settings.school_year_start).format('MMM D, YYYY')} – ${moment(settings.school_year_end).format('MMM D, YYYY')}` : 'Not configured' },
-                { label: 'State',             value: selectedState || 'Not set'                },
-                { label: 'Days Logged',       value: `${completed} / ${goal}`                  },
-                { label: 'Lessons Completed', value: String(completedLessons)                   },
-              ].map(row => (
-                <div key={row.label} className="flex justify-between">
-                  <span className="text-gray-500">{row.label}</span>
-                  <span className="font-semibold text-gray-900">{row.value}</span>
-                </div>
-              ))}
-            </div>
-            <button
-              onClick={handleExportReport}
-              disabled={isExporting || !settings?.school_year_start}
-              className="w-full py-3 bg-purple-600 text-white font-bold rounded-lg hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
-            >
-              {isExporting ? '⏳ Generating...' : '⬇️ Download PDF Report'}
-            </button>
-            {!settings?.school_year_start && (
-              <p className="text-xs text-gray-400 mt-2 text-center">Configure school year dates before generating a report.</p>
-            )}
+        <div style={{ background: '#f5f3ff', border: '1.5px solid rgba(124,58,237,0.12)', borderRadius: 14, padding: '20px' }}>
+          <div style={{ fontSize: 15, fontWeight: 900, color: '#1a1a2e', marginBottom: 4, fontFamily: "'Nunito', sans-serif" }}>📄 Compliance Report</div>
+          <div style={{ fontSize: 13, color: '#6b7280', fontWeight: 600, marginBottom: 20 }}>
+            Generate a PDF compliance report showing attendance, lesson completion, and health scores for each student.
           </div>
+          <div style={{ background: 'rgba(255,255,255,0.7)', border: '1.5px solid rgba(124,58,237,0.1)', borderRadius: 12, padding: '14px 16px', marginBottom: 20, display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {[
+              { label: 'School Year', value: settings?.school_year_start ? `${moment(settings.school_year_start).format('MMM D, YYYY')} – ${moment(settings.school_year_end).format('MMM D, YYYY')}` : 'Not configured' },
+              { label: 'State', value: selectedState || 'Not set' },
+              { label: 'Days Logged', value: `${completed} / ${goal}` },
+              { label: 'Lessons Completed', value: String(completedLessons) },
+            ].map(row => (
+              <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+                <span style={{ color: '#6b7280', fontWeight: 600 }}>{row.label}</span>
+                <span style={{ fontWeight: 800, color: '#1a1a2e' }}>{row.value}</span>
+              </div>
+            ))}
+          </div>
+          <button
+            onClick={handleExportReport}
+            disabled={isExporting || !settings?.school_year_start}
+            style={{ width: '100%', padding: '13px 20px', background: 'linear-gradient(135deg, #7c3aed, #a855f7)', color: '#fff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 800, cursor: isExporting || !settings?.school_year_start ? 'not-allowed' : 'pointer', opacity: isExporting || !settings?.school_year_start ? 0.6 : 1, fontFamily: "'Nunito', sans-serif" }}
+          >
+            {isExporting ? '⏳ Generating...' : '⬇️ Download PDF Report'}
+          </button>
+          {!settings?.school_year_start && (
+            <p style={{ fontSize: 12, color: '#9ca3af', fontWeight: 600, textAlign: 'center', marginTop: 8 }}>Configure school year dates before generating a report.</p>
+          )}
         </div>
       )}
     </div>

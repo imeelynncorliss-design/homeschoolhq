@@ -1,7 +1,7 @@
 // components/admin/EnhancedVacationManager.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@/src/lib/supabase';
 import { Calendar, Trash2, Plus, Edit2 } from 'lucide-react';
 
@@ -40,8 +40,14 @@ export default function EnhancedVacationManager({ organizationId }: EnhancedVaca
   const [notes, setNotes] = useState('');
   const [activeConfigId, setActiveConfigId] = useState<string | null>(null);
   const [showVacationList, setShowVacationList] = useState(false);
+  const formRef = useRef<HTMLDivElement>(null);
 
-  
+  useEffect(() => {
+    if (showAddForm && formRef.current) {
+      formRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [showAddForm]);
+
   useEffect(() => {
     if (!organizationId) return
     const initialize = async () => {
@@ -290,7 +296,7 @@ export default function EnhancedVacationManager({ organizationId }: EnhancedVaca
           <button
             onClick={refreshHolidays}
             disabled={refreshingHolidays || !activeConfigId || !currentUserId}
-            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 16px', background: 'linear-gradient(135deg, #7c3aed, #a855f7)', color: '#fff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 800, cursor: refreshingHolidays || !activeConfigId || !currentUserId ? 'not-allowed' : 'pointer', opacity: refreshingHolidays || !activeConfigId || !currentUserId ? 0.6 : 1, fontFamily: "'Nunito', sans-serif" }}
           >
             {refreshingHolidays ? (
               <>
@@ -307,7 +313,7 @@ export default function EnhancedVacationManager({ organizationId }: EnhancedVaca
           <button
             onClick={() => setShowAddForm(true)}
             disabled={!activeConfigId || !currentUserId}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 16px', background: 'linear-gradient(135deg, #7c3aed, #a855f7)', color: '#fff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 800, cursor: !activeConfigId || !currentUserId ? 'not-allowed' : 'pointer', opacity: !activeConfigId || !currentUserId ? 0.6 : 1, fontFamily: "'Nunito', sans-serif" }}
           >
             <Plus size={20} />
             Add Vacation Period
@@ -343,7 +349,7 @@ export default function EnhancedVacationManager({ organizationId }: EnhancedVaca
 
       {/* Add/Edit Form */}
       {showAddForm && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+        <div ref={formRef} className="bg-blue-50 border border-blue-200 rounded-lg p-6">
           <h3 className="text-lg font-semibold mb-4 text-slate-900">
             {editingVacation ? 'Edit Vacation Period' : 'Add New Vacation Period'}
           </h3>
@@ -419,13 +425,13 @@ export default function EnhancedVacationManager({ organizationId }: EnhancedVaca
           <div className="flex gap-3 mt-4">
             <button
               onClick={handleSave}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
+              style={{ padding: '9px 16px', background: 'linear-gradient(135deg, #7c3aed, #a855f7)', color: '#fff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 800, cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}
             >
               {editingVacation ? 'Update' : 'Save'} Vacation Period
             </button>
             <button
               onClick={resetForm}
-              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-slate-900"
+              style={{ padding: '9px 16px', background: 'rgba(255,255,255,0.7)', border: '2px solid rgba(124,58,237,0.3)', borderRadius: 10, fontSize: 14, fontWeight: 700, color: '#7c3aed', cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}
             >
               Cancel
             </button>
@@ -581,7 +587,7 @@ export default function EnhancedVacationManager({ organizationId }: EnhancedVaca
                     <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
                       <button
                         onClick={() => { handleEdit(v); setShowVacationList(false); }}
-                        style={{ padding: '5px 12px', borderRadius: 8, background: '#eff6ff', border: '1px solid #bfdbfe', fontSize: 12, fontWeight: 700, color: '#2563eb', cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}
+                        style={{ padding: '5px 12px', borderRadius: 8, background: 'rgba(255,255,255,0.7)', border: '2px solid rgba(124,58,237,0.3)', fontSize: 12, fontWeight: 700, color: '#7c3aed', cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}
                       >
                         Edit
                       </button>

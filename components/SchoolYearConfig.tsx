@@ -240,13 +240,13 @@ export default function SchoolYearConfig({ userId }: SchoolYearConfigProps) {
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">School Year Setup</h2>
-          <p className="text-gray-600">Configure your calendar, state compliance, and goals</p>
+          <h2 style={{ fontSize: 20, fontWeight: 900, color: '#1a1a2e', margin: '0 0 4px', fontFamily: "'Nunito', sans-serif" }}>School Year Setup</h2>
+          <p style={{ fontSize: 13, color: '#6b7280', fontWeight: 600, margin: 0 }}>Configure your calendar, state compliance, and goals</p>
         </div>
         <button
           onClick={handleExportReport}
           disabled={isExporting || !config.school_year_start}
-          className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-semibold disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors text-sm whitespace-nowrap"
+          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 18px', background: 'linear-gradient(135deg, #7c3aed, #a855f7)', color: '#fff', border: 'none', borderRadius: 99, fontSize: 13, fontWeight: 800, cursor: isExporting || !config.school_year_start ? 'not-allowed' : 'pointer', opacity: isExporting || !config.school_year_start ? 0.6 : 1, fontFamily: "'Nunito', sans-serif", whiteSpace: 'nowrap' }}
         >
           <Download size={15} />
           {isExporting ? 'Generating...' : 'Export PDF Report'}
@@ -255,22 +255,22 @@ export default function SchoolYearConfig({ userId }: SchoolYearConfigProps) {
 
       {/* ── Progress Summary Banner ── */}
       {complianceScore !== null && scoreBannerStyle && (
-        <div className={`rounded-lg p-4 border ${scoreBannerStyle.bg} flex items-center justify-between gap-4`}>
-          <div className="flex items-center gap-3">
-            <span className="text-2xl">{scoreBannerStyle.icon}</span>
+        <div style={{ background: complianceScore! >= 80 ? '#ecfdf5' : complianceScore! >= 40 ? '#fffbeb' : '#fef2f2', border: `1.5px solid ${complianceScore! >= 80 ? '#a7f3d0' : complianceScore! >= 40 ? '#fde68a' : '#fca5a5'}`, borderRadius: 12, padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span style={{ fontSize: 24 }}>{scoreBannerStyle.icon}</span>
             <div>
-              <p className={`font-semibold ${scoreBannerStyle.text}`}>
+              <p style={{ fontWeight: 800, fontSize: 14, color: '#1a1a2e', margin: '0 0 2px' }}>
                 Annual Goal Progress: {complianceScore}%
               </p>
-              <p className={`text-sm ${scoreBannerStyle.text} opacity-80`}>
+              <p style={{ fontSize: 12, color: '#4b5563', fontWeight: 600, margin: 0 }}>
                 {completedCount} of {config.annual_goal_value} {config.annual_goal_type === 'hours' ? 'hours' : 'lessons'} completed
-                {complianceScore < 80 && ' · You may need to pick up the pace to meet your annual goal'}
+                {complianceScore! < 80 && ' · You may need to pick up the pace to meet your annual goal'}
               </p>
             </div>
           </div>
           <button
             onClick={() => window.location.href = '/progress'}
-            className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap ${scoreBannerStyle.badge} border border-current border-opacity-20 hover:opacity-80 transition-opacity`}
+            style={{ padding: '8px 16px', background: 'rgba(255,255,255,0.7)', border: '2px solid rgba(124,58,237,0.3)', borderRadius: 99, fontSize: 13, fontWeight: 700, color: '#7c3aed', cursor: 'pointer', fontFamily: "'Nunito', sans-serif", whiteSpace: 'nowrap' }}
           >
             View Full Progress →
           </button>
@@ -278,8 +278,8 @@ export default function SchoolYearConfig({ userId }: SchoolYearConfigProps) {
       )}
 
       {/* School Year Dates */}
-      <div className="bg-blue-50 rounded-lg p-6 border border-blue-200">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">📅 School Year Dates</h3>
+      <div style={{ background: '#f5f3ff', borderRadius: 14, padding: '20px 24px', border: '1.5px solid rgba(124,58,237,0.15)' }}>
+        <h3 style={{ fontSize: 15, fontWeight: 900, color: '#1a1a2e', margin: '0 0 16px', fontFamily: "'Nunito', sans-serif" }}>📅 School Year Dates</h3>
         <div className="grid md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">School Year Start Date</label>
@@ -293,17 +293,17 @@ export default function SchoolYearConfig({ userId }: SchoolYearConfigProps) {
       </div>
 
       {/* State & Compliance */}
-      <div className="bg-purple-50 rounded-lg p-6 border border-purple-200">
-        <div className="flex items-center gap-2 mb-4">
-          <Shield className="w-5 h-5 text-purple-600" />
-          <h3 className="text-lg font-semibold text-gray-900">State & Compliance</h3>
+      <div style={{ background: '#f5f3ff', borderRadius: 14, padding: '20px 24px', border: '1.5px solid rgba(124,58,237,0.15)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+          <Shield size={18} style={{ color: '#7c3aed' }} />
+          <h3 style={{ fontSize: 15, fontWeight: 900, color: '#1a1a2e', margin: 0, fontFamily: "'Nunito', sans-serif" }}>State & Compliance</h3>
         </div>
-        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded text-sm">
-          <p className="text-gray-700">
+        <div style={{ marginBottom: 16, padding: '12px 14px', background: 'rgba(196,181,253,0.15)', border: '1px solid rgba(124,58,237,0.2)', borderRadius: 10, fontSize: 13 }}>
+          <p style={{ color: '#374151', margin: 0 }}>
             💡 <strong>Why select your state?</strong> Each state has different homeschool requirements.
             We'll show you what's legally required and help you track compliance throughout the year.
           </p>
-          <p className="text-gray-700 mt-2">
+          <p style={{ color: '#374151', margin: '8px 0 0' }}>
             We currently have detailed requirements for 10 states. If your state isn't listed,
             select "Custom / Other State" to enter your own requirements.
           </p>
@@ -350,9 +350,9 @@ export default function SchoolYearConfig({ userId }: SchoolYearConfigProps) {
         )}
 
         {selectedState && stateRequirements && (
-          <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
-            <p className="text-sm font-medium text-gray-900">{stateRequirements.state_name} requirements:</p>
-            <ul className="text-sm text-gray-700 space-y-1">
+          <div style={{ marginTop: 16, background: 'rgba(196,181,253,0.15)', border: '1px solid rgba(124,58,237,0.2)', borderRadius: 10, padding: '14px 16px' }}>
+            <p style={{ fontSize: 13, fontWeight: 700, color: '#1a1a2e', margin: '0 0 8px' }}>{stateRequirements.state_name} requirements:</p>
+            <ul style={{ fontSize: 13, color: '#374151', margin: '0 0 8px', paddingLeft: 4, listStyle: 'none' }}>
               {stateRequirements.required_days !== '0' && (
                 <li>• <strong>{stateRequirements.required_days} days</strong>{stateRequirements.day_requirement_type === 'Required' ? ' (required)' : ' (guideline)'}</li>
               )}
@@ -361,12 +361,12 @@ export default function SchoolYearConfig({ userId }: SchoolYearConfigProps) {
               )}
             </ul>
             {stateRequirements.overall_notes && (
-              <div className="mt-3 pt-3 border-t border-blue-300">
-                <p className="text-xs font-semibold text-gray-800 mb-2">📋 Additional Details:</p>
-                <p className="text-xs text-gray-700 whitespace-pre-line leading-relaxed">{stateRequirements.overall_notes}</p>
+              <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(124,58,237,0.15)' }}>
+                <p style={{ fontSize: 11, fontWeight: 700, color: '#1a1a2e', marginBottom: 4 }}>📋 Additional Details:</p>
+                <p style={{ fontSize: 11, color: '#4b5563', whiteSpace: 'pre-line', lineHeight: 1.6, margin: 0 }}>{stateRequirements.overall_notes}</p>
               </div>
             )}
-            <a href={ensureHttps(stateRequirements.official_source_url)} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:text-blue-800 inline-flex items-center gap-1 mt-2">
+            <a href={ensureHttps(stateRequirements.official_source_url)} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: '#7c3aed', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 8, textDecoration: 'none' }}>
               Verify at {stateRequirements.official_source_name} →
             </a>
           </div>
@@ -374,16 +374,16 @@ export default function SchoolYearConfig({ userId }: SchoolYearConfigProps) {
       </div>
 
       {/* Annual Goals */}
-      <div className="bg-green-50 rounded-lg p-6 border border-green-200">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">🎯 Annual Learning Goals</h3>
+      <div style={{ background: '#f5f3ff', borderRadius: 14, padding: '20px 24px', border: '1.5px solid rgba(124,58,237,0.15)' }}>
+        <h3 style={{ fontSize: 15, fontWeight: 900, color: '#1a1a2e', margin: '0 0 16px', fontFamily: "'Nunito', sans-serif" }}>🎯 Annual Learning Goals</h3>
         {selectedState && selectedState !== 'CUSTOM' && stateRequirements && (
-          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded text-sm">
-            <p className="text-gray-700">💡 <strong>Pre-filled from {stateRequirements.state_name} requirements.</strong> You can adjust these to exceed state minimums or match your family's goals.</p>
+          <div style={{ marginBottom: 16, padding: '12px 14px', background: 'rgba(196,181,253,0.15)', border: '1px solid rgba(124,58,237,0.2)', borderRadius: 10, fontSize: 13, color: '#374151' }}>
+            💡 <strong>Pre-filled from {stateRequirements.state_name} requirements.</strong> You can adjust these to exceed state minimums or match your family's goals.
           </div>
         )}
         {selectedState === 'CUSTOM' && (
-          <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded text-sm">
-            <p className="text-gray-700">💡 <strong>Set your own goals.</strong> Most states require 180 days or 900 hours annually.</p>
+          <div style={{ marginBottom: 16, padding: '12px 14px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10, fontSize: 13, color: '#374151' }}>
+            💡 <strong>Set your own goals.</strong> Most states require 180 days or 900 hours annually.
           </div>
         )}
         <div className="mb-4">
@@ -415,7 +415,7 @@ export default function SchoolYearConfig({ userId }: SchoolYearConfigProps) {
 
       {/* Save Button */}
       <div className="flex justify-end">
-        <button onClick={saveConfig} disabled={saving} className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold disabled:bg-blue-400">
+        <button onClick={saveConfig} disabled={saving} style={{ padding: '11px 28px', background: 'linear-gradient(135deg, #7c3aed, #a855f7)', color: '#fff', border: 'none', borderRadius: 99, fontSize: 14, fontWeight: 800, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1, fontFamily: "'Nunito', sans-serif" }}>
           {saving ? 'Saving...' : 'Save Configuration'}
         </button>
       </div>

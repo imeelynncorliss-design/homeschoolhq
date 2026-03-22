@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState, Suspense } from 'react'
-import { useTheme } from '@/contexts/ThemeContext'
 import { useFocusTrap } from '@/hooks/useFocusTrap'
 import { supabase } from '@/src/lib/supabase'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -12,7 +11,7 @@ import LessonViewModal, { type LessonViewModalLesson } from '@/components/Lesson
 import ActivityGenerator from '@/components/ActivityGenerator'
 import LessonGenerator from '@/components/LessonGenerator'
 import WeatherWidget from '@/components/WeatherWidget'
-import StylePickerModal, { DEFAULT_STRUCTURED, DEFAULT_FLEXIBLE } from '@/components/StylePickerModal'
+import StylePickerModal, { DEFAULT_STRUCTURED, DEFAULT_FLEXIBLE, DEFAULT_UNSTYLED } from '@/components/StylePickerModal'
 import ProductTour from '@/components/ProductTour'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -136,7 +135,6 @@ function StuckModal({ onClose, onGenerateLesson, onGenerateActivity, onAskScout 
   onGenerateActivity: () => void
   onAskScout: () => void
 }) {
-  const { isDark } = useTheme()
   const css = {
     overlay: {
       position: 'fixed' as const,
@@ -150,7 +148,7 @@ function StuckModal({ onClose, onGenerateLesson, onGenerateActivity, onAskScout 
       padding: 24,
     },
     modalBox: {
-      background: isDark ? '#251e4a' : 'linear-gradient(160deg, #faf5ff 0%, #ede9fe 40%, #e0f2fe 100%)',
+      background: 'linear-gradient(160deg, #faf5ff 0%, #ede9fe 40%, #f0eff4 100%)',
       borderRadius: 26,
       padding: '30px 26px 26px',
       width: '100%',
@@ -252,7 +250,6 @@ function TodaysLearningModal({
 }) {
   const router = useRouter()
   const trapRef = useFocusTrap(true)
-  const { isDark } = useTheme()
   const css = {
     overlay: {
       position: 'fixed' as const,
@@ -266,7 +263,7 @@ function TodaysLearningModal({
       padding: 24,
     },
     modalBox: {
-      background: isDark ? '#251e4a' : 'linear-gradient(160deg, #faf5ff 0%, #ede9fe 40%, #e0f2fe 100%)',
+      background: 'linear-gradient(160deg, #faf5ff 0%, #ede9fe 40%, #f0eff4 100%)',
       borderRadius: 26,
       padding: '30px 26px 26px',
       width: '100%',
@@ -704,15 +701,16 @@ function WeekStrip({
             <button
               key={key}
               onClick={() => onDayClick(key)}
+              aria-label={`${dayName} ${dayNum}${count > 0 ? `, ${count} lesson${count === 1 ? '' : 's'} scheduled` : ''}`}
               style={{
                 flex: 1, display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 3,
                 padding: '5px 2px', borderRadius: 10, border: 'none', cursor: 'pointer',
                 background: isToday ? '#7c3aed' : 'transparent',
                 transition: 'background 0.15s',
               }}>
-              <span style={{ fontFamily: "'Nunito', sans-serif", fontSize: 9, fontWeight: 700, color: isToday ? 'rgba(255,255,255,0.75)' : '#9ca3af', textTransform: 'uppercase' as const }}>{dayName}</span>
-              <span style={{ fontFamily: "'Nunito', sans-serif", fontSize: 15, fontWeight: 900, color: isToday ? '#fff' : '#1a1a2e', lineHeight: 1 }}>{dayNum}</span>
-              <div style={{ width: 4, height: 4, borderRadius: '50%', background: count > 0 ? (isToday ? 'rgba(255,255,255,0.65)' : '#7c3aed') : 'transparent' }} />
+              <span style={{ fontFamily: "'Nunito', sans-serif", fontSize: 9, fontWeight: 700, color: isToday ? 'rgba(255,255,255,0.85)' : '#6b7280', textTransform: 'uppercase' as const }}>{dayName}</span>
+              <span style={{ fontFamily: "'Nunito', sans-serif", fontSize: 15, fontWeight: 900, color: isToday ? '#fff' : '#111827', lineHeight: 1 }}>{dayNum}</span>
+              <div aria-hidden="true" style={{ width: 4, height: 4, borderRadius: '50%', background: count > 0 ? (isToday ? 'rgba(255,255,255,0.65)' : '#7c3aed') : 'transparent' }} />
             </button>
           )
         })}
@@ -899,7 +897,6 @@ function computeScoutNudge(
 function DashboardContent() {
   const router       = useRouter()
   const searchParams = useSearchParams()
-  const { isDark }   = useTheme()
   const [user, setUser]                     = useState<any>(null)
   const [loading, setLoading]               = useState(true)
   const [kidPulses, setKidPulses]           = useState<KidPulse[]>([])
@@ -920,6 +917,7 @@ function DashboardContent() {
   const [homeschoolStyle, setHomeschoolStyle] = useState<'flexible' | 'structured' | null | undefined>(undefined)
   const [pinnedFeatures, setPinnedFeatures]   = useState<string[]>([])
   const [showStylePicker, setShowStylePicker] = useState(false)
+  const [showDefaultNudge, setShowDefaultNudge] = useState(false)
   const [orgTeachingStyle,    setOrgTeachingStyle]    = useState<string | null>(null)
   const [showWelcome,         setShowWelcome]         = useState(() => searchParams?.get('preview') === 'welcome')
   const [showCurriculumNudge, setShowCurriculumNudge] = useState(() => searchParams?.get('preview') === 'curriculum')
@@ -966,20 +964,23 @@ function DashboardContent() {
         if (!resolved) { router.push('/onboarding'); return }
         orgId = resolved
 
-        // Select all rows (guard against accidental duplicates), prefer one with style set
-        const { data: profileRows } = await supabase
+        const { data: profile } = await supabase
           .from('user_profiles')
           .select('first_name, homeschool_style, pinned_features')
           .eq('user_id', user.id)
-          .order('updated_at', { ascending: false })
-        const profile = (profileRows ?? []).find((r: any) => r.homeschool_style != null)
-          ?? profileRows?.[0]
-          ?? null
+          .maybeSingle()
         localParentName = profile?.first_name ?? user.email?.split('@')[0] ?? ''
         if (profile?.first_name) setParentName(profile.first_name)
         const style = profile?.homeschool_style ?? null
         setHomeschoolStyle(style)
-        setPinnedFeatures(profile?.pinned_features ?? [])
+        const savedPins = profile?.pinned_features ?? []
+        if (style === null) {
+          // Parent skipped style picker — use defaults and show persistent nudge
+          setPinnedFeatures(savedPins.length > 0 ? savedPins : DEFAULT_UNSTYLED)
+          setShowDefaultNudge(true)
+        } else {
+          setPinnedFeatures(savedPins)
+        }
         const justOnboarded = typeof window !== 'undefined'
           && !!localStorage.getItem('hq_just_onboarded')
           && !localStorage.getItem('hq_welcome_done')
@@ -989,11 +990,10 @@ function DashboardContent() {
           setShowWelcome(true)
           // If pinned features didn't make it into DB yet, derive from style
           if ((profile?.pinned_features ?? []).length === 0) {
-            const structuredStyles = ['traditional', 'classical', 'charlotte_mason']
-            const resolvedStyle = style ?? ''
-            setPinnedFeatures(structuredStyles.includes(resolvedStyle) ? DEFAULT_STRUCTURED : DEFAULT_FLEXIBLE)
+            // style is 'structured' | 'flexible' from user_profiles
+            setPinnedFeatures(style === 'structured' ? DEFAULT_STRUCTURED : DEFAULT_FLEXIBLE)
           }
-        } else if (style === null && !sessionStorage.getItem('style_picker_dismissed')) {
+        } else if (style === null && !localStorage.getItem('style_picker_dismissed')) {
           setShowStylePicker(true)
         } else if (style !== null && !localStorage.getItem('hq_tour_done')) {
           setShowTour(true)
@@ -1129,7 +1129,7 @@ function DashboardContent() {
   }
 
   if (loading) return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #c4b5fd 0%, #e879f9 18%, #f0abfc 36%, #fbcfe8 54%, #bae6fd 76%, #6ee7b7 100%)' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#3d3a52' }}>
       <div style={{ color: '#7c3aed', fontWeight: 800, fontSize: 18, fontFamily: "'Nunito', sans-serif" }}>Loading...</div>
     </div>
   )
@@ -1140,9 +1140,7 @@ function DashboardContent() {
     root: {
       fontFamily: "'Nunito', sans-serif",
       minHeight: '100vh',
-      background: isDark
-        ? 'linear-gradient(135deg, #1a0533 0%, #2d1b69 50%, #1e1b4b 100%)'
-        : 'linear-gradient(135deg, #c4b5fd 0%, #e879f9 18%, #f0abfc 36%, #fbcfe8 54%, #bae6fd 76%, #6ee7b7 100%)',
+      background: '#3d3a52',
     },
     header: {
       background: 'transparent',
@@ -1161,19 +1159,19 @@ function DashboardContent() {
     logo: { display: 'flex', flexDirection: 'column' as const, lineHeight: 1, gap: 1 },
     logoH: { fontWeight: 900, fontSize: 26, color: '#7c3aed', letterSpacing: 0.5 },
     logoR: { fontWeight: 800, fontSize: 13, color: '#0d9488', letterSpacing: 2, paddingLeft: 24 },
-    dateStr: { fontSize: 13, color: isDark ? '#c4b5fd' : '#4b5563', fontWeight: 600 },
+    dateStr: { fontSize: 13, color: 'rgba(255,255,255,0.7)', fontWeight: 600 },
 
     cardinalWrap: { display: 'flex', alignItems: 'flex-end', gap: 12, flexShrink: 0 },
     bubble: {
-      background: isDark ? 'rgba(45,27,105,0.92)' : 'rgba(255,255,255,0.92)',
+      background: 'rgba(255,255,255,0.95)',
       borderRadius: '16px 16px 0 16px',
       padding: '14px 18px',
       boxShadow: '0 4px 20px rgba(0,0,0,0.10)',
       maxWidth: 280,
-      border: isDark ? '1px solid rgba(124,58,237,0.4)' : '1px solid rgba(255,255,255,0.95)',
+      border: '1px solid rgba(124,58,237,0.15)',
     },
-    bubbleBold: { fontWeight: 900, fontSize: 15, color: isDark ? '#f3f4f6' : '#1a1a2e' },
-    bubbleSub:  { fontSize: 13, color: isDark ? '#c4b5fd' : '#374151', marginTop: 4, lineHeight: 1.45 },
+    bubbleBold: { fontWeight: 900, fontSize: 15, color: '#1a1a2e' },
+    bubbleSub:  { fontSize: 13, color: '#374151', marginTop: 4, lineHeight: 1.45 },
     cardinal: {
       width: 130,
       height: 130,
@@ -1190,8 +1188,8 @@ function DashboardContent() {
     },
 
     sectionRow: { display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 18 },
-    secTitle:   { fontSize: 12, fontWeight: 900, color: '#6d28d9', letterSpacing: 1.2 },
-    secSub:     { fontSize: 12, color: isDark ? '#c4b5fd' : '#6b7280', fontWeight: 600 },
+    secTitle:   { fontSize: 12, fontWeight: 900, color: '#c4b5fd', letterSpacing: 1.2 },
+    secSub:     { fontSize: 12, color: 'rgba(255,255,255,0.55)', fontWeight: 600 },
 
     pulseCard: {
       display: 'flex',
@@ -1200,9 +1198,9 @@ function DashboardContent() {
       justifyContent: 'center',
       padding: '18px 12px 16px',
       minHeight: 140,
-      background: isDark ? 'rgba(45,27,105,0.45)' : 'rgba(255,255,255,0.18)',
+      background: 'rgba(255,255,255,0.85)',
       borderRadius: 20,
-      border: isDark ? '1.5px solid rgba(124,58,237,0.35)' : '1.5px solid rgba(255,255,255,0.45)',
+      border: '1.5px solid rgba(124,58,237,0.15)',
       backdropFilter: 'blur(20px)',
       boxShadow: '0 2px 16px rgba(124,58,237,0.08)',
     },
@@ -1222,11 +1220,11 @@ function DashboardContent() {
       border: '1.5px solid',
     },
     emptyCard: {
-      background: isDark ? 'rgba(45,27,105,0.7)' : 'rgba(255,255,255,0.7)',
+      background: 'rgba(255,255,255,0.85)',
       borderRadius: 22,
       padding: '48px 32px',
       textAlign: 'center' as const,
-      border: isDark ? '2px dashed rgba(124,58,237,0.4)' : '2px dashed #d1d5db',
+      border: '2px dashed #d1d5db',
     },
 
     quickGrid: {
@@ -1285,7 +1283,7 @@ function DashboardContent() {
       padding: 24,
     },
     modalBox: {
-      background: isDark ? '#251e4a' : 'linear-gradient(160deg, #faf5ff 0%, #ede9fe 40%, #e0f2fe 100%)',
+      background: 'linear-gradient(160deg, #faf5ff 0%, #ede9fe 40%, #f0eff4 100%)',
       borderRadius: 26,
       padding: '30px 26px 26px',
       width: '100%',
@@ -1410,8 +1408,8 @@ function DashboardContent() {
             onDayClick={key => setSelectedWeekDay(key)}
           />
 
-          {/* Pulse Check — hidden for flexible users unless pinned */}
-          {(homeschoolStyle !== 'flexible' || pinnedFeatures.includes('pulse_check')) && <section id="tour-pulse">
+          {/* Pulse Check — shown only when pinned (DEFAULT_STRUCTURED includes it; DEFAULT_FLEXIBLE does not) */}
+          {pinnedFeatures.includes('pulse_check') && <section id="tour-pulse">
             <div style={css.sectionRow}>
               <span style={css.secTitle}>PULSE CHECK</span>
               <span style={css.secSub}>Tap a child to see their lessons</span>
@@ -1474,6 +1472,35 @@ function DashboardContent() {
               </button>
             </div>
 
+            {/* ── Default layout nudge (shown until parent picks a style) ── */}
+            {showDefaultNudge && (
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                background: 'rgba(196,181,253,0.15)', border: '1.5px solid rgba(124,58,237,0.25)',
+                borderRadius: 12, padding: '10px 14px', marginBottom: 12,
+              }}>
+                <img src="/Cardinal_Mascot.png" alt="Scout" style={{ width: 32, height: 32, objectFit: 'contain', flexShrink: 0 }} />
+                <div style={{ flex: 1, fontSize: 12, color: 'rgba(255,255,255,0.85)', fontWeight: 600, lineHeight: 1.5 }}>
+                  Using a <span style={{ fontWeight: 900, color: '#c4b5fd' }}>default layout</span> — not personalized yet.
+                </div>
+                <button
+                  onClick={() => { setShowStylePicker(true) }}
+                  style={{
+                    background: 'linear-gradient(135deg, #7c3aed, #a855f7)', border: 'none',
+                    borderRadius: 20, padding: '6px 12px', fontSize: 11, fontWeight: 800,
+                    color: '#fff', cursor: 'pointer', fontFamily: "'Nunito', sans-serif", flexShrink: 0,
+                  }}
+                >
+                  Personalize →
+                </button>
+                <button
+                  onClick={() => setShowDefaultNudge(false)}
+                  style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', fontSize: 16, cursor: 'pointer', padding: '0 2px', lineHeight: 1, flexShrink: 0 }}
+                  aria-label="Dismiss for now"
+                >✕</button>
+              </div>
+            )}
+
             {/* ── Dynamic grid driven by pinnedFeatures ── */}
             {(() => {
               // Structured mode always gets Today's Learning first
@@ -1535,7 +1562,7 @@ function DashboardContent() {
               <button style={css.lifeFab} onClick={() => setShowLifeHappens(true)}>
                 <span style={{ fontSize: 44 }}>🌤️</span>
               </button>
-              <span style={{ fontSize: 12, fontWeight: 800, color: '#92400e', fontFamily: "'Nunito', sans-serif", letterSpacing: 0.5 }}>
+              <span style={{ fontSize: 15, fontWeight: 800, color: '#fbbf24', fontFamily: "'Nunito', sans-serif", letterSpacing: 0.5 }}>
                 Life Happens
               </span>
             </div>
@@ -1546,7 +1573,7 @@ function DashboardContent() {
                 onClick={() => { localStorage.removeItem('hq_tour_done'); setTourAutoStart(false); setShowTour(true) }}
                 style={{
                   background: 'none', border: 'none', cursor: 'pointer',
-                  fontSize: 12, fontWeight: 700, color: '#9ca3af',
+                  fontSize: 15, fontWeight: 700, color: 'rgba(255,255,255,0.55)',
                   fontFamily: "'Nunito', sans-serif",
                   letterSpacing: 0.3,
                 }}
@@ -1781,6 +1808,7 @@ function DashboardContent() {
               <div style={{ display: 'flex', gap: 10 }}>
                 <button
                   onClick={() => {
+                    localStorage.setItem('hq_curriculum_nudge_done', '1')
                     localStorage.removeItem('hq_curriculum_nudge_pending')
                     setShowCurriculumNudge(false)
                   }}
@@ -1795,6 +1823,7 @@ function DashboardContent() {
                 </button>
                 <button
                   onClick={() => {
+                    localStorage.setItem('hq_curriculum_nudge_done', '1')
                     localStorage.removeItem('hq_curriculum_nudge_pending')
                     setShowCurriculumNudge(false)
                     router.push('/curriculum/import')
@@ -1822,6 +1851,7 @@ function DashboardContent() {
             onComplete={(style, pins) => {
               setHomeschoolStyle(style)
               setPinnedFeatures(pins)
+              setShowDefaultNudge(false)
               setShowStylePicker(false)
               // Only auto-launch tour the very first time a parent sets up
               if (!localStorage.getItem('hq_tour_done')) {
@@ -1831,7 +1861,7 @@ function DashboardContent() {
             }}
             onCancel={() => {
               if (homeschoolStyle === null) {
-                sessionStorage.setItem('style_picker_dismissed', '1')
+                localStorage.setItem('style_picker_dismissed', '1')
               }
               setShowStylePicker(false)
             }}
@@ -1848,8 +1878,17 @@ function DashboardContent() {
             onDone={() => {
               setShowTour(false)
               setTourAutoStart(false)
-              if (typeof window !== 'undefined' && localStorage.getItem('hq_curriculum_nudge_pending')) {
-                setShowCurriculumNudge(true)
+              if (typeof window !== 'undefined') {
+                // Show curriculum nudge to structured-style users who haven't seen it yet.
+                // Check the actual style from DB (reliable) rather than just the localStorage key (fragile).
+                const structuredTeachingStyles = ['traditional', 'classical', 'charlotte_mason']
+                const isStructured = homeschoolStyle === 'structured'
+                  || structuredTeachingStyles.includes(orgTeachingStyle ?? '')
+                const alreadySeen = !!localStorage.getItem('hq_curriculum_nudge_done')
+                if (isStructured && !alreadySeen) {
+                  localStorage.removeItem('hq_curriculum_nudge_pending')
+                  setShowCurriculumNudge(true)
+                }
               }
             }}
           />
