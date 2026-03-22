@@ -435,7 +435,7 @@ ${printHeader(window.location.origin)}
   </div>
 
   <div style="margin-top: 40px; text-align: center;">
-    <button onclick="window.print()" style="padding: 10px 20px; font-size: 12pt; cursor: pointer; background: #3b82f6; color: white; border: none; border-radius: 5px;">
+    <button onclick="window.print()" style="padding: 10px 20px; font-size: 12pt; cursor: pointer; background: #4f46e5; color: white; border: none; border-radius: 12px; font-weight: 700;">
       Print Transcript
     </button>
     <button onclick="window.close()" style="padding: 10px 20px; font-size: 12pt; cursor: pointer; margin-left: 10px; background: #6b7280; color: white; border: none; border-radius: 5px;">
@@ -475,12 +475,12 @@ ${printHeader(window.location.origin)}
       )}
 
       {!settings && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+        <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8, padding: 16, marginBottom: 24 }}>
           <div className="flex gap-2">
             <span className="text-2xl">ℹ️</span>
             <div>
-              <h3 className="font-bold text-gray-900 mb-1">Configure Settings First</h3>
-              <p className="text-gray-700">
+              <h3 style={{ fontWeight: 700, color: '#1e40af', marginBottom: 4 }}>Configure Settings First</h3>
+              <p style={{ color: '#374151', margin: 0 }}>
                 For a professional transcript, add your school information in the Settings tab before generating.
               </p>
             </div>
@@ -490,21 +490,21 @@ ${printHeader(window.location.origin)}
 
       {/* Preview Stats */}
       <div className="grid grid-cols-4 gap-4 mb-6">
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div className="text-sm text-gray-600 mb-1">Unweighted GPA</div>
-          <div className="text-3xl font-bold text-blue-900">{unweightedGPA.toFixed(3)}</div>
+        <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8, padding: 16 }}>
+          <div style={{ fontSize: 14, color: '#4b5563', marginBottom: 4 }}>Unweighted GPA</div>
+          <div style={{ fontSize: 30, fontWeight: 700, color: '#1e40af' }}>{unweightedGPA.toFixed(3)}</div>
         </div>
-        <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-          <div className="text-sm text-gray-600 mb-1">Weighted GPA</div>
-          <div className="text-3xl font-bold text-purple-900">{weightedGPA.toFixed(3)}</div>
+        <div style={{ background: '#faf5ff', border: '1px solid #e9d5ff', borderRadius: 8, padding: 16 }}>
+          <div style={{ fontSize: 14, color: '#4b5563', marginBottom: 4 }}>Weighted GPA</div>
+          <div style={{ fontSize: 30, fontWeight: 700, color: '#6b21a8' }}>{weightedGPA.toFixed(3)}</div>
         </div>
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-          <div className="text-sm text-gray-600 mb-1">Total Credits</div>
-          <div className="text-3xl font-bold text-green-900">{totalCredits.toFixed(2)}</div>
+        <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: 16 }}>
+          <div style={{ fontSize: 14, color: '#4b5563', marginBottom: 4 }}>Total Credits</div>
+          <div style={{ fontSize: 30, fontWeight: 700, color: '#15803d' }}>{totalCredits.toFixed(2)}</div>
         </div>
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-          <div className="text-sm text-gray-600 mb-1">Lessons Documented</div>
-          <div className="text-3xl font-bold text-amber-900">{totalLinkedLessons}</div>
+        <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: 16 }}>
+          <div style={{ fontSize: 14, color: '#4b5563', marginBottom: 4 }}>Lessons Documented</div>
+          <div style={{ fontSize: 30, fontWeight: 700, color: '#b45309' }}>{totalLinkedLessons}</div>
         </div>
       </div>
 
@@ -533,23 +533,23 @@ ${printHeader(window.location.origin)}
         <button
           onClick={generatePDF}
           disabled={generating || courses.length === 0}
-          className="bg-green-600 text-white px-8 py-4 rounded-lg hover:bg-green-700 font-bold text-lg disabled:bg-gray-400 disabled:cursor-not-allowed"
+          style={{ background: 'linear-gradient(135deg, #7c3aed, #a855f7)', color: '#fff', border: 'none', borderRadius: 12, padding: '14px 32px', fontSize: 15, fontWeight: 700, cursor: generating || courses.length === 0 ? 'default' : 'pointer', opacity: generating || courses.length === 0 ? 0.5 : 1, fontFamily: "'Nunito', sans-serif" }}
         >
           {generating ? 'Generating...' : '📄 Generate Transcript PDF'}
         </button>
       </div>
 
       {/* Instructions */}
-      <div className="mt-8 bg-gray-50 rounded-lg p-6">
-        <h3 className="font-bold text-gray-900 mb-3">📋 How to Use Your Transcript</h3>
-        <ol className="list-decimal list-inside space-y-2 text-gray-700">
+      <div style={{ marginTop: 32, background: '#f9fafb', borderRadius: 8, padding: 24 }}>
+        <h3 style={{ fontWeight: 700, color: '#111827', marginBottom: 12 }}>📋 How to Use Your Transcript</h3>
+        <ol style={{ paddingLeft: 20, margin: 0, display: 'flex', flexDirection: 'column', gap: 8, color: '#374151' }}>
           <li>Click "Generate Transcript PDF" to open a printable version in a new window</li>
           <li>Review the transcript for accuracy</li>
           <li>Click "Print Transcript" to save as PDF (choose "Save as PDF" in print dialog)</li>
           <li>Send the PDF to colleges, or print and sign for a physical copy</li>
         </ol>
-        <div className="mt-4 text-sm text-gray-600">
-          <p><strong>💡 Pro Tip:</strong> Most colleges accept electronic transcripts via email or their application portals.
+        <div style={{ marginTop: 16, fontSize: 14, color: '#4b5563' }}>
+          <p style={{ margin: 0 }}><strong>💡 Pro Tip:</strong> Most colleges accept electronic transcripts via email or their application portals.
           Some may require a physical signed copy — check with each school's admissions office.</p>
         </div>
       </div>

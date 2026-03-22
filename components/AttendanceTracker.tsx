@@ -12,6 +12,7 @@ import PDFExport from './PDFExport'
 import DayDetails from './DayDetails'
 import ResolveAttendanceModal from './ResolveAttendanceModal'
 import { parseLocalDate } from '@/src/lib/utils'
+import { useTheme } from '@/contexts/ThemeContext'
 
 
 interface AttendanceTrackerProps {
@@ -73,6 +74,9 @@ type ViewMode = 'list' | 'calendar'
 type TabMode = 'overview' | 'insights' | 'goals' | 'compliance' | 'reports'
 
 export default function AttendanceTracker({ kids, organizationId, userId }: AttendanceTrackerProps) {
+  const { isDark } = useTheme()
+  const darkCardStyle: React.CSSProperties = isDark ? { backgroundColor: 'var(--hr-bg-surface)', borderColor: 'rgba(255,255,255,0.12)' } : {}
+
   const supabase = useMemo(() => createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -804,7 +808,7 @@ useEffect(() => {
           <p className="text-gray-600">Track school days and instructional hours</p>
         </div>
         {attendanceMarkedToday ? (
-        <div className="flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 rounded-lg border border-green-200">
+        <div className="flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 rounded-lg border border-green-200" style={darkCardStyle}>
           <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
           </svg>
@@ -856,7 +860,7 @@ useEffect(() => {
           <p className="text-sm font-medium text-gray-900">Progress to {stats.required} days</p>
           <p className="text-sm text-gray-600">{stats.totalDays} days completed</p>
         </div>
-        <div className="w-full bg-gray-200 rounded-full h-3">
+        <div className="w-full bg-gray-200 rounded-full h-3" style={isDark ? { backgroundColor: 'rgba(255,255,255,0.12)' } : {}}>
           <div 
             className="bg-red-600 h-3 rounded-full transition-all duration-300"
             style={{ width: `${Math.min((stats.totalDays / stats.required) * 100, 100)}%` }}
@@ -1076,17 +1080,19 @@ useEffect(() => {
                         {/* Month Header */}
                         <button
                           onClick={() => toggleMonth(index)}
-                          className="w-full px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors flex items-center justify-between"
+                          style={{ width: '100%', padding: '12px 16px', background: '#f9fafb', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', transition: 'background 0.15s' }}
+                          onMouseEnter={e => (e.currentTarget.style.background = '#f3f4f6')}
+                          onMouseLeave={e => (e.currentTarget.style.background = '#f9fafb')}
                         >
-                          <div className="flex items-center gap-3">
-                            <span className="text-lg">
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                            <span style={{ fontSize: 18, color: '#374151' }}>
                               {group.isExpanded ? '▼' : '▶'}
                             </span>
-                            <div>
-                              <h4 className="font-semibold text-gray-900">
+                            <div style={{ textAlign: 'left' }}>
+                              <h4 style={{ fontWeight: 600, color: '#111827', margin: 0, fontSize: 15 }}>
                                 {group.month} {group.year}
                               </h4>
-                              <p className="text-sm text-gray-900">
+                              <p style={{ fontSize: 14, color: '#6b7280', margin: 0 }}>
                                 {group.totalDays} days • {group.totalHours.toFixed(1)} hours
                               </p>
                             </div>
@@ -1311,6 +1317,9 @@ interface MarkAttendanceModalProps {
 }
 
 function MarkAttendanceModal({ date, kids, selectedKid, existingAttendance, defaultHours, organizationId, userId, supabaseClient, onSave, onClose }: MarkAttendanceModalProps) {
+  const { isDark } = useTheme()
+  const darkCardStyle: React.CSSProperties = isDark ? { backgroundColor: 'var(--hr-bg-surface)', borderColor: 'rgba(255,255,255,0.12)' } : {}
+
   const [status, setStatus] = useState<'full_day' | 'half_day' | 'no_school'>(existingAttendance?.status || 'full_day')
   const [hours, setHours] = useState(existingAttendance?.hours ?? defaultHours ?? 4)
   const [notes, setNotes] = useState(existingAttendance?.notes || '')
@@ -1513,7 +1522,7 @@ function MarkAttendanceModal({ date, kids, selectedKid, existingAttendance, defa
               {existingUploads.length > 0 && (
                 <div className="mb-2 space-y-1">
                   {existingUploads.map(upload => (
-                    <div key={upload.id} className="flex items-center justify-between bg-purple-50 rounded px-3 py-2 text-sm">
+                    <div key={upload.id} className="flex items-center justify-between bg-purple-50 rounded px-3 py-2 text-sm" style={darkCardStyle}>
                       <a
                         href={upload.file_url}
                         target="_blank"
@@ -1539,7 +1548,7 @@ function MarkAttendanceModal({ date, kids, selectedKid, existingAttendance, defa
               {pendingFiles.length > 0 && (
                 <div className="mb-2 space-y-1">
                   {pendingFiles.map((file, i) => (
-                    <div key={i} className="flex items-center justify-between bg-blue-50 rounded px-3 py-2 text-sm">
+                    <div key={i} className="flex items-center justify-between bg-blue-50 rounded px-3 py-2 text-sm" style={darkCardStyle}>
                       <span className="text-blue-700 font-medium truncate max-w-[220px]">
                         🆕 {file.name} <span className="text-blue-400 font-normal">({(file.size / 1024).toFixed(0)} KB)</span>
                       </span>

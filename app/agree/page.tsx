@@ -13,9 +13,7 @@ export default function AgreePage() {
   const css: Record<string, React.CSSProperties> = {
     page: {
       minHeight: '100vh',
-      background: isDark
-        ? 'linear-gradient(135deg, #1a0533 0%, #2d1b69 50%, #1e1b4b 100%)'
-        : 'linear-gradient(135deg, #ede9fe 0%, #fce7f3 50%, #dbeafe 100%)',
+      background: '#3d3a52',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -23,7 +21,7 @@ export default function AgreePage() {
       fontFamily: typography.fontFamily,
     },
     loadingText: {
-      color: colors.purple,
+      color: '#c4b5fd',
       fontWeight: typography.weights.bold,
       fontSize: typography.sizes.md,
       fontFamily: typography.fontFamily,

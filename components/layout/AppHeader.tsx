@@ -140,33 +140,6 @@ function featureKeyFromPath(pathname: string): string | null {
 // Inline so no image dependency. Swap for <img src="/cardinal.png"> once asset exists.
 
 
-// ─── Theme Toggle ─────────────────────────────────────────────────────────────
-
-function ThemeToggle() {
-  const { isDark, toggleTheme } = useTheme()
-  return (
-    <button
-      onClick={toggleTheme}
-      aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-      title={isDark ? 'Light mode' : 'Dark mode'}
-      style={{
-        background: 'rgba(255,255,255,0.15)',
-        border: '1px solid rgba(255,255,255,0.25)',
-        borderRadius: 8,
-        color: '#fff',
-        fontSize: 16,
-        padding: '5px 8px',
-        cursor: 'pointer',
-        lineHeight: 1,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-    >
-      {isDark ? '☀️' : '🌙'}
-    </button>
-  )
-}
 
 // ─── Star Rating ──────────────────────────────────────────────────────────────
 
@@ -875,8 +848,6 @@ export default function AppHeader() {
             </button>
           )}
 
-          {/* Dark / light mode toggle */}
-          <ThemeToggle />
 
           {/* Scout proactive button */}
           {userId && scoutNudge && (

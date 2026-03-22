@@ -7,7 +7,7 @@ import AuthGuard from '@/components/AuthGuard'
 import CurriculumImporter from '@/components/CurriculumImporter'
 import { getOrganizationId } from '@/src/lib/getOrganizationId'
 import { useAppHeader } from '@/components/layout/AppHeader'
-import { useTheme } from '@/contexts/ThemeContext'
+import { pageShell } from '@/src/lib/designTokens'
 
 interface Kid {
   id: string
@@ -17,7 +17,6 @@ interface Kid {
 function ToolsContent() {
   const router = useRouter()
   useAppHeader({ title: '🔧 Tools' })
-  const { isDark } = useTheme()
   const [orgId, setOrgId] = useState<string | null>(null)
   const [kids, setKids] = useState<Kid[]>([])
   const [loading, setLoading] = useState(true)
@@ -47,181 +46,46 @@ function ToolsContent() {
   }, [])
 
   if (loading) return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#3d3a52' }}>
       <div style={{ color: '#7c3aed', fontWeight: 700 }}>Loading…</div>
     </div>
   )
 
   const selectedKid = kids.find(k => k.id === importKidId) ?? null
 
-  const css: Record<string, React.CSSProperties> = {
-    root: {
-      minHeight: '100vh',
-      background: isDark ? 'linear-gradient(135deg, #1a0533 0%, #2d1b69 50%, #1e1b4b 100%)' : 'linear-gradient(135deg, #c4b5fd 0%, #e879f9 18%, #f0abfc 36%, #fbcfe8 54%, #bae6fd 76%, #6ee7b7 100%)',
-      fontFamily: "'Nunito', sans-serif",
-      paddingBottom: 80,
-    },
-    inner: {
-      maxWidth: 800,
-      margin: '0 auto',
-      padding: '28px 20px 0',
-    },
-    pageHeader: {
-      marginBottom: 24,
-    },
-    pageTitle: {
-      fontSize: 26,
-      fontWeight: 900,
-      color: isDark ? 'var(--hr-text-primary)' : '#1e1b4b',
-      margin: '0 0 6px',
-      fontFamily: "'Nunito', sans-serif",
-    },
-    pageSub: {
-      fontSize: 14,
-      color: isDark ? 'var(--hr-text-secondary)' : '#4b5563',
-      fontWeight: 600,
-      margin: '0 0 24px',
-      lineHeight: 1.6,
-    },
-    grid: {
-      display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-      gap: 16,
-      marginBottom: 20,
-    },
-    card: {
-      background: isDark ? 'var(--hr-bg-card)' : 'rgba(255,255,255,0.82)',
-      borderRadius: 18,
-      border: isDark ? '1.5px solid rgba(124,58,237,0.25)' : '1.5px solid rgba(124,58,237,0.13)',
-      backdropFilter: 'blur(8px)',
-      boxShadow: '0 2px 12px rgba(124,58,237,0.08)',
-      padding: '18px 20px',
-      display: 'flex',
-      flexDirection: 'column' as const,
-      gap: 8,
-      transition: 'transform 0.15s ease, box-shadow 0.15s ease',
-    },
-    cardIcon: {
-      width: 52,
-      height: 52,
-      borderRadius: 16,
-      flexShrink: 0,
-      background: 'linear-gradient(135deg, #ede9fe, #dbeafe)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontSize: 26,
-      marginBottom: 4,
-    },
-    cardTitle: {
-      fontSize: 16,
-      fontWeight: 800,
-      color: isDark ? 'var(--hr-text-primary)' : '#1a1a2e',
-      marginBottom: 3,
-    },
-    cardDesc: {
-      fontSize: 13,
-      color: isDark ? 'var(--hr-text-secondary)' : '#4b5563',
-      fontWeight: 600,
-      lineHeight: 1.4,
-      flex: 1,
-    },
-    label: {
-      fontSize: 11,
-      fontWeight: 800,
-      color: isDark ? 'var(--hr-text-secondary)' : '#4b5563',
-      letterSpacing: 0.5,
-      textTransform: 'uppercase' as const,
-      display: 'block',
-      marginBottom: 5,
-    },
-    select: {
-      width: '100%',
-      padding: '9px 12px',
-      borderRadius: 10,
-      border: isDark ? '1.5px solid rgba(124,58,237,0.3)' : '1.5px solid #e5e7eb',
-      fontSize: 14,
-      color: isDark ? 'var(--hr-text-primary)' : '#1f2937',
-      background: isDark ? 'var(--hr-bg-card)' : '#fff',
-      marginBottom: 8,
-    },
-    primaryBtn: {
-      padding: '11px 18px',
-      background: 'linear-gradient(135deg, #7c3aed, #a855f7)',
-      color: '#fff',
-      border: 'none',
-      borderRadius: 10,
-      fontSize: 14,
-      fontWeight: 800,
-      cursor: 'pointer',
-      marginTop: 4,
-    },
-    secondaryBtn: {
-      padding: '11px 18px',
-      background: 'linear-gradient(135deg, #7c3aed, #a855f7)',
-      color: '#fff',
-      border: 'none',
-      borderRadius: 10,
-      fontSize: 14,
-      fontWeight: 800,
-      cursor: 'pointer',
-      marginTop: 4,
-    },
-    inlinePanel: {
-      background: isDark ? 'var(--hr-bg-card)' : '#fff',
-      borderRadius: 16,
-      padding: '20px 22px',
-      boxShadow: '0 2px 12px rgba(0,0,0,0.07)',
-      border: '1px solid rgba(124,58,237,0.12)',
-      marginBottom: 20,
-    },
-    inlinePanelHead: {
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      marginBottom: 16,
-    },
-    closeInline: {
-      background: 'none',
-      border: 'none',
-      fontSize: 16,
-      color: '#9ca3af',
-      cursor: 'pointer',
-    },
+  const btnStyle: React.CSSProperties = {
+    padding: '11px 18px',
+    background: 'linear-gradient(135deg, #7c3aed, #a855f7)',
+    color: '#fff', border: 'none', borderRadius: 10,
+    fontSize: 14, fontWeight: 800, cursor: 'pointer', marginTop: 4,
+    fontFamily: "'Nunito', sans-serif",
   }
 
   return (
-    <div style={css.root}>
+    <div style={{ ...pageShell.root, paddingBottom: 80 }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
-        *, *::before, *::after { box-sizing: border-box; }
-        body { margin: 0; }
         .tool-card:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(124,58,237,0.18) !important; }
         .tool-card:active { transform: scale(0.98); }
       `}</style>
-      <div style={css.inner}>
+      <main style={pageShell.main}>
 
-        {/* Page header */}
-        <div style={css.pageHeader}>
-          <h1 style={css.pageTitle}>🔧 Tools</h1>
-          <p style={css.pageSub}>Setup, scheduling, and account management</p>
-        </div>
+        <div className="hr-section-label" style={{ marginBottom: 14, marginTop: 8 }}>SETUP, SCHEDULING &amp; ACCOUNT MANAGEMENT</div>
 
         {/* Tool cards */}
-        <div style={css.grid}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, marginBottom: 20 }}>
 
           {/* Curriculum Import */}
-          <div className="tool-card" style={css.card}>
-            <div style={css.cardIcon}>📋</div>
-            <div style={css.cardTitle}>Curriculum Import</div>
-            <div style={css.cardDesc}>
+          <div className="hr-card tool-card" style={{ padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={{ width: 52, height: 52, borderRadius: 16, background: 'linear-gradient(135deg, #ede9fe, #dbeafe)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, marginBottom: 4 }}>📋</div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: '#1a1a2e', marginBottom: 3 }}>Curriculum Import</div>
+            <div style={{ fontSize: 13, color: '#4b5563', fontWeight: 600, lineHeight: 1.4, flex: 1 }}>
               Got a curriculum with a table of contents? Upload a PDF or photo and Scout will extract the lessons and add them to your schedule automatically.
             </div>
             {kids.length > 1 && (
               <div style={{ marginTop: 12 }}>
-                <label style={css.label}>Import for</label>
+                <label style={{ fontSize: 11, fontWeight: 800, color: '#4b5563', letterSpacing: 0.5, textTransform: 'uppercase', display: 'block', marginBottom: 5 }}>Import for</label>
                 <select
-                  style={css.select}
+                  style={{ width: '100%', padding: '9px 12px', borderRadius: 10, border: '1.5px solid #e5e7eb', fontSize: 14, color: '#1f2937', background: '#fff', marginBottom: 8 }}
                   value={importKidId}
                   onChange={e => setImportKidId(e.target.value)}
                 >
@@ -231,94 +95,62 @@ function ToolsContent() {
                 </select>
               </div>
             )}
-            <button
-              style={css.primaryBtn}
-              onClick={() => setShowImporter(true)}
-              disabled={!importKidId}
-            >
+            <button style={btnStyle} onClick={() => setShowImporter(true)} disabled={!importKidId}>
               📋 Import Curriculum
             </button>
           </div>
 
           {/* Bulk Schedule */}
-          <div className="tool-card" style={css.card}>
-            <div style={css.cardIcon}>⚡</div>
-            <div style={css.cardTitle}>Bulk Schedule</div>
-            <div style={css.cardDesc}>
+          <div className="hr-card tool-card" style={{ padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={{ width: 52, height: 52, borderRadius: 16, background: 'linear-gradient(135deg, #ede9fe, #dbeafe)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, marginBottom: 4 }}>⚡</div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: '#1a1a2e', marginBottom: 3 }}>Bulk Schedule</div>
+            <div style={{ fontSize: 13, color: '#4b5563', fontWeight: 600, lineHeight: 1.4, flex: 1 }}>
               Have a pile of unscheduled lessons? Assign dates to many lessons at once — perfect for planning out a full semester in minutes.
             </div>
-            <button
-              style={css.secondaryBtn}
-              onClick={() => router.push('/bulk-schedule')}
-            >
-              ⚡ Open Scheduler
-            </button>
+            <button style={btnStyle} onClick={() => router.push('/bulk-schedule')}>⚡ Open Scheduler</button>
           </div>
 
           {/* Vacation Planner */}
-          <div className="tool-card" style={css.card}>
-            <div style={css.cardIcon}>🌴</div>
-            <div style={css.cardTitle}>Vacation Planner</div>
-            <div style={css.cardDesc}>
+          <div className="hr-card tool-card" style={{ padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={{ width: 52, height: 52, borderRadius: 16, background: 'linear-gradient(135deg, #ede9fe, #dbeafe)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, marginBottom: 4 }}>🌴</div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: '#1a1a2e', marginBottom: 3 }}>Vacation Planner</div>
+            <div style={{ fontSize: 13, color: '#4b5563', fontWeight: 600, lineHeight: 1.4, flex: 1 }}>
               Add holidays, breaks, and family trips to your school calendar. Scout won't schedule lessons on days you mark as off.
             </div>
-            <button
-              style={css.secondaryBtn}
-              onClick={() => router.push('/vacation')}
-            >
-              🌴 Manage Vacations
-            </button>
+            <button style={btnStyle} onClick={() => router.push('/vacation')}>🌴 Manage Vacations</button>
           </div>
 
           {/* Co-Teachers */}
-          <div className="tool-card" style={css.card}>
-            <div style={css.cardIcon}>👩‍🏫</div>
-            <div style={css.cardTitle}>Co-Teachers</div>
-            <div style={css.cardDesc}>
+          <div className="hr-card tool-card" style={{ padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={{ width: 52, height: 52, borderRadius: 16, background: 'linear-gradient(135deg, #ede9fe, #dbeafe)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, marginBottom: 4 }}>👩‍🏫</div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: '#1a1a2e', marginBottom: 3 }}>Co-Teachers</div>
+            <div style={{ fontSize: 13, color: '#4b5563', fontWeight: 600, lineHeight: 1.4, flex: 1 }}>
               Invite a spouse, grandparent, or tutor to view and log lessons alongside you. They get their own login with access to your school.
             </div>
-            <button
-              style={css.secondaryBtn}
-              onClick={() => router.push('/co-teachers')}
-            >
-              👩‍🏫 Manage Co-Teachers
-            </button>
+            <button style={btnStyle} onClick={() => router.push('/co-teachers')}>👩‍🏫 Manage Co-Teachers</button>
           </div>
 
           {/* Standards Setup */}
-          <div className="tool-card" style={css.card}>
-            <div style={css.cardIcon}>📌</div>
-            <div style={css.cardTitle}>Standards Setup</div>
-            <div style={css.cardDesc}>
+          <div className="hr-card tool-card" style={{ padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={{ width: 52, height: 52, borderRadius: 16, background: 'linear-gradient(135deg, #ede9fe, #dbeafe)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, marginBottom: 4 }}>📌</div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: '#1a1a2e', marginBottom: 3 }}>Standards Setup</div>
+            <div style={{ fontSize: 13, color: '#4b5563', fontWeight: 600, lineHeight: 1.4, flex: 1 }}>
               Import Common Core standards for your kids' grade levels. Once imported, you can tag standards to lessons and track coverage automatically.
             </div>
-            <button
-              style={css.secondaryBtn}
-              onClick={() => router.push('/standards-setup')}
-            >
-              📥 Import Standards
-            </button>
+            <button style={btnStyle} onClick={() => router.push('/standards-setup')}>📥 Import Standards</button>
           </div>
 
           {/* Google Calendar Sync */}
-          <div className="tool-card" style={css.card}>
-            <div style={css.cardIcon}>📅</div>
-            <div style={css.cardTitle}>Google Calendar Sync</div>
-            <div style={css.cardDesc}>
+          <div className="hr-card tool-card" style={{ padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={{ width: 52, height: 52, borderRadius: 16, background: 'linear-gradient(135deg, #ede9fe, #dbeafe)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, marginBottom: 4 }}>📅</div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: '#1a1a2e', marginBottom: 3 }}>Google Calendar Sync</div>
+            <div style={{ fontSize: 13, color: '#4b5563', fontWeight: 600, lineHeight: 1.4, flex: 1 }}>
               Connect your Google Calendar or Outlook to detect conflicts between work meetings and homeschool lessons — automatically, every 15 minutes.
             </div>
-            <button
-              style={css.secondaryBtn}
-              onClick={() => router.push('/calendar/connect')}
-            >
-              📅 Connect Calendar
-            </button>
+            <button style={btnStyle} onClick={() => router.push('/calendar/connect')}>📅 Connect Calendar</button>
           </div>
         </div>
-
-        {/* Spacer for bottom nav */}
-        <div style={{ height: 88 }} />
-      </div>
+      </main>
 
       {/* Curriculum Importer modal */}
       {showImporter && selectedKid && orgId && (

@@ -9,16 +9,11 @@ import AuthGuard from '@/components/AuthGuard'
 import { syncBetaTier } from '@/lib/tierTesting'
 import { getOrganizationId } from '@/src/lib/getOrganizationId'
 import { useAppHeader } from '@/components/layout/AppHeader'
-
-// ─── Bottom Nav ───────────────────────────────────────────────────────────────
-
-// ─── Calendar Content ─────────────────────────────────────────────────────────
-
-const GRADIENT = 'linear-gradient(135deg, #c4b5fd 0%, #e879f9 18%, #f0abfc 36%, #fbcfe8 54%, #bae6fd 76%, #6ee7b7 100%)'
+import { colors } from '@/src/lib/designTokens'
 
 function CalendarContent() {
   const router = useRouter()
-  useAppHeader({ title: '📅 Calendar' })
+  useAppHeader({ title: '📅 Calendar', backHref: '/tools' })
   const [user, setUser] = useState<any>(null)
   const [kids, setKids] = useState<any[]>([])
   const [lessonsByKid, setLessonsByKid] = useState<{ [kidId: string]: any[] }>({})
@@ -82,7 +77,7 @@ function CalendarContent() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', background: GRADIENT, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ minHeight: '100vh', background: colors.pageBackground, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ width: 40, height: 40, borderRadius: '50%', border: '3px solid #e9d5ff', borderTopColor: '#7c3aed', animation: 'spin 0.8s linear infinite' }} />
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
@@ -90,32 +85,10 @@ function CalendarContent() {
   }
 
   return (
-    <div style={{ fontFamily: "'Nunito', sans-serif", minHeight: '100vh', background: GRADIENT, paddingBottom: 80 }}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
-        *, *::before, *::after { box-sizing: border-box; }
-        body { margin: 0; }
-        @media print { .no-print { display: none !important; } }
-      `}</style>
-
-      {/* Top bar */}
-      <div className="no-print" style={{ maxWidth: 960, margin: '0 auto', padding: '16px 20px 0', display: 'flex', alignItems: 'center' }}>
-        <button
-          onClick={() => router.back()}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 6,
-            padding: '7px 14px', borderRadius: 20, border: 'none',
-            background: 'rgba(255,255,255,0.7)', color: '#6b7280',
-            fontSize: 13, fontWeight: 700, cursor: 'pointer',
-            fontFamily: "'Nunito', sans-serif",
-          }}>
-          ← Back
-        </button>
-      </div>
-
-      {/* Page title */}
-      <div style={{ maxWidth: 960, margin: '0 auto', padding: '20px 20px 0' }}>
-        <h1 style={{ fontSize: 26, fontWeight: 900, color: '#1e1b4b', margin: '0 0 20px', fontFamily: "'Nunito', sans-serif" }}>
+    <div className="hr-page" style={{ fontFamily: "'Nunito', sans-serif", paddingBottom: 80 }}>
+      {/* Page content */}
+      <div style={{ maxWidth: 960, margin: '0 auto', padding: '24px 20px 0' }}>
+        <h1 className="hr-h1" style={{ fontSize: 26, margin: '0 0 20px', fontFamily: "'Nunito', sans-serif" }}>
           Calendar
         </h1>
 
@@ -136,11 +109,7 @@ function CalendarContent() {
             organizationId={organizationId}
           />
         ) : (
-          <div style={{
-            background: 'rgba(255,255,255,0.82)', borderRadius: 18,
-            border: '1.5px solid rgba(124,58,237,0.13)', padding: '40px 24px',
-            textAlign: 'center', color: '#6b7280', fontSize: 15, fontWeight: 600,
-          }}>
+          <div className="hr-card" style={{ padding: '40px 24px', textAlign: 'center', color: '#6b7280', fontSize: 15, fontWeight: 600 }}>
             Add children to your account to see lessons on the calendar.
           </div>
         )}
@@ -212,7 +181,7 @@ function CalendarContent() {
 export default function CalendarPage() {
   return (
     <AuthGuard>
-      <Suspense fallback={<div style={{ minHeight: '100vh', background: GRADIENT }} />}>
+      <Suspense fallback={<div style={{ minHeight: '100vh', background: colors.pageBackground }} />}>
         <CalendarContent />
       </Suspense>
     </AuthGuard>

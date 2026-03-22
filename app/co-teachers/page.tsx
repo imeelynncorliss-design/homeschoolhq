@@ -37,13 +37,6 @@ type Collaborator = {
 
 // ─── Status helpers ───────────────────────────────────────────────────────────
 
-const STATUS_STYLES: Record<string, string> = {
-  pending:  'bg-emerald-50 text-emerald-700 border border-emerald-200',
-  accepted: 'bg-blue-50 text-blue-700 border border-blue-200',
-  revoked:  'bg-red-50 text-red-500 border border-red-200',
-  expired:  'bg-gray-100 text-gray-400 border border-gray-200',
-  declined: 'bg-amber-50 text-amber-600 border border-amber-200',
-};
 
 const ROLE_LABELS: Record<string, string> = {
   co_teacher: 'Co-Teacher',
@@ -68,7 +61,6 @@ export default function CoTeachersPage() {
   const supabase = createClient();
 
   const [orgId, setOrgId] = useState<string | null>(null);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [invites, setInvites] = useState<Invite[]>([]);
   const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
   const [loading, setLoading] = useState(true);
@@ -100,7 +92,7 @@ export default function CoTeachersPage() {
         return;
       }
 
-      setCurrentUserId(user.id);
+
       setOrgId(membership.organization_id);
       setLoading(false);
     }
@@ -176,8 +168,8 @@ export default function CoTeachersPage() {
   // ── Render states ───────────────────────────────────────────────────────────
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#3d3a52' }}>
+        <div style={{ color: '#7c3aed', fontWeight: 700, fontFamily: "'Nunito', sans-serif" }}>Loading…</div>
       </div>
     );
   }
@@ -185,203 +177,137 @@ export default function CoTeachersPage() {
   const pendingInvites = invites.filter(i => i.status === 'pending' && !isExpired(i.expires_at));
   const pastInvites = invites.filter(i => i.status !== 'pending' || isExpired(i.expires_at));
 
+  const rowStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, padding: '14px 20px', borderBottom: '1px solid rgba(0,0,0,0.06)' };
+  const labelStyle: React.CSSProperties = { fontSize: 12, fontWeight: 700, color: '#1a1a2e', marginBottom: 2 };
+  const subStyle: React.CSSProperties = { fontSize: 12, color: '#6b7280', fontWeight: 600 };
+const inputStyle: React.CSSProperties = { width: '100%', padding: '9px 12px', borderRadius: 10, border: '1.5px solid #e5e7eb', fontSize: 13, color: '#1f2937', background: '#fff', fontFamily: "'Nunito', sans-serif", boxSizing: 'border-box' };
+  const dangerBtn: React.CSSProperties = { background: 'none', border: 'none', fontSize: 12, fontWeight: 700, color: '#ef4444', cursor: 'pointer', fontFamily: "'Nunito', sans-serif", flexShrink: 0 };
+
+  const STATUS_INLINE: Record<string, React.CSSProperties> = {
+    pending:  { background: '#ecfdf5', color: '#059669', border: '1px solid #a7f3d0' },
+    accepted: { background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe' },
+    revoked:  { background: '#fef2f2', color: '#ef4444', border: '1px solid #fca5a5' },
+    expired:  { background: '#f9fafb', color: '#9ca3af', border: '1px solid #e5e7eb' },
+    declined: { background: '#fffbeb', color: '#d97706', border: '1px solid #fde68a' },
+  };
+
   // ── Main render ─────────────────────────────────────────────────────────────
   return (
-    <div style={pageShell.root}>
-      <header style={pageShell.topBar}>
-        <div style={pageShell.topBarLeft}>
-          <button style={pageShell.headerBtn} onClick={() => router.push('/tools')}>
-            ← Tools
-          </button>
-          <div style={pageShell.pageTitle}>👩‍🏫 Co-Teachers</div>
-        </div>
-      </header>
-
-      <div className="max-w-3xl mx-auto px-4 py-10 space-y-8" style={{ paddingBottom: 100 }}>
+    <div style={{ ...pageShell.root, paddingBottom: 100 }}>
+      <main style={pageShell.main}>
 
         {/* Success/Error messages */}
         {success && (
-          <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl px-4 py-3 text-sm font-medium">
+          <div style={{ margin: '0 0 12px', padding: '12px 16px', background: '#ecfdf5', border: '1.5px solid #a7f3d0', borderRadius: 10, fontSize: 13, color: '#059669', fontWeight: 700 }}>
             ✅ {success}
           </div>
         )}
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-600 rounded-xl px-4 py-3 text-sm font-medium">
+          <div style={{ margin: '0 0 12px', padding: '12px 16px', background: '#fef2f2', border: '1.5px solid #fca5a5', borderRadius: 10, fontSize: 13, color: '#dc2626', fontWeight: 700 }}>
             ⚠️ {error}
           </div>
         )}
 
         {/* Active collaborators */}
-        <section className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-slate-100">
-            <h2 className="font-semibold text-slate-800">
-              Active Members
-              {collaborators.length > 0 && (
-                <span className="ml-2 text-xs font-normal text-slate-400">
-                  {collaborators.length} {collaborators.length === 1 ? 'person' : 'people'}
-                </span>
-              )}
-            </h2>
-          </div>
-
+        <div className="hr-section-label" style={{ marginBottom: 8 }}>ACTIVE MEMBERS</div>
+        <div className="hr-card" style={{ marginBottom: 20, overflow: 'hidden' }}>
           {collaborators.length === 0 ? (
-            <div className="px-5 py-8 text-center text-slate-400 text-sm">
+            <div style={{ padding: '32px 20px', textAlign: 'center', color: '#6b7280', fontSize: 13, fontWeight: 600 }}>
               No co-teachers yet. Generate an invite code below to get started.
             </div>
           ) : (
-            <ul className="divide-y divide-slate-100">
-              {collaborators.map(c => (
-                <li key={c.id} className="px-5 py-4 flex items-center justify-between gap-4">
-                  <div className="min-w-0">
-                    <p className="font-medium text-slate-800 truncate">
-                      {c.name !== c.email ? c.name : c.email}
-                    </p>
-                    {c.name !== c.email && (
-                      <p className="text-xs text-slate-400 truncate">{c.email}</p>
-                    )}
-                    <p className="text-xs text-slate-500 mt-0.5">
-                      {ROLE_LABELS[c.role] ?? c.role} · Joined {formatDate(c.added_at)}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => handleRemove(c.id)}
-                    disabled={removing === c.id}
-                    className="text-xs text-red-400 hover:text-red-600 shrink-0 transition-colors disabled:opacity-40"
-                  >
-                    {removing === c.id ? 'Removing…' : 'Remove'}
-                  </button>
-                </li>
-              ))}
-            </ul>
+            collaborators.map((c, idx) => (
+              <div key={c.id} style={{ ...rowStyle, borderBottom: idx < collaborators.length - 1 ? '1px solid rgba(0,0,0,0.06)' : 'none' }}>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={labelStyle}>{c.name !== c.email ? c.name : c.email}</div>
+                  {c.name !== c.email && <div style={subStyle}>{c.email}</div>}
+                  <div style={subStyle}>{ROLE_LABELS[c.role] ?? c.role} · Joined {formatDate(c.added_at)}</div>
+                </div>
+                <button style={dangerBtn} onClick={() => handleRemove(c.id)} disabled={removing === c.id}>
+                  {removing === c.id ? 'Removing…' : 'Remove'}
+                </button>
+              </div>
+            ))
           )}
-        </section>
+        </div>
 
         {/* Generate new invite */}
-        <section className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-slate-100">
-            <h2 className="font-semibold text-slate-800">Generate Invite Code</h2>
-          </div>
-          <div className="px-5 py-5 space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-slate-600">
-                  Email address
-                  <span className="ml-1 font-normal text-slate-400">(optional)</span>
-                </label>
-                <input
-                  type="email"
-                  value={inviteEmail}
-                  onChange={e => setInviteEmail(e.target.value)}
-                  placeholder="teacher@example.com"
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
-                />
-                <p className="text-xs text-slate-400">
-                  If set, only this person can redeem the code.
-                </p>
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-slate-600">Role</label>
-                <select
-                  value={inviteRole}
-                  onChange={e => setInviteRole(e.target.value as InviteRole)}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
-                >
-                  <option value="co_teacher">Co-Teacher — can edit lessons & events</option>
-                  <option value="aide">Aide — view progress only</option>
-                </select>
-              </div>
+        <div className="hr-section-label" style={{ marginBottom: 8 }}>GENERATE INVITE CODE</div>
+        <div className="hr-card" style={{ padding: '18px 20px', marginBottom: 20 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginBottom: 14 }}>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 700, color: '#1a1a2e', display: 'block', marginBottom: 6 }}>
+                Email address <span style={{ fontWeight: 600, color: '#6b7280' }}>(optional)</span>
+              </label>
+              <input type="email" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} placeholder="teacher@example.com" style={inputStyle} />
+              <div style={{ fontSize: 11, color: '#4b5563', fontWeight: 600, marginTop: 4 }}>If set, only this person can redeem the code.</div>
             </div>
-
-            <button
-              onClick={handleGenerate}
-              disabled={generating}
-              className="bg-indigo-600 text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {generating ? 'Generating…' : 'Generate Code'}
-            </button>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 700, color: '#4b5563', display: 'block', marginBottom: 6 }}>Role</label>
+              <select value={inviteRole} onChange={e => setInviteRole(e.target.value as InviteRole)} style={inputStyle}>
+                <option value="co_teacher">Co-Teacher — can edit lessons & events</option>
+                <option value="aide">Aide — view progress only</option>
+              </select>
+            </div>
           </div>
-        </section>
+          <button
+            onClick={handleGenerate}
+            disabled={generating}
+            style={{ padding: '11px 20px', background: 'linear-gradient(135deg, #7c3aed, #a855f7)', color: '#fff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 800, cursor: generating ? 'not-allowed' : 'pointer', opacity: generating ? 0.6 : 1, fontFamily: "'Nunito', sans-serif" }}
+          >
+            {generating ? 'Generating…' : 'Generate Code'}
+          </button>
+        </div>
 
         {/* Pending invites */}
         {pendingInvites.length > 0 && (
-          <section className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-            <div className="px-5 py-4 border-b border-slate-100">
-              <h2 className="font-semibold text-slate-800">
-                Pending Invites
-                <span className="ml-2 text-xs font-normal text-slate-400">
-                  {pendingInvites.length} active
-                </span>
-              </h2>
-            </div>
-            <ul className="divide-y divide-slate-100">
-              {pendingInvites.map(inv => (
-                <li key={inv.id} className="px-5 py-4 flex items-center justify-between gap-4">
-                  <div className="min-w-0 space-y-1">
-                    <div className="flex items-center gap-3">
-                      <span className="font-mono text-lg font-bold tracking-widest text-slate-800">
-                        {inv.code}
-                      </span>
-                      <button
-                        onClick={() => handleCopy(inv.code)}
-                        className="text-xs text-indigo-500 hover:text-indigo-700 transition-colors"
-                      >
+          <>
+            <div className="hr-section-label" style={{ marginBottom: 8 }}>PENDING INVITES <span style={{ fontWeight: 600, opacity: 0.7 }}>({pendingInvites.length} active)</span></div>
+            <div className="hr-card" style={{ marginBottom: 20, overflow: 'hidden' }}>
+              {pendingInvites.map((inv, idx) => (
+                <div key={inv.id} style={{ ...rowStyle, borderBottom: idx < pendingInvites.length - 1 ? '1px solid rgba(0,0,0,0.06)' : 'none' }}>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+                      <span style={{ fontFamily: 'monospace', fontSize: 17, fontWeight: 800, letterSpacing: 3, color: '#1a1a2e' }}>{inv.code}</span>
+                      <button onClick={() => handleCopy(inv.code)} style={{ fontSize: 11, fontWeight: 700, color: '#7c3aed', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}>
                         {copiedCode === inv.code ? '✓ Copied' : 'Copy'}
                       </button>
                     </div>
-                    <p className="text-xs text-slate-400">
-                      {inv.email ? `For: ${inv.email}` : 'Open invite'} ·{' '}
-                      {ROLE_LABELS[inv.role] ?? inv.role} ·{' '}
-                      Expires {formatDate(inv.expires_at)}
-                    </p>
+                    <div style={subStyle}>{inv.email ? `For: ${inv.email}` : 'Open invite'} · {ROLE_LABELS[inv.role] ?? inv.role} · Expires {formatDate(inv.expires_at)}</div>
                   </div>
-                  <div className="flex items-center gap-3 shrink-0">
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_STYLES[inv.status]}`}>
-                      {inv.status}
-                    </span>
-                    <button
-                      onClick={() => handleRevoke(inv.id)}
-                      disabled={revoking === inv.id}
-                      className="text-xs text-red-400 hover:text-red-600 transition-colors disabled:opacity-40"
-                    >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 10px', borderRadius: 20, ...STATUS_INLINE[inv.status] }}>{inv.status}</span>
+                    <button style={dangerBtn} onClick={() => handleRevoke(inv.id)} disabled={revoking === inv.id}>
                       {revoking === inv.id ? 'Revoking…' : 'Revoke'}
                     </button>
                   </div>
-                </li>
+                </div>
               ))}
-            </ul>
-          </section>
+            </div>
+          </>
         )}
 
         {/* Past invites */}
         {pastInvites.length > 0 && (
-          <section className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-            <div className="px-5 py-4 border-b border-slate-100">
-              <h2 className="font-semibold text-slate-800 text-sm text-slate-500">
-                Past Invites
-              </h2>
-            </div>
-            <ul className="divide-y divide-slate-100">
-              {pastInvites.map(inv => (
-                <li key={inv.id} className="px-5 py-4 flex items-center justify-between gap-4 opacity-60">
-                  <div className="min-w-0 space-y-1">
-                    <span className="font-mono text-base font-bold tracking-widest text-slate-500">
-                      {inv.code}
-                    </span>
-                    <p className="text-xs text-slate-400">
-                      {inv.email ? `For: ${inv.email}` : 'Open invite'} ·{' '}
-                      {ROLE_LABELS[inv.role] ?? inv.role}
-                    </p>
+          <>
+            <div className="hr-section-label" style={{ marginBottom: 8 }}>PAST INVITES</div>
+            <div className="hr-card" style={{ marginBottom: 20, overflow: 'hidden' }}>
+              {pastInvites.map((inv, idx) => (
+                <div key={inv.id} style={{ ...rowStyle, borderBottom: idx < pastInvites.length - 1 ? '1px solid rgba(0,0,0,0.06)' : 'none' }}>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <span style={{ fontFamily: 'monospace', fontSize: 15, fontWeight: 800, letterSpacing: 2, color: '#6b7280' }}>{inv.code}</span>
+                    <div style={subStyle}>{inv.email ? `For: ${inv.email}` : 'Open invite'} · {ROLE_LABELS[inv.role] ?? inv.role}</div>
                   </div>
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${STATUS_STYLES[inv.status] ?? STATUS_STYLES.expired}`}>
+                  <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 10px', borderRadius: 20, flexShrink: 0, ...(STATUS_INLINE[inv.status] ?? STATUS_INLINE.expired) }}>
                     {isExpired(inv.expires_at) && inv.status === 'pending' ? 'expired' : inv.status}
                   </span>
-                </li>
+                </div>
               ))}
-            </ul>
-          </section>
+            </div>
+          </>
         )}
 
-      </div>
+      </main>
     </div>
   );
 }

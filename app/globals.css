@@ -140,68 +140,153 @@ body {
 
 /* ── HomeschoolReady theme tokens ───────────────────────────────────────── */
 :root {
-  --hr-bg-page:      #f5f3ff;
+  --hr-bg-page:      #3d3a52;
   --hr-bg-card:      #ffffff;
-  --hr-bg-surface:   #f9fafb;
+  --hr-bg-surface:   #474463;
   --hr-text-primary:   #111827;
   --hr-text-secondary: #6b7280;
-  --hr-text-muted:     #9ca3af;
-  --hr-border:         #ede9fe;
-  --hr-border-subtle:  #e5e7eb;
+  --hr-text-muted:     rgba(255,255,255,0.6);
+  --hr-border:         rgba(255,255,255,0.12);
+  --hr-border-subtle:  rgba(255,255,255,0.08);
   --hr-input-bg:       #fafafa;
-  --hr-modal-overlay:  rgba(0, 0, 0, 0.45);
+  --hr-modal-overlay:  rgba(0, 0, 0, 0.55);
 }
 
 .dark {
-  --hr-bg-page:      #1a1535;
-  --hr-bg-card:      #251e4a;
-  --hr-bg-surface:   #1e1840;
-  --hr-text-primary:   #f3f4f6;
-  --hr-text-secondary: #c4b5fd;
-  --hr-text-muted:     #a78bfa;
-  --hr-border:         rgba(167,139,250,0.25);
+  --hr-bg-page:      #3d3a52;
+  --hr-bg-card:      #ffffff;
+  --hr-bg-surface:   #474463;
+  --hr-text-primary:   #111827;
+  --hr-text-secondary: #6b7280;
+  --hr-text-muted:     rgba(255,255,255,0.6);
+  --hr-border:         rgba(255,255,255,0.12);
   --hr-border-subtle:  rgba(255,255,255,0.08);
-  --hr-input-bg:       #2d2460;
-  --hr-modal-overlay:  rgba(0, 0, 0, 0.7);
+  --hr-input-bg:       #fafafa;
+  --hr-modal-overlay:  rgba(0, 0, 0, 0.55);
 }
 
-/* Dark mode: Tailwind bg-white / bg-gray-* overrides */
-.dark .bg-white        { background-color: var(--hr-bg-card) !important; }
-.dark .bg-gray-50      { background-color: var(--hr-bg-surface) !important; }
-.dark .bg-gray-100     { background-color: #2a2258 !important; }
-.dark .bg-blue-50      { background-color: #1e2456 !important; }
-.dark .bg-amber-50     { background-color: #2a1f0e !important; }
-.dark .text-gray-900   { color: var(--hr-text-primary) !important; }
-.dark .text-gray-700   { color: var(--hr-text-secondary) !important; }
-.dark .text-gray-500   { color: var(--hr-text-muted) !important; }
-.dark .border-gray-200 { border-color: var(--hr-border-subtle) !important; }
-.dark .border-gray-300 { border-color: var(--hr-border-subtle) !important; }
-.dark input, .dark select, .dark textarea {
-  background-color: var(--hr-input-bg);
-  color: var(--hr-text-primary);
-  border-color: var(--hr-border-subtle);
-}
-.dark input::placeholder, .dark textarea::placeholder {
-  color: var(--hr-text-muted);
-}
-/* Inputs inside white-background modals (Tailwind bg-white or modal-light class) stay light */
-.dark .bg-white input, .dark .bg-white select, .dark .bg-white textarea,
-.dark .modal-light input, .dark .modal-light select, .dark .modal-light textarea {
-  background-color: #ffffff !important;
-  color: #111827 !important;
-  border-color: #e5e7eb !important;
-}
-.dark .bg-white input::placeholder, .dark .bg-white textarea::placeholder,
-.dark .modal-light input::placeholder, .dark .modal-light textarea::placeholder {
-  color: #9ca3af !important;
-}
-/* Soften text selection highlight in dark mode — default bright blue is too jarring */
-.dark ::selection {
-  background-color: rgba(124, 58, 237, 0.45);
-  color: #f3f4f6;
-}
+/* Dark mode Tailwind overrides intentionally removed.
+   The app uses a single #3d3a52 page theme — Tailwind utility classes
+   render at their default (light) values everywhere. */
 
 @keyframes shimmer {
   0%   { background-position: 200% 0; }
   100% { background-position: -200% 0; }
+}
+
+/* ── Global consistency utilities ──────────────────────────────────────────── */
+
+/* Page background — same dark purple used on the home/dashboard page */
+.hr-page {
+  background: #3d3a52;
+  min-height: 100vh;
+}
+
+/* Frosted-glass card — matches the weather strip on the dashboard */
+.hr-card {
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1.5px solid rgba(124, 58, 237, 0.10);
+  border-radius: 14px;
+  box-shadow: 0 4px 24px rgba(124, 58, 237, 0.07);
+}
+
+/* H1 headings on the dark page background */
+h1.hr-h1,
+.hr-h1 {
+  color: #c4b5fd;
+  font-weight: 900;
+}
+
+/* Pill switcher row (tabs / segment controls) */
+.hr-pill-row {
+  display: flex;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.20);
+  border-radius: 999px;
+  padding: 4px;
+  width: fit-content;
+}
+
+/* Individual pill button — inactive state */
+.hr-pill {
+  padding: 7px 18px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.70);
+  transition: all 0.15s ease;
+}
+
+.hr-pill:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.90);
+}
+
+/* Active pill — purple highlight */
+.hr-pill.active,
+.hr-pill-active {
+  background: #7c3aed;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.35);
+}
+
+/* Back / utility buttons — light frosted pill */
+.hr-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1.5px solid rgba(124, 58, 237, 0.15);
+  border-radius: 999px;
+  padding: 7px 16px 7px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #7c3aed;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.hr-back-btn:hover {
+  background: rgba(255, 255, 255, 0.90);
+}
+
+/* Modal overlay */
+.hr-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+}
+
+/* Modal container */
+.hr-modal {
+  background: #ffffff;
+  border-radius: 20px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.25);
+  width: 100%;
+  max-width: 560px;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 28px 24px;
+}
+
+/* Section labels (ALL-CAPS above cards) */
+.hr-section-label {
+  font-size: 11px;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.60);
+  letter-spacing: 1px;
+  text-transform: uppercase;
 }

@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo } from 'react'
+import { useTheme } from '@/contexts/ThemeContext'
 
 interface DayData {
   date: string
@@ -15,6 +16,8 @@ interface AttendanceInsightsProps {
 }
 
 export default function AttendanceInsights({ days, requiredDays }: AttendanceInsightsProps) {
+  const { isDark } = useTheme()
+  const darkCardStyle: React.CSSProperties = isDark ? { backgroundColor: 'var(--hr-bg-surface)', borderColor: 'rgba(255,255,255,0.12)' } : {}
   const insights = useMemo(() => {
     if (days.length === 0) return null
 
@@ -169,7 +172,7 @@ export default function AttendanceInsights({ days, requiredDays }: AttendanceIns
 
       {/* Streak Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border border-blue-200">
+        <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border border-blue-200" style={darkCardStyle}>
           <div className="flex items-center gap-2 mb-2">
             <span className="text-2xl">🔥</span>
             <p className="text-sm font-medium text-gray-700">Current Streak</p>
@@ -178,7 +181,7 @@ export default function AttendanceInsights({ days, requiredDays }: AttendanceIns
           <p className="text-xs text-gray-600 mt-1">consecutive school days</p>
         </div>
 
-        <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-4 border border-purple-200">
+        <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-4 border border-purple-200" style={darkCardStyle}>
           <div className="flex items-center gap-2 mb-2">
             <span className="text-2xl">🏆</span>
             <p className="text-sm font-medium text-gray-700">Longest Streak</p>
@@ -250,7 +253,7 @@ export default function AttendanceInsights({ days, requiredDays }: AttendanceIns
         <h4 className="font-semibold text-gray-900 mb-3">Most Productive Days</h4>
         
         {insights.mostProductiveDay && (
-          <div className="mb-4 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+          <div className="mb-4 p-3 bg-yellow-50 rounded-lg border border-yellow-200" style={darkCardStyle}>
             <div className="flex items-center gap-2">
               <span className="text-2xl">⭐</span>
               <div>
@@ -279,7 +282,7 @@ export default function AttendanceInsights({ days, requiredDays }: AttendanceIns
                       {stats.count} days • {stats.hours.toFixed(1)}h
                     </span>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div className="w-full bg-gray-200 rounded-full h-2" style={isDark ? { backgroundColor: 'rgba(255,255,255,0.12)' } : {}}>
                     <div
                       className="bg-blue-600 h-2 rounded-full transition-all"
                       style={{ width: `${percentage}%` }}

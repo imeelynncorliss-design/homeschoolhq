@@ -182,8 +182,8 @@ export default function BulkLessonScheduler({ userId }: BulkLessonSchedulerProps
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Bulk Lesson Scheduler</h2>
-        <p className="text-gray-600">Quickly assign dates to imported lessons from curriculum</p>
+        <h2 className="text-2xl font-bold mb-2" style={{ color: '#c4b5fd' }}>Bulk Lesson Scheduler</h2>
+        <p style={{ color: 'rgba(255,255,255,0.75)', fontWeight: 600, fontSize: 14 }}>Quickly assign dates to imported lessons from curriculum</p>
       </div>
 
       {/* Selection Controls */}
@@ -300,19 +300,19 @@ export default function BulkLessonScheduler({ userId }: BulkLessonSchedulerProps
       {/* Unscheduled Lessons */}
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h3 className="font-semibold text-gray-900">
+          <h3 className="font-semibold" style={{ color: '#c4b5fd' }}>
             Unscheduled Lessons ({unscheduledLessons.length})
           </h3>
           <div className="flex gap-2">
             <button
               onClick={selectAll}
-              className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+              style={{ padding: '6px 14px', borderRadius: 20, border: '2px solid #7c3aed', background: '#7c3aed', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}
             >
               Select All
             </button>
             <button
               onClick={deselectAll}
-              className="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
+              style={{ padding: '6px 14px', borderRadius: 20, border: '2px solid rgba(124,58,237,0.3)', background: 'rgba(255,255,255,0.7)', color: '#7c3aed', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}
             >
               Deselect All
             </button>
@@ -353,20 +353,20 @@ export default function BulkLessonScheduler({ userId }: BulkLessonSchedulerProps
 
       {/* Schedule Button */}
       {selectedLessons.size > 0 && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+        <div className="hr-card" style={{ padding: '16px 20px' }}>
           <div className="flex items-center justify-between">
             <div>
-              <p className="font-semibold text-gray-900">
+              <p style={{ fontWeight: 800, color: '#1a1a2e', fontSize: 14, margin: '0 0 3px' }}>
                 Ready to schedule {selectedLessons.size} lesson{selectedLessons.size !== 1 ? 's' : ''}
               </p>
-              <p className="text-sm text-gray-600">
+              <p style={{ fontSize: 12, color: '#4b5563', fontWeight: 600, margin: 0 }}>
                 Starting {moment(startDate).format('MMM D, YYYY')} · {scheduleMode} mode
               </p>
             </div>
             <button
               onClick={bulkSchedule}
               disabled={scheduling}
-              className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold disabled:bg-green-400"
+              style={{ padding: '11px 20px', background: 'linear-gradient(135deg, #7c3aed, #a855f7)', color: '#fff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 800, cursor: scheduling ? 'not-allowed' : 'pointer', opacity: scheduling ? 0.6 : 1, fontFamily: "'Nunito', sans-serif", whiteSpace: 'nowrap' }}
             >
               {scheduling ? 'Scheduling...' : `Schedule ${selectedLessons.size} Lesson${selectedLessons.size !== 1 ? 's' : ''}`}
             </button>

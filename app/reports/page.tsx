@@ -4,7 +4,7 @@ import { Suspense } from 'react'
 import { useRouter } from 'next/navigation'
 import AuthGuard from '@/components/AuthGuard'
 
-const GRADIENT = 'linear-gradient(135deg, #c4b5fd 0%, #e879f9 18%, #f0abfc 36%, #fbcfe8 54%, #bae6fd 76%, #6ee7b7 100%)'
+const GRADIENT = '#3d3a52'
 
 function ReportsContent() {
   const router = useRouter()
@@ -76,7 +76,7 @@ function ReportsContent() {
   ]
 
   return (
-    <div style={{ fontFamily: "'Nunito', sans-serif", minHeight: '100vh', background: GRADIENT, paddingBottom: 80 }}>
+    <div className="hr-page" style={{ fontFamily: "'Nunito', sans-serif", paddingBottom: 80 }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
         *, *::before, *::after { box-sizing: border-box; }
@@ -88,10 +88,10 @@ function ReportsContent() {
 
       {/* Page title */}
       <div style={{ maxWidth: 800, margin: '0 auto', padding: '28px 20px 0' }}>
-        <h1 style={{ fontSize: 26, fontWeight: 900, color: '#1e1b4b', margin: '0 0 6px', fontFamily: "'Nunito', sans-serif" }}>
+        <h1 className="hr-h1" style={{ fontSize: 26, margin: '0 0 6px', fontFamily: "'Nunito', sans-serif" }}>
           Records
         </h1>
-        <p style={{ fontSize: 14, color: '#4b5563', fontWeight: 600, margin: '0 0 24px', lineHeight: 1.6 }}>
+        <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.7)', fontWeight: 600, margin: '0 0 24px', lineHeight: 1.6 }}>
           Track attendance, compliance, transcripts, and progress.
         </p>
 
@@ -100,16 +100,11 @@ function ReportsContent() {
           {hubCards.map(card => (
             <button
               key={card.label}
-              className={card.comingSoon ? '' : 'hub-card'}
+              className={`hr-card${card.comingSoon ? '' : ' hub-card'}`}
               onClick={card.href ? () => router.push(card.href!) : undefined}
               disabled={card.comingSoon}
               aria-label={card.comingSoon ? `${card.label} — coming soon` : card.label}
               style={{
-                background: 'rgba(255,255,255,0.82)',
-                borderRadius: 16,
-                border: '1.5px solid rgba(124,58,237,0.13)',
-                backdropFilter: 'blur(8px)',
-                boxShadow: '0 2px 12px rgba(124,58,237,0.08)',
                 padding: '14px 16px',
                 display: 'flex', alignItems: 'center', gap: 12,
                 cursor: card.comingSoon ? 'default' : 'pointer',

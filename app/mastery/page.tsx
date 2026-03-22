@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import AuthGuard from '@/components/AuthGuard'
 import MasteryTracker from '@/components/MasteryTracker'
 import { getOrganizationId } from '@/src/lib/getOrganizationId'
-import { colors } from '@/src/lib/designTokens'
+import { pageShell, colors } from '@/src/lib/designTokens'
 import { useAppHeader } from '@/components/layout/AppHeader'
 
 function MasteryContent() {
@@ -39,9 +39,12 @@ function MasteryContent() {
   )
 
   return (
-    <div style={{ minHeight: '100vh', background: colors.pageBackground, fontFamily: "'Nunito', sans-serif", paddingBottom: 100 }}>
-      <main style={{ padding: '20px' }}>
-        <MasteryTracker organizationId={organizationId} />
+    <div style={{ ...pageShell.root, paddingBottom: 100 }}>
+      <main style={pageShell.main}>
+        <div className="hr-section-label" style={{ marginBottom: 14, marginTop: 8 }}>SUBJECT-BY-SUBJECT LEARNING INSIGHTS</div>
+        <div className="hr-card" style={{ padding: '20px' }}>
+          <MasteryTracker organizationId={organizationId} />
+        </div>
       </main>
     </div>
   )

@@ -147,8 +147,8 @@ function StandardsBrowser({ organizationId }: { organizationId: string }) {
         <>
           {/* Grade header */}
           <div style={{ marginBottom: 14 }}>
-            <div style={{ fontSize: 17, fontWeight: 900, color: '#1e1b4b' }}>{gradeLabel(selectedGrade)}</div>
-            <div style={{ fontSize: 12, color: '#9ca3af', fontWeight: 600 }}>
+            <div style={{ fontSize: 17, fontWeight: 900, color: '#c4b5fd' }}>{gradeLabel(selectedGrade)}</div>
+            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)', fontWeight: 600 }}>
               {gradeStandards.length} standards · {subjects.length - 1} subject{subjects.length - 1 !== 1 ? 's' : ''}
             </div>
           </div>
@@ -196,7 +196,7 @@ function StandardsBrowser({ organizationId }: { organizationId: string }) {
                       }}>📖</div>
                       <div style={{ textAlign: 'left' as const }}>
                         <div style={{ fontSize: 14, fontWeight: 800, color: '#1e1b4b' }}>{domain}</div>
-                        <div style={{ fontSize: 11, color: '#9ca3af', fontWeight: 600 }}>
+                        <div style={{ fontSize: 11, color: '#4b5563', fontWeight: 700 }}>
                           {items[0].subject} · {items.length} standard{items.length !== 1 ? 's' : ''}
                         </div>
                       </div>
@@ -219,7 +219,7 @@ function StandardsBrowser({ organizationId }: { organizationId: string }) {
                           }}>
                             {std.standard_code}
                           </span>
-                          <div style={{ fontSize: 13, color: '#374151', fontWeight: 600, lineHeight: 1.5 }}>
+                          <div style={{ fontSize: 13, color: '#1a1a2e', fontWeight: 600, lineHeight: 1.5 }}>
                             {std.description}
                           </div>
                         </div>
@@ -235,8 +235,9 @@ function StandardsBrowser({ organizationId }: { organizationId: string }) {
 
       <div style={{
         marginTop: 24, padding: '14px 18px',
-        background: 'rgba(124,58,237,0.06)', borderRadius: 14,
-        fontSize: 13, color: '#6b7280', fontWeight: 600, lineHeight: 1.6,
+        background: 'rgba(196,181,253,0.12)', borderRadius: 14,
+        border: '1px solid rgba(196,181,253,0.2)',
+        fontSize: 14, color: 'rgba(255,255,255,0.8)', fontWeight: 600, lineHeight: 1.6,
       }}>
         💡 Standards are shared across all your kids — each child tracks their own coverage independently through lesson tagging.
       </div>
@@ -279,10 +280,10 @@ function StandardsContent() {
 
         {/* ── Page header ── */}
         <div style={{ marginBottom: 20 }}>
-          <h2 style={{ fontSize: 22, fontWeight: 900, color: '#1e1b4b', margin: '0 0 6px', fontFamily: "'Nunito', sans-serif" }}>
+          <h2 style={{ fontSize: 22, fontWeight: 900, color: '#c4b5fd', margin: '0 0 6px', fontFamily: "'Nunito', sans-serif" }}>
             📌 Standards
           </h2>
-          <p style={{ fontSize: 14, color: '#4b5563', fontWeight: 600, margin: 0, lineHeight: 1.5 }}>
+          <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.75)', fontWeight: 600, margin: 0, lineHeight: 1.5 }}>
             Browse your imported standards or track lesson coverage.
           </p>
         </div>
@@ -375,7 +376,7 @@ function StandardsContent() {
                         <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13 }}>
                           <span style={{ fontSize: 16, flexShrink: 0 }}>{item.emoji}</span>
                           <span style={{ fontWeight: 800, color: '#374151', flexShrink: 0 }}>{item.label}</span>
-                          <span style={{ color: '#9ca3af', fontWeight: 600 }}>— {item.desc}</span>
+                          <span style={{ color: '#4b5563', fontWeight: 600 }}>— {item.desc}</span>
                         </div>
                       ))}
                     </div>

@@ -502,7 +502,8 @@ export default function CurriculumImporter({ childId, childName, onClose, onImpo
                 />
                 <label
                   htmlFor="pdf-upload"
-                  className="cursor-pointer inline-block bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700"
+                  className="cursor-pointer inline-block text-white px-6 py-3 rounded-xl font-bold"
+                  style={{ background: 'linear-gradient(135deg, #7c3aed, #a855f7)', fontFamily: "'Nunito', sans-serif" }}
                 >
                   Choose File (PDF or Image)
                 </label>
@@ -517,7 +518,8 @@ export default function CurriculumImporter({ childId, childName, onClose, onImpo
                 <button
                   onClick={extractLessons}
                   disabled={loading}
-                  className="w-full bg-purple-600 text-white py-3 rounded-lg hover:bg-purple-700 disabled:bg-gray-400"
+                  className="w-full text-white py-3 rounded-xl font-bold disabled:opacity-50"
+                  style={{ background: 'linear-gradient(135deg, #7c3aed, #a855f7)', fontFamily: "'Nunito', sans-serif" }}
                 >
                   {loading ? 'Extracting Lessons...' : 'Extract Lessons'}
                 </button>
@@ -633,7 +635,8 @@ export default function CurriculumImporter({ childId, childName, onClose, onImpo
                 <button
                   onClick={importLessons}
                   disabled={loading || selectedLessons.size === 0}
-                  className="flex-1 bg-purple-600 text-white py-3 rounded-lg hover:bg-purple-700 disabled:bg-gray-400"
+                  className="flex-1 text-white py-3 rounded-xl font-bold disabled:opacity-50"
+                  style={{ background: 'linear-gradient(135deg, #7c3aed, #a855f7)', fontFamily: "'Nunito', sans-serif" }}
                 >
                   {loading ? 'Importing...' : `Import ${selectedLessons.size} Lessons`}
                 </button>
@@ -664,7 +667,8 @@ export default function CurriculumImporter({ childId, childName, onClose, onImpo
               )}
               <button
                 onClick={() => { onImportComplete(); onClose(); }}
-                className="mt-6 bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700"
+                className="mt-6 text-white px-6 py-3 rounded-xl font-bold"
+                style={{ background: 'linear-gradient(135deg, #7c3aed, #a855f7)', fontFamily: "'Nunito', sans-serif" }}
               >
                 Done
               </button>

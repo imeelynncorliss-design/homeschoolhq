@@ -63,40 +63,25 @@ function AttendanceContent() {
 
   return (
     <div style={css.root}>
-      <button onClick={() => router.push('/reports')} style={{
-        display: 'flex', alignItems: 'center', gap: 6,
-        background: 'rgba(255,255,255,0.72)', border: '1.5px solid rgba(124,58,237,0.15)',
-        borderRadius: 20, padding: '7px 16px 7px 12px',
-        fontSize: 13, fontWeight: 700, color: '#7c3aed',
-        cursor: 'pointer', fontFamily: "'Nunito', sans-serif",
-        margin: '16px 20px 0',
-      }}>
-        ‹ Records
-      </button>
       <main style={{ ...css.main, paddingBottom: 100 }}>
-        <div style={css.sectionLabel}>TRACK YOUR SCHOOL DAYS & HOURS</div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, marginTop: 8 }}>
+          <div className="hr-section-label">TRACK YOUR SCHOOL DAYS & HOURS</div>
+          <button
+            onClick={() => router.push('/calendar')}
+            style={css.calBtn}
+          >
+            📅 Calendar
+          </button>
+        </div>
 
-        <div style={css.card}>
-          <div style={css.cardHead}>
-            <span style={{ fontSize: 20 }}>📋</span>
-            <span style={css.cardTitle}>Attendance Tracker</span>
-            {/* Calendar shortcut — useful on mobile where AppHeader has no room for it */}
-            <button
-              onClick={() => router.push('/calendar')}
-              style={css.calBtn}
-            >
-              📅 Calendar
-            </button>
-          </div>
-          <div style={css.cardBody}>
-            {organizationId && (
-              <AttendanceTracker
-                kids={kids}
-                organizationId={organizationId}
-                userId={user.id}
-              />
-            )}
-          </div>
+        <div className="hr-card" style={{ padding: '24px', minHeight: 500 }}>
+          {organizationId && (
+            <AttendanceTracker
+              kids={kids}
+              organizationId={organizationId}
+              userId={user.id}
+            />
+          )}
         </div>
       </main>
 
@@ -120,12 +105,9 @@ export default function AttendancePage() {
 
 const css: Record<string, React.CSSProperties> = {
   ...pageShell,
-  cardBody: {
-    padding: '24px',
-  },
-  // Calendar shortcut button inside the card header
+
   calBtn: {
-    marginLeft: 'auto',
+    flexShrink: 0,
     background: 'linear-gradient(135deg, #7c3aed, #a855f7)',
     color: '#fff',
     border: 'none',
@@ -134,5 +116,6 @@ const css: Record<string, React.CSSProperties> = {
     fontSize: 12,
     fontWeight: 700,
     cursor: 'pointer',
+    marginBottom: 0,
   },
 }

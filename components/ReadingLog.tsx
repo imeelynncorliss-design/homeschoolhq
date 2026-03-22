@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/src/lib/supabase'
+import { printHeader, printHeaderCSS } from '@/lib/printHeader'
 
 interface Book {
   id: string
@@ -99,7 +100,51 @@ export default function ReadingLog({ organizationId, kids }: ReadingLogProps) {
     loadBooks()
   }
 
-  const handlePrint = () => window.print()
+  const handlePrint = () => {
+    const bookRows = Object.entries(grouped).map(([month, monthBooks]) => `
+      <div style="margin-bottom:24px">
+        <div style="font-size:11px;font-weight:800;color:#7c3aed;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px">${month}</div>
+        ${monthBooks.map(b => `
+          <div style="border:1px solid #e5e7eb;border-radius:10px;padding:12px 16px;margin-bottom:8px;display:flex;gap:14px;align-items:flex-start">
+            <div style="width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,#ede9fe,#dbeafe);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">📖</div>
+            <div style="flex:1">
+              <div style="font-size:14px;font-weight:800;color:#111827">${b.title}</div>
+              ${b.author ? `<div style="font-size:12px;color:#6b7280;margin-top:2px">by ${b.author}</div>` : ''}
+              <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap">
+                ${b.pages ? `<span style="font-size:11px;font-weight:700;color:#7c3aed;background:#ede9fe;border-radius:6px;padding:2px 8px">${b.pages.toLocaleString()} pages</span>` : ''}
+                ${b.date_completed ? `<span style="font-size:11px;font-weight:700;color:#7c3aed;background:#ede9fe;border-radius:6px;padding:2px 8px">${new Date(b.date_completed + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>` : ''}
+              </div>
+              ${b.notes ? `<div style="font-size:12px;color:#6b7280;margin-top:6px;font-style:italic">${b.notes}</div>` : ''}
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    `).join('')
+
+    const win = window.open('', '_blank')
+    if (!win) return
+    win.document.write(`<!DOCTYPE html><html><head>
+      <title>Reading Log — ${kidName}</title>
+      <style>
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&display=swap');
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Nunito', sans-serif; padding: 32px; background: #fff; color: #111827; }
+        ${printHeaderCSS()}
+        @media print { button { display: none; } }
+      </style>
+    </head><body>
+      ${printHeader(window.location.origin)}
+      <h1 style="font-size:20px;font-weight:900;margin:0 0 4px">Reading Log — ${kidName}</h1>
+      <p style="font-size:13px;color:#6b7280;margin:0 0 24px">
+        ${books.length} book${books.length !== 1 ? 's' : ''}${totalPages > 0 ? ` · ${totalPages.toLocaleString()} pages` : ''} · Printed ${new Date().toLocaleDateString()}
+      </p>
+      ${bookRows}
+      <button onclick="window.print()" style="margin-top:24px;padding:10px 24px;background:#4f46e5;color:#fff;border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer">
+        🖨️ Print / Save as PDF
+      </button>
+    </body></html>`)
+    win.document.close()
+  }
 
   // Group by month
   const grouped = books.reduce<Record<string, Book[]>>((acc, b) => {
@@ -115,13 +160,6 @@ export default function ReadingLog({ organizationId, kids }: ReadingLogProps) {
 
   return (
     <div>
-      <style>{`
-        @media print {
-          .no-print { display: none !important; }
-          body { background: white !important; }
-          .print-card { break-inside: avoid; }
-        }
-      `}</style>
 
       {/* Header */}
       <div className="no-print" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
@@ -166,13 +204,6 @@ export default function ReadingLog({ organizationId, kids }: ReadingLogProps) {
         ))}
       </div>
 
-      {/* Print header (only visible when printing) */}
-      <div style={{ display: 'none' }} className="print-header">
-        <h1 style={{ fontSize: 22, fontWeight: 800, margin: '0 0 4px' }}>Reading Log — {kidName}</h1>
-        <p style={{ color: '#6b7280', fontSize: 13, margin: '0 0 20px' }}>
-          {books.length} books · {totalPages > 0 ? `${totalPages.toLocaleString()} pages` : ''} · Printed {new Date().toLocaleDateString()}
-        </p>
-      </div>
 
       {/* Book list */}
       {loading ? (

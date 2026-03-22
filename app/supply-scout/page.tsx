@@ -74,7 +74,7 @@ function extractMaterials(description?: string | null, lesson_source?: string | 
 
 // ─── Main Content ─────────────────────────────────────────────────────────────
 
-const GRADIENT = 'linear-gradient(135deg, #fef9c3 0%, #fde68a 15%, #d1fae5 55%, #bfdbfe 100%)'
+const GRADIENT = '#3d3a52'
 
 function SupplyScoutContent() {
   const router = useRouter()

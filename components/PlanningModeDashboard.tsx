@@ -167,10 +167,10 @@ export default function PlanningModeDashboard() {
   const totalTasks = tasks.length;
   const progressPercent = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
-  if (loading) return <div className="min-h-screen bg-black flex items-center justify-center text-white">Loading...</div>;
+  if (loading) return <div style={{ minHeight: '100vh', background: '#3d3a52', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#c4b5fd', fontWeight: 700 }}>Loading...</div>;
 
   return (
-    <div className="max-w-7xl mx-auto p-6 bg-gray-50 min-h-screen text-gray-900">
+    <div className="max-w-7xl mx-auto p-6 min-h-screen text-gray-900" style={{ background: '#3d3a52' }}>
       {/* Mini Header */}
       <div className="flex justify-between items-center mb-4">
       <button onClick={() => router.push('/dashboard')} className="text-gray-400 text-xs font-bold uppercase tracking-widest hover:text-gray-900 transition-all">

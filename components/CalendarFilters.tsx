@@ -15,6 +15,19 @@ interface CalendarFiltersProps {
   }
 }
 
+const PILL_STYLES = {
+  lessons: {
+    active:   { background: '#eff6ff', border: '1px solid #60a5fa', color: '#1d4ed8' },
+    inactive: { background: '#ffffff', border: '1px solid #e5e7eb', color: '#9ca3af' },
+    dot:      { active: '#3b82f6', inactive: '#d1d5db' },
+  },
+  attendance: {
+    active:   { background: '#f9fafb', border: '1px solid #9ca3af', color: '#374151' },
+    inactive: { background: '#ffffff', border: '1px solid #e5e7eb', color: '#9ca3af' },
+    dot:      { active: '#6b7280', inactive: '#d1d5db' },
+  },
+}
+
 export default function CalendarFilters({ filters, onChange, counts }: CalendarFiltersProps) {
   const toggleFilter = (key: keyof typeof filters) => {
     onChange({ ...filters, [key]: !filters[key] })
@@ -25,10 +38,7 @@ export default function CalendarFilters({ filters, onChange, counts }: CalendarF
 
   const toggleAll = () => {
     const newState = !allEnabled
-    onChange({
-      showLessons: newState,
-      showManualAttendance: newState
-    })
+    onChange({ showLessons: newState, showManualAttendance: newState })
   }
 
   const filterOptions = [
@@ -36,59 +46,58 @@ export default function CalendarFilters({ filters, onChange, counts }: CalendarF
       key: 'showLessons' as const,
       label: 'Lessons',
       icon: '📚',
-      dotColor: 'bg-blue-500',
-      activeClasses: 'bg-blue-50 border-blue-400 text-blue-700',
-      inactiveClasses: 'bg-white border-gray-200 text-gray-400 hover:border-blue-300',
-      count: counts?.lessons || 0
+      styles: PILL_STYLES.lessons,
+      count: counts?.lessons || 0,
     },
     {
       key: 'showManualAttendance' as const,
       label: 'Attendance',
       icon: '✓',
-      dotColor: 'bg-gray-500',
-      activeClasses: 'bg-gray-50 border-gray-400 text-gray-700',
-      inactiveClasses: 'bg-white border-gray-200 text-gray-400 hover:border-gray-300',
-      count: counts?.manualAttendance || 0
-    }
+      styles: PILL_STYLES.attendance,
+      count: counts?.manualAttendance || 0,
+    },
   ]
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 shadow-sm px-3 py-2 flex items-center gap-2 flex-wrap">
-      
+    <div style={{ background: '#ffffff', borderRadius: 8, border: '1px solid #e5e7eb', boxShadow: '0 1px 2px rgba(0,0,0,0.05)', padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' as const }}>
+
       {/* Filter pills */}
       {filterOptions.map(option => {
         const isActive = filters[option.key]
+        const pill = isActive ? option.styles.active : option.styles.inactive
+        const dotColor = isActive ? option.styles.dot.active : option.styles.dot.inactive
         return (
           <button
             key={option.key}
             onClick={() => toggleFilter(option.key)}
-            className={`
-              flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-semibold
-              transition-all whitespace-nowrap
-              ${isActive ? option.activeClasses : option.inactiveClasses}
-            `}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '6px 12px', borderRadius: 999, fontSize: 12, fontWeight: 600,
+              transition: 'all 0.15s', whiteSpace: 'nowrap', cursor: 'pointer',
+              ...pill,
+            }}
           >
-            <div className={`w-2 h-2 rounded-full flex-shrink-0 ${isActive ? option.dotColor : 'bg-gray-300'}`} />
+            <div style={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0, background: dotColor }} />
             <span>{option.icon} {option.label}</span>
-            <span className={`font-bold ${isActive ? '' : 'text-gray-300'}`}>{option.count}</span>
+            <span style={{ fontWeight: 700, color: isActive ? pill.color : '#d1d5db' }}>{option.count}</span>
           </button>
         )
       })}
 
       {/* Spacer */}
-      <div className="flex-1" />
+      <div style={{ flex: 1 }} />
 
       {/* Toggle all */}
       <button
         onClick={toggleAll}
-        className="text-xs text-blue-600 hover:text-blue-800 font-semibold whitespace-nowrap px-2"
+        style={{ fontSize: 12, color: '#2563eb', fontWeight: 600, whiteSpace: 'nowrap', padding: '0 8px', background: 'none', border: 'none', cursor: 'pointer' }}
       >
         {allEnabled ? 'Hide All' : 'Show All'}
       </button>
 
       {/* Warning if all disabled */}
       {allDisabled && (
-        <span className="text-xs text-yellow-700 bg-yellow-50 border border-yellow-200 px-2 py-1 rounded-full">
+        <span style={{ fontSize: 12, color: '#92400e', background: '#fffbeb', border: '1px solid #fde68a', padding: '4px 8px', borderRadius: 999 }}>
           ⚠️ All filters off
         </span>
       )}

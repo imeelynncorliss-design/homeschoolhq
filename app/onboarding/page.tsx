@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { useTheme } from '@/contexts/ThemeContext'
 import { supabase } from '@/src/lib/supabase'
 import { CANONICAL_SUBJECTS } from '@/src/constants/subjects'
 import { DEFAULT_FLEXIBLE, DEFAULT_STRUCTURED } from '@/components/StylePickerModal'
@@ -937,7 +936,6 @@ function StatePicker({
 
 export default function OnboardingPage() {
   const router = useRouter()
-  const { isDark, toggleTheme } = useTheme()
   const [user, setUser]             = useState<any>(null)
   const [step, setStep]             = useState(0)
   const [saving, setSaving]         = useState(false)
@@ -945,14 +943,15 @@ export default function OnboardingPage() {
   const [tosConfirmed, setTosConfirmed]   = useState(false)
   const [agreementSaving, setAgreementSaving] = useState(false)
 
-  // Step 1 has two sub-steps: school name → state picker
-  const [step1Sub, setStep1Sub] = useState<'name' | 'state'>('name')
+  // Step 1 has three sub-steps: school name → state picker → school year
+  const [step1Sub, setStep1Sub] = useState<'name' | 'state' | 'school_year'>('name')
 
   // Step 1 data
   const [schoolName, setSchoolName]               = useState('')
   const [selectedState, setSelectedState]         = useState('')       // code e.g. 'NC'
   const [selectedStateName, setSelectedStateName] = useState('')       // full name
-  const [schoolYearStart]                         = useState('2025-08-01')
+  const [schoolYearStart, setSchoolYearStart]     = useState('2025-08-01')
+  const [schoolYearEnd,   setSchoolYearEnd]       = useState('2026-05-31')
   const [annualGoal, setAnnualGoal]               = useState('180')
 
   // Step 2 data
@@ -1010,8 +1009,9 @@ export default function OnboardingPage() {
     const nav = navRef.current
     if (nav.step === 1) {
       if (nav.step1Sub === 'state') setStep1Sub('name')
+      else if (nav.step1Sub === 'school_year') setStep1Sub('state')
     } else if (nav.step === 2) {
-      if (nav.quizQuestion === 1) { setStep(1); setStep1Sub('state') }
+      if (nav.quizQuestion === 1) { setStep(1); setStep1Sub('school_year') }
       else setQuizQuestion(nav.quizQuestion - 1)
     } else if (nav.step === 3) {
       if (nav.curriculumSub !== 'choice') setCurriculumSub('choice')
@@ -1175,20 +1175,32 @@ export default function OnboardingPage() {
     setSelectedState(stateCode)
     setAnnualGoal(goalDays)
 
-    await supabase.from('school_year_settings').upsert({
-      organization_id: resolvedOrgId,
-      user_id: user.id,
-      state: stateCode,
-      start_date: schoolYearStart,
-      annual_goal_value: parseInt(goalDays) || 180,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: 'organization_id' })
-
     await supabase.from('organizations').update({
       ...(schoolName.trim() ? { name: schoolName.trim() } : {}),
       state: stateCode,
       updated_at: new Date().toISOString(),
     }).eq('user_id', user.id)
+
+    setSaving(false)
+    setStep1Sub('school_year')
+  }
+
+  // ── School year confirmed → save + advance to step 2 ─────────────────────
+  const handleSchoolYearConfirmed = async (startDate: string, endDate: string) => {
+    if (saving || !orgId) return
+    setSaving(true)
+    setSchoolYearStart(startDate)
+    setSchoolYearEnd(endDate)
+
+    await supabase.from('school_year_settings').upsert({
+      organization_id: orgId,
+      user_id: user.id,
+      state: selectedState,
+      school_year_start: startDate,
+      school_year_end: endDate || null,
+      annual_goal_value: parseInt(annualGoal) || 180,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'organization_id' })
 
     setSaving(false)
     setStep(2)
@@ -1255,10 +1267,9 @@ export default function OnboardingPage() {
     }
 
     return (
-      <div style={{ minHeight: '100vh', background: isDark ? 'linear-gradient(135deg, #1a0533 0%, #2d1b69 50%, #1e1b4b 100%)' : 'linear-gradient(135deg, #ede9fe 0%, #fce7f3 50%, #dbeafe 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 16px', fontFamily: "'Nunito', sans-serif", position: 'relative' }}>
+      <div style={{ minHeight: '100vh', background: '#3d3a52', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 16px', fontFamily: "'Nunito', sans-serif", position: 'relative' }}>
         <style>{`@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');`}</style>
-        <button onClick={toggleTheme} aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'} style={{ position: 'fixed', top: 16, right: 16, zIndex: 100, background: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.08)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 8, fontSize: 18, padding: '5px 8px', cursor: 'pointer', lineHeight: 1 }}>{isDark ? '☀️' : '🌙'}</button>
-        <div style={{ background: isDark ? 'var(--hr-bg-card)' : '#fff', borderRadius: 28, boxShadow: '0 24px 64px rgba(124,58,237,0.12)', padding: '48px 40px', maxWidth: 520, width: '100%' }}>
+        <div style={{ background: '#fff', borderRadius: 28, boxShadow: '0 24px 64px rgba(124,58,237,0.12)', padding: '48px 40px', maxWidth: 520, width: '100%' }}>
 
           {/* Logo */}
           <div style={{ textAlign: 'center', marginBottom: 32 }}>
@@ -1362,8 +1373,7 @@ export default function OnboardingPage() {
   const isStatePicker = step === 1 && step1Sub === 'state'
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: isDark ? '#1a1535' : '#f0edfd', position: 'relative' }}>
-      <button onClick={toggleTheme} aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'} style={{ position: 'fixed', top: 16, right: 16, zIndex: 100, background: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.08)', border: '1px solid rgba(124,58,237,0.3)', borderRadius: 8, fontSize: 18, padding: '5px 8px', cursor: 'pointer', lineHeight: 1 }}>{isDark ? '☀️' : '🌙'}</button>
+    <div className="min-h-screen" style={{ backgroundColor: '#3d3a52', position: 'relative' }}>
 
       {/* Teaching Style Browser Modal */}
       {showStyleBrowser && (
@@ -1522,6 +1532,48 @@ export default function OnboardingPage() {
         )}
 
         {/* ══════════════════════════════════════════════════════
+            STEP 1c — School Year
+        ══════════════════════════════════════════════════════ */}
+        {step === 1 && step1Sub === 'school_year' && (
+          <div>
+            <div className="text-center mb-8">
+              <div className="text-6xl mb-4">📅</div>
+              <h1 className="text-4xl font-black text-gray-900 mb-3">When does your school year run?</h1>
+              <p className="text-lg text-gray-500">This helps us track attendance, compliance, and progress.</p>
+            </div>
+            <div className="bg-white rounded-2xl shadow-sm p-6 space-y-5">
+              <div>
+                <label className="block text-sm font-bold text-gray-800 mb-2">School year start</label>
+                <input
+                  type="date"
+                  value={schoolYearStart}
+                  onChange={e => setSchoolYearStart(e.target.value)}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-gray-900 focus:border-purple-500 focus:outline-none text-base"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-800 mb-2">School year end <span className="text-gray-400 font-normal">(optional)</span></label>
+                <input
+                  type="date"
+                  value={schoolYearEnd}
+                  onChange={e => setSchoolYearEnd(e.target.value)}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-gray-900 focus:border-purple-500 focus:outline-none text-base"
+                />
+              </div>
+              <p className="text-xs text-gray-400">You can always update these dates in Profile → School Setup.</p>
+              <button
+                onClick={() => handleSchoolYearConfirmed(schoolYearStart, schoolYearEnd)}
+                disabled={!schoolYearStart || saving}
+                className="w-full py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-2xl font-bold text-base hover:opacity-90 disabled:opacity-40 transition-all"
+              >
+                {saving ? 'Saving…' : 'Continue →'}
+              </button>
+            </div>
+            <BackButton onClick={() => setStep1Sub('state')} />
+          </div>
+        )}
+
+        {/* ══════════════════════════════════════════════════════
             STEP 2 — Teaching Style Quiz
         ══════════════════════════════════════════════════════ */}
         {step === 2 && quizQuestion <= 3 && (() => {
@@ -1546,7 +1598,7 @@ export default function OnboardingPage() {
                 ))}
               </div>
               <BackButton onClick={() => {
-                if (quizQuestion === 1) { setStep(1); setStep1Sub('state') }
+                if (quizQuestion === 1) { setStep(1); setStep1Sub('school_year') }
                 else setQuizQuestion(quizQuestion - 1)
               }} />
             </div>

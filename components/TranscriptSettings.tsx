@@ -312,7 +312,7 @@ export default function TranscriptSettings({ kidId, userId }: TranscriptSettings
           <h3 className="text-lg font-bold text-gray-900">Honors & Awards</h3>
           <button
             onClick={() => setShowHonorForm(!showHonorForm)}
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm"
+            style={{ background: '#4f46e5', color: '#fff', border: 'none', borderRadius: 12, padding: '8px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}
           >
             {showHonorForm ? 'Cancel' : '+ Add Honor/Award'}
           </button>
@@ -359,7 +359,7 @@ export default function TranscriptSettings({ kidId, userId }: TranscriptSettings
               />
               <button
                 type="submit"
-                className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+                style={{ background: '#4f46e5', color: '#fff', border: 'none', borderRadius: 12, padding: '10px 20px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}
               >
                 Add Honor/Award
               </button>
@@ -404,7 +404,7 @@ export default function TranscriptSettings({ kidId, userId }: TranscriptSettings
         <button
           onClick={saveSettings}
           disabled={saving}
-          className="bg-green-600 text-white px-6 py-3 rounded hover:bg-green-700 font-medium"
+          style={{ background: 'linear-gradient(135deg, #7c3aed, #a855f7)', color: '#fff', border: 'none', borderRadius: 12, padding: '10px 24px', fontSize: 13, fontWeight: 700, cursor: saving ? 'default' : 'pointer', fontFamily: "'Nunito', sans-serif" }}
         >
           {saving ? 'Saving...' : 'Save Settings'}
         </button>

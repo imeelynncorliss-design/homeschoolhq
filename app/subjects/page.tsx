@@ -6,7 +6,6 @@ import { createClient } from '@/src/lib/supabase/client'
 import AuthGuard from '@/components/AuthGuard'
 import LessonViewModal, { type LessonViewModalLesson } from '@/components/LessonViewModal'
 import LessonGenerator from '@/components/LessonGenerator'
-import { useTheme } from '@/contexts/ThemeContext'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -60,7 +59,7 @@ const SUBJECT_PALETTE = [
 const STATUS_CONFIG = {
   completed:   { dot: '#10b981', label: 'Done' },
   in_progress: { dot: '#f59e0b', label: 'In Progress' },
-  not_started: { dot: '#d1d5db', label: 'Not Started' },
+  not_started: { dot: '#9ca3af', label: 'Not Started' },
 }
 
 const COMMON_SUBJECTS = [
@@ -125,14 +124,8 @@ function getThisWeekBounds(): { mon: string; sun: string } {
 function SubjectsContent() {
   const router   = useRouter()
   const supabase = createClient()
-  const { isDark } = useTheme()
-
   const css = {
     root: {
-      minHeight: '100vh',
-      background: isDark
-        ? 'linear-gradient(135deg, #1a0533 0%, #2d1b69 50%, #1e1b4b 100%)'
-        : 'linear-gradient(135deg, #ede9fe 0%, #dbeafe 50%, #d1fae5 100%)',
       fontFamily: "'Nunito', sans-serif",
       paddingBottom: 88,
     },
@@ -324,13 +317,13 @@ function SubjectsContent() {
   }
 
   if (loading) return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #ede9fe 0%, #dbeafe 50%, #d1fae5 100%)' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#3d3a52' }}>
       <div style={{ color: '#7c3aed', fontWeight: 800, fontSize: 18, fontFamily: "'Nunito', sans-serif" }}>Loading...</div>
     </div>
   )
 
   return (
-    <div style={css.root}>
+    <div className="hr-page" style={css.root}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
         *, *::before, *::after { box-sizing: border-box; }
@@ -345,29 +338,16 @@ function SubjectsContent() {
       {/* Page title */}
       <div style={{ maxWidth: 800, margin: '0 auto', padding: '20px 20px 0' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-          <h1 style={{ fontSize: 26, fontWeight: 900, color: '#1e1b4b', margin: 0, fontFamily: "'Nunito', sans-serif" }}>
+          <h1 className="hr-h1" style={{ fontSize: 26, margin: 0, fontFamily: "'Nunito', sans-serif" }}>
             Subjects
           </h1>
           {/* Subjects | Lessons toggle */}
-          <div style={{
-            display: 'flex', background: 'rgba(255,255,255,0.7)',
-            borderRadius: 20, padding: 3, border: '1.5px solid rgba(124,58,237,0.15)',
-          }}>
-            <button style={{
-              padding: '5px 14px', borderRadius: 17, border: 'none',
-              background: '#7c3aed', color: '#fff',
-              fontSize: 13, fontWeight: 800, cursor: 'default',
-              fontFamily: "'Nunito', sans-serif",
-            }}>Subjects</button>
-            <button onClick={() => router.push('/lessons')} style={{
-              padding: '5px 14px', borderRadius: 17, border: 'none',
-              background: 'transparent', color: '#6b7280',
-              fontSize: 13, fontWeight: 700, cursor: 'pointer',
-              fontFamily: "'Nunito', sans-serif",
-            }}>Lessons</button>
+          <div className="hr-pill-row">
+            <button className="hr-pill active" style={{ fontFamily: "'Nunito', sans-serif", cursor: 'default' }}>Subjects</button>
+            <button className="hr-pill" onClick={() => router.push('/lessons')} style={{ fontFamily: "'Nunito', sans-serif" }}>Lessons</button>
           </div>
         </div>
-        <p style={{ fontSize: 14, color: '#6b7280', fontWeight: 600, margin: '0 0 24px' }}>
+        <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.7)', fontWeight: 600, margin: '0 0 24px' }}>
           Curriculum overview by child
         </p>
       </div>
@@ -376,11 +356,7 @@ function SubjectsContent() {
       <div style={{ maxWidth: 800, margin: '0 auto', padding: '0 20px' }}>
 
         {kids.length === 0 ? (
-          <div style={{
-            background: 'rgba(255,255,255,0.82)', borderRadius: 18,
-            border: '1.5px solid rgba(124,58,237,0.13)', padding: '40px 24px',
-            textAlign: 'center', color: '#6b7280', fontSize: 15, fontWeight: 600,
-          }}>
+          <div className="hr-card" style={{ padding: '40px 24px', textAlign: 'center', color: '#6b7280', fontSize: 15, fontWeight: 600 }}>
             Add children to your account to see subjects here.
           </div>
         ) : (
@@ -430,20 +406,15 @@ function SubjectsContent() {
                       {kid.displayname.charAt(0).toUpperCase()}
                     </div>
                     <div>
-                      <div style={{ fontSize: 18, fontWeight: 900, color: '#1e1b4b' }}>{kid.displayname}</div>
-                      {kid.grade && <div style={{ fontSize: 12, color: '#6b7280', fontWeight: 600 }}>Grade {kid.grade}</div>}
+                      <div style={{ fontSize: 18, fontWeight: 900, color: '#c4b5fd' }}>{kid.displayname}</div>
+                      {kid.grade && <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', fontWeight: 600 }}>Grade {kid.grade}</div>}
                     </div>
                   </div>
                   <button
+                    className="hr-back-btn"
                     onClick={() => openAddSubject(kid.id)}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: 6,
-                      padding: '8px 14px', borderRadius: 20, border: 'none',
-                      background: color + '18', color,
-                      fontFamily: "'Nunito', sans-serif", fontSize: 13, fontWeight: 800,
-                      cursor: 'pointer',
-                    }}>
-                    <span style={{ fontSize: 16, lineHeight: 1 }}>+</span> Add Subject
+                    style={{ fontFamily: "'Nunito', sans-serif", fontSize: 13 }}>
+                    + Add Subject
                   </button>
                 </div>
 

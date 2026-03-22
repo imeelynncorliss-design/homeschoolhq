@@ -7,7 +7,7 @@ import AuthGuard from '@/components/AuthGuard'
 import FieldTripLog from '@/components/FieldTripLog'
 import { getOrganizationId } from '@/src/lib/getOrganizationId'
 import { useAppHeader } from '@/components/layout/AppHeader'
-import { colors } from '@/src/lib/designTokens'
+import { pageShell, colors } from '@/src/lib/designTokens'
 
 function FieldTripsContent() {
   const router = useRouter()
@@ -45,26 +45,19 @@ function FieldTripsContent() {
   )
 
   return (
-    <div style={{ minHeight: '100vh', background: colors.pageBackground, fontFamily: "'Nunito', sans-serif", paddingBottom: 100 }}>
-      <button onClick={() => router.push('/reports')} style={{
-        display: 'flex', alignItems: 'center', gap: 6,
-        background: 'rgba(255,255,255,0.72)', border: '1.5px solid rgba(124,58,237,0.15)',
-        borderRadius: 20, padding: '7px 16px 7px 12px',
-        fontSize: 13, fontWeight: 700, color: '#7c3aed',
-        cursor: 'pointer', fontFamily: "'Nunito', sans-serif",
-        margin: '16px 20px 0',
-      }}>
-        ‹ Records
-      </button>
-      <main style={{ padding: '20px', maxWidth: 800, margin: '0 auto' }}>
+    <div style={{ ...pageShell.root, paddingBottom: 100 }}>
+      <main style={pageShell.main}>
+        <div className="hr-section-label" style={{ marginBottom: 14, marginTop: 8 }}>LOG FIELD TRIPS, CO-OP CLASSES & ACTIVITIES</div>
         {kids.length === 0 ? (
-          <div style={{ padding: 48, textAlign: 'center', background: '#fff', borderRadius: 20 }}>
+          <div className="hr-card" style={{ padding: '48px 24px', textAlign: 'center' as const }}>
             <div style={{ fontSize: 40, marginBottom: 12 }}>🤷‍♀️</div>
-            <div style={{ fontSize: 16, fontWeight: 800, color: '#111827', marginBottom: 8 }}>No students found</div>
-            <div style={{ fontSize: 13, color: '#6b7280' }}>Add a child to your account first.</div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: colors.textPrimary, marginBottom: 8 }}>No students found</div>
+            <div style={{ fontSize: 13, color: colors.textSecondary }}>Add a child to your account first.</div>
           </div>
         ) : (
-          <FieldTripLog organizationId={organizationId!} kids={kids} />
+          <div className="hr-card" style={{ padding: '20px' }}>
+            <FieldTripLog organizationId={organizationId!} kids={kids} />
+          </div>
         )}
       </main>
     </div>

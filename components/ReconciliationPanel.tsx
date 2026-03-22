@@ -112,20 +112,20 @@ export default function ReconciliationPanel({
 
       {/* ── Suggested School Days ─────────────────────────────── */}
       {suggestions.length > 0 && (
-        <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
+        <div style={{ background: '#eff6ff', border: '2px solid #bfdbfe', borderRadius: 8, padding: 16 }}>
           <div className="flex items-start justify-between mb-3">
             <div>
-              <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+              <h3 style={{ fontSize: 18, fontWeight: 700, color: '#111827', display: 'flex', alignItems: 'center', gap: 8, margin: 0 }}>
                 <span>💡</span> Suggested School Days
-                <span className="text-sm font-normal text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">
+                <span style={{ fontSize: 13, fontWeight: 400, color: '#1d4ed8', background: '#dbeafe', padding: '2px 8px', borderRadius: 999 }}>
                   {suggestions.length}
                 </span>
               </h3>
-              <p className="text-sm text-gray-700 mt-1">
+              <p style={{ fontSize: 14, color: '#374151', marginTop: 4, marginBottom: 0 }}>
                 These days have lessons logged but no attendance record. Confirm them to count toward compliance.
               </p>
             </div>
-            <button onClick={onDismissAll} className="text-gray-500 hover:text-gray-700 text-sm whitespace-nowrap ml-4">
+            <button onClick={onDismissAll} style={{ color: '#6b7280', fontSize: 14, whiteSpace: 'nowrap', marginLeft: 16, background: 'none', border: 'none', cursor: 'pointer' }}>
               Dismiss All
             </button>
           </div>
@@ -179,9 +179,11 @@ export default function ReconciliationPanel({
                 role="checkbox"
                 aria-checked={selectedDates.has(s.date)}
                 tabIndex={0}
-                className={`bg-white rounded-lg p-3 border-2 transition-all cursor-pointer ${
-                  selectedDates.has(s.date) ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-300'
-                }`}
+                style={{
+                  background: selectedDates.has(s.date) ? '#eff6ff' : '#ffffff',
+                  borderRadius: 8, padding: 12, cursor: 'pointer', transition: 'all 0.15s',
+                  border: selectedDates.has(s.date) ? '2px solid #3b82f6' : '2px solid #e5e7eb',
+                }}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -194,14 +196,14 @@ export default function ReconciliationPanel({
                     />
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-semibold text-gray-900 text-sm">
+                        <span style={{ fontWeight: 600, color: '#111827', fontSize: 14 }}>
                           {new Date(s.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
                         </span>
-                        <span className="px-2 py-0.5 text-xs font-medium rounded bg-blue-100 text-blue-800">
+                        <span style={{ padding: '2px 8px', fontSize: 12, fontWeight: 500, borderRadius: 4, background: '#dbeafe', color: '#1e40af' }}>
                           {s.suggestedStatus === 'full_day' ? 'Full Day' : 'Half Day'}
                         </span>
                       </div>
-                      <p className="text-xs text-gray-500 mt-0.5">
+                      <p style={{ fontSize: 12, color: '#6b7280', marginTop: 2, marginBottom: 0 }}>
                         {s.lessonCount} lesson{s.lessonCount !== 1 ? 's' : ''} · {s.lessonHours.toFixed(1)}h · Suggested: {s.suggestedHours}h
                       </p>
                     </div>
@@ -221,7 +223,7 @@ export default function ReconciliationPanel({
           {suggestions.length > MAX_VISIBLE && (
             <button
               onClick={() => setShowAllSuggestions(v => !v)}
-              className="mt-3 w-full text-sm text-blue-600 hover:text-blue-800 font-medium py-1 border border-blue-200 rounded-lg bg-white"
+              style={{ marginTop: 12, width: '100%', fontSize: 14, color: '#2563eb', fontWeight: 500, padding: '4px 0', border: '1px solid #bfdbfe', borderRadius: 8, background: '#ffffff', cursor: 'pointer' }}
             >
               {showAllSuggestions
                 ? `Show less ▲`
@@ -231,9 +233,9 @@ export default function ReconciliationPanel({
 
           {/* Summary */}
           {selectedDates.size > 0 && (
-            <div className="mt-3 pt-3 border-t border-blue-200 text-sm text-gray-700">
-              <span className="font-semibold">{selectedDates.size}</span> day{selectedDates.size !== 1 ? 's' : ''} selected ·{' '}
-              ~<span className="font-semibold">{(selectedDates.size * bulkHours).toFixed(1)}</span>h will be added
+            <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #bfdbfe', fontSize: 14, color: '#374151' }}>
+              <span style={{ fontWeight: 600 }}>{selectedDates.size}</span> day{selectedDates.size !== 1 ? 's' : ''} selected ·{' '}
+              ~<span style={{ fontWeight: 600 }}>{(selectedDates.size * bulkHours).toFixed(1)}</span>h will be added
             </div>
           )}
         </div>
@@ -241,15 +243,15 @@ export default function ReconciliationPanel({
 
       {/* ── Reconciliation Panel ──────────────────────────────── */}
       {discrepancies.length > 0 && (
-        <div className="bg-amber-50 border-2 border-amber-200 rounded-lg p-4">
+        <div style={{ background: '#fffbeb', border: '2px solid #fde68a', borderRadius: 8, padding: 16 }}>
           <div className="mb-3">
-            <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+            <h3 style={{ fontSize: 18, fontWeight: 700, color: '#111827', display: 'flex', alignItems: 'center', gap: 8, margin: 0 }}>
               <span>🔍</span> Reconciliation Panel
-              <span className="text-sm font-normal text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
+              <span style={{ fontSize: 13, fontWeight: 400, color: '#92400e', background: '#fef3c7', padding: '2px 8px', borderRadius: 999 }}>
                 {discrepancies.length} issue{discrepancies.length !== 1 ? 's' : ''}
               </span>
             </h3>
-            <p className="text-sm text-gray-700 mt-1">
+            <p style={{ fontSize: 14, color: '#374151', marginTop: 4, marginBottom: 0 }}>
               These attendance records have data conflicts that may affect your compliance numbers. Review each one.
             </p>
           </div>
@@ -258,32 +260,32 @@ export default function ReconciliationPanel({
             {visibleDiscrepancies.map((d) => {
               const meta = DISCREPANCY_LABELS[d.type]
               return (
-                <div key={`${d.date}-${d.type}`} className="bg-white rounded-lg p-3 border-2 border-amber-200">
+                <div key={`${d.date}-${d.type}`} style={{ background: '#ffffff', borderRadius: 8, padding: 12, border: '2px solid #fde68a' }}>
                   <div className="flex items-start gap-3">
                     <span className="text-lg mt-0.5">{meta.icon}</span>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-semibold text-gray-900 text-sm">
+                        <span style={{ fontWeight: 600, color: '#111827', fontSize: 14 }}>
                           {parseLocalDate(d.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
                         </span>
-                        <span className="px-2 py-0.5 text-xs font-medium rounded bg-amber-100 text-amber-800">
+                        <span style={{ padding: '2px 8px', fontSize: 12, fontWeight: 500, borderRadius: 4, background: '#fef3c7', color: '#92400e' }}>
                           {meta.label}
                         </span>
                       </div>
-                      <p className="text-xs text-gray-500 mt-1">{meta.description(d)}</p>
+                      <p style={{ fontSize: 12, color: '#6b7280', marginTop: 4, marginBottom: 0 }}>{meta.description(d)}</p>
                       {meta.hint && (
-                        <p className="text-xs text-blue-600 mt-1.5 leading-relaxed">{meta.hint}</p>
+                        <p style={{ fontSize: 12, color: '#2563eb', marginTop: 6, marginBottom: 0, lineHeight: 1.5 }}>{meta.hint}</p>
                       )}
                     </div>
                     <div className="flex flex-col gap-1 items-end flex-shrink-0">
                       {d.type === 'outside_school_year' ? (
-                        <a href="/school-year" className="text-xs text-amber-700 hover:text-amber-900 font-medium whitespace-nowrap underline">
+                        <a href="/school-year" style={{ fontSize: 12, color: '#b45309', fontWeight: 500, whiteSpace: 'nowrap', textDecoration: 'underline' }}>
                           Fix →
                         </a>
                       ) : (
                         <button
                           onClick={() => onFixDate(d.date)}
-                          className="text-xs text-amber-700 hover:text-amber-900 font-medium whitespace-nowrap underline"
+                          style={{ fontSize: 12, color: '#b45309', fontWeight: 500, whiteSpace: 'nowrap', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer' }}
                         >
                           Fix →
                         </button>
@@ -291,7 +293,7 @@ export default function ReconciliationPanel({
                       {meta.canDismiss && (
                         <button
                           onClick={() => onDismissDiscrepancy(d.date, d.type)}
-                          className="text-xs text-gray-500 hover:text-gray-700 font-medium whitespace-nowrap"
+                          style={{ fontSize: 12, color: '#6b7280', fontWeight: 500, whiteSpace: 'nowrap', background: 'none', border: 'none', cursor: 'pointer' }}
                         >
                           Dismiss
                         </button>
@@ -307,7 +309,7 @@ export default function ReconciliationPanel({
           {discrepancies.length > MAX_VISIBLE && (
             <button
               onClick={() => setShowAllDiscrepancies(v => !v)}
-              className="mt-3 w-full text-sm text-amber-700 hover:text-amber-900 font-medium py-1 border border-amber-200 rounded-lg bg-white"
+              style={{ marginTop: 12, width: '100%', fontSize: 14, color: '#b45309', fontWeight: 500, padding: '4px 0', border: '1px solid #fde68a', borderRadius: 8, background: '#ffffff', cursor: 'pointer' }}
             >
               {showAllDiscrepancies
                 ? `Show less ▲`

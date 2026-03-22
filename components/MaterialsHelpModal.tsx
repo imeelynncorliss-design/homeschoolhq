@@ -16,7 +16,7 @@ export default function MaterialsHelpModal({ onClose }: MaterialsHelpModalProps)
     >
       <div
         style={{
-          background: '#fff', borderRadius: 20, width: '100%', maxWidth: 540,
+          background: '#3d3a52', borderRadius: 20, width: '100%', maxWidth: 540,
           boxShadow: '0 24px 64px rgba(0,0,0,0.2)', overflow: 'hidden',
         }}
         onClick={e => e.stopPropagation()}
@@ -70,7 +70,7 @@ export default function MaterialsHelpModal({ onClose }: MaterialsHelpModalProps)
 
           {/* 4 types */}
           <div>
-            <div style={{ fontSize: 13, fontWeight: 800, color: '#111827', marginBottom: 10 }}>
+            <div style={{ fontSize: 13, fontWeight: 800, color: '#e9d5ff', marginBottom: 10 }}>
               The 4 material types:
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -83,8 +83,8 @@ export default function MaterialsHelpModal({ onClose }: MaterialsHelpModalProps)
                 <div key={item.type} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
                   <span style={{ fontSize: 20, flexShrink: 0, marginTop: 1 }}>{item.icon}</span>
                   <div>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: '#111827' }}>{item.type}: </span>
-                    <span style={{ fontSize: 13, color: '#6b7280' }}>{item.desc}</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: '#f3f4f6' }}>{item.type}: </span>
+                    <span style={{ fontSize: 13, color: '#d1d5db' }}>{item.desc}</span>
                   </div>
                 </div>
               ))}

@@ -253,7 +253,7 @@ export default function CourseManager({ kidId, userId }: CourseManagerProps) {
           </button>
           <button
             onClick={() => setShowForm(!showForm)}
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+            style={{ background: 'linear-gradient(135deg, #7c3aed, #a855f7)', color: '#fff', border: 'none', borderRadius: 12, padding: '10px 20px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}
           >
             {showForm ? 'Cancel' : '+ New Course'}
           </button>
@@ -427,7 +427,7 @@ export default function CourseManager({ kidId, userId }: CourseManagerProps) {
           </p>
 
           <div className="flex gap-2 pt-4">
-            <button type="submit" className="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700">
+            <button type="submit" style={{ background: 'linear-gradient(135deg, #7c3aed, #a855f7)', color: '#fff', border: 'none', borderRadius: 12, padding: '10px 24px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}>
               {editingCourse ? 'Update Course' : 'Create Course'}
             </button>
             <button type="button" onClick={resetForm} className="bg-gray-300 text-gray-700 px-6 py-2 rounded hover:bg-gray-400">
@@ -440,7 +440,7 @@ export default function CourseManager({ kidId, userId }: CourseManagerProps) {
       {/* Course List */}
       <div className="space-y-3">
         {courses.length === 0 ? (
-          <CourseOnboardingGuide onCreateCourse={() => setShowForm(true)} />
+          !showGuide && <CourseOnboardingGuide onCreateCourse={() => setShowForm(true)} />
         ) : (
           courses.map(course => {
             const courseLinkedLessons = getLinkedLessons(course.id)

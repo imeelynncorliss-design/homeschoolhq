@@ -1,15 +1,12 @@
 'use client'
 
 import { useState, useEffect, Suspense } from 'react'
-import { useRouter } from 'next/navigation'
+
 import AuthGuard from '@/components/AuthGuard'
 import { supabase } from '@/src/lib/supabase'
 import { getOrganizationId } from '@/src/lib/getOrganizationId'
 import { useAppHeader } from '@/components/layout/AppHeader'
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const GRADIENT = 'linear-gradient(135deg, #c4b5fd 0%, #e879f9 18%, #f0abfc 36%, #fbcfe8 54%, #bae6fd 76%, #6ee7b7 100%)'
+import { pageShell } from '@/src/lib/designTokens'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -56,7 +53,6 @@ function isImage(fileType: string | null, fileName: string) {
 // ─── Main content ─────────────────────────────────────────────────────────────
 
 function PortfolioContent() {
-  const router = useRouter()
   useAppHeader({ title: '🗂️ Portfolio', backHref: '/reports' })
 
   const [groups, setGroups]     = useState<KidGroup[]>([])
@@ -147,40 +143,9 @@ function PortfolioContent() {
   const activeGroup = groups.find(g => g.kid_id === activeKid)
 
   return (
-    <div style={{ fontFamily: "'Nunito', sans-serif", minHeight: '100vh', background: GRADIENT, paddingBottom: 80 }}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
-        *, *::before, *::after { box-sizing: border-box; }
-        body { margin: 0; }
-      `}</style>
-
-      <div style={{ maxWidth: 800, margin: '0 auto', padding: '0 0 12px' }}>
-
-        {/* Back button */}
-        <div style={{ padding: '16px 20px 0' }}>
-          <button
-            onClick={() => router.push('/reports')}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 6,
-              background: 'rgba(255,255,255,0.72)', border: '1.5px solid rgba(124,58,237,0.15)',
-              borderRadius: 20, padding: '7px 16px 7px 12px',
-              fontSize: 13, fontWeight: 700, color: '#7c3aed',
-              cursor: 'pointer', fontFamily: "'Nunito', sans-serif",
-            }}
-          >
-            ‹ Records
-          </button>
-        </div>
-
-        {/* Page title */}
-        <div style={{ padding: '16px 20px 4px' }}>
-          <h1 style={{ fontSize: 26, fontWeight: 900, color: '#1e1b4b', margin: '0 0 4px', fontFamily: "'Nunito', sans-serif" }}>
-            🗂️ Portfolio
-          </h1>
-          <p style={{ fontSize: 14, color: '#4b5563', fontWeight: 600, margin: 0, lineHeight: 1.6 }}>
-            Work samples uploaded during lesson check-ins.
-          </p>
-        </div>
+    <div style={{ ...pageShell.root, paddingBottom: 80 }}>
+      <main style={pageShell.main}>
+        <div className="hr-section-label" style={{ marginBottom: 14, marginTop: 8 }}>WORK SAMPLES & UPLOADED DOCUMENTS</div>
 
         {/* Loading */}
         {loading && (
@@ -236,9 +201,9 @@ function PortfolioContent() {
             {/* Summary */}
             {activeGroup && (
               <div style={{ padding: '14px 20px 6px' }}>
-                <div style={{ fontSize: 13, color: '#4b5563', fontWeight: 700 }}>
+                <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', fontWeight: 700 }}>
                   {activeGroup.uploads.length} file{activeGroup.uploads.length !== 1 ? 's' : ''} for{' '}
-                  <strong style={{ color: '#1e1b4b' }}>{activeGroup.kid_name}</strong>
+                  <strong style={{ color: '#c4b5fd' }}>{activeGroup.kid_name}</strong>
                 </div>
               </div>
             )}
@@ -326,8 +291,7 @@ function PortfolioContent() {
             )}
           </>
         )}
-      </div>
-
+      </main>
 
       {/* Lightbox */}
       {preview && (
@@ -378,7 +342,7 @@ function PortfolioContent() {
 export default function PortfolioPage() {
   return (
     <AuthGuard>
-      <Suspense fallback={<div style={{ minHeight: '100vh', background: GRADIENT }} />}>
+      <Suspense fallback={<div style={{ minHeight: '100vh', background: '#3d3a52' }} />}>
         <PortfolioContent />
       </Suspense>
     </AuthGuard>

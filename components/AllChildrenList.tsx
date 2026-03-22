@@ -506,11 +506,13 @@ export default function AllChildrenList({
                                     <div key={subjectKey} className="border rounded-lg">
                                       <button
                                         onClick={() => toggleSubject(subjectKey)}
-                                        className="w-full px-4 py-2 flex items-center gap-2 text-sm font-semibold text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-t-lg"
+                                        style={{ width: '100%', padding: '8px 16px', display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, fontWeight: 600, color: '#374151', background: '#f9fafb', border: 'none', borderRadius: '8px 8px 0 0', cursor: 'pointer', textAlign: 'left' as const }}
+                                        onMouseEnter={e => (e.currentTarget.style.background = '#f3f4f6')}
+                                        onMouseLeave={e => (e.currentTarget.style.background = '#f9fafb')}
                                       >
                                         <span>{isSubjectCollapsed ? '▶' : '▼'}</span>
                                         <span>📚 {subject}</span>
-                                        <span className="font-normal text-gray-500">({subjectLessons.length})</span>
+                                        <span style={{ fontWeight: 400, color: '#9ca3af' }}>({subjectLessons.length})</span>
                                       </button>
 
                                       {!isSubjectCollapsed && (
@@ -544,11 +546,16 @@ export default function AllChildrenList({
                                                     showStatusToast(lesson.id, lesson.status, newStatus)
                                                     onCycleStatus(lesson.id, lesson.status)
                                                   }}
-                                                  className={`mt-0.5 flex items-center gap-1 px-2 py-0.5 rounded-full border text-xs font-700 cursor-pointer transition-colors flex-shrink-0 ${
-                                                    lesson.status === 'completed' ? 'bg-green-100 border-green-300 text-green-700' :
-                                                    lesson.status === 'in_progress' ? 'bg-yellow-100 border-yellow-300 text-yellow-700' :
-                                                    'bg-gray-100 border-gray-300 text-gray-500'
-                                                  }`}
+                                                  style={{
+                                                    marginTop: 2, display: 'flex', alignItems: 'center', gap: 4,
+                                                    padding: '2px 8px', borderRadius: 999, fontSize: 12, fontWeight: 600,
+                                                    cursor: 'pointer', flexShrink: 0, transition: 'all 0.15s',
+                                                    ...(lesson.status === 'completed'
+                                                      ? { background: '#f0fdf4', border: '1px solid #86efac', color: '#15803d' }
+                                                      : lesson.status === 'in_progress'
+                                                      ? { background: '#fefce8', border: '1px solid #fde047', color: '#a16207' }
+                                                      : { background: '#f5f3ff', border: '1px solid #c4b5fd', color: '#7c3aed' })
+                                                  }}
                                                 >
                                                   <span>{lesson.status === 'completed' ? '✅' : lesson.status === 'in_progress' ? '🔵' : '⬜'}</span>
                                                   <span>{lesson.status === 'completed' ? 'Done' : lesson.status === 'in_progress' ? 'In Progress' : 'Not Started'}</span>

@@ -452,13 +452,13 @@ function LessonsContent() {
   // ── Render ──────────────────────────────────────────────────────────────────
 
   if (loading) return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #ede9fe 0%, #dbeafe 50%, #d1fae5 100%)' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#3d3a52' }}>
       <div style={{ color: '#7c3aed', fontWeight: 800, fontSize: 16, fontFamily: "'Nunito', sans-serif" }}>Loading lessons...</div>
     </div>
   )
 
   return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #ede9fe 0%, #dbeafe 50%, #d1fae5 100%)', fontFamily: "'Nunito', sans-serif", paddingBottom: 88 }}>
+    <div className="hr-page" style={{ fontFamily: "'Nunito', sans-serif", paddingBottom: 88 }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
         *, *::before, *::after { box-sizing: border-box; }
@@ -469,26 +469,19 @@ function LessonsContent() {
       {/* ── Page header ────────────────────────────────────────────────── */}
       <div style={{ maxWidth: 860, margin: '0 auto', padding: '20px 20px 0' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-          <h1 style={{ fontSize: 26, fontWeight: 900, color: '#1e1b4b', margin: 0, fontFamily: "'Nunito', sans-serif" }}>
+          <h1 className="hr-h1" style={{ fontSize: 26, margin: 0, fontFamily: "'Nunito', sans-serif" }}>
             Lessons
           </h1>
           <div style={{ display: 'flex', gap: 8 }}>
             <button
-              className="cal-btn"
+              className="hr-back-btn"
               onClick={() => router.push('/subjects')}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 6,
-                padding: '7px 14px', borderRadius: 20,
-                border: '1.5px solid rgba(124,58,237,0.25)',
-                background: 'rgba(255,255,255,0.7)', color: '#7c3aed',
-                fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 13,
-                cursor: 'pointer',
-              }}>
+              style={{ fontFamily: "'Nunito', sans-serif", fontSize: 13 }}>
               📚 Subjects
             </button>
           </div>
         </div>
-        <p style={{ fontSize: 14, color: '#6b7280', fontWeight: 600, margin: '0 0 20px' }}>
+        <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.7)', fontWeight: 600, margin: '0 0 20px' }}>
           Lesson plans by child
         </p>
 
@@ -550,11 +543,7 @@ function LessonsContent() {
           }}
         />
         {kids.length === 0 ? (
-          <div style={{
-            background: 'rgba(255,255,255,0.82)', borderRadius: 18,
-            border: '1.5px solid rgba(124,58,237,0.13)',
-            padding: '48px 32px', textAlign: 'center',
-          }}>
+          <div className="hr-card" style={{ padding: '48px 32px', textAlign: 'center' }}>
             <div style={{ fontSize: 48, marginBottom: 12 }}>📚</div>
             <h2 style={{ fontSize: 20, fontWeight: 900, color: '#111827', margin: '0 0 8px', fontFamily: "'Nunito', sans-serif" }}>No lessons yet</h2>
             <p style={{ color: '#6b7280', fontSize: 14, margin: '0 0 20px', fontFamily: "'Nunito', sans-serif" }}>

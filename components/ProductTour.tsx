@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useTheme } from '@/contexts/ThemeContext'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -33,7 +34,7 @@ function buildTourSteps(
   steps.push({
     targetId: 'tour-week-strip',
     title: 'Your Week at a Glance',
-    content: "A purple dot means lessons are scheduled that day. Tap any day to see those lessons — and open, edit, check in, or delete right from there. Tap 'View full calendar' to see the full month view.",
+    content: "A small dot (●) below a date means lessons are scheduled that day. Tap any day to see those lessons — and open, edit, check in, or delete right from there. Tap 'View full calendar' to see the full month view.",
     position: 'bottom',
   })
 
@@ -69,7 +70,20 @@ function buildTourSteps(
       '📋 Records — attendance, compliance, transcripts, reading logs, and more',
       '💡 Resources — manage teaching materials and supplies',
       '🔧 Tools — import curriculum, bulk schedule, plan vacations, add co-teachers',
-      '👤 Profile — your account, children\'s profiles, and teaching style',
+    ],
+    position: 'top',
+  })
+
+  // Profile — always
+  steps.push({
+    targetId: 'tour-profile-nav',
+    title: 'Your School Profile',
+    content: 'Tap Profile to manage the details that shape your whole experience:',
+    bullets: [
+      '👧 Children — add kids, update names, grade, and learning style',
+      '📅 School year — set your start and end dates anytime',
+      '🎨 Teaching style — retake the quiz if your approach evolves',
+      '🏫 School name & state — shown on reports and transcripts',
     ],
     position: 'top',
   })
@@ -101,7 +115,7 @@ const STORAGE_KEY = 'hq_tour_done'
 
 type ArrowDir = 'up' | 'down' | 'none'
 
-function getTooltipPosition(targetId: string): { style: React.CSSProperties; arrow: ArrowDir } {
+function getTooltipPosition(targetId: string, prefer: 'top' | 'bottom' | 'left' | 'right' | 'center' = 'bottom'): { style: React.CSSProperties; arrow: ArrowDir } {
   if (typeof window === 'undefined') {
     return { style: { top: '50%', left: '50%', transform: 'translate(-50%,-50%)' }, arrow: 'none' }
   }
@@ -122,29 +136,34 @@ function getTooltipPosition(targetId: string): { style: React.CSSProperties; arr
   // Center the tooltip horizontally over the element, clamped to viewport
   const left = Math.max(M, Math.min(rect.left + rect.width / 2 - TW / 2, vw - TW - M))
 
-  // Prefer placing below the element
   const topBelow = rect.bottom + GAP
-  if (topBelow + TH <= vh - M) {
-    return { style: { top: topBelow, left, width: TW }, arrow: 'up' }
-  }
-
-  // Otherwise place above the element
   const topAbove = rect.top - TH - GAP
-  if (topAbove >= M) {
-    return { style: { top: Math.max(M, topAbove), left, width: TW }, arrow: 'down' }
+
+  if (prefer === 'top') {
+    // Anchor from the bottom of the viewport so actual tooltip height doesn't matter
+    const bottomOffset = vh - rect.top + GAP
+    return { style: { bottom: bottomOffset, left, width: TW }, arrow: 'down' }
+  } else {
+    // Default: try below first
+    if (topBelow + TH <= vh - M) {
+      return { style: { top: topBelow, left, width: TW }, arrow: 'up' }
+    }
+    if (topAbove >= M) {
+      return { style: { top: Math.max(M, topAbove), left, width: TW }, arrow: 'down' }
+    }
   }
 
   // Last resort: bottom-center above nav
   return { style: { bottom: 110, left: Math.max(M, (vw - TW) / 2), width: TW }, arrow: 'up' }
 }
 
-function getArrowStyle(arrow: ArrowDir): React.CSSProperties {
+function getArrowStyle(arrow: ArrowDir, bg = '#ffffff'): React.CSSProperties {
   const base: React.CSSProperties = {
     position: 'absolute', width: 0, height: 0, borderStyle: 'solid',
     left: '50%', transform: 'translateX(-50%)',
   }
-  if (arrow === 'up')   return { ...base, top: -10,    borderWidth: '0 10px 10px', borderColor: 'transparent transparent #fff transparent' }
-  if (arrow === 'down') return { ...base, bottom: -10, borderWidth: '10px 10px 0', borderColor: '#fff transparent transparent transparent' }
+  if (arrow === 'up')   return { ...base, top: -10,    borderWidth: '0 10px 10px', borderColor: `transparent transparent ${bg} transparent` }
+  if (arrow === 'down') return { ...base, bottom: -10, borderWidth: '10px 10px 0', borderColor: `${bg} transparent transparent transparent` }
   return {}
 }
 
@@ -193,6 +212,16 @@ function HighlightRing({ targetId }: { targetId: string }) {
 
 export default function ProductTour({ parentName, autoStart = false, homeschoolStyle, pinnedFeatures = [], onDone }: ProductTourProps) {
   const tourSteps = buildTourSteps(homeschoolStyle, pinnedFeatures)
+  const { isDark } = useTheme()
+
+  // Dark-mode-aware color tokens
+  const cardBg      = '#ffffff'
+  const textPrimary = '#374151'
+  const textMuted   = '#6b7280'
+  const borderColor = '#e5e7eb'
+  const surfaceBg   = '#fafafa'
+  const dotInactive = '#e5e7eb'
+
   const [phase, setPhase]         = useState<'idle' | 'welcome' | 'tour'>('idle')
   const [step, setStep]           = useState(0)
   const [tooltipStyle, setTooltipStyle] = useState<React.CSSProperties>({})
@@ -222,14 +251,16 @@ export default function ProductTour({ parentName, autoStart = false, homeschoolS
     const s = tourSteps[step]
     const el = document.getElementById(s.targetId)
     if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      // Don't scrollIntoView fixed elements — it scrolls page content unexpectedly
+      const isFixed = window.getComputedStyle(el).position === 'fixed'
+      if (!isFixed) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
       setTimeout(() => {
-        const { style, arrow } = getTooltipPosition(s.targetId)
+        const { style, arrow } = getTooltipPosition(s.targetId, s.position)
         setTooltipStyle(style)
         setArrowDir(arrow)
       }, 600)
     } else {
-      const { style, arrow } = getTooltipPosition(s.targetId)
+      const { style, arrow } = getTooltipPosition(s.targetId, s.position)
       setTooltipStyle(style)
       setArrowDir(arrow)
     }
@@ -286,9 +317,9 @@ export default function ProductTour({ parentName, autoStart = false, homeschoolS
           animation: 'tour-fade-in 0.4s ease forwards',
         }}>
           <div style={{
-            background: '#fff', borderRadius: 22,
+            background: cardBg, borderRadius: 22,
             boxShadow: '0 16px 48px rgba(0,0,0,0.18), 0 2px 8px rgba(124,58,237,0.12)',
-            border: '1.5px solid rgba(124,58,237,0.15)',
+            border: `1.5px solid ${borderColor}`,
             overflow: 'hidden',
           }}>
             {/* Scout header */}
@@ -305,7 +336,7 @@ export default function ProductTour({ parentName, autoStart = false, homeschoolS
             </div>
             {/* Body */}
             <div style={{ padding: '16px 18px 18px' }}>
-              <p style={{ fontSize: 13, color: '#374151', lineHeight: 1.6, margin: '0 0 14px', fontWeight: 600 }}>
+              <p style={{ fontSize: 13, color: textPrimary, lineHeight: 1.6, margin: '0 0 14px', fontWeight: 600 }}>
                 Your home screen is all set! Want a quick 30-second tour so you know where everything lives?
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -326,8 +357,8 @@ export default function ProductTour({ parentName, autoStart = false, homeschoolS
                     onClick={finish}
                     style={{
                       padding: '10px 14px', borderRadius: 12,
-                      border: '1.5px solid #e5e7eb',
-                      background: '#fafafa', color: '#6b7280',
+                      border: `1.5px solid ${borderColor}`,
+                      background: surfaceBg, color: textMuted,
                       fontWeight: 700, fontSize: 13, cursor: 'pointer',
                       fontFamily: "'Nunito', sans-serif",
                       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -344,7 +375,7 @@ export default function ProductTour({ parentName, autoStart = false, homeschoolS
           <div style={{
             width: 0, height: 0, borderStyle: 'solid',
             borderWidth: '10px 10px 0',
-            borderColor: 'rgba(124,58,237,0.15) transparent transparent',
+            borderColor: `${cardBg} transparent transparent`,
             marginLeft: 'auto', marginRight: 28, marginTop: -1,
           }} />
         </div>
@@ -382,13 +413,13 @@ export default function ProductTour({ parentName, autoStart = false, homeschoolS
           >
             {/* Arrow */}
             {arrowDir !== 'none' && (
-              <div style={getArrowStyle(arrowDir)} />
+              <div style={getArrowStyle(arrowDir, cardBg)} />
             )}
 
             <div style={{
-              background: '#fff', borderRadius: 20,
+              background: cardBg, borderRadius: 20,
               boxShadow: '0 20px 60px rgba(0,0,0,0.22)',
-              border: '1.5px solid rgba(124,58,237,0.12)',
+              border: `1.5px solid ${borderColor}`,
               overflow: 'hidden',
             }}>
               {/* Header */}
@@ -413,13 +444,13 @@ export default function ProductTour({ parentName, autoStart = false, homeschoolS
 
               {/* Body */}
               <div style={{ padding: '18px 20px 20px' }}>
-                <p style={{ fontSize: 14, color: '#374151', lineHeight: 1.65, margin: currentTourStep.bullets ? '0 0 12px' : '0 0 18px', fontWeight: 600 }}>
+                <p style={{ fontSize: 14, color: textPrimary, lineHeight: 1.65, margin: currentTourStep.bullets ? '0 0 12px' : '0 0 18px', fontWeight: 600 }}>
                   {currentTourStep.content}
                 </p>
                 {currentTourStep.bullets && (
                   <ul style={{ margin: '0 0 18px', padding: '0 0 0 4px', listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 6 }}>
                     {currentTourStep.bullets.map((b, i) => (
-                      <li key={i} style={{ fontSize: 13, color: '#374151', fontWeight: 600, lineHeight: 1.4 }}>{b}</li>
+                      <li key={i} style={{ fontSize: 13, color: textPrimary, fontWeight: 600, lineHeight: 1.4 }}>{b}</li>
                     ))}
                   </ul>
                 )}
@@ -431,7 +462,7 @@ export default function ProductTour({ parentName, autoStart = false, homeschoolS
                       <div key={i} style={{
                         height: 6, borderRadius: 3,
                         width: i === step ? 22 : 6,
-                        background: i === step ? '#7c3aed' : '#e5e7eb',
+                        background: i === step ? '#7c3aed' : dotInactive,
                         transition: 'all 0.25s',
                       }} />
                     ))}
@@ -442,8 +473,8 @@ export default function ProductTour({ parentName, autoStart = false, homeschoolS
                         onClick={() => setStep(s => s - 1)}
                         style={{
                           padding: '9px 14px', borderRadius: 10,
-                          border: '1.5px solid #e5e7eb',
-                          background: '#fafafa', color: '#6b7280',
+                          border: `1.5px solid ${borderColor}`,
+                          background: surfaceBg, color: textMuted,
                           fontWeight: 700, fontSize: 13, cursor: 'pointer',
                           fontFamily: "'Nunito', sans-serif",
                         }}

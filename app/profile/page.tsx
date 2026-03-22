@@ -10,7 +10,7 @@ import KidProfileForm from '@/components/KidProfileForm'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const GRADIENT = 'linear-gradient(135deg, #c4b5fd 0%, #e879f9 18%, #f0abfc 36%, #fbcfe8 54%, #bae6fd 76%, #6ee7b7 100%)'
+const GRADIENT = '#3d3a52'
 
 const KID_COLORS = ['#7c3aed', '#0d9488', '#ec4899', '#f59e0b', '#3b82f6']
 
@@ -82,6 +82,12 @@ function ProfileContent() {
   const [orgState,       setOrgState]       = useState<string | null>(null)
   const [teachingStyle,  setTeachingStyle]  = useState<string | null>(null)
   const [schoolYearStr,  setSchoolYearStr]  = useState('—')
+  const [schoolYearStartRaw, setSchoolYearStartRaw] = useState('')
+  const [schoolYearEndRaw,   setSchoolYearEndRaw]   = useState('')
+  const [editingSchoolYear,  setEditingSchoolYear]  = useState(false)
+  const [syStartInput,       setSyStartInput]       = useState('')
+  const [syEndInput,         setSyEndInput]         = useState('')
+  const [syStartSaving,      setSyStartSaving]      = useState(false)
   const [requiredDays,   setRequiredDays]   = useState('—')
   const [coTeacherCount, setCoTeacherCount] = useState(0)
   const [kids,           setKids]           = useState<Kid[]>([])
@@ -153,6 +159,8 @@ function ProfileContent() {
         const end   = fmt(syRes.data.school_year_end)
         if (start && end) setSchoolYearStr(`${start} – ${end}`)
         else if (start)   setSchoolYearStr(start)
+        if (syRes.data.school_year_start) setSchoolYearStartRaw(syRes.data.school_year_start)
+        if (syRes.data.school_year_end)   setSchoolYearEndRaw(syRes.data.school_year_end)
 
         const val  = syRes.data.annual_goal_value
         const type = (syRes.data.annual_goal_type ?? 'days').toLowerCase()
@@ -206,8 +214,8 @@ function ProfileContent() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: GRADIENT }}>
-        <div style={{ color: '#7c3aed', fontWeight: 800, fontSize: 18, fontFamily: "'Nunito', sans-serif" }}>Loading...</div>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#3d3a52' }}>
+        <div style={{ color: '#c4b5fd', fontWeight: 800, fontSize: 18, fontFamily: "'Nunito', sans-serif" }}>Loading...</div>
       </div>
     )
   }
@@ -266,23 +274,13 @@ function ProfileContent() {
 
   return (
     <>
-    <div style={{ fontFamily: "'Nunito', sans-serif", minHeight: '100vh', background: GRADIENT, paddingBottom: 88 }}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
-        *, *::before, *::after { box-sizing: border-box; }
-        body { margin: 0; }
-        .profile-kid-row:hover { background: rgba(124,58,237,0.04) !important; }
-      `}</style>
+    <div className="hr-page" style={{ fontFamily: "'Nunito', sans-serif", paddingBottom: 88 }}>
+      <style>{`.profile-kid-row:hover { background: rgba(124,58,237,0.04) !important; }`}</style>
 
       <div style={{ maxWidth: 600, margin: '0 auto', padding: '16px 20px 0' }}>
 
         {/* ── Header hero card ── */}
-        <div style={{
-          background: 'rgba(255,255,255,0.88)', borderRadius: 22,
-          border: '1.5px solid rgba(124,58,237,0.15)',
-          padding: '20px 22px', marginBottom: 20,
-          boxShadow: '0 2px 14px rgba(0,0,0,0.08)',
-        }}>
+        <div className="hr-card" style={{ padding: '20px 22px', marginBottom: 20 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
             {/* Initials avatar */}
             <div style={{
@@ -325,31 +323,108 @@ function ProfileContent() {
         </div>
 
         {/* ── School Setup ── */}
-        <div style={{ fontSize: 11, fontWeight: 800, color: '#4c1d95', letterSpacing: 0.8, marginBottom: 8, paddingLeft: 4 }}>
+        <div className="hr-section-label" style={{ marginBottom: 8, paddingLeft: 4 }}>
           SCHOOL SETUP
         </div>
-        <div style={{
-          background: 'rgba(255,255,255,0.88)', borderRadius: 20,
-          border: '1.5px solid rgba(124,58,237,0.15)',
-          marginBottom: 20, overflow: 'hidden',
-          boxShadow: '0 2px 14px rgba(0,0,0,0.08)',
-        }}>
-          <InfoRow label="School year"   value={schoolYearStr} />
+        <div className="hr-card" style={{ marginBottom: 20, overflow: 'hidden' }}>
+          {/* School year — inline editable */}
+          {editingSchoolYear ? (
+            <div style={{ padding: '14px 20px', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#4b5563', marginBottom: 10 }}>School year</div>
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>
+                <div style={{ flex: 1, minWidth: 130 }}>
+                  <label style={{ fontSize: 11, fontWeight: 700, color: '#6b7280', display: 'block', marginBottom: 4 }}>Start</label>
+                  <input
+                    type="date"
+                    value={syStartInput}
+                    onChange={e => setSyStartInput(e.target.value)}
+                    style={{ width: '100%', padding: '8px 10px', border: '1.5px solid rgba(124,58,237,0.3)', borderRadius: 8, fontSize: 13, fontFamily: "'Nunito', sans-serif", color: '#1a1a2e' }}
+                  />
+                </div>
+                <div style={{ flex: 1, minWidth: 130 }}>
+                  <label style={{ fontSize: 11, fontWeight: 700, color: '#6b7280', display: 'block', marginBottom: 4 }}>End <span style={{ fontWeight: 400 }}>(optional)</span></label>
+                  <input
+                    type="date"
+                    value={syEndInput}
+                    onChange={e => setSyEndInput(e.target.value)}
+                    style={{ width: '100%', padding: '8px 10px', border: '1.5px solid rgba(124,58,237,0.3)', borderRadius: 8, fontSize: 13, fontFamily: "'Nunito', sans-serif", color: '#1a1a2e' }}
+                  />
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  disabled={!syStartInput || syStartSaving}
+                  onClick={async () => {
+                    if (!orgId || !syStartInput) return
+                    setSyStartSaving(true)
+                    await supabase.from('school_year_settings').upsert({
+                      organization_id: orgId,
+                      school_year_start: syStartInput,
+                      school_year_end: syEndInput || null,
+                      updated_at: new Date().toISOString(),
+                    }, { onConflict: 'organization_id' })
+                    setSchoolYearStartRaw(syStartInput)
+                    setSchoolYearEndRaw(syEndInput)
+                    const fmt = (s: string) => {
+                      if (!s) return null
+                      return new Date(s + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+                    }
+                    const s = fmt(syStartInput)
+                    const e = fmt(syEndInput)
+                    setSchoolYearStr(s && e ? `${s} – ${e}` : s ?? '—')
+                    setSyStartSaving(false)
+                    setEditingSchoolYear(false)
+                  }}
+                  style={{
+                    background: 'linear-gradient(135deg, #7c3aed, #a855f7)', color: '#fff',
+                    border: 'none', borderRadius: 8, padding: '8px 16px',
+                    fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                    fontFamily: "'Nunito', sans-serif",
+                    opacity: !syStartInput || syStartSaving ? 0.5 : 1,
+                  }}
+                >
+                  {syStartSaving ? 'Saving…' : 'Save'}
+                </button>
+                <button
+                  onClick={() => setEditingSchoolYear(false)}
+                  style={{
+                    background: 'none', border: '1px solid rgba(0,0,0,0.1)', borderRadius: 8,
+                    padding: '8px 14px', fontSize: 12, fontWeight: 700, color: '#6b7280',
+                    cursor: 'pointer', fontFamily: "'Nunito', sans-serif",
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
+              <span style={{ fontSize: 14, color: '#4b5563', fontWeight: 600 }}>School year</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: 14, fontWeight: 700, color: '#1a1a2e' }}>{schoolYearStr}</span>
+                <button
+                  onClick={() => {
+                    setSyStartInput(schoolYearStartRaw)
+                    setSyEndInput(schoolYearEndRaw)
+                    setEditingSchoolYear(true)
+                  }}
+                  style={{ background: 'none', border: 'none', color: '#7c3aed', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: "'Nunito', sans-serif", padding: '2px 6px' }}
+                >
+                  Edit
+                </button>
+              </div>
+            </div>
+          )}
           <InfoRow label="State"         value={orgState || '—'} />
           <InfoRow label="Required days" value={requiredDays} />
           <InfoRow label="Co-teachers"   value={coTeacherCount > 0 ? `${coTeacherCount} active` : '—'} last />
         </div>
 
         {/* ── Teaching Style ── */}
-        <div style={{ fontSize: 11, fontWeight: 800, color: '#4c1d95', letterSpacing: 0.8, marginBottom: 8, paddingLeft: 4 }}>
+        <div className="hr-section-label" style={{ marginBottom: 8, paddingLeft: 4 }}>
           TEACHING STYLE
         </div>
-        <div style={{
-          background: 'rgba(255,255,255,0.88)', borderRadius: 20,
-          border: '1.5px solid rgba(124,58,237,0.15)',
-          padding: '18px 22px', marginBottom: 20,
-          boxShadow: '0 2px 14px rgba(0,0,0,0.08)',
-        }}>
+        <div className="hr-card" style={{ padding: '18px 22px', marginBottom: 20 }}>
           {styleName ? (
             <>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
@@ -405,15 +480,10 @@ function ProfileContent() {
         </div>
 
         {/* ── Children ── */}
-        <div style={{ fontSize: 11, fontWeight: 800, color: '#4c1d95', letterSpacing: 0.8, marginBottom: 8, paddingLeft: 4 }}>
+        <div className="hr-section-label" style={{ marginBottom: 8, paddingLeft: 4 }}>
           CHILDREN
         </div>
-        <div style={{
-          background: 'rgba(255,255,255,0.88)', borderRadius: 20,
-          border: '1.5px solid rgba(124,58,237,0.15)',
-          marginBottom: 20, overflow: 'hidden',
-          boxShadow: '0 2px 14px rgba(0,0,0,0.08)',
-        }}>
+        <div className="hr-card" style={{ marginBottom: 20, overflow: 'hidden' }}>
           {kids.map((kid, idx) => {
             const color = KID_COLORS[idx % KID_COLORS.length]
             const grade = kid.grade
@@ -480,15 +550,10 @@ function ProfileContent() {
         </div>
 
         {/* ── Account ── */}
-        <div style={{ fontSize: 11, fontWeight: 800, color: '#4c1d95', letterSpacing: 0.8, marginBottom: 8, paddingLeft: 4 }}>
+        <div className="hr-section-label" style={{ marginBottom: 8, paddingLeft: 4 }}>
           ACCOUNT
         </div>
-        <div style={{
-          background: 'rgba(255,255,255,0.88)', borderRadius: 20,
-          border: '1.5px solid rgba(124,58,237,0.15)',
-          marginBottom: 24, overflow: 'hidden',
-          boxShadow: '0 2px 14px rgba(0,0,0,0.08)',
-        }}>
+        <div className="hr-card" style={{ marginBottom: 24, overflow: 'hidden' }}>
           {accountRows.map((row, i) => (
             <InfoRow key={row.label} label={row.label} value={row.value} last={i === accountRows.length - 1} />
           ))}
@@ -553,7 +618,7 @@ function ProfileContent() {
 export default function ProfilePage() {
   return (
     <AuthGuard>
-      <Suspense fallback={<div style={{ minHeight: '100vh', background: GRADIENT }} />}>
+      <Suspense fallback={<div style={{ minHeight: '100vh', background: '#3d3a52' }} />}>
         <ProfileContent />
       </Suspense>
     </AuthGuard>

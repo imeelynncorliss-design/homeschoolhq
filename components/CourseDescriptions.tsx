@@ -165,11 +165,14 @@ export default function CourseDescriptions({ kidId }: CourseDescriptionsProps) {
                       onClick={() => handleSave(course.id)}
                       disabled={isSaving || !isDirty}
                       style={{
-                        padding: '8px 20px', borderRadius: 8, border: 'none',
-                        fontSize: 12, fontWeight: 700, cursor: isSaving || !isDirty ? 'default' : 'pointer',
-                        background: wasSaved ? '#059669' : isDirty ? 'linear-gradient(135deg, #7c3aed, #a855f7)' : '#f3f4f6',
-                        color: isDirty || wasSaved ? '#fff' : '#9ca3af',
+                        padding: '10px 20px', borderRadius: 12, border: 'none',
+                        fontSize: 13, fontWeight: 700,
+                        cursor: isSaving || !isDirty ? 'default' : 'pointer',
+                        pointerEvents: isSaving || !isDirty ? 'none' : 'auto',
+                        background: wasSaved ? '#059669' : 'linear-gradient(135deg, #7c3aed, #a855f7)',
+                        color: '#fff',
                         transition: 'all 0.2s',
+                        fontFamily: "'Nunito', sans-serif",
                       }}
                     >
                       {isSaving ? 'Saving...' : wasSaved ? '✓ Saved' : 'Save'}

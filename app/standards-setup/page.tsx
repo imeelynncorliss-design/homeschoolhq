@@ -92,10 +92,10 @@ function StandardsSetupContent() {
 
         {/* Header */}
         <div style={{ marginBottom: 24 }}>
-          <h2 style={{ fontSize: 22, fontWeight: 900, color: '#1e1b4b', margin: '0 0 6px', fontFamily: "'Nunito', sans-serif" }}>
+          <h2 style={{ fontSize: 22, fontWeight: 900, color: '#c4b5fd', margin: '0 0 6px', fontFamily: "'Nunito', sans-serif" }}>
             📥 Standards Setup
           </h2>
-          <p style={{ fontSize: 14, color: '#4b5563', fontWeight: 600, margin: 0, lineHeight: 1.5 }}>
+          <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.75)', fontWeight: 600, margin: 0, lineHeight: 1.5 }}>
             Import standards once — then tag them to lessons to track coverage over time.
           </p>
         </div>
@@ -159,9 +159,10 @@ function StandardsSetupContent() {
           <button
             onClick={() => router.push('/standards')}
             style={{
-              background: 'none', border: 'none', cursor: 'pointer',
-              fontSize: 14, fontWeight: 700, color: '#7c3aed',
-              fontFamily: "'Nunito', sans-serif", textDecoration: 'underline',
+              padding: '11px 24px', background: 'linear-gradient(135deg, #7c3aed, #a855f7)',
+              color: '#fff', border: 'none', borderRadius: 99,
+              fontSize: 14, fontWeight: 800, cursor: 'pointer',
+              fontFamily: "'Nunito', sans-serif",
             }}
           >
             View Standards Coverage →

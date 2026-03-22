@@ -3,13 +3,11 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { 
-  ShieldCheck, 
-  Calendar, 
-  Clock, 
+  ShieldCheck,
+  Calendar,
+  Clock,
   TrendingUp,
   AlertTriangle,
-  Users,
-  User,
   ChevronRight,
   ExternalLink
 } from 'lucide-react'
@@ -19,6 +17,7 @@ import { useComplianceSettings } from '@/src/hooks/useComplianceSettings'
 import { generateComplianceReport } from '@/src/utils/generateComplianceReport'
 import { useAppHeader } from '@/components/layout/AppHeader'
 import { getOrganizationId } from '@/src/lib/getOrganizationId'
+import { colors } from '@/src/lib/designTokens'
 
 interface Kid {
   id: string
@@ -340,18 +339,15 @@ export default function CompliancePage() {
 
   if (loading || settingsLoading || templatesLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600 font-medium">Loading compliance data...</p>
-        </div>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: colors.pageBackground }}>
+        <div style={{ color: colors.purple, fontWeight: 700, fontSize: 16 }}>Loading compliance data...</div>
       </div>
     )
   }
 
   if (!settings || showStateSelector) {
     return (
-      <div className="min-h-screen bg-gray-50 p-8">
+      <div className="hr-page" style={{ padding: 32 }}>
         <div className="max-w-3xl mx-auto">
           <div className="bg-white rounded-2xl shadow-lg p-8">
             <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -455,49 +451,28 @@ export default function CompliancePage() {
     : null
 
   return (
-    <div className="min-h-screen bg-gray-50" style={{ paddingBottom: 100 }}>
-      <div className="p-8">
-      <button onClick={() => router.push('/reports')} style={{
-        display: 'flex', alignItems: 'center', gap: 6,
-        background: 'rgba(255,255,255,0.72)', border: '1.5px solid rgba(124,58,237,0.15)',
-        borderRadius: 20, padding: '7px 16px 7px 12px',
-        fontSize: 13, fontWeight: 700, color: '#7c3aed',
-        cursor: 'pointer', fontFamily: "'Nunito', sans-serif",
-        margin: '0 0 16px',
-      }}>
-        ‹ Records
-      </button>
-      <div className="max-w-7xl mx-auto">
+    <div className="hr-page" style={{ paddingBottom: 100 }}>
+      <div style={{ maxWidth: 1120, margin: '0 auto', padding: '24px 20px 0' }}>
 
         {/* View Mode Toggle */}
-        <div className="mb-6 flex justify-center">
-          <div className="flex bg-gray-100 rounded-xl p-1">
+        <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'center' }}>
+          <div className="hr-pill-row">
             <button
               onClick={() => setViewMode('family')}
-              className={`px-6 py-3 rounded-lg font-bold transition-all ${
-                viewMode === 'family'
-                  ? 'bg-white shadow text-gray-900'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
+              className={`hr-pill${viewMode === 'family' ? ' active' : ''}`}
+              style={{ fontFamily: "'Nunito', sans-serif" }}
             >
-              <Users className="inline mr-2" size={18} />
-              Family Overview
+              👨‍👩‍👧 Family Overview
             </button>
             <button
               onClick={() => {
                 setViewMode('individual')
-                if (!selectedKidId && kids.length > 0) {
-                  setSelectedKidId(kids[0].id)
-                }
+                if (!selectedKidId && kids.length > 0) setSelectedKidId(kids[0].id)
               }}
-              className={`px-6 py-3 rounded-lg font-bold transition-all ${
-                viewMode === 'individual'
-                  ? 'bg-white shadow text-gray-900'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
+              className={`hr-pill${viewMode === 'individual' ? ' active' : ''}`}
+              style={{ fontFamily: "'Nunito', sans-serif" }}
             >
-              <User className="inline mr-2" size={18} />
-              Individual Details
+              👤 Individual Details
             </button>
           </div>
         </div>
@@ -592,7 +567,7 @@ export default function CompliancePage() {
                       {data.requiredDays > 0 && (
                         <div>
                           <div className="flex items-center justify-between mb-2">
-                            <span className="text-xs font-black text-gray-600 uppercase flex items-center gap-1">
+                            <span className="text-xs font-black text-gray-500 uppercase flex items-center gap-1">
                               <Calendar size={14} />
                               School Days
                             </span>
@@ -615,7 +590,7 @@ export default function CompliancePage() {
                       {data.requiredHours > 0 && (
                         <div>
                           <div className="flex items-center justify-between mb-2">
-                            <span className="text-xs font-black text-gray-600 uppercase flex items-center gap-1">
+                            <span className="text-xs font-black text-gray-500 uppercase flex items-center gap-1">
                               <Clock size={14} />
                               Instructional Hours
                             </span>
@@ -774,8 +749,6 @@ export default function CompliancePage() {
           </div>
         )}
       </div>
-      </div> {/* closes p-8 wrapper */}
-
     </div>
   )
 }
