@@ -466,9 +466,9 @@ function SubjectsContent() {
                             style={{
                               display: 'inline-flex', alignItems: 'center', gap: 4,
                               fontSize: 10, fontWeight: 900,
-                              color: subj.color, background: subj.color + '15',
+                              color: '#7c3aed', background: 'rgba(124,58,237,0.12)',
                               borderRadius: 8, padding: '3px 8px', marginBottom: 6,
-                              border: `1px solid ${subj.color}30`,
+                              border: '1px solid rgba(124,58,237,0.25)',
                               cursor: 'pointer', fontFamily: "'Nunito', sans-serif",
                             }}>
                             Target: {subj.weekly_frequency}×/wk ✏️
@@ -505,7 +505,7 @@ function SubjectsContent() {
                               : thisWeekCount >= target ? 'Target met! 🎉' : 'In progress'
                             return (
                               <div style={{ marginBottom: 6 }}>
-                                <div style={{ fontSize: 9, fontWeight: 800, color: '#9ca3af', letterSpacing: 0.4, textTransform: 'uppercase', marginBottom: 2 }}>
+                                <div style={{ fontSize: 9, fontWeight: 800, color: 'rgba(255,255,255,0.55)', letterSpacing: 0.4, textTransform: 'uppercase', marginBottom: 2 }}>
                                   This week's lessons
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
@@ -513,7 +513,7 @@ function SubjectsContent() {
                                     {thisWeekCount} of {target} {statusLabel}
                                   </span>
                                 </div>
-                                <div style={{ height: 4, borderRadius: 4, background: '#e5e7eb', overflow: 'hidden' }}>
+                                <div style={{ height: 4, borderRadius: 4, background: 'rgba(255,255,255,0.15)', overflow: 'hidden' }}>
                                   <div style={{
                                     height: '100%', borderRadius: 4,
                                     width: `${pct * 100}%`,
@@ -530,13 +530,13 @@ function SubjectsContent() {
                               <div style={{ fontSize: 9, fontWeight: 800, color: '#9ca3af', letterSpacing: 0.4, textTransform: 'uppercase', marginBottom: 2 }}>
                                 This week's lessons
                               </div>
-                              <div style={{ fontSize: 10, fontWeight: 700, color: '#9ca3af' }}>
+                              <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.6)' }}>
                                 {thisWeekCount > 0 ? `${thisWeekCount} scheduled` : 'None scheduled'}
                               </div>
                             </div>
                           )
                         })()}
-                        <div style={{ fontSize: 11, fontWeight: 700, color: subj.lessons.length === 0 ? '#9ca3af' : subj.color, display: 'block' }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: subj.lessons.length === 0 ? 'rgba(255,255,255,0.5)' : subj.color, display: 'block' }}>
                           {subj.lessons.length === 0 ? 'No lessons yet' : `${subj.lessons.length} lesson${subj.lessons.length !== 1 ? 's' : ''}`}
                         </div>
                       </div>
@@ -701,25 +701,25 @@ function SubjectsContent() {
           }} />
           <div style={{
             position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 301,
-            background: '#fff', borderRadius: '24px 24px 0 0',
-            boxShadow: '0 -8px 40px rgba(0,0,0,0.2)',
+            background: '#2d2b3d', borderRadius: '24px 24px 0 0',
+            boxShadow: '0 -8px 40px rgba(0,0,0,0.4)',
             maxHeight: '90vh', overflowY: 'auto',
             fontFamily: "'Nunito', sans-serif",
           }}>
             {/* Handle */}
             <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 0' }}>
-              <div style={{ width: 40, height: 4, borderRadius: 2, background: '#e5e7eb' }} />
+              <div style={{ width: 40, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.2)' }} />
             </div>
 
             <div style={{ padding: '16px 20px 40px' }}>
-              <div style={{ fontSize: 20, fontWeight: 900, color: '#1e1b4b', marginBottom: 4 }}>Add a Subject</div>
-              <div style={{ fontSize: 13, color: '#6b7280', fontWeight: 600, marginBottom: 20, lineHeight: 1.5 }}>
+              <div style={{ fontSize: 20, fontWeight: 900, color: '#c4b5fd', marginBottom: 4 }}>Add a Subject</div>
+              <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)', fontWeight: 600, marginBottom: 20, lineHeight: 1.5 }}>
                 Add subjects you plan to teach — even if you haven&rsquo;t scheduled lessons yet. Lessons will appear here once added.
               </div>
 
               {/* Subject name */}
               <div style={{ marginBottom: 20 }}>
-                <div style={{ fontSize: 12, fontWeight: 800, color: '#374151', marginBottom: 8, letterSpacing: 0.5 }}>SUBJECT NAME</div>
+                <div style={{ fontSize: 12, fontWeight: 800, color: 'rgba(255,255,255,0.6)', marginBottom: 8, letterSpacing: 0.5 }}>SUBJECT NAME</div>
                 <input
                   value={addName}
                   onChange={e => handleNameChange(e.target.value)}
@@ -727,8 +727,9 @@ function SubjectsContent() {
                   list="subject-suggestions"
                   style={{
                     width: '100%', padding: '11px 14px', borderRadius: 12,
-                    border: '1.5px solid #e5e7eb', fontSize: 15, fontWeight: 600,
+                    border: '1.5px solid rgba(255,255,255,0.15)', fontSize: 15, fontWeight: 600,
                     fontFamily: "'Nunito', sans-serif", color: '#1e1b4b', outline: 'none',
+                    background: '#fff',
                   }}
                 />
                 <datalist id="subject-suggestions">
@@ -739,8 +740,8 @@ function SubjectsContent() {
                   {COMMON_SUBJECTS.filter(s => !s.toLowerCase().includes(addName.toLowerCase()) || addName === '').slice(0, 10).map(s => (
                     <button key={s} onClick={() => handleNameChange(s)}
                       style={{
-                        padding: '4px 10px', borderRadius: 14, border: '1.5px solid #e5e7eb',
-                        background: '#f9fafb', fontSize: 12, fontWeight: 700, color: '#374151',
+                        padding: '4px 10px', borderRadius: 14, border: '1.5px solid rgba(255,255,255,0.2)',
+                        background: 'rgba(255,255,255,0.1)', fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.85)',
                         cursor: 'pointer', fontFamily: "'Nunito', sans-serif",
                       }}>{s}</button>
                   ))}
@@ -749,7 +750,7 @@ function SubjectsContent() {
 
               {/* Weekly frequency */}
               <div style={{ marginBottom: 20 }}>
-                <div style={{ fontSize: 12, fontWeight: 800, color: '#374151', marginBottom: 8, letterSpacing: 0.5 }}>
+                <div style={{ fontSize: 12, fontWeight: 800, color: 'rgba(255,255,255,0.6)', marginBottom: 8, letterSpacing: 0.5 }}>
                   TARGET FREQUENCY
                 </div>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' as const }}>
@@ -758,9 +759,9 @@ function SubjectsContent() {
                       onClick={() => setAddFrequency(addFrequency === n ? null : n)}
                       style={{
                         width: 48, height: 48, borderRadius: 12,
-                        border: addFrequency === n ? '2px solid #7c3aed' : '1.5px solid #e5e7eb',
-                        background: addFrequency === n ? '#ede9fe' : '#f9fafb',
-                        color: addFrequency === n ? '#7c3aed' : '#374151',
+                        border: addFrequency === n ? '2px solid #a78bfa' : '1.5px solid rgba(255,255,255,0.15)',
+                        background: addFrequency === n ? 'rgba(124,58,237,0.3)' : 'rgba(255,255,255,0.08)',
+                        color: addFrequency === n ? '#c4b5fd' : 'rgba(255,255,255,0.8)',
                         fontWeight: 900, fontSize: 14, cursor: 'pointer',
                         fontFamily: "'Nunito', sans-serif",
                         display: 'flex', flexDirection: 'column' as const, alignItems: 'center', justifyContent: 'center',
@@ -774,9 +775,9 @@ function SubjectsContent() {
                     onClick={() => setAddFrequency(null)}
                     style={{
                       padding: '0 14px', height: 48, borderRadius: 12,
-                      border: addFrequency === null ? '2px solid #7c3aed' : '1.5px solid #e5e7eb',
-                      background: addFrequency === null ? '#ede9fe' : '#f9fafb',
-                      color: addFrequency === null ? '#7c3aed' : '#374151',
+                      border: addFrequency === null ? '2px solid #a78bfa' : '1.5px solid rgba(255,255,255,0.15)',
+                      background: addFrequency === null ? 'rgba(124,58,237,0.3)' : 'rgba(255,255,255,0.08)',
+                      color: addFrequency === null ? '#c4b5fd' : 'rgba(255,255,255,0.8)',
                       fontWeight: 700, fontSize: 12, cursor: 'pointer',
                       fontFamily: "'Nunito', sans-serif",
                     }}>Flexible</button>
@@ -785,7 +786,7 @@ function SubjectsContent() {
 
               {/* Color picker */}
               <div style={{ marginBottom: 24 }}>
-                <div style={{ fontSize: 12, fontWeight: 800, color: '#374151', marginBottom: 8, letterSpacing: 0.5 }}>COLOR</div>
+                <div style={{ fontSize: 12, fontWeight: 800, color: 'rgba(255,255,255,0.6)', marginBottom: 8, letterSpacing: 0.5 }}>COLOR</div>
                 <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' as const }}>
                   {SUBJECT_PALETTE.map(c => (
                     <button key={c} className="color-swatch"
@@ -804,7 +805,7 @@ function SubjectsContent() {
               {/* Preview */}
               {addName.trim() && (
                 <div style={{ marginBottom: 20 }}>
-                  <div style={{ fontSize: 12, fontWeight: 800, color: '#374151', marginBottom: 8, letterSpacing: 0.5 }}>PREVIEW</div>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: 'rgba(255,255,255,0.6)', marginBottom: 8, letterSpacing: 0.5 }}>PREVIEW</div>
                   <div style={{
                     display: 'inline-block', background: 'rgba(255,255,255,0.88)',
                     border: `1.5px solid ${addColor}30`, borderRadius: 16, padding: '16px 14px',
