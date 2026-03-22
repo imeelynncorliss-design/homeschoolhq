@@ -1078,6 +1078,7 @@ function DashboardContent() {
   const [showCurriculumNudge, setShowCurriculumNudge] = useState(() => searchParams?.get('preview') === 'curriculum')
   const [showTour, setShowTour]               = useState(false)
   const [tourAutoStart, setTourAutoStart]     = useState(false)
+  const [tourFromWelcome, setTourFromWelcome] = useState(false)
   const [weekLessons, setWeekLessons]           = useState<Record<string, { lesson: any; kid: Kid }[]>>({})
   const [selectedWeekDay, setSelectedWeekDay]   = useState<string | null>(null)
 
@@ -1890,10 +1891,12 @@ function DashboardContent() {
               .update({ welcome_shown_at: new Date().toISOString() })
               .eq('user_id', user?.id)
             setShowWelcome(false)
-            if (!localStorage.getItem('hq_tour_done')) {
-              setTourAutoStart(true)
-              setShowTour(true)
-            }
+            // Always start the tour — parent just clicked "Let's take a tour →"
+            localStorage.removeItem('hq_tour_done')
+            localStorage.removeItem('hq_curriculum_nudge_done')
+            setTourFromWelcome(true)
+            setTourAutoStart(true)
+            setShowTour(true)
           }
           return (
             <div style={{
@@ -2034,18 +2037,16 @@ function DashboardContent() {
             onDone={() => {
               setShowTour(false)
               setTourAutoStart(false)
-              if (typeof window !== 'undefined') {
-                // Show curriculum nudge to structured-style users who haven't seen it yet.
-                // Check the actual style from DB (reliable) rather than just the localStorage key (fragile).
-                const structuredTeachingStyles = ['traditional', 'classical', 'charlotte_mason']
-                const isStructured = homeschoolStyle === 'structured'
-                  || structuredTeachingStyles.includes(orgTeachingStyle ?? '')
-                const alreadySeen = !!localStorage.getItem('hq_curriculum_nudge_done')
-                if (isStructured && !alreadySeen) {
-                  localStorage.removeItem('hq_curriculum_nudge_pending')
-                  setShowCurriculumNudge(true)
-                }
+              const structuredTeachingStyles = ['traditional', 'classical', 'charlotte_mason']
+              const isStructured = homeschoolStyle === 'structured'
+                || structuredTeachingStyles.includes(orgTeachingStyle ?? '')
+              // Always show curriculum nudge to structured users coming from the welcome flow
+              // (clears stale localStorage so nothing is suppressed)
+              const alreadySeen = tourFromWelcome ? false : !!localStorage.getItem('hq_curriculum_nudge_done')
+              if (isStructured && !alreadySeen) {
+                setShowCurriculumNudge(true)
               }
+              setTourFromWelcome(false)
             }}
           />
         )}
