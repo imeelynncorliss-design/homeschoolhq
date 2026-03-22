@@ -442,6 +442,8 @@ const SCOUT_QUIPS = [
   "The best homeschool families know when to close the books and open the door. 🚪 Go enjoy your day!",
 ]
 
+const FT_SUBJECTS = ['Science', 'History', 'Art', 'Geography', 'Language Arts', 'Life Skills', 'Physical Education', 'Other']
+
 function nextSchoolDay(): string {
   const d = new Date()
   do { d.setDate(d.getDate() + 1) } while (d.getDay() === 0 || d.getDay() === 6)
@@ -452,18 +454,30 @@ function formatNextDay(dateStr: string): string {
   return new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
 }
 
-function LifeHappensModal({ todayLessons, kidPulses, cardinalSrc, onClose, onRescheduled }: {
+type LHStep = 'scout' | 'reason' | 'note' | 'field_trip' | 'reschedule' | 'done'
+type LHReason = 'sick' | 'field_trip' | 'free_day' | 'other'
+
+function LifeHappensModal({ todayLessons, kidPulses, cardinalSrc, organizationId, onClose, onRescheduled }: {
   todayLessons: Record<string, any[]>
   kidPulses: KidPulse[]
   cardinalSrc: string
+  organizationId: string | null
   onClose: () => void
   onRescheduled: () => void
 }) {
-  const [step, setStep] = useState<'scout' | 'reschedule' | 'done'>('scout')
-  const [rescheduling, setRescheduling] = useState(false)
+  const [step, setStep]           = useState<LHStep>('scout')
+  const [reason, setReason]       = useState<LHReason | null>(null)
+  const [note, setNote]           = useState('')
+  const [ftTitle, setFtTitle]     = useState('')
+  const [ftLocation, setFtLocation] = useState('')
+  const [ftSubject, setFtSubject] = useState('Other')
+  const [ftHours, setFtHours]     = useState('')
+  const [ftKidId, setFtKidId]     = useState(() => kidPulses[0]?.kid.id ?? '')
+  const [saving, setSaving]       = useState(false)
   const [quip] = useState(() => SCOUT_QUIPS[Math.floor(Math.random() * SCOUT_QUIPS.length)])
   const trapRef = useFocusTrap(true)
 
+  const today  = new Date().toISOString().split('T')[0]
   const nextDay = nextSchoolDay()
 
   const unfinished = kidPulses.flatMap(p =>
@@ -472,22 +486,53 @@ function LifeHappensModal({ todayLessons, kidPulses, cardinalSrc, onClose, onRes
       .map((l: any) => ({ ...l, kidName: p.kid.displayname }))
   )
 
-  const handleReschedule = async () => {
-    if (unfinished.length === 0) { onClose(); return }
-    setRescheduling(true)
-    const { error } = await supabase
-      .from('lessons')
-      .update({ lesson_date: nextDay })
-      .in('id', unfinished.map((l: any) => l.id))
-    setRescheduling(false)
-    if (error) { alert('Something went wrong rescheduling. Please try again.'); return }
+  // Save school_day_log + optionally reschedule lessons
+  const handleReschedule = async (resolvedReason: LHReason, resolvedNote: string, ftId?: string) => {
+    setSaving(true)
+    // 1. Log the day reason
+    if (organizationId) {
+      await supabase.from('school_day_logs').upsert(
+        { organization_id: organizationId, date: today, reason: resolvedReason, note: resolvedNote || null, field_trip_id: ftId ?? null },
+        { onConflict: 'organization_id,date' }
+      )
+    }
+    // 2. Reschedule unfinished lessons
+    if (unfinished.length > 0) {
+      await supabase.from('lessons').update({ lesson_date: nextDay }).in('id', unfinished.map((l: any) => l.id))
+    }
+    setSaving(false)
     setStep('done')
   }
+
+  // Field trip: insert record then proceed to reschedule
+  const handleFieldTripSave = async () => {
+    if (!ftTitle.trim()) return
+    setSaving(true)
+    let ftId: string | undefined
+    const { data: ft } = await supabase.from('field_trips').insert({
+      title: ftTitle.trim(),
+      location: ftLocation.trim() || null,
+      subject: ftSubject,
+      hours: ftHours ? parseFloat(ftHours) : null,
+      trip_date: today,
+      kid_id: ftKidId,
+    }).select('id').single()
+    ftId = ft?.id
+    await handleReschedule('field_trip', note, ftId)
+  }
+
+  const REASON_OPTIONS: { key: LHReason; emoji: string; label: string; sub: string; bg: string; color: string }[] = [
+    { key: 'sick',       emoji: '🤒', label: 'Sick Day',    sub: "Someone's not feeling well",      bg: '#fef2f2', color: '#991b1b' },
+    { key: 'field_trip', emoji: '🚌', label: 'Field Trip',  sub: 'We\'re out learning in the world', bg: '#fffbeb', color: '#92400e' },
+    { key: 'free_day',   emoji: '☀️', label: 'Free Day',    sub: 'Just taking a break — no worries', bg: '#f0fdf4', color: '#065f46' },
+    { key: 'other',      emoji: '✏️', label: 'Something Else', sub: 'Add a note about what happened', bg: '#f5f3ff', color: '#4c1d95' },
+  ]
 
   return (
     <div style={lh.overlay} onClick={onClose} role="dialog" aria-modal="true" aria-label="Life Happens">
       <div ref={trapRef} style={lh.modal} onClick={e => e.stopPropagation()}>
 
+        {/* ── Step 1: Scout quip ── */}
         {step === 'scout' && (
           <>
             <button style={lh.closeBtn} onClick={onClose} aria-label="Close">×</button>
@@ -496,60 +541,158 @@ function LifeHappensModal({ todayLessons, kidPulses, cardinalSrc, onClose, onRes
             </div>
             <div style={lh.bubble}>{quip}</div>
             <div style={{ padding: '0 22px 24px', display: 'flex', flexDirection: 'column' as const, gap: 10 }}>
-              {unfinished.length > 0 ? (
-                <button style={lh.btnPrimary} onClick={() => setStep('reschedule')}>
-                  See Today&apos;s Lessons →
-                </button>
-              ) : (
-                <button style={lh.btnPrimary} onClick={onClose}>
-                  Enjoy your day! 🎉
-                </button>
-              )}
+              <button style={lh.btnPrimary} onClick={() => setStep('reason')}>
+                What&apos;s going on today? →
+              </button>
               <button style={lh.btnGhost} onClick={onClose}>Never mind, back to school</button>
             </div>
           </>
         )}
 
-        {step === 'reschedule' && (
+        {/* ── Step 2: Reason picker ── */}
+        {step === 'reason' && (
           <>
             <div style={lh.reschedHead}>
               <button style={lh.backBtn} onClick={() => setStep('scout')}>←</button>
-              <div style={lh.reschedTitle}>Reschedule Today</div>
+              <div style={lh.reschedTitle}>What&apos;s happening today?</div>
             </div>
-            <div style={lh.reschedBody}>
-              <div style={lh.nextDayNote}>
-                Moving <strong>{unfinished.length} lesson{unfinished.length !== 1 ? 's' : ''}</strong> to{' '}
-                <strong>{formatNextDay(nextDay)}</strong>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 8 }}>
-                {unfinished.map((l: any) => (
-                  <div key={l.id} style={lh.lessonRow}>
-                    <span style={lh.kidTag}>{l.kidName}</span>
-                    <span style={lh.lessonName}>{l.title}</span>
-                    <span style={lh.subjectTag}>{l.subject}</span>
+            <div style={{ padding: '14px 18px 20px', display: 'flex', flexDirection: 'column' as const, gap: 10 }}>
+              {REASON_OPTIONS.map(r => (
+                <button key={r.key} onClick={() => {
+                  setReason(r.key)
+                  if (r.key === 'field_trip') setStep('field_trip')
+                  else if (r.key === 'other')  setStep('note')
+                  else handleReschedule(r.key, '')
+                }} style={{
+                  display: 'flex', alignItems: 'center', gap: 14,
+                  background: r.bg, border: `1.5px solid ${r.color}22`,
+                  borderRadius: 14, padding: '14px 16px', cursor: 'pointer',
+                  textAlign: 'left', fontFamily: "'Nunito', sans-serif",
+                }}>
+                  <span style={{ fontSize: 28, lineHeight: 1, flexShrink: 0 }}>{r.emoji}</span>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: r.color }}>{r.label}</div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: r.color, opacity: 0.75, marginTop: 2 }}>{r.sub}</div>
                   </div>
-                ))}
-              </div>
+                </button>
+              ))}
             </div>
-            <div style={{ padding: '0 22px 24px' }}>
+          </>
+        )}
+
+        {/* ── Step 3a: Note (for "other") ── */}
+        {step === 'note' && (
+          <>
+            <div style={lh.reschedHead}>
+              <button style={lh.backBtn} onClick={() => setStep('reason')}>←</button>
+              <div style={lh.reschedTitle}>What happened?</div>
+            </div>
+            <div style={{ padding: '14px 20px 20px' }}>
+              <textarea
+                value={note}
+                onChange={e => setNote(e.target.value)}
+                placeholder="Co-op day, appointment, travel, spontaneous adventure…"
+                rows={4}
+                style={{
+                  width: '100%', borderRadius: 12, border: '1.5px solid #e5e7eb',
+                  padding: '12px 14px', fontSize: 14, fontFamily: "'Nunito', sans-serif",
+                  fontWeight: 600, color: '#1a1a2e', resize: 'none', outline: 'none',
+                  boxSizing: 'border-box',
+                }}
+              />
               <button
-                style={{ ...lh.btnPrimary, opacity: rescheduling ? 0.6 : 1 }}
-                disabled={rescheduling}
-                onClick={handleReschedule}
+                style={{ ...lh.btnPrimary, marginTop: 12, opacity: saving ? 0.6 : 1 }}
+                disabled={saving}
+                onClick={() => handleReschedule('other', note)}
               >
-                {rescheduling ? 'Moving lessons…' : "🎉 Push 'Em Forward!"}
+                {saving ? 'Saving…' : 'Save & Reschedule Lessons →'}
+              </button>
+              <button style={{ ...lh.btnGhost, marginTop: 8 }} onClick={() => handleReschedule('other', '')}>
+                Skip note
               </button>
             </div>
           </>
         )}
 
+        {/* ── Step 3b: Field trip quick log ── */}
+        {step === 'field_trip' && (
+          <>
+            <div style={lh.reschedHead}>
+              <button style={lh.backBtn} onClick={() => setStep('reason')}>←</button>
+              <div style={lh.reschedTitle}>🚌 Log the Field Trip</div>
+            </div>
+            <div style={{ padding: '14px 20px 20px', display: 'flex', flexDirection: 'column' as const, gap: 12 }}>
+              <div>
+                <label style={lh.fieldLabel}>Where did you go? *</label>
+                <input
+                  value={ftTitle} onChange={e => setFtTitle(e.target.value)}
+                  placeholder="e.g. Natural History Museum"
+                  style={lh.input}
+                />
+              </div>
+              <div>
+                <label style={lh.fieldLabel}>Location (optional)</label>
+                <input
+                  value={ftLocation} onChange={e => setFtLocation(e.target.value)}
+                  placeholder="City, address, or 'local'"
+                  style={lh.input}
+                />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <div>
+                  <label style={lh.fieldLabel}>Subject</label>
+                  <select value={ftSubject} onChange={e => setFtSubject(e.target.value)} style={lh.input}>
+                    {FT_SUBJECTS.map(s => <option key={s}>{s}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={lh.fieldLabel}>Hours</label>
+                  <input
+                    type="number" min="0.5" max="8" step="0.5"
+                    value={ftHours} onChange={e => setFtHours(e.target.value)}
+                    placeholder="e.g. 2"
+                    style={lh.input}
+                  />
+                </div>
+              </div>
+              {kidPulses.length > 1 && (
+                <div>
+                  <label style={lh.fieldLabel}>Which child?</label>
+                  <select value={ftKidId} onChange={e => setFtKidId(e.target.value)} style={lh.input}>
+                    {kidPulses.map(p => <option key={p.kid.id} value={p.kid.id}>{p.kid.displayname}</option>)}
+                  </select>
+                </div>
+              )}
+              <button
+                style={{ ...lh.btnPrimary, opacity: saving || !ftTitle.trim() ? 0.6 : 1 }}
+                disabled={saving || !ftTitle.trim()}
+                onClick={handleFieldTripSave}
+              >
+                {saving ? 'Saving…' : '🚌 Log Trip & Reschedule →'}
+              </button>
+              <button style={lh.btnGhost} onClick={() => handleReschedule('field_trip', '')}>
+                Skip log, just reschedule
+              </button>
+            </div>
+          </>
+        )}
+
+        {/* ── Step 4: Done ── */}
         {step === 'done' && (
           <div style={lh.doneWrap}>
-            <div style={{ fontSize: 56 }}>🎉</div>
+            <div style={{ fontSize: 56 }}>
+              {reason === 'sick' ? '🤒' : reason === 'field_trip' ? '🚌' : reason === 'free_day' ? '☀️' : '✅'}
+            </div>
             <div style={lh.doneTitle}>You&apos;re all set!</div>
             <div style={lh.doneSub}>
-              <strong>{unfinished.length} lesson{unfinished.length !== 1 ? 's' : ''}</strong> moved to{' '}
-              <strong>{formatNextDay(nextDay)}</strong>.<br />Go enjoy your day!
+              {unfinished.length > 0 ? (
+                <><strong>{unfinished.length} lesson{unfinished.length !== 1 ? 's' : ''}</strong> moved to{' '}
+                <strong>{formatNextDay(nextDay)}</strong>.<br /></>
+              ) : null}
+              {reason === 'sick'       && 'Hope everyone feels better soon! 💊'}
+              {reason === 'field_trip' && 'Field trip logged. Have a great time! 🎒'}
+              {reason === 'free_day'   && 'Enjoy your well-deserved break! 🌿'}
+              {reason === 'other'      && 'Day logged. Go enjoy it! 🌟'}
             </div>
             <button style={{ ...lh.btnPrimary, marginTop: 8 }} onClick={onRescheduled}>
               Got it! 👍
@@ -572,6 +715,7 @@ const lh: Record<string, import('react').CSSProperties> = {
   modal: {
     background: '#fff', borderRadius: 24,
     width: '100%', maxWidth: 420,
+    maxHeight: 'calc(100vh - 120px)', overflowY: 'auto',
     boxShadow: '0 -4px 40px rgba(0,0,0,0.2)',
     position: 'relative', overflow: 'hidden',
   },
@@ -651,6 +795,17 @@ const lh: Record<string, import('react').CSSProperties> = {
   doneSub: {
     fontSize: 14, color: '#6b7280', lineHeight: 1.6,
     fontFamily: "'Nunito', sans-serif",
+  },
+  fieldLabel: {
+    display: 'block', fontSize: 11, fontWeight: 800, color: '#6b7280',
+    textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6,
+    fontFamily: "'Nunito', sans-serif",
+  },
+  input: {
+    width: '100%', borderRadius: 10, border: '1.5px solid #e5e7eb',
+    padding: '10px 12px', fontSize: 14, fontFamily: "'Nunito', sans-serif",
+    fontWeight: 600, color: '#1a1a2e', outline: 'none', boxSizing: 'border-box',
+    background: '#fff',
   },
 }
 
@@ -1592,6 +1747,7 @@ function DashboardContent() {
             todayLessons={todayLessons}
             kidPulses={kidPulses}
             cardinalSrc={cardinalSrc}
+            organizationId={organizationId}
             onClose={() => setShowLifeHappens(false)}
             onRescheduled={() => {
               setShowLifeHappens(false)
