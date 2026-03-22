@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/src/lib/supabase'
 import { CANONICAL_SUBJECTS } from '@/src/constants/subjects'
 import { DEFAULT_FLEXIBLE, DEFAULT_STRUCTURED } from '@/components/StylePickerModal'
@@ -390,9 +390,10 @@ function StepIndicator({ currentStep, onBack }: { currentStep: number; onBack?: 
               }`}>
                 {isCompleted ? '✓' : stepNum}
               </div>
-              <span className={`text-xs mt-1.5 font-semibold text-center whitespace-nowrap leading-tight ${
-                isActive ? 'text-purple-700' : isCompleted ? 'text-yellow-600' : 'text-gray-400'
-              }`}>{label}</span>
+              <span
+                className="text-xs mt-1.5 font-semibold text-center whitespace-nowrap leading-tight"
+                style={{ color: isActive ? '#c4b5fd' : isCompleted ? '#fde68a' : 'rgba(255,255,255,0.45)' }}
+              >{label}</span>
             </div>
             {i < STEP_LABELS.length - 1 && (
               <div
@@ -410,25 +411,29 @@ function StepIndicator({ currentStep, onBack }: { currentStep: number; onBack?: 
   )
 }
 
-function DidYouKnow({ tip }: { tip: string }) {
-  const [open, setOpen] = useState(false)
+function ScoutBubble({ tip }: { tip: string }) {
   return (
-    <div className="relative inline-block mb-6">
-      <button
-        onClick={() => setOpen(!open)}
-        className="flex items-center gap-2 px-4 py-2 bg-yellow-400 rounded-full text-sm font-bold text-yellow-900 hover:bg-yellow-300 transition-colors"
-      >
-        💡 Did you know?
-      </button>
-      {open && (
-        <>
-          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute left-0 top-full mt-3 z-20 bg-indigo-950 text-white text-sm rounded-2xl p-4 max-w-xs shadow-xl leading-relaxed">
-            <div className="absolute -top-2 left-6 w-4 h-4 bg-indigo-950 rotate-45" style={{ borderRadius: 2 }} />
-            {tip}
-          </div>
-        </>
-      )}
+    <div style={{ display: 'flex', alignItems: 'center', gap: 0, marginBottom: 20 }}>
+      <div style={{
+        background: '#ede9fe',
+        borderRadius: 16,
+        padding: '14px 18px',
+        boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+        flex: 1,
+        minWidth: 0,
+      }}>
+        <div style={{ fontWeight: 800, fontSize: 14, color: '#1a1a2e', marginBottom: 4 }}>
+          Scout says:
+        </div>
+        <div style={{ fontSize: 13, color: '#4b5563', lineHeight: 1.55 }}>
+          {tip}
+        </div>
+      </div>
+      <img
+        src="/Cardinal_Mascot.png"
+        alt="Scout"
+        style={{ width: 110, height: 110, objectFit: 'contain', flexShrink: 0, marginLeft: -24 }}
+      />
     </div>
   )
 }
@@ -455,7 +460,12 @@ function AnswerRow({ emoji, text, onClick }: { emoji: string; text: string; onCl
 
 function BackButton({ onClick }: { onClick: () => void }) {
   return (
-    <button onClick={onClick} className="mt-6 flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800 font-medium transition-colors">
+    <button onClick={onClick} style={{
+      marginTop: 20, display: 'inline-flex', alignItems: 'center', gap: 6,
+      padding: '8px 18px', borderRadius: 99,
+      background: 'rgba(255,255,255,0.12)', border: '1.5px solid rgba(255,255,255,0.25)',
+      color: 'rgba(255,255,255,0.8)', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+    }}>
       ← Back
     </button>
   )
@@ -504,8 +514,8 @@ function StatePicker({
     <div>
       <div className="text-center mb-8">
         <div className="text-6xl mb-4">🗺️</div>
-        <h1 className="text-4xl font-black text-gray-900 mb-3">Where do you homeschool?</h1>
-        <DidYouKnow tip="Every state has different homeschool laws — some require nothing at all, others require annual testing and portfolio reviews. Knowing your state's requirements upfront means you won't get a nasty surprise at the end of the year." />
+        <h1 className="text-4xl font-black mb-3" style={{ color: '#c4b5fd' }}>Where do you homeschool?</h1>
+        <ScoutBubble tip="Every state has different homeschool laws — some require nothing at all, others require annual testing and portfolio reviews. Knowing your state's requirements upfront means you won't get a nasty surprise at the end of the year." />
       </div>
 
       <div className="flex gap-5 items-start">
@@ -936,6 +946,8 @@ function StatePicker({
 
 export default function OnboardingPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const isPreview = searchParams.get('preview') === 'true'
   const [user, setUser]             = useState<any>(null)
   const [step, setStep]             = useState(0)
   const [saving, setSaving]         = useState(false)
@@ -1070,7 +1082,7 @@ export default function OnboardingPage() {
         .from('user_profiles').select('onboarding_completed_at')
         .eq('user_id', user.id).maybeSingle()
 
-      if (profile?.onboarding_completed_at) { router.push('/dashboard'); return }
+      if (profile?.onboarding_completed_at && !isPreview) { router.push('/dashboard'); return }
 
       // ── 3. Has an existing org → treat as completed, redirect to dashboard ─
       const { data: userOrg } = await supabase
@@ -1079,7 +1091,7 @@ export default function OnboardingPage() {
         .eq('user_id', user.id)
         .maybeSingle()
 
-      if (userOrg?.organization_id) {
+      if (userOrg?.organization_id && !isPreview) {
         const { data: kids } = await supabase
           .from('kids').select('id').eq('user_id', user.id).limit(1)
 
@@ -1111,6 +1123,7 @@ export default function OnboardingPage() {
 
   const completeOnboarding = async (destination = '/dashboard') => {
     if (!user) return
+    if (isPreview) { router.push('/dashboard'); return }
     // Auto-set home layout based on teaching style chosen during onboarding
     const structuredStyles = ['traditional', 'classical', 'charlotte_mason']
     const homeStyle: 'structured' | 'flexible' = structuredStyles.includes(teachingStyle) ? 'structured' : 'flexible'
@@ -1149,26 +1162,39 @@ export default function OnboardingPage() {
   
     // Create org if it doesn't exist yet
     if (!resolvedOrgId) {
-      const { data: newOrg, error: orgError } = await supabase
-        .from('organizations')
-        .insert({ user_id: user.id, name: schoolName.trim() || 'My Homeschool' })
-        .select('id')
-        .single()
-  
-      if (orgError || !newOrg) {
-        console.error('Failed to create organization:', orgError)
-        setSaving(false)
-        return
+      if (isPreview) {
+        // In preview mode, reuse the existing org rather than creating a new one
+        const { data: existingOrg } = await supabase
+          .from('organizations')
+          .select('id')
+          .eq('user_id', user.id)
+          .maybeSingle()
+        if (existingOrg) {
+          resolvedOrgId = existingOrg.id
+          setOrgId(resolvedOrgId)
+        }
+      } else {
+        const { data: newOrg, error: orgError } = await supabase
+          .from('organizations')
+          .insert({ user_id: user.id, name: schoolName.trim() || 'My Homeschool' })
+          .select('id')
+          .single()
+
+        if (orgError || !newOrg) {
+          console.error('Failed to create organization:', orgError)
+          setSaving(false)
+          return
+        }
+
+        await supabase.from('user_organizations').insert({
+          user_id: user.id,
+          organization_id: newOrg.id,
+          role: 'admin',
+        })
+
+        resolvedOrgId = newOrg.id
+        setOrgId(resolvedOrgId)
       }
-  
-      await supabase.from('user_organizations').insert({
-        user_id: user.id,
-        organization_id: newOrg.id,
-        role: 'admin',
-      })
-  
-      resolvedOrgId = newOrg.id
-      setOrgId(resolvedOrgId)
     }
 
     setSelectedStateName(stateName)
@@ -1489,15 +1515,15 @@ export default function OnboardingPage() {
           <div>
             <div className="text-center mb-8">
               <div className="text-6xl mb-4">🏠</div>
-              <h1 className="text-4xl font-black text-gray-900 mb-3">Let's set up your school</h1>
-              <p className="text-lg text-gray-500">Every great homeschool starts with a home base.</p>
+              <h1 className="text-4xl font-black mb-3" style={{ color: '#c4b5fd' }}>Let's set up your school</h1>
+              <p className="text-lg" style={{ color: 'rgba(255,255,255,0.75)' }}>Every great homeschool starts with a home base.</p>
             </div>
             <div className="bg-white rounded-2xl shadow-sm p-6 space-y-5">
               <div>
                 <label className="block text-sm font-bold text-gray-800 mb-2">
                   What would you like to call your homeschool?
                 </label>
-                <DidYouKnow tip="Many families give their school a name — like 'The Johnson Academy' or 'Sunrise Learning Co.' It appears on compliance reports and transcripts, and gives your kids something to be proud of." />
+                <ScoutBubble tip="Many families give their school a name — like 'The Johnson Academy' or 'Sunrise Learning Co.' It appears on compliance reports and transcripts, and gives your kids something to be proud of." />
                 <input
                   type="text"
                   value={schoolName}
@@ -1538,8 +1564,8 @@ export default function OnboardingPage() {
           <div>
             <div className="text-center mb-8">
               <div className="text-6xl mb-4">📅</div>
-              <h1 className="text-4xl font-black text-gray-900 mb-3">When does your school year run?</h1>
-              <p className="text-lg text-gray-500">This helps us track attendance, compliance, and progress.</p>
+              <h1 className="text-4xl font-black mb-3" style={{ color: '#c4b5fd' }}>When does your school year run?</h1>
+              <p className="text-lg" style={{ color: 'rgba(255,255,255,0.75)' }}>This helps us track attendance, compliance, and progress.</p>
             </div>
             <div className="bg-white rounded-2xl shadow-sm p-6 space-y-5">
               <div>
@@ -1581,11 +1607,12 @@ export default function OnboardingPage() {
           return (
             <div>
               <div className="mb-8">
-                <span className="inline-flex items-center gap-2 px-4 py-2 bg-purple-100 text-purple-700 rounded-full text-sm font-bold mb-6">
+                <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold mb-6" style={{ background: 'rgba(255,255,255,0.15)', color: '#c4b5fd', border: '1.5px solid rgba(196,181,253,0.4)' }}>
                   {q.emoji} QUESTION {quizQuestion} OF 3
                 </span>
-                <h1 className="text-4xl font-black text-gray-900 mb-4 leading-tight">{q.question}</h1>
-                <DidYouKnow tip={q.tip} />
+                <h1 className="text-4xl font-black mb-2 leading-tight" style={{ color: '#c4b5fd' }}>{q.question}</h1>
+                <p className="text-sm mb-4" style={{ color: 'rgba(255,255,255,0.65)' }}>Your answers help Scout generate personalized lessons and activities for your family.</p>
+                <ScoutBubble tip={q.tip} />
               </div>
               <div className="space-y-3">
                 {q.answers.map(answer => (
@@ -1680,7 +1707,8 @@ export default function OnboardingPage() {
                   {/* Actions */}
                   <button
                     onClick={() => setStep(3)}
-                    className={`w-full py-4 bg-gradient-to-r ${result.gradient} text-white rounded-2xl font-bold text-base hover:opacity-90 transition-all`}
+                    className="w-full py-4 text-white rounded-2xl font-bold text-base hover:opacity-90 transition-all"
+                    style={{ background: 'linear-gradient(135deg, #7c3aed, #a855f7)' }}
                   >
                     Continue →
                   </button>
@@ -1703,10 +1731,10 @@ export default function OnboardingPage() {
   <div>
     <div className="text-center mb-8">
       <div className="text-6xl mb-4">🧒</div>
-      <h1 className="text-4xl font-black text-gray-900 mb-3 leading-tight">
+      <h1 className="text-4xl font-black mb-3 leading-tight" style={{ color: '#c4b5fd' }}>
         Now let's add your first student
       </h1>
-      <p className="text-lg text-gray-500">
+      <p className="text-lg" style={{ color: 'rgba(255,255,255,0.75)' }}>
         This is the heart of it all. You can add more kids after setup.
       </p>
     </div>
@@ -1926,12 +1954,12 @@ export default function OnboardingPage() {
         />
       </div>
 
-      <DidYouKnow tip="In homeschooling, grade levels are flexible. Many families teach to their child's actual ability level rather than their age — so a 9-year-old might do 5th grade math and 3rd grade reading. You can always adjust this later." />
+      <ScoutBubble tip="In homeschooling, grade levels are flexible. Many families teach to their child's actual ability level rather than their age — so a 9-year-old might do 5th grade math and 3rd grade reading. You can always adjust this later." />
 
       <div className="flex gap-3 pt-1">
         <button
           onClick={() => setStep(3)}
-          className="px-5 py-3 border-2 border-gray-200 rounded-xl text-gray-600 font-bold text-sm hover:bg-gray-50 transition-all"
+          style={{ padding: '10px 20px', borderRadius: 99, background: 'rgba(255,255,255,0.12)', border: '1.5px solid rgba(255,255,255,0.25)', color: 'rgba(255,255,255,0.8)', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
         >
           ← Back
         </button>
@@ -1955,8 +1983,9 @@ export default function OnboardingPage() {
           <div>
             <div className="text-center mb-8">
               <div className="text-6xl mb-4">📚</div>
-              <h1 className="text-4xl font-black text-gray-900 mb-3">Do you have a curriculum?</h1>
-              <p className="text-lg text-gray-500">No pressure — many families start without one and figure it out as they go.</p>
+              <h1 className="text-4xl font-black mb-3" style={{ color: '#c4b5fd' }}>Do you have a curriculum?</h1>
+              <p className="text-lg" style={{ color: 'rgba(255,255,255,0.75)' }}>No pressure — many families start without one and figure it out as they go.</p>
+              <p className="text-sm mt-2" style={{ color: 'rgba(255,255,255,0.55)' }}>This helps Scout create more relevant lessons and activities for your family.</p>
             </div>
             <div className="space-y-3">
               <button
@@ -2004,8 +2033,8 @@ export default function OnboardingPage() {
           <div>
             <div className="text-center mb-8">
               <div className="text-6xl mb-4">✅</div>
-              <h1 className="text-4xl font-black text-gray-900 mb-3">What curriculum are you using?</h1>
-              <p className="text-lg text-gray-500">We'll note it in your profile for reports and resources.</p>
+              <h1 className="text-4xl font-black mb-3" style={{ color: '#c4b5fd' }}>What curriculum are you using?</h1>
+              <p className="text-lg" style={{ color: 'rgba(255,255,255,0.75)' }}>We'll note it in your profile for reports and resources.</p>
             </div>
             <div className="bg-white rounded-2xl shadow-sm p-6 space-y-5">
               <input
@@ -2021,7 +2050,7 @@ export default function OnboardingPage() {
                 <p className="text-xs text-purple-600">After setup you can <strong>import lessons from a PDF</strong> or <strong>create your own lesson plan</strong> from scratch — under <strong>Lessons → Add Lesson</strong>. Our Copilot Assistant can also generate lessons based on your curriculum and teaching style.</p>
               </div>
               <div className="flex gap-3">
-                <button onClick={() => setCurriculumSub('choice')} className="px-5 py-3 border-2 border-gray-200 rounded-xl text-gray-600 font-bold text-sm hover:bg-gray-50">← Back</button>
+                <button onClick={() => setCurriculumSub('choice')} style={{ padding: '10px 20px', borderRadius: 99, background: 'rgba(255,255,255,0.12)', border: '1.5px solid rgba(255,255,255,0.25)', color: 'rgba(255,255,255,0.8)', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>← Back</button>
                 <button
                   onClick={() => { setCurriculumLabel(curriculumName.trim() || 'Custom'); setStep(4) }}
                   disabled={!curriculumName.trim()}
@@ -2041,8 +2070,8 @@ export default function OnboardingPage() {
             <div>
               <div className="text-center mb-6">
                 <div className="text-6xl mb-4">🔍</div>
-                <h1 className="text-4xl font-black text-gray-900 mb-3">Curriculum ideas for you</h1>
-                <p className="text-lg text-gray-500">No pressure — many families start without one and figure it out as they go.</p>
+                <h1 className="text-4xl font-black mb-3" style={{ color: '#c4b5fd' }}>Curriculum ideas for you</h1>
+                <p className="text-lg" style={{ color: 'rgba(255,255,255,0.75)' }}>No pressure — many families start without one and figure it out as they go.</p>
               </div>
 
               {/* Disclaimer banner */}
@@ -2107,8 +2136,8 @@ export default function OnboardingPage() {
           <div>
             <div className="text-center mb-8">
               <div className="text-6xl mb-4">📚</div>
-              <h1 className="text-4xl font-black text-gray-900 mb-3">What will you be teaching?</h1>
-              <p className="text-gray-500 text-base leading-relaxed">
+              <h1 className="text-4xl font-black mb-3" style={{ color: '#c4b5fd' }}>What will you be teaching?</h1>
+              <p className="text-base leading-relaxed" style={{ color: 'rgba(255,255,255,0.75)' }}>
                 We've pre-selected the most common subjects. Tap to deselect any you won't cover, or add your own.
               </p>
             </div>
@@ -2227,10 +2256,10 @@ export default function OnboardingPage() {
           <div>
             <div className="text-center mb-8">
               <div className="text-6xl mb-4">🎉</div>
-              <h1 className="text-4xl font-black text-gray-900 mb-4 leading-tight">
+              <h1 className="text-4xl font-black mb-4 leading-tight" style={{ color: '#c4b5fd' }}>
                 {schoolName ? `${schoolName} is ready!` : "You're all set!"}
               </h1>
-              <p className="text-lg text-gray-600 leading-relaxed">
+              <p className="text-lg leading-relaxed" style={{ color: 'rgba(255,255,255,0.85)' }}>
                 You've set up <strong>{schoolName || 'your school'}</strong>, discovered your{' '}
                 <strong>{STYLE_RESULTS[teachingStyle]?.name || 'teaching'}</strong> teaching style,
                 {' '}and added <strong>{nickname || firstName}</strong> as your first student. That's a great start.
