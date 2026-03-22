@@ -1121,7 +1121,7 @@ function DashboardContent() {
 
         const { data: profile } = await supabase
           .from('user_profiles')
-          .select('first_name, homeschool_style, pinned_features')
+          .select('first_name, homeschool_style, pinned_features, onboarding_completed_at, welcome_shown_at')
           .eq('user_id', user.id)
           .maybeSingle()
         localParentName = profile?.first_name ?? user.email?.split('@')[0] ?? ''
@@ -1136,16 +1136,14 @@ function DashboardContent() {
         } else {
           setPinnedFeatures(savedPins)
         }
-        const justOnboarded = typeof window !== 'undefined'
-          && !!localStorage.getItem('hq_just_onboarded')
-          && !localStorage.getItem('hq_welcome_done')
+        // Show welcome + tour if onboarding is complete but welcome hasn't been shown yet.
+        // Uses DB so it works across devices and survives browser/tab interruptions.
+        const needsWelcome = !!profile?.onboarding_completed_at && !profile?.welcome_shown_at
 
-        if (justOnboarded) {
-          // Coming straight from onboarding — show welcome regardless of DB lag
+        if (needsWelcome) {
           setShowWelcome(true)
           // If pinned features didn't make it into DB yet, derive from style
           if ((profile?.pinned_features ?? []).length === 0) {
-            // style is 'structured' | 'flexible' from user_profiles
             setPinnedFeatures(style === 'structured' ? DEFAULT_STRUCTURED : DEFAULT_FLEXIBLE)
           }
         } else if (style === null && !localStorage.getItem('style_picker_dismissed')) {
@@ -1886,9 +1884,11 @@ function DashboardContent() {
           }
           const styleKey = orgTeachingStyle ?? homeschoolStyle ?? ''
           const styleName = STYLE_DISPLAY[styleKey] ?? styleKey ?? 'your teaching style'
-          const handleDismiss = () => {
-            localStorage.setItem('hq_welcome_done', '1')
-            localStorage.removeItem('hq_just_onboarded')
+          const handleDismiss = async () => {
+            // Mark welcome as shown in DB so it never re-appears on any device
+            await supabase.from('user_profiles')
+              .update({ welcome_shown_at: new Date().toISOString() })
+              .eq('user_id', user?.id)
             setShowWelcome(false)
             if (!localStorage.getItem('hq_tour_done')) {
               setTourAutoStart(true)

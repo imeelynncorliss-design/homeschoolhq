@@ -1142,13 +1142,7 @@ function OnboardingInner() {
         .eq('user_id', user.id),
     ])
 
-    // Signal dashboard: first-time user, show welcome + optional curriculum nudge
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('hq_just_onboarded', '1')
-      if (homeStyle === 'structured') {
-        localStorage.setItem('hq_curriculum_nudge_pending', '1')
-      }
-    }
+    // Dashboard detects new users via welcome_shown_at being null in DB — no localStorage needed
 
     router.push(destination)
   }
