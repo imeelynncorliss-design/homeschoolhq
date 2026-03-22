@@ -165,8 +165,8 @@ function PortfolioContent() {
         {!loading && !error && groups.length === 0 && (
           <div style={{ padding: '48px 20px', textAlign: 'center' }}>
             <div style={{ fontSize: 52, marginBottom: 12 }}>🗂️</div>
-            <div style={{ fontSize: 16, fontWeight: 800, color: '#1e1b4b', marginBottom: 8 }}>No work samples yet</div>
-            <div style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.6, fontWeight: 600 }}>
+            <div style={{ fontSize: 16, fontWeight: 800, color: '#c4b5fd', marginBottom: 8 }}>No work samples yet</div>
+            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)', lineHeight: 1.6, fontWeight: 600 }}>
               Upload photos or PDFs from the Check-In tab inside any lesson.
             </div>
           </div>
@@ -261,8 +261,8 @@ function PortfolioContent() {
                             rel="noopener noreferrer"
                             style={{
                               padding: '6px 12px', borderRadius: 8,
-                              background: '#eff6ff', border: '1px solid #bfdbfe',
-                              fontSize: 11, fontWeight: 700, color: '#2563eb',
+                              background: 'rgba(124,58,237,0.12)', border: '1px solid rgba(124,58,237,0.25)',
+                              fontSize: 11, fontWeight: 700, color: '#7c3aed',
                               textDecoration: 'none',
                             }}
                           >

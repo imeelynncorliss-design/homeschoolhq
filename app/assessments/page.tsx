@@ -294,14 +294,14 @@ function AssessmentsContent() {
             )}
 
             {currentView === 'standards' && (
-              <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-2xl p-6 mb-6 border-2 border-blue-200">
+              <div className="rounded-2xl p-6 mb-6 border-2" style={{ background: 'rgba(124,58,237,0.1)', borderColor: 'rgba(124,58,237,0.3)' }}>
                 <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center flex-shrink-0">
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'linear-gradient(135deg, #7c3aed, #a855f7)' }}>
                     <Lightbulb className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <h3 className="font-black text-blue-900 mb-1">Your Standards Library</h3>
-                    <p className="text-blue-700 text-sm">
+                    <h3 className="font-black mb-1" style={{ color: '#c4b5fd' }}>Your Standards Library</h3>
+                    <p className="text-sm" style={{ color: 'rgba(255,255,255,0.75)' }}>
                       You have <strong>{standards.length} standards</strong> in your library. Click <strong>+ Import Standards</strong> to add more.
                     </p>
                   </div>
@@ -423,9 +423,9 @@ function AssessmentsContent() {
                         <span className="text-2xl font-black text-emerald-700">{filteredAssessments.filter(a => !!a.result).length}</span>
                       </div>
                       {filteredAssessments.filter(a => a.result?.auto_score !== null).length > 0 && (
-                        <div className="flex justify-between items-center p-4 bg-blue-50 rounded-2xl">
-                          <span className="text-blue-600 font-bold text-sm uppercase">Avg Score</span>
-                          <span className="text-2xl font-black text-blue-700">
+                        <div className="flex justify-between items-center p-4 rounded-2xl" style={{ background: 'rgba(124,58,237,0.08)' }}>
+                          <span className="font-bold text-sm uppercase" style={{ color: '#7c3aed' }}>Avg Score</span>
+                          <span className="text-2xl font-black" style={{ color: '#7c3aed' }}>
                             {Math.round(filteredAssessments.filter(a => a.result?.auto_score !== null).reduce((sum, a) => sum + (a.result?.auto_score || 0), 0) / filteredAssessments.filter(a => a.result?.auto_score !== null).length)}%
                           </span>
                         </div>
@@ -484,7 +484,7 @@ function AssessmentsContent() {
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-3 flex-wrap">
                             <span className="px-2 py-1 rounded-lg bg-slate-900 text-white text-[10px] font-black uppercase tracking-wider">{standard.standard_code}</span>
-                            <span className="px-2 py-1 rounded-lg bg-blue-50 text-blue-700 text-[10px] font-black uppercase tracking-wider">{standard.subject}</span>
+                            <span className="px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider" style={{ background: 'rgba(124,58,237,0.1)', color: '#7c3aed' }}>{standard.subject}</span>
                             <span className="px-2 py-1 rounded-lg bg-green-50 text-green-700 text-[10px] font-black uppercase tracking-wider">Grade {standard.grade_level}</span>
                           </div>
                           <p className="text-slate-600 font-medium text-lg leading-snug">{standard.description}</p>
