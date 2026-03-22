@@ -1962,7 +1962,7 @@ function DashboardContent() {
               </div>
               <div style={{ fontSize: 13, color: '#4b5563', lineHeight: 1.7, marginBottom: 24 }}>
                 Since you use a structured curriculum, you can import your lessons directly into HomeschoolReady — saving hours of manual entry.
-                Head to <strong>Tools → Import Curriculum</strong> to get started.
+                Ready to dive in? Tap <strong>Import Now</strong> below. Prefer to do it later? You can always find it under <strong>Tools</strong>.
               </div>
               <div style={{ display: 'flex', gap: 10 }}>
                 <button
