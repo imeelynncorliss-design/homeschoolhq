@@ -66,12 +66,6 @@ function AttendanceContent() {
       <main style={{ ...css.main, paddingBottom: 100 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, marginTop: 8 }}>
           <div className="hr-section-label">TRACK YOUR SCHOOL DAYS & HOURS</div>
-          <button
-            onClick={() => router.push('/calendar')}
-            style={css.calBtn}
-          >
-            📅 Calendar
-          </button>
         </div>
 
         <div className="hr-card" style={{ padding: '24px', minHeight: 500 }}>

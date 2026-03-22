@@ -820,7 +820,8 @@ useEffect(() => {
             setMarkingDate(new Date().toLocaleDateString('en-CA'))
             setShowMarkModal(true)
           }}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+          className="px-4 py-2 text-white rounded-lg font-medium"
+          style={{ background: 'linear-gradient(135deg, #7c3aed, #a855f7)' }}
         >
           ✓ Mark Today
         </button>
@@ -1030,21 +1031,15 @@ useEffect(() => {
               <div className="flex gap-2">
                 <button
                   onClick={() => setViewMode('list')}
-                  className={`px-4 py-2 rounded font-medium transition-colors ${
-                    viewMode === 'list'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
+                  className="px-4 py-2 rounded font-medium transition-colors"
+                  style={viewMode === 'list' ? { background: 'linear-gradient(135deg, #7c3aed, #a855f7)', color: '#fff' } : { background: '#f3f4f6', color: '#374151' }}
                 >
                   📋 List View
                 </button>
                 <button
                   onClick={() => setViewMode('calendar')}
-                  className={`px-4 py-2 rounded font-medium transition-colors ${
-                    viewMode === 'calendar'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
+                  className="px-4 py-2 rounded font-medium transition-colors"
+                  style={viewMode === 'calendar' ? { background: 'linear-gradient(135deg, #7c3aed, #a855f7)', color: '#fff' } : { background: '#f3f4f6', color: '#374151' }}
                 >
                   📅 Calendar View
                 </button>
@@ -1142,7 +1137,7 @@ useEffect(() => {
                                         setMarkingDefaultHours(day.totalHours || undefined)
                                         setShowMarkModal(true)
                                       }}
-                                      className="px-2 py-1 text-blue-600 hover:bg-blue-50 rounded text-sm"
+                                      className="px-2 py-1 text-purple-600 hover:bg-purple-50 rounded text-sm"
                                       title="Edit hours for this day"
                                     >
                                       ✏️
@@ -1548,7 +1543,7 @@ function MarkAttendanceModal({ date, kids, selectedKid, existingAttendance, defa
               {pendingFiles.length > 0 && (
                 <div className="mb-2 space-y-1">
                   {pendingFiles.map((file, i) => (
-                    <div key={i} className="flex items-center justify-between bg-blue-50 rounded px-3 py-2 text-sm" style={darkCardStyle}>
+                    <div key={i} className="flex items-center justify-between bg-purple-50 rounded px-3 py-2 text-sm" style={darkCardStyle}>
                       <span className="text-blue-700 font-medium truncate max-w-[220px]">
                         🆕 {file.name} <span className="text-blue-400 font-normal">({(file.size / 1024).toFixed(0)} KB)</span>
                       </span>
@@ -1594,7 +1589,8 @@ function MarkAttendanceModal({ date, kids, selectedKid, existingAttendance, defa
               <button
                 type="submit"
                 disabled={uploading}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                className="flex-1 px-4 py-2 text-white rounded disabled:opacity-50"
+                style={{ background: 'linear-gradient(135deg, #7c3aed, #a855f7)' }}
               >
                 {uploading ? 'Uploading…' : 'Save'}
               </button>
