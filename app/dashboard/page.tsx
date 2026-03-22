@@ -1143,9 +1143,13 @@ function DashboardContent() {
 
         if (needsWelcome) {
           setShowWelcome(true)
-          // If pinned features didn't make it into DB yet, derive from style
+          // If pinned features didn't make it into DB yet, derive from style and persist them
           if ((profile?.pinned_features ?? []).length === 0) {
-            setPinnedFeatures(style === 'structured' ? DEFAULT_STRUCTURED : DEFAULT_FLEXIBLE)
+            const defaultPins = style === 'structured' ? DEFAULT_STRUCTURED : DEFAULT_FLEXIBLE
+            setPinnedFeatures(defaultPins)
+            supabase.from('user_profiles')
+              .update({ pinned_features: defaultPins })
+              .eq('user_id', user.id)
           }
         } else if (style === null && !localStorage.getItem('style_picker_dismissed')) {
           setShowStylePicker(true)
