@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
+import { MI_INTELLIGENCES, MI_CLUSTERS } from '@/src/lib/learningProfiles'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -27,6 +28,7 @@ interface KidData {
   grade?: string | null
   photo_url?: string
   learning_style?: string | null
+  mi_profile?: string[] | null
   current_hook?: string | null
   curriculum?: string | null
   photoFile?: File
@@ -59,12 +61,19 @@ export default function KidProfileForm({ kid, onSave, onCancel }: KidProfileForm
   const [learningStyles, setLearningStyles] = useState<string[]>(
     kid?.learning_style ? kid.learning_style.split(',').map((s: string) => s.trim()) : []
   )
+  const [miProfile, setMiProfile] = useState<string[]>(kid?.mi_profile ?? [])
   const [currentHook, setCurrentHook] = useState(kid?.current_hook || '')
   const [curriculum, setCurriculum] = useState(kid?.curriculum || '')
 
   const toggleStyle = (value: string) => {
     setLearningStyles(prev =>
       prev.includes(value) ? prev.filter(s => s !== value) : [...prev, value]
+    )
+  }
+
+  const toggleMi = (id: string) => {
+    setMiProfile(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : prev.length < 3 ? [...prev, id] : prev
     )
   }
 
@@ -101,6 +110,7 @@ export default function KidProfileForm({ kid, onSave, onCancel }: KidProfileForm
         age: age ? parseInt(age) : null,
         grade: grade || null,
         learning_style: learningStyles.length > 0 ? learningStyles.join(', ') : null,
+        mi_profile: miProfile.length > 0 ? miProfile : null,
         current_hook: currentHook.trim() || null,
         curriculum: curriculum || null,
         photoFile: photoFile || undefined,
@@ -349,6 +359,56 @@ export default function KidProfileForm({ kid, onSave, onCancel }: KidProfileForm
                 {learningStyles.length > 1 && (
                   <p className="text-xs text-purple-600 font-semibold mt-2">
                     ✓ Multimodal learner — Copilot will blend these styles
+                  </p>
+                )}
+              </div>
+
+              {/* Multiple Intelligences */}
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-1">
+                  Multiple Intelligences{' '}
+                  <span className="font-normal text-gray-400">(optional — pick up to 3)</span>
+                </label>
+                <p className="text-xs text-gray-400 mb-3">
+                  Where do they naturally shine? This powers the Teaching Blueprint.
+                </p>
+                <div className="space-y-3">
+                  {(Object.keys(MI_CLUSTERS) as Array<keyof typeof MI_CLUSTERS>).map(cluster => (
+                    <div key={cluster}>
+                      <p className="text-xs font-bold uppercase tracking-wider mb-1.5" style={{ color: MI_CLUSTERS[cluster].color }}>
+                        {MI_CLUSTERS[cluster].label}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {MI_INTELLIGENCES.filter(m => m.cluster === cluster).map(m => {
+                          const selected = miProfile.includes(m.id)
+                          const maxed    = miProfile.length >= 3 && !selected
+                          return (
+                            <button
+                              key={m.id}
+                              type="button"
+                              onClick={() => toggleMi(m.id)}
+                              disabled={maxed}
+                              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border-2 text-xs font-bold transition-all ${
+                                selected
+                                  ? 'border-purple-500 bg-purple-50 text-purple-700'
+                                  : maxed
+                                  ? 'border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed'
+                                  : 'border-gray-200 bg-white text-gray-600 hover:border-purple-300'
+                              }`}
+                            >
+                              <span>{m.emoji}</span>
+                              <span>{m.name}</span>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {miProfile.length > 0 && (
+                  <p className="text-xs text-purple-600 font-semibold mt-2">
+                    {miProfile.length}/3 selected
+                    {miProfile.length === 3 && ' — max reached'}
                   </p>
                 )}
               </div>
