@@ -83,7 +83,7 @@ export const VAK_BRIDGE: VakBridgeMatrix = {
         'Whiteboard or wall-mounted timeline for history keeps the big picture always visible',
         'Watch documentary supplements alongside the textbook chapter to reinforce visually',
       ],
-      scoutTip: 'Ask Scout to create a visual study guide or concept map for any textbook chapter — it turns dense text into something a visual learner can scan and remember.',
+      scoutTip: 'Ask Scout to create a structured study guide for any textbook chapter — it formats key concepts into scannable headers, bullet points, and a summary table a visual learner can review at a glance.',
     },
     auditory: {
       headline: 'Traditional × Auditory',
@@ -122,7 +122,7 @@ export const VAK_BRIDGE: VakBridgeMatrix = {
         'Great Books study: let them illustrate scenes or create visual summaries of chapters',
         'Science diagrams drawn by hand — label, color, and annotate rather than just reading descriptions',
       ],
-      scoutTip: 'Ask Scout to create a visual grammar or logic chart for any concept — it can format rules, patterns, and structures in a scannable visual format.',
+      scoutTip: 'Ask Scout to format any grammar or logic rule as a structured reference table — rules, patterns, and examples laid out so your child can see the system clearly.',
     },
     auditory: {
       headline: 'Classical × Auditory',
