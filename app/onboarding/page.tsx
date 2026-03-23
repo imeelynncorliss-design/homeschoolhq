@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/src/lib/supabase'
 import { CANONICAL_SUBJECTS } from '@/src/constants/subjects'
 import { DEFAULT_FLEXIBLE, DEFAULT_STRUCTURED } from '@/components/StylePickerModal'
+import { MI_INTELLIGENCES, MI_CLUSTERS, MI_REMEMBER } from '@/src/lib/learningProfiles'
 
 // ── State Data ────────────────────────────────────────────────────────────────
 
@@ -342,53 +343,6 @@ function calculateStyle(answers: Record<number, StyleScores>): string {
 
 const STEP_LABELS = ['Your School', 'Teaching Style', 'Curriculum', 'Your Child', 'Subjects']
 
-export const VAK_TIPS: Record<string, { label: string; emoji: string; tips: string[] }> = {
-  visual: {
-    label: 'Visual', emoji: '👁️',
-    tips: [
-      'Use pictures, charts, maps, and graphs',
-      'Highlight important points with colour',
-      'Illustrate ideas as a picture or mind-map before writing',
-      'Study in a quiet place away from distractions',
-      'Use illustrated books and videos',
-      'Visualize information as a mental picture',
-    ],
-  },
-  auditory: {
-    label: 'Auditory', emoji: '👂',
-    tips: [
-      'Participate in discussions and debates',
-      'Read text out loud',
-      'Create songs or jingles to aid memorization',
-      'Use verbal analogies and storytelling',
-      'Discuss ideas out loud before writing them down',
-      'Record lessons and listen back',
-    ],
-  },
-  kinesthetic: {
-    label: 'Kinesthetic', emoji: '🤸',
-    tips: [
-      'Take frequent movement breaks',
-      'Learn new concepts while moving (read on a walk, mold clay)',
-      'Work at a standing position',
-      'Use bright colours to highlight reading material',
-      'Use hands-on activities and experiments',
-      'Skim material first, then dive in — don\'t force linear reading',
-    ],
-  },
-}
-
-const MI_INTELLIGENCES = [
-  { id: 'naturalistic',  emoji: '🌿', name: 'Naturalistic',  desc: 'Nature, animals & outdoors' },
-  { id: 'musical',       emoji: '🎵', name: 'Musical',        desc: 'Rhythm, sound & music' },
-  { id: 'logical',       emoji: '🔢', name: 'Logical',        desc: 'Patterns, math & sequences' },
-  { id: 'existential',   emoji: '🌌', name: 'Existential',    desc: 'Big ideas & deep questions' },
-  { id: 'interpersonal', emoji: '👥', name: 'Interpersonal',  desc: 'People, groups & teamwork' },
-  { id: 'kinesthetic',   emoji: '🤸', name: 'Kinesthetic',    desc: 'Movement & hands-on doing' },
-  { id: 'verbal',        emoji: '📖', name: 'Verbal',         desc: 'Words, reading & stories' },
-  { id: 'intrapersonal', emoji: '🪞', name: 'Intrapersonal',  desc: 'Self-awareness & reflection' },
-  { id: 'visual',        emoji: '🎨', name: 'Visual',         desc: 'Images, art & spatial thinking' },
-]
 
 const ONBOARDING_SUBJECTS = [
   { name: 'Mathematics',        emoji: '🔢', color: '#7c3aed' },
@@ -2070,44 +2024,65 @@ function OnboardingInner() {
               </div>
             </div>
 
-            {/* 9 intelligence cards */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 20 }}>
-              {MI_INTELLIGENCES.map(mi => {
-                const selected = miProfile.includes(mi.id)
-                const maxed = miProfile.length >= 3 && !selected
-                return (
-                  <button
-                    key={mi.id}
-                    onClick={() => toggleMi(mi.id)}
-                    disabled={maxed}
-                    style={{
-                      padding: '14px 8px',
-                      borderRadius: 16,
-                      border: `2px solid ${selected ? '#a855f7' : 'rgba(255,255,255,0.15)'}`,
-                      background: selected ? 'rgba(168,85,247,0.18)' : 'rgba(255,255,255,0.07)',
-                      cursor: maxed ? 'not-allowed' : 'pointer',
-                      opacity: maxed ? 0.45 : 1,
-                      textAlign: 'center' as const,
-                      transition: 'all 0.15s',
-                      position: 'relative' as const,
-                      fontFamily: "'Nunito', sans-serif",
-                    }}
-                  >
-                    {selected && (
-                      <div style={{
-                        position: 'absolute', top: 6, right: 6,
-                        width: 16, height: 16, borderRadius: '50%',
-                        background: '#a855f7',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: 9, color: '#fff', fontWeight: 900,
-                      }}>✓</div>
-                    )}
-                    <div style={{ fontSize: 28, marginBottom: 6 }}>{mi.emoji}</div>
-                    <div style={{ fontSize: 11, fontWeight: 800, color: selected ? '#e9d5ff' : '#c4b5fd', marginBottom: 3, lineHeight: 1.2 }}>{mi.name}</div>
-                    <div style={{ fontSize: 9, fontWeight: 600, color: 'rgba(255,255,255,0.5)', lineHeight: 1.3 }}>{mi.desc}</div>
-                  </button>
-                )
-              })}
+            {/* 9 intelligence cards — grouped by cluster */}
+            {(['analytical', 'introspective', 'interactive'] as const).map(cluster => {
+              const clusterInfo = MI_CLUSTERS[cluster]
+              const clusterItems = MI_INTELLIGENCES.filter(mi => mi.cluster === cluster)
+              return (
+                <div key={cluster} style={{ marginBottom: 16 }}>
+                  <div style={{ fontSize: 9, fontWeight: 800, color: clusterInfo.color, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8, opacity: 0.9 }}>
+                    {clusterInfo.label}
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                    {clusterItems.map(mi => {
+                      const selected = miProfile.includes(mi.id)
+                      const maxed = miProfile.length >= 3 && !selected
+                      return (
+                        <button
+                          key={mi.id}
+                          onClick={() => toggleMi(mi.id)}
+                          disabled={maxed}
+                          style={{
+                            padding: '12px 6px',
+                            borderRadius: 14,
+                            border: `2px solid ${selected ? '#a855f7' : 'rgba(255,255,255,0.12)'}`,
+                            background: selected ? 'rgba(168,85,247,0.18)' : 'rgba(255,255,255,0.06)',
+                            cursor: maxed ? 'not-allowed' : 'pointer',
+                            opacity: maxed ? 0.4 : 1,
+                            textAlign: 'center' as const,
+                            transition: 'all 0.15s',
+                            position: 'relative' as const,
+                            fontFamily: "'Nunito', sans-serif",
+                          }}
+                        >
+                          {selected && (
+                            <div style={{
+                              position: 'absolute', top: 5, right: 5,
+                              width: 14, height: 14, borderRadius: '50%',
+                              background: '#a855f7',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              fontSize: 8, color: '#fff', fontWeight: 900,
+                            }}>✓</div>
+                          )}
+                          <div style={{ fontSize: 24, marginBottom: 5 }}>{mi.emoji}</div>
+                          <div style={{ fontSize: 10, fontWeight: 800, color: selected ? '#e9d5ff' : '#c4b5fd', marginBottom: 2, lineHeight: 1.2 }}>{mi.name}</div>
+                          <div style={{ fontSize: 8, fontWeight: 600, color: 'rgba(255,255,255,0.45)', lineHeight: 1.3 }}>{mi.desc}</div>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )
+            })}
+
+            {/* Disclaimer */}
+            <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 10, padding: '10px 14px', marginBottom: 16 }}>
+              <div style={{ fontSize: 9, fontWeight: 800, color: 'rgba(255,255,255,0.4)', letterSpacing: 0.5, marginBottom: 6, textTransform: 'uppercase' }}>Remember</div>
+              <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 3 }}>
+                {MI_REMEMBER.map(r => (
+                  <div key={r} style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', fontWeight: 600 }}>· {r}</div>
+                ))}
+              </div>
             </div>
 
             {/* Actions */}
