@@ -1253,33 +1253,18 @@ function DataDictionaryTab() {
 
 // ─── Parent's Corner Tab ──────────────────────────────────────────────────────
 
-function ParentsCornerTab() {
+type BlueprintKid = { id: string; displayname: string; learning_style?: string | null; mi_profile?: string[] | null }
+
+function ParentsCornerTab({ blueprintKids, blueprintOrgStyle }: { blueprintKids: BlueprintKid[]; blueprintOrgStyle: string | null }) {
   const [miProfile, setMiProfile] = useState<string[]>([])
   const [expandedVak, setExpandedVak] = useState<string | null>(null)
   const [activeSection, setActiveSection] = useState<'blueprint' | 'mi' | 'vak' | 'highschool' | 'guides'>('blueprint')
+  const [selectedKidId, setSelectedKidId] = useState<string | null>(blueprintKids[0]?.id ?? null)
 
-  // Blueprint data
-  const [blueprintKids, setBlueprintKids] = useState<{ id: string; displayname: string; learning_style?: string | null; mi_profile?: string[] | null }[]>([])
-  const [blueprintStyle, setBlueprintStyle] = useState<string | null>(null)
-  const [selectedKidId, setSelectedKidId] = useState<string | null>(null)
-
+  // Keep selectedKidId in sync if kids load after mount
   useEffect(() => {
-    const fetchBlueprint = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-      const { orgId } = await getOrganizationId(user.id)
-      if (!orgId) return
-      const [orgRes, kidsRes] = await Promise.all([
-        supabase.from('organizations').select('teaching_style').eq('id', orgId).maybeSingle(),
-        supabase.from('kids').select('id, displayname, learning_style, mi_profile').eq('organization_id', orgId).order('displayname'),
-      ])
-      if (orgRes.data?.teaching_style) setBlueprintStyle(orgRes.data.teaching_style)
-      const kids = kidsRes.data ?? []
-      setBlueprintKids(kids)
-      if (kids.length > 0) setSelectedKidId(kids[0].id)
-    }
-    fetchBlueprint()
-  }, [])
+    if (!selectedKidId && blueprintKids.length > 0) setSelectedKidId(blueprintKids[0].id)
+  }, [blueprintKids, selectedKidId])
 
   const toggleMi = (id: string) => {
     setMiProfile(prev =>
@@ -1319,10 +1304,10 @@ function ParentsCornerTab() {
       {activeSection === 'blueprint' && (() => {
         const styleMap: Record<string, string> = { charlotte_mason: 'charlotte', unit_studies: 'unit' }
         const vakMap: Record<string, string> = { aural: 'auditory' }
-        const blueprintStyleId = styleMap[blueprintStyle ?? ''] ?? blueprintStyle ?? ''
+        const blueprintOrgStyleId = styleMap[blueprintOrgStyle ?? ''] ?? blueprintOrgStyle ?? ''
         const kid = blueprintKids.find(k => k.id === selectedKidId) ?? blueprintKids[0]
 
-        if (!blueprintStyle || blueprintKids.length === 0) {
+        if (!blueprintOrgStyle || blueprintKids.length === 0) {
           return (
             <div style={{ background: '#fff', borderRadius: 14, padding: 24, border: '1px solid #e5e7eb', textAlign: 'center' as const }}>
               <div style={{ fontSize: 32, marginBottom: 10 }}>🗺️</div>
@@ -1340,11 +1325,11 @@ function ParentsCornerTab() {
         let topVak: string | null = null
         for (const s of vakStyles) {
           const mapped = vakMap[s] ?? s
-          const b = getVakBridge(blueprintStyleId, mapped)
+          const b = getVakBridge(blueprintOrgStyleId, mapped)
           if (b) { bridge = b; topVak = mapped; break }
         }
         const extraStyles = vakStyles.filter(s => (vakMap[s] ?? s) !== topVak)
-        const miTips = (kid?.mi_profile?.length ?? 0) > 0 ? getMiTips(kid!.mi_profile!, blueprintStyleId) : []
+        const miTips = (kid?.mi_profile?.length ?? 0) > 0 ? getMiTips(kid!.mi_profile!, blueprintOrgStyleId) : []
 
         return (
           <div>
@@ -1575,6 +1560,8 @@ function ResourcesContent() {
   const [userStyle, setUserStyle] = useState<string | null>(null)
   const [organizationId, setOrganizationId] = useState<string>('')
   const [loading, setLoading] = useState(true)
+  const [blueprintKids, setBlueprintKids] = useState<{ id: string; displayname: string; learning_style?: string | null; mi_profile?: string[] | null }[]>([])
+  const [blueprintOrgStyle, setBlueprintOrgStyle] = useState<string | null>(null)
 
   useEffect(() => {
     const init = async () => {
@@ -1584,24 +1571,29 @@ function ResourcesContent() {
       const { orgId } = await getOrganizationId(user.id)
       if (orgId) {
         setOrganizationId(orgId)
-        // Try to pull teaching style from org settings
-        const { data: orgSettings } = await supabase
-          .from('organization_settings')
-          .select('teaching_style')
-          .eq('organization_id', orgId)
-          .maybeSingle()
 
-        if (orgSettings?.teaching_style) {
-          const styleId = orgSettings.teaching_style.toLowerCase().replace(/\s+/g, '')
-          // Map to our known ids
+        const [orgSettingsRes, orgRes, kidsRes] = await Promise.all([
+          supabase.from('organization_settings').select('teaching_style').eq('organization_id', orgId).maybeSingle(),
+          supabase.from('organizations').select('teaching_style').eq('id', orgId).maybeSingle(),
+          supabase.from('kids').select('id, displayname, learning_style, mi_profile').eq('organization_id', orgId).order('displayname'),
+        ])
+
+        // Teaching style for styles tab
+        if (orgSettingsRes.data?.teaching_style) {
+          const styleId = orgSettingsRes.data.teaching_style.toLowerCase().replace(/\s+/g, '')
           const matched = TEACHING_STYLES.find(
-            s => s.id === styleId || s.name.toLowerCase() === orgSettings.teaching_style.toLowerCase()
+            s => s.id === styleId || s.name.toLowerCase() === orgSettingsRes.data!.teaching_style.toLowerCase()
           )
           if (matched) {
             setUserStyle(matched.id)
             setCurriculumStyle(matched.id)
           }
         }
+
+        // Teaching style + kids for blueprint
+        const orgStyle = orgRes.data?.teaching_style ?? orgSettingsRes.data?.teaching_style ?? null
+        setBlueprintOrgStyle(orgStyle)
+        setBlueprintKids(kidsRes.data ?? [])
       }
       setLoading(false)
     }
@@ -1688,7 +1680,7 @@ function ResourcesContent() {
           <DataDictionaryTab />
         )}
         {activeTab === 'parents' && (
-          <ParentsCornerTab />
+          <ParentsCornerTab blueprintKids={blueprintKids} blueprintOrgStyle={blueprintOrgStyle} />
         )}
         {activeTab === 'materials' && organizationId && (
           <MaterialsTab organizationId={organizationId} />
