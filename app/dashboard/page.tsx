@@ -1749,6 +1749,7 @@ function DashboardContent() {
             const styleMap: Record<string, string> = { charlotte_mason: 'charlotte', unit_studies: 'unit' }
             const vakMap: Record<string, string> = { aural: 'auditory' }
             const blueprintStyleId = styleMap[orgTeachingStyle ?? ''] ?? orgTeachingStyle ?? ''
+            const hasBlueprint = !!kidPulses.find(p => p.kid.learning_style) && !!blueprintStyleId
             // Find first child with a learning style set
             const kidWithStyle = kidPulses.find(p => p.kid.learning_style)
             if (!kidWithStyle || !blueprintStyleId) return null
@@ -1760,7 +1761,7 @@ function DashboardContent() {
             }
             if (!bridge) return null
             return (
-              <section style={{ marginTop: 8 }}>
+              <section id="tour-blueprint" style={{ marginTop: 8 }}>
                 <div style={{ ...css.sectionRow }}>
                   <span style={css.secTitle}>TEACHING BLUEPRINT</span>
                 </div>
@@ -2106,6 +2107,7 @@ function DashboardContent() {
             autoStart={tourAutoStart}
             homeschoolStyle={homeschoolStyle ?? null}
             pinnedFeatures={pinnedFeatures}
+            hasBlueprint={!!kidPulses.find(p => p.kid.learning_style) && !!orgTeachingStyle}
             onDone={() => {
               setShowTour(false)
               setTourAutoStart(false)

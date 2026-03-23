@@ -19,6 +19,7 @@ interface ProductTourProps {
   autoStart?: boolean
   homeschoolStyle?: 'flexible' | 'structured' | null
   pinnedFeatures?: string[]
+  hasBlueprint?: boolean
   onDone: () => void
 }
 
@@ -26,7 +27,8 @@ interface ProductTourProps {
 
 function buildTourSteps(
   homeschoolStyle: 'flexible' | 'structured' | null | undefined,
-  pinnedFeatures: string[]
+  pinnedFeatures: string[],
+  hasBlueprint: boolean
 ): TourStep[] {
   const steps: TourStep[] = []
 
@@ -68,7 +70,7 @@ function buildTourSteps(
     bullets: [
       '📚 Subjects — see what each child is learning and all their scheduled lessons',
       '📋 Records — attendance, compliance, transcripts, reading logs, and more',
-      '💡 Resources — manage teaching materials and supplies',
+      "💡 Resources — Teaching Styles, State Laws, Parent's Corner (with your Teaching Blueprint), and My Materials",
       '🔧 Tools — import curriculum, bulk schedule, plan vacations, add co-teachers',
     ],
     position: 'top',
@@ -80,13 +82,23 @@ function buildTourSteps(
     title: 'Your School Profile',
     content: 'Tap Profile to manage the details that shape your whole experience:',
     bullets: [
-      '👧 Children — add kids, update names, grade, and learning style',
+      '👧 Children — add kids, set grade, learning style, and Multiple Intelligences profile',
       '📅 School year — set your start and end dates anytime',
       '🎨 Teaching style — retake the quiz if your approach evolves',
       '🏫 School name & state — shown on reports and transcripts',
     ],
     position: 'top',
   })
+
+  // Teaching Blueprint — only if the card is visible on the dashboard
+  if (hasBlueprint) {
+    steps.push({
+      targetId: 'tour-blueprint',
+      title: 'Your Teaching Blueprint',
+      content: "This card bridges your teaching style with how your child learns best — specific tips for your exact combination. Tap 'See full blueprint' to go deeper in Parent's Corner.",
+      position: 'top',
+    })
+  }
 
   // Life Happens — always
   steps.push({
@@ -210,8 +222,8 @@ function HighlightRing({ targetId }: { targetId: string }) {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export default function ProductTour({ parentName, autoStart = false, homeschoolStyle, pinnedFeatures = [], onDone }: ProductTourProps) {
-  const tourSteps = buildTourSteps(homeschoolStyle, pinnedFeatures)
+export default function ProductTour({ parentName, autoStart = false, homeschoolStyle, pinnedFeatures = [], hasBlueprint = false, onDone }: ProductTourProps) {
+  const tourSteps = buildTourSteps(homeschoolStyle, pinnedFeatures, hasBlueprint)
   const { isDark } = useTheme()
 
   // Dark-mode-aware color tokens
