@@ -131,6 +131,64 @@ const ALL_STATES = [
 
 const SUPPORTED_NAMES = Object.keys(SUPPORTED_STATES)
 
+// ── Compliance Defaults (all 50 states + DC) ──────────────────────────────────
+
+const COMPLIANCE_DEFAULTS: Record<string, {
+  days: number; hours: number; noi: boolean; level: 'low' | 'moderate' | 'high'
+}> = {
+  AL:{days:180,hours:0,noi:false,level:'moderate'},
+  AK:{days:180,hours:0,noi:false,level:'low'},
+  AZ:{days:180,hours:0,noi:true,level:'moderate'},
+  AR:{days:178,hours:0,noi:true,level:'moderate'},
+  CA:{days:175,hours:0,noi:false,level:'moderate'},
+  CO:{days:172,hours:0,noi:true,level:'moderate'},
+  CT:{days:180,hours:0,noi:true,level:'moderate'},
+  DE:{days:180,hours:0,noi:true,level:'moderate'},
+  FL:{days:180,hours:0,noi:true,level:'moderate'},
+  GA:{days:180,hours:0,noi:true,level:'moderate'},
+  HI:{days:180,hours:0,noi:true,level:'moderate'},
+  ID:{days:0,hours:0,noi:false,level:'low'},
+  IL:{days:176,hours:0,noi:false,level:'low'},
+  IN:{days:180,hours:0,noi:false,level:'low'},
+  IA:{days:148,hours:0,noi:true,level:'moderate'},
+  KS:{days:186,hours:0,noi:false,level:'moderate'},
+  KY:{days:185,hours:0,noi:false,level:'low'},
+  LA:{days:180,hours:0,noi:true,level:'moderate'},
+  ME:{days:175,hours:0,noi:true,level:'moderate'},
+  MD:{days:180,hours:0,noi:true,level:'moderate'},
+  MA:{days:180,hours:0,noi:true,level:'high'},
+  MI:{days:180,hours:0,noi:false,level:'low'},
+  MN:{days:165,hours:0,noi:true,level:'moderate'},
+  MS:{days:180,hours:0,noi:true,level:'low'},
+  MO:{days:0,hours:1000,noi:false,level:'low'},
+  MT:{days:180,hours:0,noi:true,level:'moderate'},
+  NE:{days:0,hours:1032,noi:true,level:'moderate'},
+  NV:{days:180,hours:0,noi:true,level:'moderate'},
+  NH:{days:180,hours:0,noi:true,level:'moderate'},
+  NJ:{days:180,hours:0,noi:false,level:'low'},
+  NM:{days:180,hours:0,noi:false,level:'low'},
+  NY:{days:180,hours:900,noi:true,level:'high'},
+  NC:{days:180,hours:0,noi:true,level:'moderate'},
+  ND:{days:175,hours:0,noi:true,level:'high'},
+  OH:{days:182,hours:900,noi:true,level:'moderate'},
+  OK:{days:180,hours:0,noi:false,level:'low'},
+  OR:{days:180,hours:0,noi:true,level:'moderate'},
+  PA:{days:180,hours:900,noi:true,level:'high'},
+  RI:{days:180,hours:0,noi:true,level:'moderate'},
+  SC:{days:180,hours:0,noi:false,level:'moderate'},
+  SD:{days:175,hours:0,noi:true,level:'moderate'},
+  TN:{days:180,hours:0,noi:true,level:'low'},
+  TX:{days:180,hours:0,noi:false,level:'low'},
+  UT:{days:180,hours:0,noi:false,level:'low'},
+  VT:{days:175,hours:0,noi:true,level:'moderate'},
+  VA:{days:180,hours:0,noi:true,level:'moderate'},
+  WA:{days:180,hours:0,noi:true,level:'moderate'},
+  WV:{days:180,hours:0,noi:true,level:'high'},
+  WI:{days:0,hours:875,noi:false,level:'low'},
+  WY:{days:175,hours:0,noi:false,level:'low'},
+  DC:{days:180,hours:0,noi:true,level:'moderate'},
+}
+
 // ── Grades ────────────────────────────────────────────────────────────────────
 
 const GRADES = [
@@ -958,8 +1016,11 @@ function OnboardingInner() {
   const [tosConfirmed, setTosConfirmed]   = useState(false)
   const [agreementSaving, setAgreementSaving] = useState(false)
 
-  // Step 1 has three sub-steps: school name → state picker → school year
-  const [step1Sub, setStep1Sub] = useState<'name' | 'state' | 'school_year'>('name')
+  // Step 1 has four sub-steps: school name → state picker → school year → compliance
+  const [step1Sub, setStep1Sub] = useState<'name' | 'state' | 'school_year' | 'compliance'>('name')
+  const [complianceDays, setComplianceDays] = useState('180')
+  const [complianceHours, setComplianceHours] = useState(0)
+  const [showHsldaOverlay, setShowHsldaOverlay] = useState(false)
 
   // Step 1 data
   const [schoolName, setSchoolName]               = useState('')
@@ -1037,8 +1098,9 @@ function OnboardingInner() {
     if (nav.step === 1) {
       if (nav.step1Sub === 'state') setStep1Sub('name')
       else if (nav.step1Sub === 'school_year') setStep1Sub('state')
+      else if (nav.step1Sub === 'compliance') setStep1Sub('school_year')
     } else if (nav.step === 2) {
-      if (nav.quizQuestion === 1) { setStep(1); setStep1Sub('school_year') }
+      if (nav.quizQuestion === 1) { setStep(1); setStep1Sub('compliance') }
       else setQuizQuestion(nav.quizQuestion - 1)
     } else if (nav.step === 3) {
       if (nav.curriculumSub !== 'choice') setCurriculumSub('choice')
@@ -1239,6 +1301,29 @@ function OnboardingInner() {
       updated_at: new Date().toISOString(),
     }, { onConflict: 'organization_id' })
 
+    setSaving(false)
+    const defaults = COMPLIANCE_DEFAULTS[selectedState] ?? null
+    setComplianceDays(defaults ? (defaults.days > 0 ? String(defaults.days) : defaults.hours > 0 ? '180' : '180') : '180')
+    setComplianceHours(defaults?.hours ?? 0)
+    setStep1Sub('compliance')
+  }
+
+  // ── Compliance confirmed → save to user_compliance_settings + advance to step 2 ─
+  const handleComplianceConfirmed = async (skip = false) => {
+    if (saving || !orgId) return
+    setSaving(true)
+    const days = skip ? 180 : (parseInt(complianceDays) || 180)
+    const defaults = selectedState ? COMPLIANCE_DEFAULTS[selectedState] : null
+    await supabase.from('user_compliance_settings').upsert({
+      organization_id: orgId,
+      state_code: selectedState || null,
+      state_name: selectedStateName || null,
+      school_year_start_date: schoolYearStart,
+      school_year_end_date: schoolYearEnd || null,
+      required_annual_days: days,
+      required_annual_hours: defaults?.hours ?? 0,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'organization_id' })
     setSaving(false)
     setStep(2)
     setQuizQuestion(1)
@@ -1618,6 +1703,131 @@ function OnboardingInner() {
         )}
 
         {/* ══════════════════════════════════════════════════════
+            STEP 1d — Compliance Confirmation
+        ══════════════════════════════════════════════════════ */}
+        {step === 1 && step1Sub === 'compliance' && (() => {
+          const defaults = selectedState ? COMPLIANCE_DEFAULTS[selectedState] : null
+          const level = defaults?.level ?? 'moderate'
+          const levelConfig = {
+            low:      { label: 'Low Regulation',      color: '#10b981', bg: '#d1fae5', emoji: '🌿' },
+            moderate: { label: 'Moderate Regulation', color: '#f59e0b', bg: '#fef3c7', emoji: '⚖️' },
+            high:     { label: 'Strict Regulation',   color: '#ef4444', bg: '#fee2e2', emoji: '📋' },
+          }[level]
+          const usesHours = (defaults?.hours ?? 0) > 0 && (defaults?.days ?? 0) === 0
+          return (
+            <div>
+              <div className="text-center mb-8">
+                <div className="text-6xl mb-4">📋</div>
+                <h1 className="text-4xl font-black mb-3" style={{ color: '#c4b5fd' }}>
+                  {selectedStateName ? `${selectedStateName}'s` : 'Your'} Homeschool Rules
+                </h1>
+                <p className="text-lg" style={{ color: 'rgba(255,255,255,0.75)' }}>
+                  We pre-filled this from state law — confirm or adjust below.
+                </p>
+              </div>
+
+              <div className="bg-white rounded-2xl shadow-sm p-6 space-y-5">
+                {/* Regulation level badge */}
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: levelConfig!.bg, color: levelConfig!.color, borderRadius: 20, padding: '5px 14px', fontSize: 13, fontWeight: 800 }}>
+                  <span>{levelConfig!.emoji}</span>
+                  <span>{levelConfig!.label}</span>
+                </div>
+
+                {/* NOI banner */}
+                {defaults?.noi ? (
+                  <div style={{ background: '#fef3c7', border: '1.5px solid #f59e0b', borderRadius: 12, padding: '12px 16px', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                    <span style={{ fontSize: 20, flexShrink: 0 }}>📬</span>
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 800, color: '#92400e' }}>Notice of Intent Required</div>
+                      <div style={{ fontSize: 13, color: '#78350f', marginTop: 2, lineHeight: 1.5 }}>
+                        {selectedStateName} requires you to file a Notice of Intent with your school district or state agency. HomeschoolReady will remind you when it's due.
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ background: '#f0fdf4', border: '1.5px solid #86efac', borderRadius: 12, padding: '12px 16px', display: 'flex', gap: 10, alignItems: 'center' }}>
+                    <span style={{ fontSize: 20 }}>✅</span>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: '#14532d' }}>
+                      No Notice of Intent required in {selectedStateName || 'your state'}.
+                    </div>
+                  </div>
+                )}
+
+                {/* Required days / hours */}
+                <div>
+                  <label className="block text-sm font-bold text-gray-800 mb-1">
+                    {usesHours ? 'Required instruction hours per year' : 'Required teaching days per year'}
+                  </label>
+                  {usesHours ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{ padding: '10px 14px', border: '2px solid #e5e7eb', borderRadius: 12, fontSize: 20, fontWeight: 900, color: '#7c3aed', background: '#fafafa', minWidth: 80, textAlign: 'center' }}>
+                        {defaults!.hours.toLocaleString()}
+                      </div>
+                      <span style={{ fontSize: 13, color: '#6b7280', fontWeight: 600 }}>hours/year — we'll track these automatically</span>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <input
+                        type="number"
+                        value={complianceDays}
+                        onChange={e => setComplianceDays(e.target.value)}
+                        min={0}
+                        max={365}
+                        style={{ width: 90, padding: '10px 14px', border: '2px solid #e5e7eb', borderRadius: 12, fontSize: 20, fontWeight: 900, color: '#7c3aed', textAlign: 'center', outline: 'none', fontFamily: "'Nunito', sans-serif" }}
+                        onFocus={e => (e.target.style.borderColor = '#7c3aed')}
+                        onBlur={e => (e.target.style.borderColor = '#e5e7eb')}
+                      />
+                      <span style={{ fontSize: 13, color: '#6b7280', fontWeight: 600 }}>days per school year</span>
+                    </div>
+                  )}
+                  <p className="text-xs text-gray-400 mt-1">You can update this anytime in Compliance settings.</p>
+                </div>
+
+                {/* HSLDA reference */}
+                <div style={{ background: '#f5f3ff', borderRadius: 12, padding: '12px 16px', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                  <img src="/Cardinal_Mascot.png" alt="Scout" style={{ width: 22, height: 22, objectFit: 'contain', flexShrink: 0, marginTop: 1 }} />
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#5b21b6', marginBottom: 3 }}>
+                      Not sure about your state's exact rules?
+                    </div>
+                    <div style={{ fontSize: 12, color: '#7c3aed', lineHeight: 1.5 }}>
+                      HSLDA keeps the most up-to-date summaries for every state.{' '}
+                      <a
+                        href={`https://hslda.org/legal/${selectedStateName ? selectedStateName.toLowerCase().replace(/\s+/g, '-') : ''}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ color: '#7c3aed', fontWeight: 800, textDecoration: 'underline' }}
+                      >
+                        Check {selectedStateName || 'your state'} on HSLDA →
+                      </a>
+                      {' '}(opens in a new tab — come back here when you're done)
+                    </div>
+                  </div>
+                </div>
+
+                {/* CTA buttons */}
+                <button
+                  onClick={() => handleComplianceConfirmed(false)}
+                  disabled={saving}
+                  className="w-full py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-2xl font-bold text-base hover:opacity-90 disabled:opacity-40 transition-all"
+                >
+                  {saving ? 'Saving…' : "Looks right — let's continue →"}
+                </button>
+                <button
+                  onClick={() => handleComplianceConfirmed(true)}
+                  disabled={saving}
+                  className="w-full py-3 text-gray-400 text-sm font-semibold hover:text-gray-600 transition-colors"
+                  style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+                >
+                  Skip for now — use 180 days as default (I'll review this later)
+                </button>
+              </div>
+              <BackButton onClick={() => setStep1Sub('school_year')} />
+            </div>
+          )
+        })()}
+
+        {/* ══════════════════════════════════════════════════════
             STEP 2 — Teaching Style Quiz
         ══════════════════════════════════════════════════════ */}
         {step === 2 && quizQuestion <= 3 && (() => {
@@ -1643,7 +1853,7 @@ function OnboardingInner() {
                 ))}
               </div>
               <BackButton onClick={() => {
-                if (quizQuestion === 1) { setStep(1); setStep1Sub('school_year') }
+                if (quizQuestion === 1) { setStep(1); setStep1Sub('compliance') }
                 else setQuizQuestion(quizQuestion - 1)
               }} />
             </div>
