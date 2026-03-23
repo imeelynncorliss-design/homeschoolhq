@@ -51,7 +51,7 @@ interface Kid {
   displayname: string
   grade?: string | null
   subjects: string[]
-  learning_style?: string[] | null
+  learning_style?: string | null   // comma-separated e.g. "visual, aural"
   mi_profile?: string[] | null
 }
 
@@ -190,7 +190,7 @@ function ProfileContent() {
           subsByKid[row.kid_id].add(row.subject)
         }
 
-        setKids(kidsData.map((k: { id: string; displayname: string; grade?: string; learning_style?: string[]; mi_profile?: string[] }) => ({
+        setKids(kidsData.map((k: { id: string; displayname: string; grade?: string; learning_style?: string | null; mi_profile?: string[] }) => ({
           ...k,
           subjects: subsByKid[k.id] ? Array.from(subsByKid[k.id]).slice(0, 5) : [],
         })))
@@ -554,7 +554,7 @@ function ProfileContent() {
         </div>
 
         {/* ── Teaching Blueprint ── */}
-        {kids.some(k => (k.learning_style?.length ?? 0) > 0 || (k.mi_profile?.length ?? 0) > 0) && teachingStyle && (() => {
+        {kids.some(k => k.learning_style || (k.mi_profile?.length ?? 0) > 0) && teachingStyle && (() => {
           const styleMap: Record<string, string> = { charlotte_mason: 'charlotte', unit_studies: 'unit' }
           const vakMap: Record<string, string> = { aural: 'auditory' }
           const blueprintStyleId = styleMap[teachingStyle] ?? teachingStyle
@@ -563,11 +563,12 @@ function ProfileContent() {
               <div className="hr-section-label" style={{ marginBottom: 8, paddingLeft: 4 }}>
                 TEACHING BLUEPRINT
               </div>
-              {kids.filter(k => (k.learning_style?.length ?? 0) > 0 || (k.mi_profile?.length ?? 0) > 0).map((kid, idx) => {
+              {kids.filter(k => k.learning_style || (k.mi_profile?.length ?? 0) > 0).map((kid, idx) => {
                 const color = KID_COLORS[idx % KID_COLORS.length]
-                const topVak = kid.learning_style && kid.learning_style.length > 0
-                  ? (vakMap[kid.learning_style[0]] ?? kid.learning_style[0])
-                  : null
+                const vakStyles = kid.learning_style
+                  ? kid.learning_style.split(',').map(s => s.trim()).filter(Boolean)
+                  : []
+                const topVak = vakStyles.length > 0 ? (vakMap[vakStyles[0]] ?? vakStyles[0]) : null
                 const vakBridge = topVak ? getVakBridge(blueprintStyleId, topVak) : null
                 const miTips = (kid.mi_profile?.length ?? 0) > 0
                   ? getMiTips(kid.mi_profile!, blueprintStyleId)
