@@ -7,6 +7,8 @@ import AuthGuard from '@/components/AuthGuard'
 import { getOrganizationId } from '@/src/lib/getOrganizationId'
 import { TIER_INFO, type UserTier } from '@/lib/tierTesting'
 import KidProfileForm from '@/components/KidProfileForm'
+import { getVakBridge, getMiTips } from '@/src/lib/teachingBlueprint'
+import { MI_INTELLIGENCES } from '@/src/lib/learningProfiles'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -49,6 +51,8 @@ interface Kid {
   displayname: string
   grade?: string | null
   subjects: string[]
+  learning_style?: string[] | null
+  mi_profile?: string[] | null
 }
 
 // ─── Bottom Nav ───────────────────────────────────────────────────────────────
@@ -129,7 +133,7 @@ function ProfileContent() {
           .eq('organization_id', orgId)
           .maybeSingle(),
         supabase.from('kids')
-          .select('id, displayname, grade')
+          .select('id, displayname, grade, learning_style, mi_profile')
           .eq('organization_id', orgId)
           .order('displayname'),
         supabase.from('user_organizations')
@@ -186,7 +190,7 @@ function ProfileContent() {
           subsByKid[row.kid_id].add(row.subject)
         }
 
-        setKids(kidsData.map((k: { id: string; displayname: string; grade?: string }) => ({
+        setKids(kidsData.map((k: { id: string; displayname: string; grade?: string; learning_style?: string[]; mi_profile?: string[] }) => ({
           ...k,
           subjects: subsByKid[k.id] ? Array.from(subsByKid[k.id]).slice(0, 5) : [],
         })))
@@ -548,6 +552,99 @@ function ProfileContent() {
             <span style={{ fontSize: 14, fontWeight: 700, color: '#7c3aed' }}>Add another child</span>
           </div>
         </div>
+
+        {/* ── Teaching Blueprint ── */}
+        {kids.some(k => (k.learning_style?.length ?? 0) > 0 || (k.mi_profile?.length ?? 0) > 0) && teachingStyle && (() => {
+          const styleMap: Record<string, string> = { charlotte_mason: 'charlotte', unit_studies: 'unit' }
+          const vakMap: Record<string, string> = { aural: 'auditory' }
+          const blueprintStyleId = styleMap[teachingStyle] ?? teachingStyle
+          return (
+            <>
+              <div className="hr-section-label" style={{ marginBottom: 8, paddingLeft: 4 }}>
+                TEACHING BLUEPRINT
+              </div>
+              {kids.filter(k => (k.learning_style?.length ?? 0) > 0 || (k.mi_profile?.length ?? 0) > 0).map((kid, idx) => {
+                const color = KID_COLORS[idx % KID_COLORS.length]
+                const topVak = kid.learning_style && kid.learning_style.length > 0
+                  ? (vakMap[kid.learning_style[0]] ?? kid.learning_style[0])
+                  : null
+                const vakBridge = topVak ? getVakBridge(blueprintStyleId, topVak) : null
+                const miTips = (kid.mi_profile?.length ?? 0) > 0
+                  ? getMiTips(kid.mi_profile!, blueprintStyleId)
+                  : []
+                if (!vakBridge && miTips.length === 0) return null
+                return (
+                  <div key={kid.id} className="hr-card" style={{ marginBottom: 16, padding: 20 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                      <div style={{
+                        width: 32, height: 32, borderRadius: '50%', background: color, flexShrink: 0,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 13, fontWeight: 900, color: '#fff',
+                      }}>
+                        {kid.displayname[0].toUpperCase()}
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 14, fontWeight: 800, color: '#1a1a2e' }}>{kid.displayname}</div>
+                        <div style={{ fontSize: 11, color: '#7c3aed', fontWeight: 700 }}>🗺️ Teaching Blueprint</div>
+                      </div>
+                    </div>
+
+                    {vakBridge && (
+                      <div style={{ marginBottom: miTips.length > 0 ? 16 : 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 800, color: '#1a1a2e', marginBottom: 4 }}>{vakBridge.headline}</div>
+                        <div style={{ fontSize: 12, color: '#4b5563', lineHeight: 1.6, marginBottom: 10 }}>{vakBridge.intro}</div>
+                        <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                          {vakBridge.tips.slice(0, 3).map((tip, i) => (
+                            <li key={i} style={{ display: 'flex', gap: 8, fontSize: 12, color: '#374151', lineHeight: 1.6 }}>
+                              <span style={{ color: '#7c3aed', flexShrink: 0, marginTop: 1 }}>•</span>
+                              <span>{tip}</span>
+                            </li>
+                          ))}
+                        </ul>
+                        {vakBridge.scoutTip && (
+                          <div style={{
+                            marginTop: 10, background: '#f5f3ff', borderRadius: 10,
+                            padding: '10px 12px', display: 'flex', gap: 8,
+                          }}>
+                            <span style={{ fontSize: 14, flexShrink: 0 }}>🐦</span>
+                            <p style={{ margin: 0, fontSize: 11, color: '#6d28d9', lineHeight: 1.6 }}>{vakBridge.scoutTip}</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {miTips.length > 0 && (
+                      <div style={vakBridge ? { paddingTop: 14, borderTop: '1px solid #f3f4f6' } : {}}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
+                          Intelligence Strengths
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                          {(kid.mi_profile ?? []).map((miId, i) => {
+                            const miDef = MI_INTELLIGENCES.find(m => m.id === miId)
+                            const tipEntry = miTips[i]
+                            if (!miDef || !tipEntry) return null
+                            return (
+                              <div key={miId} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                                <span style={{
+                                  fontSize: 11, fontWeight: 700, color: '#7c3aed',
+                                  background: '#ede9fe', borderRadius: 20, padding: '2px 8px',
+                                  flexShrink: 0, whiteSpace: 'nowrap', marginTop: 1,
+                                }}>
+                                  {miDef.emoji} {miDef.name}
+                                </span>
+                                {tipEntry.styleTip && <p style={{ margin: 0, fontSize: 11, color: '#4b5563', lineHeight: 1.6 }}>{tipEntry.styleTip}</p>}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </>
+          )
+        })()}
 
         {/* ── Account ── */}
         <div className="hr-section-label" style={{ marginBottom: 8, paddingLeft: 4 }}>

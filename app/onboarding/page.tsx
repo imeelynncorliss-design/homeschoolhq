@@ -6,6 +6,7 @@ import { supabase } from '@/src/lib/supabase'
 import { CANONICAL_SUBJECTS } from '@/src/constants/subjects'
 import { DEFAULT_FLEXIBLE, DEFAULT_STRUCTURED } from '@/components/StylePickerModal'
 import { MI_INTELLIGENCES, MI_CLUSTERS, MI_REMEMBER } from '@/src/lib/learningProfiles'
+import { getVakBridge, getMiTips } from '@/src/lib/teachingBlueprint'
 
 // ── State Data ────────────────────────────────────────────────────────────────
 
@@ -2417,6 +2418,7 @@ function OnboardingInner() {
                   { icon: '🎨', label: 'Teaching style', value: STYLE_RESULTS[teachingStyle]?.name || 'Not set' },
                   { icon: '🧒', label: 'First student', value: `${nickname || firstName}${grade ? ` · ${grade}` : ''}${age ? ` · Age ${age}` : ''}` },
                   { icon: '🧠', label: 'Learning style', value: learningStyles.length > 0 ? learningStyles.map(v => LEARNING_STYLES.find(s => s.value === v)?.label).join(', ') : '—' },
+                  { icon: '🧬', label: 'Intelligences', value: miProfile.length > 0 ? miProfile.map(id => MI_INTELLIGENCES.find(m => m.id === id)?.name).filter(Boolean).join(', ') : '—' },
                   { icon: '📚', label: 'Curriculum', value: curriculumLabel },
                 ].map(row => (
                   <div key={row.label} className="flex items-center gap-4 py-2 border-b border-gray-100 last:border-0">
@@ -2427,6 +2429,64 @@ function OnboardingInner() {
                 ))}
               </div>
             </div>
+
+            {/* ── Teaching Blueprint Preview ─────────────────────────── */}
+            {(() => {
+              // Normalize style/VAK IDs between onboarding keys and blueprint keys
+              const styleMap: Record<string, string> = { charlotte_mason: 'charlotte', unit_studies: 'unit' }
+              const blueprintStyleId = styleMap[teachingStyle] ?? teachingStyle
+              const vakMap: Record<string, string> = { aural: 'auditory' }
+              const topVak = learningStyles.length > 0 ? (vakMap[learningStyles[0]] ?? learningStyles[0]) : null
+              const vakBridge = topVak ? getVakBridge(blueprintStyleId, topVak) : null
+              const miTips = miProfile.length > 0 ? getMiTips(miProfile, blueprintStyleId) : []
+              if (!vakBridge && miTips.length === 0) return null
+              return (
+                <div className="bg-white rounded-2xl shadow-sm p-6 mb-6 border border-purple-100">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-lg">🗺️</span>
+                    <p className="text-xs font-bold uppercase tracking-widest text-purple-600">Your Teaching Blueprint</p>
+                  </div>
+                  <p className="text-xs text-gray-400 mb-4">How your style meets {nickname || firstName}&apos;s way of learning</p>
+
+                  {vakBridge && (
+                    <div className="mb-4">
+                      <p className="text-sm font-bold text-gray-900 mb-1">{vakBridge.headline}</p>
+                      <p className="text-sm text-gray-600 mb-3 leading-relaxed">{vakBridge.intro}</p>
+                      <ul className="space-y-1.5">
+                        {vakBridge.tips.slice(0, 3).map((tip, i) => (
+                          <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                            <span className="text-purple-400 mt-0.5 flex-shrink-0">•</span>
+                            <span>{tip}</span>
+                          </li>
+                        ))}
+                      </ul>
+                      {vakBridge.scoutTip && (
+                        <div className="mt-3 bg-purple-50 rounded-xl px-4 py-3 flex items-start gap-2">
+                          <span className="text-sm flex-shrink-0">🐦</span>
+                          <p className="text-xs text-purple-700 leading-relaxed">{vakBridge.scoutTip}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {miTips.length > 0 && (
+                    <div className={vakBridge ? 'pt-4 border-t border-gray-100' : ''}>
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                        {nickname || firstName}&apos;s Intelligence Strengths
+                      </p>
+                      <div className="space-y-2">
+                        {miTips.map(({ mi, styleTip }) => (
+                          <div key={mi.headline} className="flex items-start gap-2">
+                            <span className="text-xs bg-purple-100 text-purple-700 font-semibold rounded-full px-2 py-0.5 flex-shrink-0 mt-0.5">{mi.headline}</span>
+                            {styleTip && <p className="text-xs text-gray-600 leading-relaxed">{styleTip}</p>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
 
             <button
               onClick={() => completeOnboarding()}
