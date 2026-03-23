@@ -167,7 +167,7 @@ function SupplyScoutContent() {
         @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
         *, *::before, *::after { box-sizing: border-box; }
         body { margin: 0; }
-        .material-row:hover { background: rgba(245,158,11,0.08) !important; }
+        .material-row:hover { background: rgba(124,58,237,0.06) !important; }
         .lesson-block { transition: box-shadow 0.15s; }
         .lesson-block:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.1) !important; }
         @keyframes spin { to { transform: rotate(360deg); } }
@@ -192,9 +192,9 @@ function SupplyScoutContent() {
                   <button key={tab} onClick={() => setActiveTab(tab)} style={{
                     padding: '6px 14px', borderRadius: 20, border: 'none', cursor: 'pointer',
                     fontFamily: "'Nunito', sans-serif", fontSize: 13, fontWeight: isActive ? 800 : 600,
-                    background: isActive ? '#f59e0b' : 'rgba(255,255,255,0.6)',
+                    background: isActive ? '#7c3aed' : 'rgba(255,255,255,0.6)',
                     color: isActive ? '#fff' : '#6b7280',
-                    boxShadow: isActive ? '0 2px 8px rgba(245,158,11,0.35)' : 'none',
+                    boxShadow: isActive ? '0 2px 8px rgba(124,58,237,0.35)' : 'none',
                     transition: 'all 0.15s',
                   }}>{label}</button>
                 )
@@ -256,10 +256,10 @@ function SupplyScoutContent() {
             {/* Summary banner */}
             <div style={{
               background: 'rgba(255,255,255,0.75)', borderRadius: 14,
-              border: '1px solid rgba(245,158,11,0.2)',
+              border: '1px solid rgba(124,58,237,0.2)',
               padding: '12px 16px', marginBottom: 20,
               display: 'flex', alignItems: 'center', gap: 10,
-              fontSize: 13, color: '#92400e', fontWeight: 700,
+              fontSize: 13, color: '#5b21b6', fontWeight: 700,
             }}>
               <span style={{ fontSize: 18 }}>💡</span>
               <span>
@@ -280,7 +280,7 @@ function SupplyScoutContent() {
                     display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12,
                   }}>
                     <div style={{
-                      background: '#f59e0b', color: '#fff', borderRadius: 10,
+                      background: '#7c3aed', color: '#fff', borderRadius: 10,
                       padding: '4px 12px', fontSize: 12, fontWeight: 900, letterSpacing: 0.5,
                     }}>
                       {DAYS[group.date.getDay()].toUpperCase()}
@@ -299,7 +299,7 @@ function SupplyScoutContent() {
                         className="lesson-block"
                         style={{
                           background: 'rgba(255,255,255,0.90)',
-                          borderRadius: 16, border: '1.5px solid rgba(245,158,11,0.15)',
+                          borderRadius: 16, border: '1.5px solid rgba(124,58,237,0.15)',
                           overflow: 'hidden',
                           boxShadow: '0 2px 10px rgba(0,0,0,0.06)',
                         }}
@@ -331,8 +331,8 @@ function SupplyScoutContent() {
                             )}
                           </div>
                           <div style={{
-                            fontSize: 11, fontWeight: 800, color: '#92400e',
-                            background: '#fef3c7', borderRadius: 8, padding: '3px 8px', flexShrink: 0,
+                            fontSize: 11, fontWeight: 800, color: '#5b21b6',
+                            background: '#ede9fe', borderRadius: 8, padding: '3px 8px', flexShrink: 0,
                           }}>
                             {materials.length} item{materials.length !== 1 ? 's' : ''}
                           </div>
