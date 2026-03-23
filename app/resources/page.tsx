@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, Suspense } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import AuthGuard from '@/components/AuthGuard'
 import { supabase } from '@/src/lib/supabase'
 import { getOrganizationId } from '@/src/lib/getOrganizationId'
@@ -1597,8 +1597,12 @@ function ParentsCornerTab() {
 
 function ResourcesContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   useAppHeader({ title: '💡 Resources' })
-  const [activeTab, setActiveTab] = useState<'styles' | 'curriculum' | 'statelaws' | 'dictionary' | 'parents' | 'materials'>('styles')
+  const validTabs = ['styles', 'statelaws', 'dictionary', 'parents', 'materials'] as const
+  type TabId = typeof validTabs[number]
+  const initialTab = validTabs.includes(searchParams.get('tab') as TabId) ? searchParams.get('tab') as TabId : 'styles'
+  const [activeTab, setActiveTab] = useState<TabId>(initialTab)
   const [stylesSubTab, setStylesSubTab] = useState<'styles' | 'curriculum'>('styles')
   const [curriculumStyle, setCurriculumStyle] = useState('charlotte')
   const [userStyle, setUserStyle] = useState<string | null>(null)
