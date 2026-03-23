@@ -240,6 +240,8 @@ function ProfileContent() {
     // Update local state so name/grade reflects immediately
     setKids(prev => prev.map(k => k.id === data.id ? { ...k, displayname: fields.displayname, grade: fields.grade, learning_style: fields.learning_style, mi_profile: fields.mi_profile } : k))
     setEditingKid(null)
+    // Invalidate the router cache so pages like Resources re-fetch fresh data on next visit
+    router.refresh()
   }
 
   const handleAddKid = async (data: any) => {
