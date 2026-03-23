@@ -53,14 +53,14 @@ interface LessonCalendarProps {
 }
 
 const CHILD_COLORS = [
-  '#3b82f6',
-  '#a855f7',
-  '#ec4899',
-  '#f97316',
-  '#14b8a6',
-  '#84cc16',
-  '#f59e0b',
-  '#8b5cf6',
+  '#7c3aed',  // violet — matches dashboard kid pill 1
+  '#0d9488',  // teal   — matches dashboard kid pill 2
+  '#ec4899',  // pink   — matches dashboard kid pill 3
+  '#f59e0b',  // amber  — matches dashboard kid pill 4
+  '#3b82f6',  // blue   — matches dashboard kid pill 5
+  '#ef4444',  // red
+  '#8b5cf6',  // purple
+  '#06b6d4',  // cyan
 ]
 
 const ACTIVITY_COLORS = {
