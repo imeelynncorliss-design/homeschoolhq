@@ -6,6 +6,7 @@ import { createClient } from '@/src/lib/supabase/client'
 import AuthGuard from '@/components/AuthGuard'
 import { getOrganizationId } from '@/src/lib/getOrganizationId'
 import { useAppHeader } from '@/components/layout/AppHeader'
+import { pageShell } from '@/src/lib/designTokens'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -74,11 +75,9 @@ function extractMaterials(description?: string | null, lesson_source?: string | 
 
 // ─── Main Content ─────────────────────────────────────────────────────────────
 
-const GRADIENT = '#3d3a52'
-
 function SupplyScoutContent() {
   const router = useRouter()
-  useAppHeader({ title: '🔍 Supply Scout', backHref: '/resources' })
+  useAppHeader({ title: '🔍 Supply Scout', backHref: '/tools' })
   const supabase = createClient()
 
   const [loading, setLoading]         = useState(true)
@@ -155,7 +154,7 @@ function SupplyScoutContent() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', background: GRADIENT, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ ...pageShell.root, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ width: 40, height: 40, borderRadius: '50%', border: '3px solid #fde68a', borderTopColor: '#f59e0b', animation: 'spin 0.8s linear infinite' }} />
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
@@ -163,7 +162,7 @@ function SupplyScoutContent() {
   }
 
   return (
-    <div style={{ fontFamily: "'Nunito', sans-serif", minHeight: '100vh', background: GRADIENT, paddingBottom: 96 }}>
+    <div style={{ ...pageShell.root, paddingBottom: 96 }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
         *, *::before, *::after { box-sizing: border-box; }
@@ -180,7 +179,7 @@ function SupplyScoutContent() {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
               <span style={{ fontSize: 28 }}>🛒</span>
-              <h1 style={{ fontSize: 26, fontWeight: 900, color: '#1e1b4b', margin: 0, fontFamily: "'Nunito', sans-serif" }}>
+              <h1 style={{ fontSize: 26, fontWeight: 900, color: '#7c3aed', margin: 0, fontFamily: "'Nunito', sans-serif" }}>
                 Supply Scout
               </h1>
             </div>
@@ -201,7 +200,7 @@ function SupplyScoutContent() {
                 )
               })}
             </div>
-            <p style={{ fontSize: 12, color: '#9ca3af', fontWeight: 600, margin: '0 0 4px' }}>
+            <p style={{ fontSize: 12, color: '#6b7280', fontWeight: 600, margin: '0 0 4px' }}>
               {weekLabel}
             </p>
           </div>
@@ -412,7 +411,7 @@ function SupplyScoutContent() {
 export default function SupplyScoutPage() {
   return (
     <AuthGuard>
-      <Suspense fallback={<div style={{ minHeight: '100vh', background: GRADIENT }} />}>
+      <Suspense fallback={<div style={{ ...pageShell.root }} />}>
         <SupplyScoutContent />
       </Suspense>
     </AuthGuard>
