@@ -1359,7 +1359,7 @@ function ParentsCornerTab({ blueprintKids, blueprintOrgStyle }: { blueprintKids:
                 <div style={{ fontSize: 15, fontWeight: 800, color: '#111827', marginBottom: 6 }}>
                   No learning profile for {kid?.displayname ?? 'this child'}
                 </div>
-                <p style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.6, margin: 0 }}>
+                <p style={{ fontSize: 14, color: '#6b7280', lineHeight: 1.6, margin: 0 }}>
                   Set their learning style and MI profile in Profile → Edit Child to unlock their blueprint.
                 </p>
               </div>
@@ -1369,15 +1369,15 @@ function ParentsCornerTab({ blueprintKids, blueprintOrgStyle }: { blueprintKids:
                   <>
                     <div style={{ fontSize: 17, fontWeight: 800, color: '#111827', marginBottom: 4 }}>{bridge.headline}</div>
                     {extraStyles.length > 0 && (
-                      <div style={{ fontSize: 11, color: '#9ca3af', fontWeight: 600, marginBottom: 8 }}>
+                      <div style={{ fontSize: 12, color: '#9ca3af', fontWeight: 600, marginBottom: 8 }}>
                         Also selected: {extraStyles.map(s => s === 'read_write' ? 'Read/Write' : s.charAt(0).toUpperCase() + s.slice(1)).join(', ')}
                         {extraStyles.includes('read_write') && ' — Read/Write learners benefit from written notes and outlines; ask Scout to create written summaries for any lesson.'}
                       </div>
                     )}
-                    <p style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.7, margin: '0 0 16px' }}>{bridge.intro}</p>
+                    <p style={{ fontSize: 14, color: '#6b7280', lineHeight: 1.7, margin: '0 0 16px' }}>{bridge.intro}</p>
                     <ul style={{ margin: '0 0 16px', padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column' as const, gap: 8 }}>
                       {bridge.tips.map((tip, i) => (
-                        <li key={i} style={{ display: 'flex', gap: 10, fontSize: 13, color: '#374151', lineHeight: 1.6 }}>
+                        <li key={i} style={{ display: 'flex', gap: 10, fontSize: 14, color: '#374151', lineHeight: 1.6 }}>
                           <span style={{ color: '#7c3aed', flexShrink: 0, marginTop: 2 }}>•</span>
                           <span>{tip}</span>
                         </li>
@@ -1386,7 +1386,7 @@ function ParentsCornerTab({ blueprintKids, blueprintOrgStyle }: { blueprintKids:
                     {bridge.scoutTip && (
                       <div style={{ background: '#f5f3ff', borderRadius: 12, padding: '12px 14px', display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: miTips.length > 0 ? 20 : 0 }}>
                         <img src="/Cardinal_Mascot.png" alt="Scout" style={{ width: 24, height: 24, objectFit: 'contain', flexShrink: 0 }} />
-                        <p style={{ margin: 0, fontSize: 12, color: '#6d28d9', lineHeight: 1.6 }}>{bridge.scoutTip}</p>
+                        <p style={{ margin: 0, fontSize: 13, color: '#6d28d9', lineHeight: 1.6 }}>{bridge.scoutTip}</p>
                       </div>
                     )}
                   </>
@@ -1408,9 +1408,9 @@ function ParentsCornerTab({ blueprintKids, blueprintOrgStyle }: { blueprintKids:
                               <span style={{ fontSize: 20 }}>{miDef.emoji}</span>
                               <span style={{ fontSize: 13, fontWeight: 800, color: '#1e1b4b' }}>{miDef.fullName}</span>
                             </div>
-                            <p style={{ margin: '0 0 4px 28px', fontSize: 12, color: '#6b7280', lineHeight: 1.6 }}>{miDef.detail}</p>
+                            <p style={{ margin: '0 0 4px 28px', fontSize: 13, color: '#6b7280', lineHeight: 1.6 }}>{miDef.detail}</p>
                             {tipEntry.styleTip && (
-                              <div style={{ margin: '0 0 0 28px', fontSize: 12, color: '#7c3aed', fontWeight: 600, lineHeight: 1.5 }}>
+                              <div style={{ margin: '0 0 0 28px', fontSize: 13, color: '#7c3aed', fontWeight: 600, lineHeight: 1.5 }}>
                                 → {tipEntry.styleTip}
                               </div>
                             )}

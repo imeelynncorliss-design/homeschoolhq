@@ -19,6 +19,7 @@ export const STYLE_FEATURES = [
   { id: 'transcript',  emoji: '🎓', label: 'Transcript Builder',       desc: 'GPA, courses, college-ready records' },
   { id: 'mastery',     emoji: '🏆', label: 'Mastery Tracker',          desc: 'Standards & skill mastery' },
   { id: 'portfolio',   emoji: '🗂️', label: 'Portfolio',                desc: 'Work samples & highlights' },
+  { id: 'supply_scout', emoji: '🔍', label: 'Supply Scout',            desc: 'Check materials needed this week & next' },
 ]
 
 // ─── Defaults per style ───────────────────────────────────────────────────────

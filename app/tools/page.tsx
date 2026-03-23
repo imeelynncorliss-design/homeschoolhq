@@ -69,6 +69,20 @@ function ToolsContent() {
       `}</style>
       <main style={pageShell.main}>
 
+        <div className="hr-section-label" style={{ marginBottom: 14, marginTop: 8 }}>WEEKLY PLANNING</div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, marginBottom: 28 }}>
+          {/* Supply Scout */}
+          <div className="hr-card tool-card" style={{ padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={{ width: 52, height: 52, borderRadius: 16, background: 'linear-gradient(135deg, #fefce8, #fef9c3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, marginBottom: 4 }}>🔍</div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: '#1a1a2e', marginBottom: 3 }}>Supply Scout</div>
+            <div style={{ fontSize: 13, color: '#4b5563', fontWeight: 600, lineHeight: 1.4, flex: 1 }}>
+              Check what materials and supplies you need for this week and next. Scout scans your upcoming lessons and flags anything you'll need to gather or order in advance.
+            </div>
+            <button style={btnStyle} onClick={() => router.push('/supply-scout')}>🔍 Check Supplies</button>
+          </div>
+        </div>
+
         <div className="hr-section-label" style={{ marginBottom: 14, marginTop: 8 }}>SETUP, SCHEDULING &amp; ACCOUNT MANAGEMENT</div>
 
         {/* Tool cards */}
