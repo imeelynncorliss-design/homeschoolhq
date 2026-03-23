@@ -1386,7 +1386,7 @@ function ParentsCornerTab({ blueprintKids, blueprintOrgStyle }: { blueprintKids:
                     {bridge.scoutTip && (
                       <div style={{ background: '#f5f3ff', borderRadius: 12, padding: '12px 14px', display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: miTips.length > 0 ? 20 : 0 }}>
                         <img src="/Cardinal_Mascot.png" alt="Scout" style={{ width: 24, height: 24, objectFit: 'contain', flexShrink: 0 }} />
-                        <p style={{ margin: 0, fontSize: 13, color: '#6d28d9', lineHeight: 1.6 }}>{bridge.scoutTip}</p>
+                        <p style={{ margin: 0, fontSize: 15, color: '#6d28d9', lineHeight: 1.6 }}>{bridge.scoutTip}</p>
                       </div>
                     )}
                   </>
