@@ -2436,8 +2436,11 @@ function OnboardingInner() {
               const styleMap: Record<string, string> = { charlotte_mason: 'charlotte', unit_studies: 'unit' }
               const blueprintStyleId = styleMap[teachingStyle] ?? teachingStyle
               const vakMap: Record<string, string> = { aural: 'auditory' }
-              const topVak = learningStyles.length > 0 ? (vakMap[learningStyles[0]] ?? learningStyles[0]) : null
-              const vakBridge = topVak ? getVakBridge(blueprintStyleId, topVak) : null
+              let vakBridge = null
+              for (const s of learningStyles) {
+                const b = getVakBridge(blueprintStyleId, vakMap[s] ?? s)
+                if (b) { vakBridge = b; break }
+              }
               const miTips = miProfile.length > 0 ? getMiTips(miProfile, blueprintStyleId) : []
               if (!vakBridge && miTips.length === 0) return null
               return (
@@ -2462,7 +2465,7 @@ function OnboardingInner() {
                       </ul>
                       {vakBridge.scoutTip && (
                         <div className="mt-3 bg-purple-50 rounded-xl px-4 py-3 flex items-start gap-2">
-                          <span className="text-sm flex-shrink-0">🐦</span>
+                          <img src="/Cardinal_Mascot.png" alt="Scout" className="flex-shrink-0" style={{ width: 22, height: 22, objectFit: 'contain' }} />
                           <p className="text-xs text-purple-700 leading-relaxed">{vakBridge.scoutTip}</p>
                         </div>
                       )}

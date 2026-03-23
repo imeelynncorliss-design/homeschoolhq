@@ -1753,8 +1753,11 @@ function DashboardContent() {
             const kidWithStyle = kidPulses.find(p => p.kid.learning_style)
             if (!kidWithStyle || !blueprintStyleId) return null
             const vakStyles = kidWithStyle.kid.learning_style!.split(',').map(s => s.trim()).filter(Boolean)
-            const topVak = vakMap[vakStyles[0]] ?? vakStyles[0]
-            const bridge = getVakBridge(blueprintStyleId, topVak)
+            let bridge = null
+            for (const s of vakStyles) {
+              const b = getVakBridge(blueprintStyleId, vakMap[s] ?? s)
+              if (b) { bridge = b; break }
+            }
             if (!bridge) return null
             return (
               <section style={{ marginTop: 8 }}>
@@ -1787,7 +1790,7 @@ function DashboardContent() {
                       background: 'rgba(124,58,237,0.25)', borderRadius: 10,
                       padding: '8px 12px', display: 'flex', gap: 8, alignItems: 'flex-start', marginBottom: 12,
                     }}>
-                      <span style={{ fontSize: 14, flexShrink: 0 }}>🐦</span>
+                      <img src="/Cardinal_Mascot.png" alt="Scout" style={{ width: 22, height: 22, objectFit: 'contain', flexShrink: 0 }} />
                       <p style={{ margin: 0, fontSize: 11, color: 'rgba(196,181,253,0.9)', lineHeight: 1.5 }}>{bridge.scoutTip}</p>
                     </div>
                   )}

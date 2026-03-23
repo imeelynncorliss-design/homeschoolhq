@@ -542,52 +542,6 @@ function CurriculumTab({ initialStyle }: { initialStyle: string }) {
   )
 }
 
-// ─── Compliance Tab ───────────────────────────────────────────────────────────
-
-function ComplianceTab() {
-  return (
-    <div>
-      <div style={{
-        background: '#fff', borderRadius: 14, padding: '18px 20px',
-        border: '1px solid #e5e7eb', marginBottom: 14,
-      }}>
-        <div style={{ fontSize: 17, fontWeight: 700, color: '#111827', marginBottom: 6 }}>
-          What is homeschool compliance?
-        </div>
-        <p style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.7, margin: 0 }}>
-          Every state has different laws governing homeschooling — some require almost nothing, others
-          require annual filings, testing, and portfolio reviews. Compliance means meeting your state's
-          specific requirements each year. HomeschoolReady tracks all of this automatically once your
-          state is set up.
-        </p>
-      </div>
-
-      {COMPLIANCE_TERMS.map(item => (
-        <div key={item.term} style={{
-          background: '#fff', borderRadius: 14, padding: '15px 18px',
-          border: '1px solid #e5e7eb', marginBottom: 10,
-        }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: '#111827', marginBottom: 5 }}>{item.term}</div>
-          <p style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.6, margin: 0 }}>{item.def}</p>
-        </div>
-      ))}
-
-      <div style={css.infoBanner}>
-        💡 HomeschoolReady is not a legal advisor. Always verify requirements at{' '}
-        <a
-          href="https://hslda.org"
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{ color: '#7c3aed', fontWeight: 700 }}
-        >
-          HSLDA.org
-        </a>{' '}
-        or your state's Department of Education.
-      </div>
-    </div>
-  )
-}
-
 // ─── Guides Tab ───────────────────────────────────────────────────────────────
 
 function GuidesTab() {
@@ -1381,8 +1335,15 @@ function ParentsCornerTab() {
         }
 
         const vakStyles = kid?.learning_style ? kid.learning_style.split(',').map(s => s.trim()).filter(Boolean) : []
-        const topVak = vakStyles.length > 0 ? (vakMap[vakStyles[0]] ?? vakStyles[0]) : null
-        const bridge = topVak ? getVakBridge(blueprintStyleId, topVak) : null
+        // Find the first style that has a VAK bridge (read_write has no bridge entry)
+        let bridge = null
+        let topVak: string | null = null
+        for (const s of vakStyles) {
+          const mapped = vakMap[s] ?? s
+          const b = getVakBridge(blueprintStyleId, mapped)
+          if (b) { bridge = b; topVak = mapped; break }
+        }
+        const extraStyles = vakStyles.filter(s => (vakMap[s] ?? s) !== topVak)
         const miTips = (kid?.mi_profile?.length ?? 0) > 0 ? getMiTips(kid!.mi_profile!, blueprintStyleId) : []
 
         return (
@@ -1422,6 +1383,12 @@ function ParentsCornerTab() {
                 {bridge && (
                   <>
                     <div style={{ fontSize: 17, fontWeight: 800, color: '#111827', marginBottom: 4 }}>{bridge.headline}</div>
+                    {extraStyles.length > 0 && (
+                      <div style={{ fontSize: 11, color: '#9ca3af', fontWeight: 600, marginBottom: 8 }}>
+                        Also selected: {extraStyles.map(s => s === 'read_write' ? 'Read/Write' : s.charAt(0).toUpperCase() + s.slice(1)).join(', ')}
+                        {extraStyles.includes('read_write') && ' — Read/Write learners benefit from written notes and outlines; ask Scout to create written summaries for any lesson.'}
+                      </div>
+                    )}
                     <p style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.7, margin: '0 0 16px' }}>{bridge.intro}</p>
                     <ul style={{ margin: '0 0 16px', padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column' as const, gap: 8 }}>
                       {bridge.tips.map((tip, i) => (
@@ -1433,7 +1400,7 @@ function ParentsCornerTab() {
                     </ul>
                     {bridge.scoutTip && (
                       <div style={{ background: '#f5f3ff', borderRadius: 12, padding: '12px 14px', display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: miTips.length > 0 ? 20 : 0 }}>
-                        <span style={{ fontSize: 18, flexShrink: 0 }}>🐦</span>
+                        <img src="/Cardinal_Mascot.png" alt="Scout" style={{ width: 24, height: 24, objectFit: 'contain', flexShrink: 0 }} />
                         <p style={{ margin: 0, fontSize: 12, color: '#6d28d9', lineHeight: 1.6 }}>{bridge.scoutTip}</p>
                       </div>
                     )}
