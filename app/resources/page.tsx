@@ -8,6 +8,7 @@ import { getOrganizationId } from '@/src/lib/getOrganizationId'
 import { useAppHeader } from '@/components/layout/AppHeader'
 import { pageShell } from '@/src/lib/designTokens'
 import MaterialsHelpModal from '@/components/MaterialsHelpModal'
+import { MI_INTELLIGENCES, MI_CLUSTERS, MI_REMEMBER, VAK_TIPS } from '@/src/lib/learningProfiles'
 
 // ─── Static Data ──────────────────────────────────────────────────────────────
 
@@ -1268,12 +1269,199 @@ function HighSchoolTab() {
   )
 }
 
+// ─── Data Dictionary Tab ──────────────────────────────────────────────────────
+
+function DataDictionaryTab() {
+  return (
+    <div>
+      <div style={{ background: '#fff', borderRadius: 14, padding: '18px 20px', border: '1px solid #e5e7eb', marginBottom: 14 }}>
+        <div style={{ fontSize: 17, fontWeight: 700, color: '#111827', marginBottom: 6 }}>Homeschool Terms Explained</div>
+        <p style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.7, margin: 0 }}>
+          Every state has different laws governing homeschooling — some require almost nothing, others
+          require annual filings, testing, and portfolio reviews. Here's what the common terms mean.
+        </p>
+      </div>
+      {COMPLIANCE_TERMS.map(item => (
+        <div key={item.term} style={{ background: '#fff', borderRadius: 14, padding: '15px 18px', border: '1px solid #e5e7eb', marginBottom: 10 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#111827', marginBottom: 5 }}>{item.term}</div>
+          <p style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.6, margin: 0 }}>{item.def}</p>
+        </div>
+      ))}
+      <div style={css.infoBanner}>
+        💡 HomeschoolReady is not a legal advisor. Always verify requirements at{' '}
+        <a href="https://hslda.org" target="_blank" rel="noopener noreferrer" style={{ color: '#7c3aed', fontWeight: 700 }}>HSLDA.org</a>{' '}
+        or your state's Department of Education.
+      </div>
+    </div>
+  )
+}
+
+// ─── Parent's Corner Tab ──────────────────────────────────────────────────────
+
+function ParentsCornerTab() {
+  const [miProfile, setMiProfile] = useState<string[]>([])
+  const [expandedVak, setExpandedVak] = useState<string | null>(null)
+  const [activeSection, setActiveSection] = useState<'mi' | 'vak' | 'highschool' | 'guides'>('mi')
+
+  const toggleMi = (id: string) => {
+    setMiProfile(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : prev.length < 3 ? [...prev, id] : prev
+    )
+  }
+
+  return (
+    <div>
+      {/* Section nav */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 24, flexWrap: 'wrap' as const }}>
+        {[
+          { id: 'mi' as const,         label: '🧠 MI Self-Assessment' },
+          { id: 'vak' as const,        label: '👁️ Learning Style Tips' },
+          { id: 'highschool' as const, label: '🎓 High School Planning' },
+          { id: 'guides' as const,     label: '🌱 Guides' },
+        ].map(s => (
+          <button
+            key={s.id}
+            onClick={() => setActiveSection(s.id)}
+            style={{
+              padding: '7px 16px', borderRadius: 99, fontSize: 13, fontWeight: 700,
+              border: '1.5px solid',
+              borderColor: activeSection === s.id ? '#7c3aed' : 'rgba(124,58,237,0.2)',
+              background: activeSection === s.id ? '#7c3aed' : 'rgba(255,255,255,0.7)',
+              color: activeSection === s.id ? '#fff' : '#7c3aed',
+              cursor: 'pointer', fontFamily: "'Nunito', sans-serif",
+            }}
+          >
+            {s.label}
+          </button>
+        ))}
+      </div>
+
+      {/* MI Self-Assessment */}
+      {activeSection === 'mi' && (
+        <div>
+          <div style={{ background: '#fff', borderRadius: 14, padding: '20px', border: '1px solid #e5e7eb', marginBottom: 16 }}>
+            <div style={{ fontSize: 17, fontWeight: 800, color: '#111827', marginBottom: 6 }}>Your Multiple Intelligences Profile</div>
+            <p style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.7, margin: '0 0 16px' }}>
+              How you learn often shapes how you teach — even unconsciously. Pick your top 3 intelligences to build your own MI profile. Use this alongside your child's profile to find your best teaching fit.
+            </p>
+
+            {/* Cards by cluster */}
+            {(['analytical', 'introspective', 'interactive'] as const).map(cluster => {
+              const clusterInfo = MI_CLUSTERS[cluster]
+              const items = MI_INTELLIGENCES.filter(mi => mi.cluster === cluster)
+              return (
+                <div key={cluster} style={{ marginBottom: 16 }}>
+                  <div style={{ fontSize: 10, fontWeight: 800, color: clusterInfo.color, letterSpacing: 1, textTransform: 'uppercase' as const, marginBottom: 8 }}>
+                    {clusterInfo.label} — <span style={{ fontWeight: 600, textTransform: 'none' as const, color: '#9ca3af' }}>{clusterInfo.tagline}</span>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                    {items.map(mi => {
+                      const selected = miProfile.includes(mi.id)
+                      const maxed = miProfile.length >= 3 && !selected
+                      return (
+                        <button
+                          key={mi.id}
+                          onClick={() => toggleMi(mi.id)}
+                          disabled={maxed}
+                          style={{
+                            padding: '14px 10px', borderRadius: 12,
+                            border: `2px solid ${selected ? '#7c3aed' : '#e5e7eb'}`,
+                            background: selected ? '#f5f3ff' : '#fafafa',
+                            cursor: maxed ? 'not-allowed' : 'pointer',
+                            opacity: maxed ? 0.4 : 1,
+                            textAlign: 'center' as const,
+                            transition: 'all 0.15s',
+                            position: 'relative' as const,
+                            fontFamily: "'Nunito', sans-serif",
+                          }}
+                        >
+                          {selected && (
+                            <div style={{ position: 'absolute', top: 6, right: 6, width: 16, height: 16, borderRadius: '50%', background: '#7c3aed', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, color: '#fff', fontWeight: 900 }}>✓</div>
+                          )}
+                          <div style={{ fontSize: 26, marginBottom: 6 }}>{mi.emoji}</div>
+                          <div style={{ fontSize: 11, fontWeight: 800, color: selected ? '#7c3aed' : '#1e1b4b', marginBottom: 3 }}>{mi.name}</div>
+                          <div style={{ fontSize: 10, color: '#6b7280', lineHeight: 1.4 }}>{mi.desc}</div>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )
+            })}
+
+            {miProfile.length > 0 && (
+              <div style={{ marginTop: 16, padding: '14px 16px', background: '#f5f3ff', borderRadius: 12, border: '1.5px solid #e9d5ff' }}>
+                <div style={{ fontSize: 12, fontWeight: 800, color: '#7c3aed', marginBottom: 8 }}>YOUR PROFILE: {miProfile.map(id => MI_INTELLIGENCES.find(m => m.id === id)?.name).join(' · ')}</div>
+                {miProfile.map(id => {
+                  const mi = MI_INTELLIGENCES.find(m => m.id === id)
+                  if (!mi) return null
+                  return (
+                    <div key={id} style={{ marginBottom: 8 }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: '#1e1b4b' }}>{mi.emoji} {mi.fullName}</div>
+                      <div style={{ fontSize: 12, color: '#6b7280', lineHeight: 1.5 }}>{mi.detail}</div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            <div style={{ marginTop: 14, padding: '10px 14px', background: '#f9fafb', borderRadius: 10, border: '1px solid #e5e7eb' }}>
+              <div style={{ fontSize: 10, fontWeight: 800, color: '#9ca3af', letterSpacing: 0.5, marginBottom: 6, textTransform: 'uppercase' as const }}>Remember</div>
+              {MI_REMEMBER.map(r => <div key={r} style={{ fontSize: 11, color: '#6b7280', fontWeight: 600 }}>· {r}</div>)}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* VAK Learning Style Tips */}
+      {activeSection === 'vak' && (
+        <div>
+          <div style={{ background: '#fff', borderRadius: 14, padding: '20px', border: '1px solid #e5e7eb', marginBottom: 16 }}>
+            <div style={{ fontSize: 17, fontWeight: 800, color: '#111827', marginBottom: 6 }}>Learning Style Tips (VAK)</div>
+            <p style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.7, margin: '0 0 16px' }}>
+              Visual, Auditory, and Kinesthetic — the three modes of how information is best received. Use these tips to shape how you deliver lessons to your child.
+            </p>
+            {Object.entries(VAK_TIPS).map(([key, vak]) => (
+              <div key={key} style={{ border: '1.5px solid', borderColor: expandedVak === key ? '#7c3aed' : '#e5e7eb', borderRadius: 12, marginBottom: 10, overflow: 'hidden' }}>
+                <button
+                  onClick={() => setExpandedVak(expandedVak === key ? null : key)}
+                  style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', background: expandedVak === key ? '#f5f3ff' : '#fff', border: 'none', cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}
+                >
+                  <span style={{ fontSize: 14, fontWeight: 700, color: '#111827' }}>{vak.emoji} {vak.label} Learners</span>
+                  <span style={{ fontSize: 18, color: '#9ca3af' }}>{expandedVak === key ? '−' : '+'}</span>
+                </button>
+                {expandedVak === key && (
+                  <div style={{ padding: '0 16px 16px' }}>
+                    {vak.tips.map((tip, i) => (
+                      <div key={i} style={{ display: 'flex', gap: 10, padding: '8px 0', borderTop: '1px solid #f3f4f6' }}>
+                        <span style={{ color: '#7c3aed', fontWeight: 800, flexShrink: 0 }}>→</span>
+                        <span style={{ fontSize: 13, color: '#374151', lineHeight: 1.5 }}>{tip}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* High School Planning */}
+      {activeSection === 'highschool' && <HighSchoolTab />}
+
+      {/* Guides */}
+      {activeSection === 'guides' && <GuidesTab />}
+    </div>
+  )
+}
+
 // ─── Resources Content ────────────────────────────────────────────────────────
 
 function ResourcesContent() {
   const router = useRouter()
   useAppHeader({ title: '💡 Resources' })
-  const [activeTab, setActiveTab] = useState<'styles' | 'curriculum' | 'compliance' | 'guides' | 'materials' | 'statelaws' | 'highschool'>('styles')
+  const [activeTab, setActiveTab] = useState<'styles' | 'curriculum' | 'statelaws' | 'dictionary' | 'parents' | 'materials'>('styles')
+  const [stylesSubTab, setStylesSubTab] = useState<'styles' | 'curriculum'>('styles')
   const [curriculumStyle, setCurriculumStyle] = useState('charlotte')
   const [userStyle, setUserStyle] = useState<string | null>(null)
   const [organizationId, setOrganizationId] = useState<string>('')
@@ -1312,18 +1500,17 @@ function ResourcesContent() {
   }, [])
 
   const TABS = [
-    { id: 'styles' as const,     icon: '🎨', label: 'Teaching Styles'   },
-    { id: 'curriculum' as const, icon: '📚', label: 'Curriculum'         },
-    { id: 'statelaws' as const,  icon: '⚖️', label: 'State Laws'         },
-    { id: 'highschool' as const, icon: '🎓', label: 'High School'        },
-    { id: 'compliance' as const, icon: '✅', label: 'Compliance Basics'  },
-    { id: 'guides' as const,     icon: '🌱', label: 'Guides'             },
-    { id: 'materials' as const,  icon: '🗂️', label: 'My Materials'       },
+    { id: 'styles' as const,     icon: '🎨', label: 'Teaching Styles & Curriculum' },
+    { id: 'statelaws' as const,  icon: '⚖️', label: 'State Laws'                   },
+    { id: 'dictionary' as const, icon: '📖', label: 'Data Dictionary'              },
+    { id: 'parents' as const,    icon: '🪴', label: "Parent's Corner"              },
+    { id: 'materials' as const,  icon: '🗂️', label: 'My Materials'                 },
   ]
 
   const handleViewCurriculum = (styleId: string) => {
     setCurriculumStyle(styleId)
-    setActiveTab('curriculum')
+    setStylesSubTab('curriculum')
+    setActiveTab('styles')
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
@@ -1338,9 +1525,9 @@ function ResourcesContent() {
   return (
     <div style={{ ...pageShell.root, paddingBottom: 80 }}>
 
-      <div style={{ maxWidth: (activeTab === 'guides' || activeTab === 'materials' || activeTab === 'statelaws') ? 1060 : 860, margin: '0 auto', padding: '24px 24px 48px' }}>
+      <div style={{ maxWidth: (activeTab === 'statelaws' || activeTab === 'materials') ? 1060 : 860, margin: '0 auto', padding: '24px 24px 48px' }}>
 
-        <div className="hr-section-label" style={{ marginBottom: 14 }}>TEACHING STYLES · STATE LAWS · CURRICULUM · GUIDES &amp; MORE</div>
+        <div className="hr-section-label" style={{ marginBottom: 14 }}>TEACHING STYLES · STATE LAWS · DATA DICTIONARY · PARENT'S CORNER</div>
 
         {/* Tab pills */}
         <div className="hr-pill-row" style={{ marginBottom: 24, flexWrap: 'wrap' }}>
@@ -1358,22 +1545,41 @@ function ResourcesContent() {
 
         {/* Tab content */}
         {activeTab === 'styles' && (
-          <TeachingStylesTab userStyle={userStyle} onViewCurriculum={handleViewCurriculum} />
-        )}
-        {activeTab === 'curriculum' && (
-          <CurriculumTab initialStyle={curriculumStyle} />
+          <div>
+            {/* Sub-nav: Styles | Curriculum */}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+              {[
+                { id: 'styles' as const, label: '🎨 Teaching Styles' },
+                { id: 'curriculum' as const, label: '📚 Curriculum' },
+              ].map(sub => (
+                <button
+                  key={sub.id}
+                  onClick={() => setStylesSubTab(sub.id)}
+                  style={{
+                    padding: '7px 16px', borderRadius: 99, fontSize: 13, fontWeight: 700,
+                    border: '1.5px solid',
+                    borderColor: stylesSubTab === sub.id ? '#7c3aed' : 'rgba(124,58,237,0.2)',
+                    background: stylesSubTab === sub.id ? '#7c3aed' : 'rgba(255,255,255,0.7)',
+                    color: stylesSubTab === sub.id ? '#fff' : '#7c3aed',
+                    cursor: 'pointer', fontFamily: "'Nunito', sans-serif",
+                  }}
+                >
+                  {sub.label}
+                </button>
+              ))}
+            </div>
+            {stylesSubTab === 'styles' && <TeachingStylesTab userStyle={userStyle} onViewCurriculum={handleViewCurriculum} />}
+            {stylesSubTab === 'curriculum' && <CurriculumTab initialStyle={curriculumStyle} />}
+          </div>
         )}
         {activeTab === 'statelaws' && (
           <StateLawsTab />
         )}
-        {activeTab === 'highschool' && (
-          <HighSchoolTab />
+        {activeTab === 'dictionary' && (
+          <DataDictionaryTab />
         )}
-        {activeTab === 'compliance' && (
-          <ComplianceTab />
-        )}
-        {activeTab === 'guides' && (
-          <GuidesTab />
+        {activeTab === 'parents' && (
+          <ParentsCornerTab />
         )}
         {activeTab === 'materials' && organizationId && (
           <MaterialsTab organizationId={organizationId} />
