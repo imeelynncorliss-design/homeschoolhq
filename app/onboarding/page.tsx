@@ -342,6 +342,54 @@ function calculateStyle(answers: Record<number, StyleScores>): string {
 
 const STEP_LABELS = ['Your School', 'Teaching Style', 'Curriculum', 'Your Child', 'Subjects']
 
+export const VAK_TIPS: Record<string, { label: string; emoji: string; tips: string[] }> = {
+  visual: {
+    label: 'Visual', emoji: '👁️',
+    tips: [
+      'Use pictures, charts, maps, and graphs',
+      'Highlight important points with colour',
+      'Illustrate ideas as a picture or mind-map before writing',
+      'Study in a quiet place away from distractions',
+      'Use illustrated books and videos',
+      'Visualize information as a mental picture',
+    ],
+  },
+  auditory: {
+    label: 'Auditory', emoji: '👂',
+    tips: [
+      'Participate in discussions and debates',
+      'Read text out loud',
+      'Create songs or jingles to aid memorization',
+      'Use verbal analogies and storytelling',
+      'Discuss ideas out loud before writing them down',
+      'Record lessons and listen back',
+    ],
+  },
+  kinesthetic: {
+    label: 'Kinesthetic', emoji: '🤸',
+    tips: [
+      'Take frequent movement breaks',
+      'Learn new concepts while moving (read on a walk, mold clay)',
+      'Work at a standing position',
+      'Use bright colours to highlight reading material',
+      'Use hands-on activities and experiments',
+      'Skim material first, then dive in — don\'t force linear reading',
+    ],
+  },
+}
+
+const MI_INTELLIGENCES = [
+  { id: 'naturalistic',  emoji: '🌿', name: 'Naturalistic',  desc: 'Nature, animals & outdoors' },
+  { id: 'musical',       emoji: '🎵', name: 'Musical',        desc: 'Rhythm, sound & music' },
+  { id: 'logical',       emoji: '🔢', name: 'Logical',        desc: 'Patterns, math & sequences' },
+  { id: 'existential',   emoji: '🌌', name: 'Existential',    desc: 'Big ideas & deep questions' },
+  { id: 'interpersonal', emoji: '👥', name: 'Interpersonal',  desc: 'People, groups & teamwork' },
+  { id: 'kinesthetic',   emoji: '🤸', name: 'Kinesthetic',    desc: 'Movement & hands-on doing' },
+  { id: 'verbal',        emoji: '📖', name: 'Verbal',         desc: 'Words, reading & stories' },
+  { id: 'intrapersonal', emoji: '🪞', name: 'Intrapersonal',  desc: 'Self-awareness & reflection' },
+  { id: 'visual',        emoji: '🎨', name: 'Visual',         desc: 'Images, art & spatial thinking' },
+]
+
 const ONBOARDING_SUBJECTS = [
   { name: 'Mathematics',        emoji: '🔢', color: '#7c3aed' },
   { name: 'Reading',            emoji: '📖', color: '#0d9488' },
@@ -985,6 +1033,18 @@ function OnboardingInner() {
   const [learningStyles, setLearningStyles] = useState<string[]>([])
   const [currentHook, setCurrentHook]       = useState('')
 
+  // Step 4 sub-steps: child info → MI quiz
+  const [step4Sub, setStep4Sub] = useState<'info' | 'mi'>('info')
+
+  // MI quiz
+  const [miProfile, setMiProfile] = useState<string[]>([])
+
+  const toggleMi = (id: string) => {
+    setMiProfile(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : prev.length < 3 ? [...prev, id] : prev
+    )
+  }
+
   // Learning style quiz
   const [showLsQuiz, setShowLsQuiz]         = useState(false)
   const [lsQuizStep, setLsQuizStep]         = useState(0)
@@ -1010,12 +1070,12 @@ function OnboardingInner() {
   }
 
   // ── Browser back button interception ─────────────────────────────────────
-  const navRef = useRef({ step, step1Sub, quizQuestion, curriculumSub })
+  const navRef = useRef({ step, step1Sub, quizQuestion, curriculumSub, step4Sub })
 
   useEffect(() => {
-    navRef.current = { step, step1Sub, quizQuestion, curriculumSub }
+    navRef.current = { step, step1Sub, quizQuestion, curriculumSub, step4Sub }
     window.history.pushState({ onboarding: true }, '')
-  }, [step, step1Sub, quizQuestion, curriculumSub])
+  }, [step, step1Sub, quizQuestion, curriculumSub, step4Sub])
 
   const goBack = () => {
     const nav = navRef.current
@@ -1029,8 +1089,10 @@ function OnboardingInner() {
       if (nav.curriculumSub !== 'choice') setCurriculumSub('choice')
       else { setStep(2); setQuizQuestion(4) }
     } else if (nav.step === 4) {
-      setStep(3)
+      if (nav.step4Sub === 'mi') setStep4Sub('info')
+      else setStep(3)
     } else if (nav.step === 5) {
+      setStep4Sub('mi')
       setStep(4)
     }
   }
@@ -1264,6 +1326,13 @@ function OnboardingInner() {
     }).select().single()
     if (!error && data) setKidId(data.id)
     setSaving(false)
+    setStep4Sub('mi')
+  }
+
+  const saveMiAndProceed = async () => {
+    if (kidId && miProfile.length > 0) {
+      await supabase.from('kids').update({ mi_profile: miProfile }).eq('id', kidId)
+    }
     setStep(5)
   }
 
@@ -1721,7 +1790,7 @@ function OnboardingInner() {
         {/* ══════════════════════════════════════════════════════
             STEP 4 — Your Child
         ══════════════════════════════════════════════════════ */}
-      {step === 4 && (
+      {step === 4 && step4Sub === 'info' && (
   <div>
     <div className="text-center mb-8">
       <div className="text-6xl mb-4">🧒</div>
@@ -1962,13 +2031,118 @@ function OnboardingInner() {
           disabled={!firstName.trim() || learningStyles.length === 0 || saving}
           className="flex-1 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-bold text-sm hover:opacity-90 disabled:opacity-40 transition-all"
         >
-          {saving ? 'Saving...' : 'Complete Setup →'}
+          {saving ? 'Saving...' : 'Next →'}
         </button>
       </div>
 
     </div>
   </div>
 )}
+
+        {/* ══════════════════════════════════════════════════════
+            STEP 4b — Multiple Intelligences
+        ══════════════════════════════════════════════════════ */}
+        {step === 4 && step4Sub === 'mi' && (
+          <div>
+            <div className="text-center mb-6">
+              <div className="text-6xl mb-4">🧠</div>
+              <h1 className="text-4xl font-black mb-3 leading-tight" style={{ color: '#c4b5fd' }}>
+                How does {firstName.trim() || 'your child'} think?
+              </h1>
+              <p className="text-base leading-relaxed" style={{ color: 'rgba(255,255,255,0.75)' }}>
+                Pick up to 3 that describe them best.
+              </p>
+              <p className="text-sm mt-1" style={{ color: 'rgba(255,255,255,0.5)' }}>
+                Scout uses these to shape every lesson and activity.
+              </p>
+            </div>
+
+            {/* Selection counter */}
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 20 }}>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {[0, 1, 2].map(i => (
+                  <div key={i} style={{
+                    width: 10, height: 10, borderRadius: '50%',
+                    background: i < miProfile.length ? '#a855f7' : 'rgba(255,255,255,0.2)',
+                    transition: 'background 0.2s',
+                  }} />
+                ))}
+              </div>
+            </div>
+
+            {/* 9 intelligence cards */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 20 }}>
+              {MI_INTELLIGENCES.map(mi => {
+                const selected = miProfile.includes(mi.id)
+                const maxed = miProfile.length >= 3 && !selected
+                return (
+                  <button
+                    key={mi.id}
+                    onClick={() => toggleMi(mi.id)}
+                    disabled={maxed}
+                    style={{
+                      padding: '14px 8px',
+                      borderRadius: 16,
+                      border: `2px solid ${selected ? '#a855f7' : 'rgba(255,255,255,0.15)'}`,
+                      background: selected ? 'rgba(168,85,247,0.18)' : 'rgba(255,255,255,0.07)',
+                      cursor: maxed ? 'not-allowed' : 'pointer',
+                      opacity: maxed ? 0.45 : 1,
+                      textAlign: 'center' as const,
+                      transition: 'all 0.15s',
+                      position: 'relative' as const,
+                      fontFamily: "'Nunito', sans-serif",
+                    }}
+                  >
+                    {selected && (
+                      <div style={{
+                        position: 'absolute', top: 6, right: 6,
+                        width: 16, height: 16, borderRadius: '50%',
+                        background: '#a855f7',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 9, color: '#fff', fontWeight: 900,
+                      }}>✓</div>
+                    )}
+                    <div style={{ fontSize: 28, marginBottom: 6 }}>{mi.emoji}</div>
+                    <div style={{ fontSize: 11, fontWeight: 800, color: selected ? '#e9d5ff' : '#c4b5fd', marginBottom: 3, lineHeight: 1.2 }}>{mi.name}</div>
+                    <div style={{ fontSize: 9, fontWeight: 600, color: 'rgba(255,255,255,0.5)', lineHeight: 1.3 }}>{mi.desc}</div>
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* Actions */}
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                onClick={() => setStep4Sub('info')}
+                style={{ padding: '10px 20px', borderRadius: 99, background: 'rgba(255,255,255,0.12)', border: '1.5px solid rgba(255,255,255,0.25)', color: 'rgba(255,255,255,0.8)', fontSize: 13, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}
+              >
+                ← Back
+              </button>
+              <button
+                onClick={saveMiAndProceed}
+                disabled={miProfile.length === 0}
+                style={{
+                  flex: 1, padding: '12px 20px', borderRadius: 12,
+                  background: miProfile.length === 0 ? 'rgba(255,255,255,0.1)' : 'linear-gradient(135deg, #7c3aed, #a855f7)',
+                  color: miProfile.length === 0 ? 'rgba(255,255,255,0.3)' : '#fff',
+                  border: 'none', fontSize: 14, fontWeight: 800,
+                  cursor: miProfile.length === 0 ? 'not-allowed' : 'pointer',
+                  fontFamily: "'Nunito', sans-serif", transition: 'all 0.15s',
+                }}
+              >
+                {miProfile.length === 0 ? 'Pick at least one →' : `Continue with ${miProfile.length} selected →`}
+              </button>
+            </div>
+
+            {/* Skip */}
+            <button
+              onClick={() => setStep(5)}
+              style={{ display: 'block', width: '100%', marginTop: 12, background: 'none', border: 'none', fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.4)', cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}
+            >
+              Not sure yet — skip for now
+            </button>
+          </div>
+        )}
 
         {/* ══════════════════════════════════════════════════════
             STEP 3 — Curriculum
