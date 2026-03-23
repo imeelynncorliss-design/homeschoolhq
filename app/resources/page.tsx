@@ -9,6 +9,7 @@ import { useAppHeader } from '@/components/layout/AppHeader'
 import { pageShell } from '@/src/lib/designTokens'
 import MaterialsHelpModal from '@/components/MaterialsHelpModal'
 import { MI_INTELLIGENCES, MI_CLUSTERS, MI_REMEMBER, VAK_TIPS } from '@/src/lib/learningProfiles'
+import { getVakBridge, getMiTips } from '@/src/lib/teachingBlueprint'
 
 // ─── Static Data ──────────────────────────────────────────────────────────────
 
@@ -1301,7 +1302,30 @@ function DataDictionaryTab() {
 function ParentsCornerTab() {
   const [miProfile, setMiProfile] = useState<string[]>([])
   const [expandedVak, setExpandedVak] = useState<string | null>(null)
-  const [activeSection, setActiveSection] = useState<'mi' | 'vak' | 'highschool' | 'guides'>('mi')
+  const [activeSection, setActiveSection] = useState<'blueprint' | 'mi' | 'vak' | 'highschool' | 'guides'>('blueprint')
+
+  // Blueprint data
+  const [blueprintKids, setBlueprintKids] = useState<{ id: string; displayname: string; learning_style?: string | null; mi_profile?: string[] | null }[]>([])
+  const [blueprintStyle, setBlueprintStyle] = useState<string | null>(null)
+  const [selectedKidId, setSelectedKidId] = useState<string | null>(null)
+
+  useEffect(() => {
+    const fetchBlueprint = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const { orgId } = await getOrganizationId(user.id)
+      if (!orgId) return
+      const [orgRes, kidsRes] = await Promise.all([
+        supabase.from('organizations').select('teaching_style').eq('id', orgId).maybeSingle(),
+        supabase.from('kids').select('id, displayname, learning_style, mi_profile').eq('organization_id', orgId).order('displayname'),
+      ])
+      if (orgRes.data?.teaching_style) setBlueprintStyle(orgRes.data.teaching_style)
+      const kids = kidsRes.data ?? []
+      setBlueprintKids(kids)
+      if (kids.length > 0) setSelectedKidId(kids[0].id)
+    }
+    fetchBlueprint()
+  }, [])
 
   const toggleMi = (id: string) => {
     setMiProfile(prev =>
@@ -1314,6 +1338,7 @@ function ParentsCornerTab() {
       {/* Section nav */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 24, flexWrap: 'wrap' as const }}>
         {[
+          { id: 'blueprint' as const,  label: '🗺️ Teaching Blueprint' },
           { id: 'mi' as const,         label: '🧠 MI Self-Assessment' },
           { id: 'vak' as const,        label: '👁️ Learning Style Tips' },
           { id: 'highschool' as const, label: '🎓 High School Planning' },
@@ -1335,6 +1360,119 @@ function ParentsCornerTab() {
           </button>
         ))}
       </div>
+
+      {/* Teaching Blueprint */}
+      {activeSection === 'blueprint' && (() => {
+        const styleMap: Record<string, string> = { charlotte_mason: 'charlotte', unit_studies: 'unit' }
+        const vakMap: Record<string, string> = { aural: 'auditory' }
+        const blueprintStyleId = styleMap[blueprintStyle ?? ''] ?? blueprintStyle ?? ''
+        const kid = blueprintKids.find(k => k.id === selectedKidId) ?? blueprintKids[0]
+
+        if (!blueprintStyle || blueprintKids.length === 0) {
+          return (
+            <div style={{ background: '#fff', borderRadius: 14, padding: 24, border: '1px solid #e5e7eb', textAlign: 'center' as const }}>
+              <div style={{ fontSize: 32, marginBottom: 10 }}>🗺️</div>
+              <div style={{ fontSize: 15, fontWeight: 800, color: '#111827', marginBottom: 6 }}>No blueprint yet</div>
+              <p style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.6, margin: 0 }}>
+                Complete onboarding and set your child&apos;s learning style to generate your Teaching Blueprint.
+              </p>
+            </div>
+          )
+        }
+
+        const vakStyles = kid?.learning_style ? kid.learning_style.split(',').map(s => s.trim()).filter(Boolean) : []
+        const topVak = vakStyles.length > 0 ? (vakMap[vakStyles[0]] ?? vakStyles[0]) : null
+        const bridge = topVak ? getVakBridge(blueprintStyleId, topVak) : null
+        const miTips = (kid?.mi_profile?.length ?? 0) > 0 ? getMiTips(kid!.mi_profile!, blueprintStyleId) : []
+
+        return (
+          <div>
+            {/* Child selector */}
+            {blueprintKids.length > 1 && (
+              <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' as const }}>
+                {blueprintKids.map(k => (
+                  <button
+                    key={k.id}
+                    onClick={() => setSelectedKidId(k.id)}
+                    style={{
+                      padding: '6px 14px', borderRadius: 99, fontSize: 13, fontWeight: 700,
+                      border: '1.5px solid',
+                      borderColor: selectedKidId === k.id ? '#7c3aed' : 'rgba(124,58,237,0.2)',
+                      background: selectedKidId === k.id ? '#7c3aed' : 'rgba(255,255,255,0.7)',
+                      color: selectedKidId === k.id ? '#fff' : '#7c3aed',
+                      cursor: 'pointer', fontFamily: "'Nunito', sans-serif",
+                    }}
+                  >{k.displayname}</button>
+                ))}
+              </div>
+            )}
+
+            {!bridge && miTips.length === 0 ? (
+              <div style={{ background: '#fff', borderRadius: 14, padding: 24, border: '1px solid #e5e7eb', textAlign: 'center' as const }}>
+                <div style={{ fontSize: 32, marginBottom: 10 }}>🗺️</div>
+                <div style={{ fontSize: 15, fontWeight: 800, color: '#111827', marginBottom: 6 }}>
+                  No learning profile for {kid?.displayname ?? 'this child'}
+                </div>
+                <p style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.6, margin: 0 }}>
+                  Set their learning style and MI profile in Profile → Edit Child to unlock their blueprint.
+                </p>
+              </div>
+            ) : (
+              <div style={{ background: '#fff', borderRadius: 14, padding: 20, border: '1px solid #e5e7eb' }}>
+                {bridge && (
+                  <>
+                    <div style={{ fontSize: 17, fontWeight: 800, color: '#111827', marginBottom: 4 }}>{bridge.headline}</div>
+                    <p style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.7, margin: '0 0 16px' }}>{bridge.intro}</p>
+                    <ul style={{ margin: '0 0 16px', padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column' as const, gap: 8 }}>
+                      {bridge.tips.map((tip, i) => (
+                        <li key={i} style={{ display: 'flex', gap: 10, fontSize: 13, color: '#374151', lineHeight: 1.6 }}>
+                          <span style={{ color: '#7c3aed', flexShrink: 0, marginTop: 2 }}>•</span>
+                          <span>{tip}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    {bridge.scoutTip && (
+                      <div style={{ background: '#f5f3ff', borderRadius: 12, padding: '12px 14px', display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: miTips.length > 0 ? 20 : 0 }}>
+                        <span style={{ fontSize: 18, flexShrink: 0 }}>🐦</span>
+                        <p style={{ margin: 0, fontSize: 12, color: '#6d28d9', lineHeight: 1.6 }}>{bridge.scoutTip}</p>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {miTips.length > 0 && (
+                  <div style={bridge ? { paddingTop: 16, borderTop: '1px solid #f3f4f6' } : {}}>
+                    <div style={{ fontSize: 11, fontWeight: 800, color: '#9ca3af', textTransform: 'uppercase' as const, letterSpacing: '0.06em', marginBottom: 12 }}>
+                      {kid?.displayname}&apos;s Intelligence Strengths
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 12 }}>
+                      {(kid?.mi_profile ?? []).map((miId, i) => {
+                        const miDef = MI_INTELLIGENCES.find(m => m.id === miId)
+                        const tipEntry = miTips[i]
+                        if (!miDef || !tipEntry) return null
+                        return (
+                          <div key={miId}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                              <span style={{ fontSize: 20 }}>{miDef.emoji}</span>
+                              <span style={{ fontSize: 13, fontWeight: 800, color: '#1e1b4b' }}>{miDef.fullName}</span>
+                            </div>
+                            <p style={{ margin: '0 0 4px 28px', fontSize: 12, color: '#6b7280', lineHeight: 1.6 }}>{miDef.detail}</p>
+                            {tipEntry.styleTip && (
+                              <div style={{ margin: '0 0 0 28px', fontSize: 12, color: '#7c3aed', fontWeight: 600, lineHeight: 1.5 }}>
+                                → {tipEntry.styleTip}
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )
+      })()}
 
       {/* MI Self-Assessment */}
       {activeSection === 'mi' && (

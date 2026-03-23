@@ -13,6 +13,7 @@ import LessonGenerator from '@/components/LessonGenerator'
 import WeatherWidget from '@/components/WeatherWidget'
 import StylePickerModal, { DEFAULT_STRUCTURED, DEFAULT_FLEXIBLE, DEFAULT_UNSTYLED } from '@/components/StylePickerModal'
 import ProductTour from '@/components/ProductTour'
+import { getVakBridge } from '@/src/lib/teachingBlueprint'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -21,6 +22,7 @@ interface Kid {
   displayname: string
   grade_level?: string
   learning_style?: string | null
+  mi_profile?: string[] | null
 }
 
 interface KidPulse {
@@ -1211,7 +1213,7 @@ function DashboardContent() {
             )].slice(0, 3) as string[]
 
             return {
-              kid: { id: kid.id, displayname: kid.displayname, grade_level: kid.grade_level, learning_style: kid.learning_style },
+              kid: { id: kid.id, displayname: kid.displayname, grade_level: kid.grade_level, learning_style: kid.learning_style, mi_profile: kid.mi_profile },
               totalToday: total,
               completedToday: completed,
               pct: total > 0 ? Math.round((completed / total) * 100) : 0,
@@ -1249,7 +1251,7 @@ function DashboardContent() {
             if (kid && byDate[lesson.lesson_date]) {
               byDate[lesson.lesson_date].push({
                 lesson,
-                kid: { id: kid.id, displayname: kid.displayname, grade_level: kid.grade_level, learning_style: kid.learning_style },
+                kid: { id: kid.id, displayname: kid.displayname, grade_level: kid.grade_level, learning_style: kid.learning_style, mi_profile: kid.mi_profile },
               })
             }
           }
@@ -1741,6 +1743,68 @@ function DashboardContent() {
               </button>
             </div>
           </section>
+
+          {/* ── Teaching Blueprint card ── */}
+          {(() => {
+            const styleMap: Record<string, string> = { charlotte_mason: 'charlotte', unit_studies: 'unit' }
+            const vakMap: Record<string, string> = { aural: 'auditory' }
+            const blueprintStyleId = styleMap[orgTeachingStyle ?? ''] ?? orgTeachingStyle ?? ''
+            // Find first child with a learning style set
+            const kidWithStyle = kidPulses.find(p => p.kid.learning_style)
+            if (!kidWithStyle || !blueprintStyleId) return null
+            const vakStyles = kidWithStyle.kid.learning_style!.split(',').map(s => s.trim()).filter(Boolean)
+            const topVak = vakMap[vakStyles[0]] ?? vakStyles[0]
+            const bridge = getVakBridge(blueprintStyleId, topVak)
+            if (!bridge) return null
+            return (
+              <section style={{ marginTop: 8 }}>
+                <div style={{ ...css.sectionRow }}>
+                  <span style={css.secTitle}>TEACHING BLUEPRINT</span>
+                </div>
+                <div style={{
+                  background: 'rgba(255,255,255,0.10)',
+                  backdropFilter: 'blur(18px)',
+                  WebkitBackdropFilter: 'blur(18px)',
+                  border: '1.5px solid rgba(196,181,253,0.25)',
+                  borderRadius: 16, padding: '16px 18px',
+                }}>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: '#c4b5fd', marginBottom: 4 }}>
+                    {bridge.headline}
+                    {kidPulses.length > 1 && (
+                      <span style={{ fontWeight: 600, color: 'rgba(196,181,253,0.6)', fontSize: 11, marginLeft: 6 }}>
+                        · {kidWithStyle.kid.displayname}
+                      </span>
+                    )}
+                  </div>
+                  <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)', lineHeight: 1.6, margin: '0 0 10px' }}>
+                    {bridge.intro}
+                  </p>
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)', lineHeight: 1.6, marginBottom: 12 }}>
+                    <span style={{ color: '#a78bfa', marginRight: 6 }}>•</span>{bridge.tips[0]}
+                  </div>
+                  {bridge.scoutTip && (
+                    <div style={{
+                      background: 'rgba(124,58,237,0.25)', borderRadius: 10,
+                      padding: '8px 12px', display: 'flex', gap: 8, alignItems: 'flex-start', marginBottom: 12,
+                    }}>
+                      <span style={{ fontSize: 14, flexShrink: 0 }}>🐦</span>
+                      <p style={{ margin: 0, fontSize: 11, color: 'rgba(196,181,253,0.9)', lineHeight: 1.5 }}>{bridge.scoutTip}</p>
+                    </div>
+                  )}
+                  <button
+                    onClick={() => router.push('/resources?tab=parents')}
+                    style={{
+                      background: 'none', border: '1.5px solid rgba(196,181,253,0.4)',
+                      borderRadius: 20, padding: '6px 14px', fontSize: 12, fontWeight: 700,
+                      color: '#c4b5fd', cursor: 'pointer', fontFamily: "'Nunito', sans-serif",
+                    }}
+                  >
+                    See full blueprint →
+                  </button>
+                </div>
+              </section>
+            )
+          })()}
 
         </main>
 
