@@ -578,6 +578,40 @@ function CopilotPanel({ onClose, organizationId, userId, userName, userState, ho
               <div ref={bottomRef} />
             </div>
 
+            {/* Quick-action prompt chips — shown when chat is empty */}
+            {messages.length === 0 && !loading && (
+              <div style={{ padding: '8px 14px 4px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(196,181,253,0.5)', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 2 }}>
+                  Try asking Scout…
+                </div>
+                {[
+                  { emoji: '🔬', label: 'Hands-on activity', prompt: 'Add a hands-on activity to [lesson topic] — suggest an experiment, building project, or movement drill that reinforces the concept.' },
+                  { emoji: '💬', label: 'Verbal review script', prompt: 'Write a verbal review script for [subject/topic] — a set of discussion questions I can ask out loud at the end of the lesson.' },
+                  { emoji: '📋', label: 'Study guide', prompt: 'Create a structured study guide for [chapter/topic] — format key concepts into scannable headers, bullet points, and a summary table.' },
+                ].map(chip => (
+                  <button
+                    key={chip.label}
+                    onClick={() => setInput(chip.prompt)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 8,
+                      padding: '8px 12px', borderRadius: 10,
+                      background: 'rgba(255,255,255,0.06)',
+                      border: '1.5px solid rgba(196,181,253,0.2)',
+                      color: 'rgba(255,255,255,0.75)', fontSize: 12, fontWeight: 600,
+                      cursor: 'pointer', textAlign: 'left', fontFamily: "'Nunito', sans-serif",
+                      transition: 'background 0.15s',
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(168,85,247,0.15)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}
+                  >
+                    <span style={{ fontSize: 15, flexShrink: 0 }}>{chip.emoji}</span>
+                    <span style={{ color: '#c4b5fd', fontWeight: 700 }}>{chip.label}</span>
+                    <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, marginLeft: 'auto', flexShrink: 0 }}>tap to use →</span>
+                  </button>
+                ))}
+              </div>
+            )}
+
             {/* Input */}
             <div style={cp.inputRow}>
               <input
