@@ -342,7 +342,7 @@ function TeachingStylesTab({
   userStyle: string | null
   onViewCurriculum: (styleId: string) => void
 }) {
-  const [expanded, setExpanded] = useState<string | null>(userStyle || 'charlotte')
+  const [expanded, setExpanded] = useState<string | null>(null)
 
   return (
     <div>

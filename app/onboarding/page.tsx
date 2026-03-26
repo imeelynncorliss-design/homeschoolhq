@@ -131,6 +131,20 @@ const ALL_STATES = [
 
 const SUPPORTED_NAMES = Object.keys(SUPPORTED_STATES)
 
+const STATE_NAME_TO_CODE: Record<string, string> = {
+  Alabama:'AL',Alaska:'AK',Arizona:'AZ',Arkansas:'AR',California:'CA',
+  Colorado:'CO',Connecticut:'CT',Delaware:'DE',Florida:'FL',Georgia:'GA',
+  Hawaii:'HI',Idaho:'ID',Illinois:'IL',Indiana:'IN',Iowa:'IA',Kansas:'KS',
+  Kentucky:'KY',Louisiana:'LA',Maine:'ME',Maryland:'MD',Massachusetts:'MA',
+  Michigan:'MI',Minnesota:'MN',Mississippi:'MS',Missouri:'MO',Montana:'MT',
+  Nebraska:'NE',Nevada:'NV','New Hampshire':'NH','New Jersey':'NJ',
+  'New Mexico':'NM','New York':'NY','North Carolina':'NC','North Dakota':'ND',
+  Ohio:'OH',Oklahoma:'OK',Oregon:'OR',Pennsylvania:'PA','Rhode Island':'RI',
+  'South Carolina':'SC','South Dakota':'SD',Tennessee:'TN',Texas:'TX',
+  Utah:'UT',Vermont:'VT',Virginia:'VA',Washington:'WA','West Virginia':'WV',
+  Wisconsin:'WI',Wyoming:'WY','Washington D.C.':'DC',
+}
+
 // ── Compliance Defaults (all 50 states + DC) ──────────────────────────────────
 
 const COMPLIANCE_DEFAULTS: Record<string, {
@@ -534,7 +548,7 @@ function BackButton({ onClick }: { onClick: () => void }) {
 
 // ── State Picker ──────────────────────────────────────────────────────────────
 
-type PanelState = 'detail' | 'remindme' | 'notified' | 'remindset' | 'custom'
+type PanelState = 'detail' | 'remindme' | 'notified' | 'remindset'
 
 function StatePicker({
   initialName,
@@ -548,18 +562,6 @@ function StatePicker({
   const [search, setSearch]       = useState('')
   const [picked, setPicked]       = useState(initialName)
   const [panel, setPanel]         = useState<PanelState>('detail')
-  const [notifyEmail, setNotifyEmail] = useState('')
-  // Custom requirements form
-  const [customDays, setCustomDays]         = useState('180')
-  const [customSubjects, setCustomSubjects] = useState('')
-  const [customTesting, setCustomTesting]   = useState('')
-  const [customNOI, setCustomNOI]           = useState(false)
-  const [customPortfolio, setCustomPortfolio] = useState(false)
-  const [customExtras, setCustomExtras]     = useState<string[]>([])
-  const [customNewExtra, setCustomNewExtra] = useState('')
-  const [noiOpen, setNoiOpen]               = useState(false)
-  const [portfolioOpen, setPortfolioOpen]   = useState(false)
-
   const filtered      = ALL_STATES.filter(s => s.toLowerCase().includes(search.toLowerCase()))
   const isSupported   = SUPPORTED_NAMES.includes(picked)
   const isUnsupported = !!picked && !isSupported
@@ -688,284 +690,76 @@ function StatePicker({
             </div>
           )}
 
-          {/* Unsupported state */}
-          {isUnsupported && panel === 'detail' && (
-            <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
-              <div className="bg-gradient-to-br from-indigo-950 to-purple-900 p-6">
-                <p className="text-xs font-bold uppercase tracking-widest text-purple-300 mb-1">Not yet available</p>
-                <h3 className="text-2xl font-black text-white mb-1">{picked}</h3>
-                <p className="text-sm text-purple-200 leading-relaxed">
-                  We're not in {picked} yet — but it's on our roadmap. You can still use HomeschoolReady for everything else.
-                </p>
-              </div>
-              <div className="p-5">
-                {/* What you can still do */}
-                <div className="bg-purple-50 rounded-xl p-4 mb-5">
-                  <p className="text-sm font-bold text-gray-800 mb-3">What you can still do right now:</p>
-                  {['Copilot lesson generation', 'Teaching schedule & planning', 'Student progress tracking', 'Co-teacher collaboration', 'Transcript generation'].map(f => (
-                    <div key={f} className="flex gap-2 items-center text-sm text-gray-600 mb-1.5">
-                      <span className="text-purple-600 font-bold">✓</span>{f}
+          {/* Unsupported state — pre-loaded compliance */}
+          {isUnsupported && panel === 'detail' && (() => {
+            const code = STATE_NAME_TO_CODE[picked] ?? 'OTHER'
+            const defaults = COMPLIANCE_DEFAULTS[code]
+            const levelLabel = defaults?.level === 'low' ? 'Low Regulation' : defaults?.level === 'high' ? 'High Regulation' : 'Moderate Regulation'
+            const levelColor = defaults?.level === 'low' ? '#10b981' : defaults?.level === 'high' ? '#ef4444' : '#f59e0b'
+            const levelBg    = defaults?.level === 'low' ? '#d1fae5' : defaults?.level === 'high' ? '#fee2e2' : '#fef9c3'
+            return (
+              <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
+                <div className="bg-gradient-to-br from-indigo-600 to-purple-600 p-6">
+                  <span style={{ background: levelBg, color: levelColor }} className="text-xs font-bold px-3 py-1 rounded-full inline-block mb-3">
+                    {levelLabel}
+                  </span>
+                  <h3 className="text-2xl font-black text-white mb-1">{picked}</h3>
+                  <p className="text-sm text-purple-200 leading-relaxed">
+                    We have {picked}'s requirements pre-loaded. Review and confirm on the next screen.
+                  </p>
+                </div>
+                <div className="p-5">
+                  {defaults && (
+                    <div className="space-y-3 mb-4">
+                      {defaults.days > 0 && (
+                        <div className="flex gap-3 items-start pb-3 border-b border-gray-100">
+                          <div className="w-9 h-9 rounded-xl bg-purple-50 flex items-center justify-center text-base flex-shrink-0">📅</div>
+                          <div>
+                            <p className="text-sm font-bold text-gray-900 mb-0.5">{defaults.days} Teaching Days</p>
+                            <p className="text-xs text-gray-500">Required minimum per school year</p>
+                          </div>
+                        </div>
+                      )}
+                      {defaults.hours > 0 && (
+                        <div className="flex gap-3 items-start pb-3 border-b border-gray-100">
+                          <div className="w-9 h-9 rounded-xl bg-purple-50 flex items-center justify-center text-base flex-shrink-0">⏱️</div>
+                          <div>
+                            <p className="text-sm font-bold text-gray-900 mb-0.5">{defaults.hours} Instructional Hours</p>
+                            <p className="text-xs text-gray-500">Required minimum per school year</p>
+                          </div>
+                        </div>
+                      )}
+                      <div className="flex gap-3 items-start">
+                        <div className="w-9 h-9 rounded-xl bg-purple-50 flex items-center justify-center text-base flex-shrink-0">📋</div>
+                        <div>
+                          <p className="text-sm font-bold text-gray-900 mb-0.5">Notice of Intent</p>
+                          <p className="text-xs text-gray-500">{defaults.noi ? 'Required — you must file with your school district' : 'Not required in this state'}</p>
+                        </div>
+                      </div>
                     </div>
-                  ))}
-                </div>
-
-                {/* Notify me */}
-                <div className="mb-4">
-                  <p className="text-sm font-bold text-gray-800 mb-2">
-                    📬 Notify me when {picked} launches
-                  </p>
-                  <input
-                    type="email"
-                    value={notifyEmail}
-                    onChange={e => setNotifyEmail(e.target.value)}
-                    placeholder="your@email.com"
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-gray-900 text-sm focus:border-purple-500 focus:outline-none mb-2"
-                  />
-                  <button
-                    onClick={() => setPanel('notified')}
-                    disabled={!notifyEmail.includes('@')}
-                    className="w-full py-3.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-bold text-sm hover:opacity-90 disabled:opacity-40 transition-all"
-                  >
-                    Notify me when {picked} is ready
-                  </button>
-                </div>
-
-                {/* OR divider */}
-                <div className="flex items-center gap-3 my-4">
-                  <div className="flex-1 h-px bg-gray-200" />
-                  <span className="text-xs font-bold text-gray-400">OR</span>
-                  <div className="flex-1 h-px bg-gray-200" />
-                </div>
-
-                {/* Add your own requirements */}
-                <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-3">
-                  <p className="text-sm font-bold text-yellow-900 mb-1">
-                    📋 Add {picked}'s requirements yourself
-                  </p>
-                  <p className="text-xs text-yellow-800 leading-relaxed mb-3">
-                    We don't have {picked}'s laws yet — but you can enter them manually and we'll track your progress. You're responsible for verifying accuracy with your state's Department of Education or{' '}
-                    <a href="https://hslda.org" target="_blank" rel="noopener noreferrer" className="font-bold underline text-yellow-900 hover:text-yellow-700">HSLDA.org</a>.
-                  </p>
-                  <button
-                    onClick={() => setPanel('custom')}
-                    className="px-4 py-2 bg-yellow-400 text-yellow-900 rounded-xl font-bold text-sm hover:bg-yellow-300 transition-all"
-                  >
-                    Enter {picked}'s requirements →
-                  </button>
-                </div>
-
-                {/* Skip */}
-                <button
-                  onClick={() => setPanel('remindme')}
-                  className="w-full py-3 border-2 border-purple-300 text-purple-700 rounded-xl font-bold text-sm hover:bg-purple-50 transition-all"
-                >
-                  Skip for now — remind me later
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Unsupported — notified */}
-          {isUnsupported && panel === 'notified' && (
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-8 text-center">
-              <div className="text-5xl mb-4">📬</div>
-              <h3 className="text-2xl font-black text-gray-900 mb-3">You're on the list!</h3>
-              <p className="text-sm text-gray-500 leading-relaxed mb-6">
-                We'll email you the moment <strong>{picked}</strong> compliance launches.
-                Everything else in HomeschoolReady is ready to go now.
-              </p>
-              <button
-                onClick={() => onConfirm(picked, 'OTHER', '180')}
-                className="w-full py-3.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-bold text-sm hover:opacity-90 transition-all"
-              >
-                Continue to next step →
-              </button>
-            </div>
-          )}
-
-          {/* Custom requirements form */}
-          {panel === 'custom' && (
-            <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
-              {/* Header */}
-              <div className="bg-gradient-to-br from-amber-700 to-orange-500 p-6">
-                <p className="text-xs font-bold uppercase tracking-widest text-orange-200 mb-1">Custom Setup</p>
-                <h3 className="text-2xl font-black text-white mb-2">{picked} — Enter Requirements</h3>
-                <p className="text-xs text-orange-100 leading-relaxed">
-                  HomeschoolReady is not a legal advisor. Verify all requirements at{' '}
-                  <a href="https://hslda.org" target="_blank" rel="noopener noreferrer" className="font-bold underline text-yellow-300 hover:text-yellow-200">HSLDA.org</a>{' '}
-                  or your state's Dept of Education before relying on them.
-                </p>
-              </div>
-
-              <div className="p-5 space-y-5">
-                {/* Teaching days */}
-                <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <label className="text-sm font-bold text-gray-800">📅 Required teaching days per year</label>
-                    <span className="text-xs font-bold px-2 py-0.5 bg-yellow-100 text-yellow-800 rounded-full border border-yellow-300">💡 Recommended</span>
-                  </div>
-                  <input
-                    type="number"
-                    value={customDays}
-                    onChange={e => setCustomDays(e.target.value)}
-                    placeholder="e.g. 180"
-                    className="w-full px-4 py-3 bg-purple-50 border-2 border-gray-200 rounded-xl text-gray-900 text-sm focus:border-purple-500 focus:outline-none"
-                  />
-                  {!customDays && (
-                    <p className="text-xs text-yellow-700 mt-1">⚡ Teaching days drives your attendance tracking — strongly recommended.</p>
                   )}
-                </div>
-
-                {/* Required subjects */}
-                <div>
-                  <label className="block text-sm font-bold text-gray-800 mb-2">
-                    📚 Required subjects <span className="font-normal text-gray-400">(comma separated)</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={customSubjects}
-                    onChange={e => setCustomSubjects(e.target.value)}
-                    placeholder="e.g. Math, English, Science, History"
-                    className="w-full px-4 py-3 bg-purple-50 border-2 border-gray-200 rounded-xl text-gray-900 text-sm focus:border-purple-500 focus:outline-none"
-                  />
-                </div>
-
-                {/* Assessment */}
-                <div>
-                  <label className="block text-sm font-bold text-gray-800 mb-2">
-                    📊 Assessment or testing requirement
-                  </label>
-                  <input
-                    type="text"
-                    value={customTesting}
-                    onChange={e => setCustomTesting(e.target.value)}
-                    placeholder="e.g. Annual standardized test in grades 3, 5, 8"
-                    className="w-full px-4 py-3 bg-purple-50 border-2 border-gray-200 rounded-xl text-gray-900 text-sm focus:border-purple-500 focus:outline-none"
-                  />
-                </div>
-
-                {/* NOI + Portfolio toggles */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <button
-                      onClick={() => setCustomNOI(!customNOI)}
-                      className={`w-full flex items-center gap-3 p-3 rounded-xl border-2 transition-all text-left ${
-                        customNOI ? 'border-purple-500 bg-purple-50' : 'border-gray-200 bg-gray-50 hover:border-purple-300'
-                      }`}
-                    >
-                      <div className={`w-5 h-5 rounded flex items-center justify-center flex-shrink-0 border-2 transition-all ${
-                        customNOI ? 'bg-purple-600 border-purple-600' : 'bg-white border-gray-300'
-                      }`}>
-                        {customNOI && <span className="text-white text-xs font-black">✓</span>}
-                      </div>
-                      <span className={`text-sm font-bold ${customNOI ? 'text-purple-700' : 'text-gray-700'}`}>
-                        📋 Notice of Intent required
-                      </span>
-                    </button>
-                    <button
-                      onClick={() => setNoiOpen(!noiOpen)}
-                      className="text-xs text-purple-600 hover:text-purple-800 font-semibold mt-1 ml-1"
-                    >
-                      {noiOpen ? '▲ Hide' : '▼ What is this?'}
-                    </button>
-                    {noiOpen && (
-                      <div className="mt-2 bg-blue-50 border border-blue-200 rounded-xl p-3 text-xs text-blue-800 leading-relaxed">
-                        A Notice of Intent (NOI) is a formal letter you send to your local school district or state education office to notify them you're homeschooling. Some states require this annually — others don't require it at all. Think of it as officially registering your homeschool each year.
-                      </div>
-                    )}
+                  <div className="bg-green-50 rounded-xl p-3 flex gap-3 items-start mb-4">
+                    <span className="text-lg flex-shrink-0">🤖</span>
+                    <p className="text-xs text-green-800 leading-relaxed">
+                      <strong>HomeschoolReady will auto-populate your compliance goals</strong> based on these requirements. You can review and edit them on the next screen.
+                    </p>
                   </div>
-
-                  <div>
-                    <button
-                      onClick={() => setCustomPortfolio(!customPortfolio)}
-                      className={`w-full flex items-center gap-3 p-3 rounded-xl border-2 transition-all text-left ${
-                        customPortfolio ? 'border-purple-500 bg-purple-50' : 'border-gray-200 bg-gray-50 hover:border-purple-300'
-                      }`}
-                    >
-                      <div className={`w-5 h-5 rounded flex items-center justify-center flex-shrink-0 border-2 transition-all ${
-                        customPortfolio ? 'bg-purple-600 border-purple-600' : 'bg-white border-gray-300'
-                      }`}>
-                        {customPortfolio && <span className="text-white text-xs font-black">✓</span>}
-                      </div>
-                      <span className={`text-sm font-bold ${customPortfolio ? 'text-purple-700' : 'text-gray-700'}`}>
-                        📁 Portfolio required
-                      </span>
-                    </button>
-                    <button
-                      onClick={() => setPortfolioOpen(!portfolioOpen)}
-                      className="text-xs text-purple-600 hover:text-purple-800 font-semibold mt-1 ml-1"
-                    >
-                      {portfolioOpen ? '▲ Hide' : '▼ What is this?'}
-                    </button>
-                    {portfolioOpen && (
-                      <div className="mt-2 bg-blue-50 border border-blue-200 rounded-xl p-3 text-xs text-blue-800 leading-relaxed">
-                        A homeschool portfolio is a collection of your child's work throughout the year — writing samples, art, math worksheets, project photos, and reading logs. Some states require you to submit it for review by a certified teacher or school official to show educational progress.
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Freeform extras */}
-                <div>
-                  <label className="block text-sm font-bold text-gray-800 mb-2">
-                    + Any other requirements? <span className="font-normal text-gray-400">(optional)</span>
-                  </label>
-                  <div className="flex gap-2 mb-2">
-                    <input
-                      type="text"
-                      value={customNewExtra}
-                      onChange={e => setCustomNewExtra(e.target.value)}
-                      onKeyDown={e => {
-                        if (e.key === 'Enter' && customNewExtra.trim()) {
-                          setCustomExtras(prev => [...prev, customNewExtra.trim()])
-                          setCustomNewExtra('')
-                        }
-                      }}
-                      placeholder="e.g. Annual immunization records submission"
-                      className="flex-1 px-4 py-3 bg-purple-50 border-2 border-gray-200 rounded-xl text-gray-900 text-sm focus:border-purple-500 focus:outline-none"
-                    />
-                    <button
-                      onClick={() => {
-                        if (customNewExtra.trim()) {
-                          setCustomExtras(prev => [...prev, customNewExtra.trim()])
-                          setCustomNewExtra('')
-                        }
-                      }}
-                      className="w-12 h-12 bg-purple-600 text-white rounded-xl font-black text-xl hover:bg-purple-700 transition-colors flex items-center justify-center flex-shrink-0"
-                    >
-                      +
-                    </button>
-                  </div>
-                  {customExtras.map((ex, i) => (
-                    <div key={i} className="flex items-center justify-between bg-purple-50 rounded-xl px-3 py-2 mb-1.5">
-                      <span className="text-sm text-purple-700">📌 {ex}</span>
-                      <button
-                        onClick={() => setCustomExtras(prev => prev.filter((_, j) => j !== i))}
-                        className="text-pink-500 font-black text-base hover:text-pink-700 ml-2"
-                      >✕</button>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Actions */}
-                <div className="flex gap-3 pt-1">
                   <button
-                    onClick={() => onConfirm(picked, 'OTHER', customDays || '180')}
-                    disabled={!customDays}
-                    className="flex-1 py-4 bg-gradient-to-r from-purple-600 to-pink-500 text-white rounded-2xl font-bold text-sm hover:opacity-90 disabled:opacity-40 transition-all"
+                    onClick={() => onConfirm(picked, code, String(defaults?.days || defaults?.hours || 180))}
+                    className="w-full py-3.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-bold text-sm hover:opacity-90 transition-all"
                   >
-                    Save & start tracking {picked} →
+                    Set {picked} as my state & review requirements →
                   </button>
                   <button
-                    onClick={() => setPanel('detail')}
-                    className="px-6 py-4 border-2 border-purple-300 text-purple-700 rounded-2xl font-bold text-sm hover:bg-purple-50 transition-all"
+                    onClick={() => setPanel('remindme')}
+                    className="w-full py-3 mt-2 border-2 border-gray-200 rounded-xl text-gray-600 font-bold text-sm hover:bg-gray-50 transition-all"
                   >
-                    ← Back
+                    Skip — remind me later
                   </button>
                 </div>
               </div>
-            </div>
-          )}
+            )
+          })()}
 
           {/* Remind me later — confirmation */}
           {panel === 'remindme' && (
@@ -982,7 +776,7 @@ function StatePicker({
                 <strong>Settings → School → Compliance</strong>
               </div>
               <button
-                onClick={() => onConfirm(picked, 'OTHER', '180')}
+                onClick={() => onConfirm(picked, STATE_NAME_TO_CODE[picked] ?? 'OTHER', '180')}
                 className="w-full py-3.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-bold text-sm hover:opacity-90 transition-all mb-2"
               >
                 Continue to next step →
@@ -1016,10 +810,11 @@ function OnboardingInner() {
   const [tosConfirmed, setTosConfirmed]   = useState(false)
   const [agreementSaving, setAgreementSaving] = useState(false)
 
-  // Step 1 has four sub-steps: school name → state picker → school year → compliance
+  // Step 1 has four sub-steps: school name → state picker → compliance → school year
   const [step1Sub, setStep1Sub] = useState<'name' | 'state' | 'school_year' | 'compliance'>('name')
   const [complianceDays, setComplianceDays] = useState('180')
   const [complianceHours, setComplianceHours] = useState(0)
+  const [complianceNOI, setComplianceNOI] = useState(false)
   const [showHsldaOverlay, setShowHsldaOverlay] = useState(false)
 
   // Step 1 data
@@ -1057,7 +852,7 @@ function OnboardingInner() {
 
   const toggleMi = (id: string) => {
     setMiProfile(prev =>
-      prev.includes(id) ? prev.filter(x => x !== id) : prev.length < 3 ? [...prev, id] : prev
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
     )
   }
 
@@ -1093,12 +888,16 @@ function OnboardingInner() {
     window.history.pushState({ onboarding: true }, '')
   }, [step, step1Sub, quizQuestion, curriculumSub, step4Sub])
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [step, step1Sub, quizQuestion, curriculumSub, step4Sub])
+
   const goBack = () => {
     const nav = navRef.current
     if (nav.step === 1) {
       if (nav.step1Sub === 'state') setStep1Sub('name')
-      else if (nav.step1Sub === 'school_year') setStep1Sub('state')
-      else if (nav.step1Sub === 'compliance') setStep1Sub('school_year')
+      else if (nav.step1Sub === 'compliance') setStep1Sub('state')
+      else if (nav.step1Sub === 'school_year') setStep1Sub('compliance')
     } else if (nav.step === 2) {
       if (nav.quizQuestion === 1) { setStep(1); setStep1Sub('compliance') }
       else setQuizQuestion(nav.quizQuestion - 1)
@@ -1281,39 +1080,19 @@ function OnboardingInner() {
     }).eq('user_id', user.id)
 
     setSaving(false)
-    setStep1Sub('school_year')
-  }
-
-  // ── School year confirmed → save + advance to step 2 ─────────────────────
-  const handleSchoolYearConfirmed = async (startDate: string, endDate: string) => {
-    if (saving || !orgId) return
-    setSaving(true)
-    setSchoolYearStart(startDate)
-    setSchoolYearEnd(endDate)
-
-    await supabase.from('school_year_settings').upsert({
-      organization_id: orgId,
-      user_id: user.id,
-      state: selectedState,
-      school_year_start: startDate,
-      school_year_end: endDate || null,
-      annual_goal_value: parseInt(annualGoal) || 180,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: 'organization_id' })
-
-    setSaving(false)
-    const defaults = COMPLIANCE_DEFAULTS[selectedState] ?? null
-    setComplianceDays(defaults ? (defaults.days > 0 ? String(defaults.days) : defaults.hours > 0 ? '180' : '180') : '180')
+    const defaults = COMPLIANCE_DEFAULTS[stateCode] ?? null
+    setComplianceDays(defaults ? (defaults.days > 0 ? String(defaults.days) : '180') : '180')
     setComplianceHours(defaults?.hours ?? 0)
+    setComplianceNOI(defaults?.noi ?? false)
     setStep1Sub('compliance')
   }
 
-  // ── Compliance confirmed → save to user_compliance_settings + advance to step 2 ─
+  // ── Compliance confirmed → save to user_compliance_settings + advance to school year ─
   const handleComplianceConfirmed = async (skip = false) => {
     if (saving || !orgId) return
     setSaving(true)
     const days = skip ? 180 : (parseInt(complianceDays) || 180)
-    const defaults = selectedState ? COMPLIANCE_DEFAULTS[selectedState] : null
+    const hours = skip ? 0 : complianceHours
     await supabase.from('user_compliance_settings').upsert({
       organization_id: orgId,
       state_code: selectedState || null,
@@ -1321,9 +1100,37 @@ function OnboardingInner() {
       school_year_start_date: schoolYearStart,
       school_year_end_date: schoolYearEnd || null,
       required_annual_days: days,
-      required_annual_hours: defaults?.hours ?? 0,
+      required_annual_hours: hours,
       updated_at: new Date().toISOString(),
     }, { onConflict: 'organization_id' })
+    setSaving(false)
+    setStep1Sub('school_year')
+  }
+
+  // ── School year confirmed → save + backfill compliance dates + advance to step 2 ─
+  const handleSchoolYearConfirmed = async (startDate: string, endDate: string) => {
+    if (saving || !orgId) return
+    setSaving(true)
+    setSchoolYearStart(startDate)
+    setSchoolYearEnd(endDate)
+
+    await Promise.all([
+      supabase.from('school_year_settings').upsert({
+        organization_id: orgId,
+        user_id: user.id,
+        state: selectedState,
+        school_year_start: startDate,
+        school_year_end: endDate || null,
+        annual_goal_value: parseInt(annualGoal) || 180,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'organization_id' }),
+      supabase.from('user_compliance_settings').update({
+        school_year_start_date: startDate,
+        school_year_end_date: endDate || null,
+        updated_at: new Date().toISOString(),
+      }).eq('organization_id', orgId),
+    ])
+
     setSaving(false)
     setStep(2)
     setQuizQuestion(1)
@@ -1370,7 +1177,7 @@ function OnboardingInner() {
   }
 
   const saveMiAndProceed = async () => {
-    if (kidId && miProfile.length > 0) {
+    if (kidId) {
       await supabase.from('kids').update({ mi_profile: miProfile }).eq('id', kidId)
     }
     setStep(5)
@@ -1698,7 +1505,7 @@ function OnboardingInner() {
                 {saving ? 'Saving…' : 'Continue →'}
               </button>
             </div>
-            <BackButton onClick={() => setStep1Sub('state')} />
+            <BackButton onClick={() => setStep1Sub('compliance')} />
           </div>
         )}
 
@@ -1722,7 +1529,7 @@ function OnboardingInner() {
                   {selectedStateName ? `${selectedStateName}'s` : 'Your'} Homeschool Rules
                 </h1>
                 <p className="text-lg" style={{ color: 'rgba(255,255,255,0.75)' }}>
-                  We pre-filled this from state law — confirm or adjust below.
+                  We pre-filled this from state law — edit anything that looks wrong.
                 </p>
               </div>
 
@@ -1733,25 +1540,39 @@ function OnboardingInner() {
                   <span>{levelConfig!.label}</span>
                 </div>
 
-                {/* NOI banner */}
-                {defaults?.noi ? (
-                  <div style={{ background: '#fef3c7', border: '1.5px solid #f59e0b', borderRadius: 12, padding: '12px 16px', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                    <span style={{ fontSize: 20, flexShrink: 0 }}>📬</span>
-                    <div>
-                      <div style={{ fontSize: 14, fontWeight: 800, color: '#92400e' }}>Notice of Intent Required</div>
-                      <div style={{ fontSize: 13, color: '#78350f', marginTop: 2, lineHeight: 1.5 }}>
-                        {selectedStateName} requires you to file a Notice of Intent with your school district or state agency. HomeschoolReady will remind you when it's due.
-                      </div>
-                    </div>
+                {/* NOI toggle */}
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">📬 Notice of Intent (NOI)</label>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setComplianceNOI(true)}
+                      style={{
+                        flex: 1, padding: '10px 0', borderRadius: 10, fontWeight: 700, fontSize: 13,
+                        border: complianceNOI ? '2px solid #f59e0b' : '2px solid #e5e7eb',
+                        background: complianceNOI ? '#fef3c7' : '#f9fafb',
+                        color: complianceNOI ? '#92400e' : '#6b7280',
+                        cursor: 'pointer', transition: 'all 0.15s',
+                      }}
+                    >
+                      📋 Required in my state
+                    </button>
+                    <button
+                      onClick={() => setComplianceNOI(false)}
+                      style={{
+                        flex: 1, padding: '10px 0', borderRadius: 10, fontWeight: 700, fontSize: 13,
+                        border: !complianceNOI ? '2px solid #86efac' : '2px solid #e5e7eb',
+                        background: !complianceNOI ? '#f0fdf4' : '#f9fafb',
+                        color: !complianceNOI ? '#14532d' : '#6b7280',
+                        cursor: 'pointer', transition: 'all 0.15s',
+                      }}
+                    >
+                      ✅ Not required
+                    </button>
                   </div>
-                ) : (
-                  <div style={{ background: '#f0fdf4', border: '1.5px solid #86efac', borderRadius: 12, padding: '12px 16px', display: 'flex', gap: 10, alignItems: 'center' }}>
-                    <span style={{ fontSize: 20 }}>✅</span>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: '#14532d' }}>
-                      No Notice of Intent required in {selectedStateName || 'your state'}.
-                    </div>
-                  </div>
-                )}
+                  <p className="text-xs text-gray-400 mt-1">
+                    {complianceNOI ? `${selectedStateName} requires filing a Notice of Intent with your school district.` : `No NOI required in ${selectedStateName || 'your state'}.`}
+                  </p>
+                </div>
 
                 {/* Required days / hours */}
                 <div>
@@ -1760,9 +1581,16 @@ function OnboardingInner() {
                   </label>
                   {usesHours ? (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <div style={{ padding: '10px 14px', border: '2px solid #e5e7eb', borderRadius: 12, fontSize: 20, fontWeight: 900, color: '#7c3aed', background: '#fafafa', minWidth: 80, textAlign: 'center' }}>
-                        {defaults!.hours.toLocaleString()}
-                      </div>
+                      <input
+                        type="number"
+                        value={complianceHours}
+                        onChange={e => setComplianceHours(parseInt(e.target.value) || 0)}
+                        min={0}
+                        max={9999}
+                        style={{ width: 90, padding: '10px 14px', border: '2px solid #e5e7eb', borderRadius: 12, fontSize: 20, fontWeight: 900, color: '#7c3aed', textAlign: 'center', outline: 'none', fontFamily: "'Nunito', sans-serif" }}
+                        onFocus={e => (e.target.style.borderColor = '#7c3aed')}
+                        onBlur={e => (e.target.style.borderColor = '#e5e7eb')}
+                      />
                       <span style={{ fontSize: 13, color: '#6b7280', fontWeight: 600 }}>hours/year — we'll track these automatically</span>
                     </div>
                   ) : (
@@ -1811,7 +1639,7 @@ function OnboardingInner() {
                   disabled={saving}
                   className="w-full py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-2xl font-bold text-base hover:opacity-90 disabled:opacity-40 transition-all"
                 >
-                  {saving ? 'Saving…' : "Looks right — let's continue →"}
+                  {saving ? 'Saving…' : 'Save & continue →'}
                 </button>
                 <button
                   onClick={() => handleComplianceConfirmed(true)}
@@ -1822,7 +1650,7 @@ function OnboardingInner() {
                   Skip for now — use 180 days as default (I'll review this later)
                 </button>
               </div>
-              <BackButton onClick={() => setStep1Sub('school_year')} />
+              <BackButton onClick={() => setStep1Sub('state')} />
             </div>
           )
         })()}
@@ -1853,7 +1681,7 @@ function OnboardingInner() {
                 ))}
               </div>
               <BackButton onClick={() => {
-                if (quizQuestion === 1) { setStep(1); setStep1Sub('compliance') }
+                if (quizQuestion === 1) { setStep(1); setStep1Sub('school_year') }
                 else setQuizQuestion(quizQuestion - 1)
               }} />
             </div>
@@ -2215,69 +2043,69 @@ function OnboardingInner() {
                 How does {firstName.trim() || 'your child'} think?
               </h1>
               <p className="text-base leading-relaxed" style={{ color: 'rgba(255,255,255,0.75)' }}>
-                Pick up to 3 that describe them best.
+                Select all that describe them — or none if you're not sure yet.
               </p>
               <p className="text-sm mt-1" style={{ color: 'rgba(255,255,255,0.5)' }}>
                 Scout uses these to shape every lesson and activity.
               </p>
             </div>
 
-            {/* Selection counter */}
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 20 }}>
-              <div style={{ display: 'flex', gap: 8 }}>
-                {[0, 1, 2].map(i => (
-                  <div key={i} style={{
-                    width: 10, height: 10, borderRadius: '50%',
-                    background: i < miProfile.length ? '#a855f7' : 'rgba(255,255,255,0.2)',
-                    transition: 'background 0.2s',
-                  }} />
-                ))}
+            {miProfile.length > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
+                <div style={{ background: 'rgba(168,85,247,0.25)', border: '1.5px solid rgba(168,85,247,0.5)', borderRadius: 20, padding: '4px 14px', fontSize: 13, fontWeight: 700, color: '#e9d5ff' }}>
+                  {miProfile.length} selected
+                </div>
               </div>
-            </div>
+            )}
 
-            {/* 9 intelligence cards — grouped by cluster */}
+            {/* 9 intelligence cards — grouped by cluster, vertical list */}
             {(['analytical', 'introspective', 'interactive'] as const).map(cluster => {
               const clusterInfo = MI_CLUSTERS[cluster]
               const clusterItems = MI_INTELLIGENCES.filter(mi => mi.cluster === cluster)
               return (
-                <div key={cluster} style={{ marginBottom: 16 }}>
-                  <div style={{ fontSize: 9, fontWeight: 800, color: clusterInfo.color, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8, opacity: 0.9 }}>
-                    {clusterInfo.label}
+                <div key={cluster} style={{ marginBottom: 20 }}>
+                  <div style={{ fontSize: 11, fontWeight: 800, color: clusterInfo.color, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 6, opacity: 0.9 }}>
+                    {clusterInfo.label} — <span style={{ fontWeight: 600, textTransform: 'none', letterSpacing: 0 }}>{clusterInfo.tagline}</span>
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     {clusterItems.map(mi => {
                       const selected = miProfile.includes(mi.id)
-                      const maxed = miProfile.length >= 3 && !selected
                       return (
                         <button
                           key={mi.id}
                           onClick={() => toggleMi(mi.id)}
-                          disabled={maxed}
                           style={{
-                            padding: '12px 6px',
+                            padding: '14px 16px',
                             borderRadius: 14,
                             border: `2px solid ${selected ? '#a855f7' : 'rgba(255,255,255,0.12)'}`,
                             background: selected ? 'rgba(168,85,247,0.18)' : 'rgba(255,255,255,0.06)',
-                            cursor: maxed ? 'not-allowed' : 'pointer',
-                            opacity: maxed ? 0.4 : 1,
-                            textAlign: 'center' as const,
+                            cursor: 'pointer',
+                            textAlign: 'left' as const,
                             transition: 'all 0.15s',
                             position: 'relative' as const,
                             fontFamily: "'Nunito', sans-serif",
+                            display: 'flex',
+                            alignItems: 'flex-start',
+                            gap: 14,
                           }}
                         >
-                          {selected && (
-                            <div style={{
-                              position: 'absolute', top: 5, right: 5,
-                              width: 14, height: 14, borderRadius: '50%',
-                              background: '#a855f7',
-                              display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              fontSize: 8, color: '#fff', fontWeight: 900,
-                            }}>✓</div>
-                          )}
-                          <div style={{ fontSize: 24, marginBottom: 5 }}>{mi.emoji}</div>
-                          <div style={{ fontSize: 10, fontWeight: 800, color: selected ? '#e9d5ff' : '#c4b5fd', marginBottom: 2, lineHeight: 1.2 }}>{mi.name}</div>
-                          <div style={{ fontSize: 8, fontWeight: 600, color: 'rgba(255,255,255,0.45)', lineHeight: 1.3 }}>{mi.desc}</div>
+                          <div style={{ fontSize: 28, flexShrink: 0, lineHeight: 1 }}>{mi.emoji}</div>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: 15, fontWeight: 800, color: selected ? '#e9d5ff' : '#c4b5fd', marginBottom: 4, lineHeight: 1.2 }}>
+                              {mi.name}
+                              <span style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.4)', marginLeft: 6 }}>{mi.fullName !== mi.name ? `(${mi.fullName.replace(mi.name, '').replace(/[()]/g,'').trim()})` : ''}</span>
+                            </div>
+                            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)', lineHeight: 1.5 }}>{mi.detail}</div>
+                          </div>
+                          <div style={{
+                            width: 22, height: 22, borderRadius: '50%', flexShrink: 0, marginTop: 2,
+                            border: `2px solid ${selected ? '#a855f7' : 'rgba(255,255,255,0.2)'}`,
+                            background: selected ? '#a855f7' : 'transparent',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            transition: 'all 0.15s',
+                          }}>
+                            {selected && <span style={{ fontSize: 11, color: '#fff', fontWeight: 900 }}>✓</span>}
+                          </div>
                         </button>
                       )
                     })}
@@ -2287,11 +2115,11 @@ function OnboardingInner() {
             })}
 
             {/* Disclaimer */}
-            <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 10, padding: '10px 14px', marginBottom: 16 }}>
-              <div style={{ fontSize: 9, fontWeight: 800, color: 'rgba(255,255,255,0.4)', letterSpacing: 0.5, marginBottom: 6, textTransform: 'uppercase' }}>Remember</div>
-              <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 3 }}>
+            <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 10, padding: '12px 16px', marginBottom: 16 }}>
+              <div style={{ fontSize: 11, fontWeight: 800, color: 'rgba(255,255,255,0.4)', letterSpacing: 0.5, marginBottom: 6, textTransform: 'uppercase' }}>Remember</div>
+              <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 4 }}>
                 {MI_REMEMBER.map(r => (
-                  <div key={r} style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', fontWeight: 600 }}>· {r}</div>
+                  <div key={r} style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', fontWeight: 600 }}>· {r}</div>
                 ))}
               </div>
             </div>
@@ -2300,33 +2128,24 @@ function OnboardingInner() {
             <div style={{ display: 'flex', gap: 10 }}>
               <button
                 onClick={() => setStep4Sub('info')}
-                style={{ padding: '10px 20px', borderRadius: 99, background: 'rgba(255,255,255,0.12)', border: '1.5px solid rgba(255,255,255,0.25)', color: 'rgba(255,255,255,0.8)', fontSize: 13, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}
+                style={{ padding: '12px 20px', borderRadius: 99, background: 'rgba(255,255,255,0.12)', border: '1.5px solid rgba(255,255,255,0.25)', color: 'rgba(255,255,255,0.8)', fontSize: 14, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}
               >
                 ← Back
               </button>
               <button
                 onClick={saveMiAndProceed}
-                disabled={miProfile.length === 0}
                 style={{
-                  flex: 1, padding: '12px 20px', borderRadius: 12,
-                  background: miProfile.length === 0 ? 'rgba(255,255,255,0.1)' : 'linear-gradient(135deg, #7c3aed, #a855f7)',
-                  color: miProfile.length === 0 ? 'rgba(255,255,255,0.3)' : '#fff',
-                  border: 'none', fontSize: 14, fontWeight: 800,
-                  cursor: miProfile.length === 0 ? 'not-allowed' : 'pointer',
+                  flex: 1, padding: '14px 20px', borderRadius: 12,
+                  background: 'linear-gradient(135deg, #7c3aed, #a855f7)',
+                  color: '#fff',
+                  border: 'none', fontSize: 15, fontWeight: 800,
+                  cursor: 'pointer',
                   fontFamily: "'Nunito', sans-serif", transition: 'all 0.15s',
                 }}
               >
-                {miProfile.length === 0 ? 'Pick at least one →' : `Continue with ${miProfile.length} selected →`}
+                {miProfile.length === 0 ? 'Skip for now →' : `Continue with ${miProfile.length} selected →`}
               </button>
             </div>
-
-            {/* Skip */}
-            <button
-              onClick={() => setStep(5)}
-              style={{ display: 'block', width: '100%', marginTop: 12, background: 'none', border: 'none', fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.4)', cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}
-            >
-              Not sure yet — skip for now
-            </button>
           </div>
         )}
 

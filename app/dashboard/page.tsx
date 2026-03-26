@@ -1745,71 +1745,6 @@ function DashboardContent() {
             </div>
           </section>
 
-          {/* ── Teaching Blueprint card ── */}
-          {(() => {
-            const styleMap: Record<string, string> = { charlotte_mason: 'charlotte', unit_studies: 'unit' }
-            const vakMap: Record<string, string> = { aural: 'auditory' }
-            const blueprintStyleId = styleMap[orgTeachingStyle ?? ''] ?? orgTeachingStyle ?? ''
-            const hasBlueprint = !!kidPulses.find(p => p.kid.learning_style) && !!blueprintStyleId
-            // Find first child with a learning style set
-            const kidWithStyle = kidPulses.find(p => p.kid.learning_style)
-            if (!kidWithStyle || !blueprintStyleId) return null
-            const vakStyles = kidWithStyle.kid.learning_style!.split(',').map(s => s.trim()).filter(Boolean)
-            let bridge = null
-            for (const s of vakStyles) {
-              const b = getVakBridge(blueprintStyleId, vakMap[s] ?? s)
-              if (b) { bridge = b; break }
-            }
-            if (!bridge) return null
-            return (
-              <section id="tour-blueprint" style={{ marginTop: 8 }}>
-                <div style={{ ...css.sectionRow }}>
-                  <span style={css.secTitle}>TEACHING BLUEPRINT</span>
-                </div>
-                <div style={{
-                  background: 'rgba(255,255,255,0.10)',
-                  backdropFilter: 'blur(18px)',
-                  WebkitBackdropFilter: 'blur(18px)',
-                  border: '1.5px solid rgba(196,181,253,0.25)',
-                  borderRadius: 16, padding: '16px 18px',
-                }}>
-                  <div style={{ fontSize: 13, fontWeight: 800, color: '#c4b5fd', marginBottom: 4 }}>
-                    {bridge.headline}
-                    {kidPulses.length > 1 && (
-                      <span style={{ fontWeight: 600, color: 'rgba(196,181,253,0.6)', fontSize: 11, marginLeft: 6 }}>
-                        · {kidWithStyle.kid.displayname}
-                      </span>
-                    )}
-                  </div>
-                  <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)', lineHeight: 1.6, margin: '0 0 10px' }}>
-                    {bridge.intro}
-                  </p>
-                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)', lineHeight: 1.6, marginBottom: 12 }}>
-                    <span style={{ color: '#a78bfa', marginRight: 6 }}>•</span>{bridge.tips[0]}
-                  </div>
-                  {bridge.scoutTip && (
-                    <div style={{
-                      background: 'rgba(124,58,237,0.25)', borderRadius: 10,
-                      padding: '8px 12px', display: 'flex', gap: 8, alignItems: 'flex-start', marginBottom: 12,
-                    }}>
-                      <img src="/Cardinal_Mascot.png" alt="Scout" style={{ width: 22, height: 22, objectFit: 'contain', flexShrink: 0 }} />
-                      <p style={{ margin: 0, fontSize: 11, color: 'rgba(196,181,253,0.9)', lineHeight: 1.5 }}>{bridge.scoutTip}</p>
-                    </div>
-                  )}
-                  <button
-                    onClick={() => router.push('/resources?tab=parents')}
-                    style={{
-                      background: 'none', border: '1.5px solid rgba(196,181,253,0.4)',
-                      borderRadius: 20, padding: '6px 14px', fontSize: 12, fontWeight: 700,
-                      color: '#c4b5fd', cursor: 'pointer', fontFamily: "'Nunito', sans-serif",
-                    }}
-                  >
-                    See full blueprint →
-                  </button>
-                </div>
-              </section>
-            )
-          })()}
 
         </main>
 
@@ -2035,7 +1970,7 @@ function DashboardContent() {
                 Ready to import your curriculum?
               </div>
               <div style={{ fontSize: 13, color: '#4b5563', lineHeight: 1.7, marginBottom: 24 }}>
-                Since you use a structured curriculum, you can import your lessons directly into HomeschoolReady — saving hours of manual entry.
+                You can import your curriculum's lessons directly into HomeschoolReady — saving hours of manual entry.
                 Ready to dive in? Tap <strong>Import Now</strong> below. Prefer to do it later? You can always find it under <strong>Tools</strong>.
               </div>
               <div style={{ display: 'flex', gap: 10 }}>
@@ -2112,13 +2047,9 @@ function DashboardContent() {
             onDone={() => {
               setShowTour(false)
               setTourAutoStart(false)
-              const structuredTeachingStyles = ['traditional', 'classical', 'charlotte_mason']
-              const isStructured = homeschoolStyle === 'structured'
-                || structuredTeachingStyles.includes(orgTeachingStyle ?? '')
-              // Always show curriculum nudge to structured users coming from the welcome flow
-              // (clears stale localStorage so nothing is suppressed)
+              // Always show curriculum nudge to all users after the tour (once)
               const alreadySeen = tourFromWelcome ? false : !!localStorage.getItem('hq_curriculum_nudge_done')
-              if (isStructured && !alreadySeen) {
+              if (!alreadySeen) {
                 setShowCurriculumNudge(true)
               }
               setTourFromWelcome(false)
