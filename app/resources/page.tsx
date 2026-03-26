@@ -1384,10 +1384,18 @@ function ParentsCornerTab({ blueprintKids, blueprintOrgStyle }: { blueprintKids:
                       ))}
                     </ul>
                     {bridge.scoutTip && (
-                      <div style={{ background: '#f5f3ff', borderRadius: 12, padding: '12px 14px', display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: miTips.length > 0 ? 20 : 0 }}>
+                      <button
+                        onClick={() => window.dispatchEvent(new CustomEvent('open-scout-copilot', { detail: { prompt: bridge.scoutTip } }))}
+                        style={{ background: '#f5f3ff', borderRadius: 12, padding: '12px 14px', display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: miTips.length > 0 ? 20 : 0, border: '1.5px solid #ede9fe', cursor: 'pointer', textAlign: 'left', width: '100%', transition: 'background 0.15s' }}
+                        onMouseEnter={e => (e.currentTarget.style.background = '#ede9fe')}
+                        onMouseLeave={e => (e.currentTarget.style.background = '#f5f3ff')}
+                      >
                         <img src="/Cardinal_Mascot.png" alt="Scout" style={{ width: 24, height: 24, objectFit: 'contain', flexShrink: 0 }} />
-                        <p style={{ margin: 0, fontSize: 15, color: '#6d28d9', lineHeight: 1.6 }}>{bridge.scoutTip}</p>
-                      </div>
+                        <div style={{ flex: 1 }}>
+                          <p style={{ margin: '0 0 4px', fontSize: 15, color: '#6d28d9', lineHeight: 1.6 }}>{bridge.scoutTip}</p>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: '#a78bfa' }}>Tap to ask Scout →</span>
+                        </div>
+                      </button>
                     )}
                   </>
                 )}

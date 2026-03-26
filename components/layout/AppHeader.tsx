@@ -65,6 +65,7 @@ interface SavedConversation {
 
 interface CopilotPanelProps {
   onClose: () => void
+  initialInput?: string
   organizationId?: string
   userId?: string
   userName?: string
@@ -345,8 +346,8 @@ function KidAvatar({ kid, size = 30 }: KidAvatarProps) {
 
 // ─── Copilot Panel ────────────────────────────────────────────────────────────
 
-function CopilotPanel({ onClose, organizationId, userId, userName, userState, homeschoolStyle, messages, setMessages, isStarred, onStar, onNewChat, loadHistory, onStarConversation }: CopilotPanelProps) {
-  const [input, setInput] = useState('')
+function CopilotPanel({ onClose, initialInput, organizationId, userId, userName, userState, homeschoolStyle, messages, setMessages, isStarred, onStar, onNewChat, loadHistory, onStarConversation }: CopilotPanelProps) {
+  const [input, setInput] = useState(initialInput ?? '')
   const [loading, setLoading] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
   const [historyList, setHistoryList] = useState<SavedConversation[]>([])
@@ -665,6 +666,7 @@ export default function AppHeader() {
   const [copilotStarred, setCopilotStarred] = useState(false)
   const [showFeedback, setShowFeedback] = useState(false)
   const [showCopilot, setShowCopilot] = useState(false)
+  const [copilotInitialInput, setCopilotInitialInput] = useState<string | undefined>(undefined)
   const conversationIdRef = useRef<string | null>(null)
   const [scoutNudge, setScoutNudge] = useState<string | null>(null)
   const [showScoutBubble, setShowScoutBubble] = useState(false)
@@ -746,7 +748,11 @@ export default function AppHeader() {
   }, [])
 
   useEffect(() => {
-    const handler = () => setShowCopilot(true)
+    const handler = (e: Event) => {
+      const prompt = (e as CustomEvent).detail?.prompt as string | undefined
+      setCopilotInitialInput(prompt)
+      setShowCopilot(true)
+    }
     window.addEventListener('open-scout-copilot', handler)
     return () => window.removeEventListener('open-scout-copilot', handler)
   }, [])
@@ -972,7 +978,8 @@ export default function AppHeader() {
 
       {showCopilot && (
         <CopilotPanel
-          onClose={() => setShowCopilot(false)}
+          onClose={() => { setShowCopilot(false); setCopilotInitialInput(undefined) }}
+          initialInput={copilotInitialInput}
           organizationId={orgId ?? undefined}
           userId={userId ?? undefined}
           userName={displayName || undefined}
