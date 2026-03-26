@@ -1667,7 +1667,7 @@ function OnboardingInner() {
                   {q.emoji} QUESTION {quizQuestion} OF 3
                 </span>
                 <h1 className="text-4xl font-black mb-2 leading-tight" style={{ color: '#c4b5fd' }}>{q.question}</h1>
-                <p className="text-sm mb-4" style={{ color: 'rgba(255,255,255,0.65)' }}>Your answers help Scout generate personalized lessons and activities for your family.</p>
+                {quizQuestion === 1 && <p className="text-sm mb-4" style={{ color: 'rgba(255,255,255,0.65)' }}>Your answers help Scout generate personalized lessons and activities for your family.</p>}
                 <ScoutBubble tip={q.tip} />
               </div>
               <div className="space-y-3">
