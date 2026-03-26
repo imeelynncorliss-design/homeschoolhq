@@ -390,7 +390,13 @@ function CopilotPanel({ onClose, initialInput, organizationId, userId, userName,
       })
 
       const data = await response.json()
-      const reply = data.response || 'Sorry, I had trouble responding. Please try again.'
+
+      let reply: string
+      if (response.status === 429 && data.error) {
+        reply = `${data.error} Visit **Profile → Subscription** to upgrade.`
+      } else {
+        reply = data.response || 'Sorry, I had trouble responding. Please try again.'
+      }
 
       setMessages(prev => [
         ...prev,
@@ -405,7 +411,7 @@ function CopilotPanel({ onClose, initialInput, organizationId, userId, userName,
         ...prev,
         {
           role: 'assistant',
-          content: 'Something went wrong. Please try again.',
+          content: 'Something went wrong — check your connection and try again.',
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         },
       ])

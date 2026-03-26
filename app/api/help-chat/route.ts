@@ -148,7 +148,7 @@ export async function POST(request: NextRequest) {
 
     const { text } = await generateText({
       model: getModel(),
-      maxOutputTokens: 1000,
+      maxOutputTokens: 2000,
       system: systemPrompt,
       messages: messages.map((msg: { role: string; content: string }) => ({
         role: msg.role === 'assistant' ? 'assistant' : 'user',
