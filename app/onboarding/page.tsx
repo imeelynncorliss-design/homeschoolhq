@@ -287,10 +287,10 @@ const QUIZ_QUESTIONS = [
     question: 'How would you like to track your child\'s learning progress?',
     tip: "Most states don't require formal grades or standardized tests for homeschoolers. You get to define what 'progress' means for your child.",
     answers: [
-      { id: 'a', emoji: '📊', text: 'Tests, grades, and clear benchmarks',                  scores: { traditional: 2, classical: 1 } },
-      { id: 'b', emoji: '⚖️', text: 'A mix depending on the subject and the kid',           scores: { eclectic: 2, montessori: 1 } },
-      { id: 'c', emoji: '📁', text: 'A portfolio of their work, art, and projects',          scores: { waldorf: 1, charlotte_mason: 1, montessori: 1 } },
-      { id: 'd', emoji: '💬', text: "Conversations — I'll know by how they talk about it",  scores: { unschooling: 2, charlotte_mason: 1 } },
+      { id: 'a', emoji: '📊', text: 'Tests, grades, and clear benchmarks',                  scores: { traditional: 2, classical: 1 },       color: '#ede9fe' },
+      { id: 'b', emoji: '⚖️', text: 'A mix depending on the subject and the kid',           scores: { eclectic: 2, montessori: 1 },          color: '#fef3c7' },
+      { id: 'c', emoji: '📁', text: 'A portfolio of their work, art, and projects',          scores: { waldorf: 1, charlotte_mason: 1, montessori: 1 }, color: '#ccfbf1' },
+      { id: 'd', emoji: '💬', text: "Conversations — I'll know by how they talk about it",  scores: { unschooling: 2, charlotte_mason: 1 }, color: '#dcfce7' },
     ],
   },
 ]
@@ -513,7 +513,7 @@ function ScoutBubble({ tip }: { tip: string }) {
   )
 }
 
-function AnswerRow({ emoji, text, onClick }: { emoji: string; text: string; onClick: () => void }) {
+function AnswerRow({ emoji, text, onClick, iconBg }: { emoji: string; text: string; onClick: () => void; iconBg?: string }) {
   const [pressed, setPressed] = useState(false)
   return (
     <button
@@ -522,7 +522,7 @@ function AnswerRow({ emoji, text, onClick }: { emoji: string; text: string; onCl
         pressed ? 'ring-2 ring-purple-400 bg-purple-50' : ''
       }`}
     >
-      <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center text-xl flex-shrink-0 group-hover:bg-purple-100 transition-colors">
+      <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0 transition-colors" style={{ background: iconBg ?? '#f3f4f6' }}>
         {emoji}
       </div>
       <span className="flex-1 font-semibold text-gray-900 text-base leading-snug">{text}</span>
@@ -1677,6 +1677,7 @@ function OnboardingInner() {
                     emoji={answer.emoji}
                     text={answer.text}
                     onClick={() => handleQuizAnswer(quizQuestion, answer.scores)}
+                    iconBg={'color' in answer ? (answer as any).color : undefined}
                   />
                 ))}
               </div>
