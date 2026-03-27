@@ -201,7 +201,7 @@ export default function PricingPage() {
                 a: "Scout is HomeschoolReady's AI assistant — your knowledgeable homeschool companion available on every page. On Free and Essential (Basic), Scout answers questions, explains concepts, and helps you think through your curriculum. On Pro and Premium (Full Copilot), Scout goes further: generating complete ready-to-use lesson plans and activity guides personalized to your child's grade and learning style, importing state standards directly into your planner, and adapting any lesson for a different child with one tap — all with no monthly generation cap.",
               },
               {
-                q: 'How many AI generations do I get?',
+                q: 'How many Scout lesson and activity generations do I get?',
                 a: 'Free: 10 lesson generations and 5 activity generations per month. Essential: 25 lesson generations and 15 activity generations per month. Pro and Premium: unlimited lesson and activity generations. Scout chat messages are also capped — 20/mo on Free, 50/mo on Essential, and unlimited on Pro+.',
               },
             ].map((faq, i, arr) => (
