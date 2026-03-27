@@ -245,17 +245,19 @@ function StuckModal({ onClose, onGenerateLesson, onGenerateActivity, onAskScout 
 // ─── Today's Learning Modal ───────────────────────────────────────────────────
 
 function TodaysLearningModal({
-  onClose, kidPulses, todayLessons, weekLessons, onLessonClick,
+  onClose, kidPulses, todayLessons, weekLessons, onRefreshWeek, onLessonClick,
 }: {
   onClose: () => void
   kidPulses: KidPulse[]
   todayLessons: Record<string, any[]>
   weekLessons: Record<string, { lesson: any; kid: Kid }[]>
+  onRefreshWeek: () => Promise<void>
   onLessonClick: (lesson: any, kidName: string) => void
 }) {
   const router = useRouter()
   const trapRef = useFocusTrap(true)
   const [view, setView] = useState<'today' | 'week'>('today')
+  const [refreshing, setRefreshing] = useState(false)
   const css = {
     overlay: {
       position: 'fixed' as const,
@@ -387,7 +389,14 @@ ${childSections}
           {(['today', 'week'] as const).map(v => (
             <button
               key={v}
-              onClick={() => setView(v)}
+              onClick={async () => {
+                setView(v)
+                if (v === 'week') {
+                  setRefreshing(true)
+                  await onRefreshWeek()
+                  setRefreshing(false)
+                }
+              }}
               style={{
                 flex: 1, padding: '8px 0', borderRadius: 9, border: 'none', cursor: 'pointer',
                 fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 13,
@@ -461,7 +470,12 @@ ${childSections}
         })}
 
         {/* Week view */}
-        {view === 'week' && (() => {
+        {view === 'week' && refreshing && (
+          <div style={{ textAlign: 'center', padding: '32px 0', color: '#7c3aed', fontWeight: 700, fontSize: 14 }}>
+            Refreshing…
+          </div>
+        )}
+        {view === 'week' && !refreshing && (() => {
           const today = new Date()
           const days = Array.from({ length: 7 }, (_, i) => {
             const d = new Date(today)
@@ -1370,6 +1384,37 @@ function DashboardContent() {
     load()
   }, [])
 
+  // Refresh week lessons from DB — called when user opens the This Week view
+  const refreshWeekLessons = async () => {
+    if (!kidPulses.length) return
+    const now2 = new Date()
+    const wDow = now2.getDay()
+    const weekStart = new Date(now2)
+    weekStart.setDate(now2.getDate() - (wDow === 0 ? 6 : wDow - 1))
+    const weekDays = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(weekStart)
+      d.setDate(weekStart.getDate() + i)
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    })
+    const kidIds = kidPulses.map(p => p.kid.id)
+    const { data: weekData } = await supabase
+      .from('lessons')
+      .select('id, title, status, subject, start_time, lesson_date, duration_minutes, kid_id, description, lesson_source')
+      .in('kid_id', kidIds)
+      .in('lesson_date', weekDays)
+      .order('start_time', { ascending: true })
+    const byDate: Record<string, { lesson: any; kid: Kid }[]> = {}
+    for (const d of weekDays) byDate[d] = []
+    for (const lesson of weekData ?? []) {
+      if (!lesson.lesson_date) continue
+      const pulse = kidPulses.find(p => p.kid.id === lesson.kid_id)
+      if (pulse && byDate[lesson.lesson_date]) {
+        byDate[lesson.lesson_date].push({ lesson, kid: pulse.kid })
+      }
+    }
+    setWeekLessons(byDate)
+  }
+
   // Dispatch Scout nudge once data is loaded
   useEffect(() => {
     if (loading) return
@@ -1905,6 +1950,7 @@ function DashboardContent() {
             kidPulses={kidPulses}
             todayLessons={todayLessons}
             weekLessons={weekLessons}
+            onRefreshWeek={refreshWeekLessons}
             onLessonClick={(lesson, kidName) => {
               setShowToday(false)
               setSelectedLesson(lesson as LessonViewModalLesson)
