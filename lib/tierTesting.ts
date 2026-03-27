@@ -152,7 +152,7 @@ export const TIER_DISPLAY: Record<UserTier, {
       'Manual lesson planning',
       'Basic calendar view',
       'Basic compliance tracking',
-      'Scout AI assistant (basic)',
+      'Scout Copilot (basic)',
     ],
   },
   ESSENTIAL: {
@@ -194,7 +194,7 @@ export const TIER_DISPLAY: Record<UserTier, {
       '👩‍🏫 Co-teacher & family collaboration',
       '📅 Google Calendar sync',
       'Transcript generator',
-      'Scout AI Copilot (full)',
+      'Scout Copilot (full)',
     ],
   },
   PREMIUM: {
@@ -246,7 +246,7 @@ export const PRICING_COMPARISON_ROWS: { name: string; values: string[] }[] = [
   { name: 'Co-op class management',      values: ['–',           '–',          '–',          '✓'] },
   { name: 'Organization switcher',       values: ['–',           '–',          '–',          '✓'] },
   // Support
-  { name: 'Scout AI Copilot',            values: ['Basic',       'Basic',      'Full',       'Full'] },
+  { name: 'Scout Copilot',               values: ['Basic',       'Basic',      'Full',       'Full'] },
   { name: 'Priority support',            values: ['–',           '–',          '–',          '✓'] },
 ]
 
