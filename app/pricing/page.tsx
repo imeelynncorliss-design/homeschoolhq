@@ -197,12 +197,8 @@ export default function PricingPage() {
                 a: 'All 50 states are supported. We have detailed state-specific requirements pre-loaded so you know exactly what you need to track.',
               },
               {
-                q: 'What is Scout?',
-                a: "Scout is HomeschoolReady's AI assistant, available from every page in the app. On all plans Scout answers general homeschooling questions. On Pro and Premium, Scout becomes a full Copilot — generating complete lessons, activities, and importing state standards with no monthly cap.",
-              },
-              {
-                q: "What's the difference between Scout Basic and Scout Full Copilot?",
-                a: "Scout Basic (Free & Essential) answers your homeschooling questions, explains concepts, suggests ideas, and helps you think through your curriculum — like a knowledgeable friend you can ask anything. Scout Full Copilot (Pro & Premium) goes further: it generates complete, ready-to-use lesson plans and activity guides personalized to your child's grade, learning style, and subject, imports state standards directly into your planner, and can adapt any lesson for a different child with one tap.",
+                q: 'What is Scout, and what does Basic vs Full Copilot mean?',
+                a: "Scout is HomeschoolReady's AI assistant — your knowledgeable homeschool companion available on every page. On Free and Essential (Basic), Scout answers questions, explains concepts, and helps you think through your curriculum. On Pro and Premium (Full Copilot), Scout goes further: generating complete ready-to-use lesson plans and activity guides personalized to your child's grade and learning style, importing state standards directly into your planner, and adapting any lesson for a different child with one tap — all with no monthly generation cap.",
               },
               {
                 q: 'How many AI generations do I get?',
