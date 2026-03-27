@@ -12,6 +12,7 @@ import ActivityGenerator from '@/components/ActivityGenerator'
 import LessonGenerator from '@/components/LessonGenerator'
 import WeatherWidget from '@/components/WeatherWidget'
 import StylePickerModal, { DEFAULT_STRUCTURED, DEFAULT_FLEXIBLE, DEFAULT_UNSTYLED } from '@/components/StylePickerModal'
+import { printHeader, printHeaderCSS } from '@/lib/printHeader'
 import ProductTour from '@/components/ProductTour'
 import { getVakBridge } from '@/src/lib/teachingBlueprint'
 
@@ -333,8 +334,10 @@ function TodaysLearningModal({
   .desc { margin: 8px 0 0; font-size: 13px; color: #374151; }
   .mats { margin: 4px 0 0; font-size: 12px; color: #6b7280; }
   @media print { body { margin: 20px; } }
+  ${printHeaderCSS()}
 </style>
 </head><body>
+${printHeader(window.location.origin)}
 <h1>Daily Lesson Plan</h1>
 <div class="date">${today}</div>
 ${childSections}
@@ -1185,9 +1188,13 @@ function DashboardContent() {
         .from('kids')
         .select('*')
         .eq('organization_id', orgId)
+        .eq('archived', false)
         .order('created_at', { ascending: true })
 
-      if (kidsData?.length) {
+      // Deduplicate by id — guards against rare DB duplicates
+      const uniqueKids = Array.from(new Map((kidsData || []).map((k: any) => [k.id, k])).values()) as any[]
+
+      if (uniqueKids.length) {
         const todayStr   = [
           now.getFullYear(),
           String(now.getMonth() + 1).padStart(2, '0'),
@@ -1196,7 +1203,7 @@ function DashboardContent() {
         const lessonsMap: Record<string, any[]> = {}
 
         const pulses: KidPulse[] = await Promise.all(
-          kidsData.map(async (kid: any, idx: number) => {
+          uniqueKids.map(async (kid: any, idx: number) => {
             const { data: lessons } = await supabase
               .from('lessons')
               .select('id, title, status, subject, start_time, lesson_date, duration_minutes, kid_id, description, lesson_source')

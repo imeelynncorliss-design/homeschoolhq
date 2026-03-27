@@ -8,6 +8,7 @@ import DailyNotes from './DailyNotes'
 import DayViewModal from './DayViewModal'
 import DayDetails from './DayDetails'
 import { supabase } from '@/src/lib/supabase'
+import { printHeader, printHeaderCSS } from '@/lib/printHeader'
 import './calendar-print.css'
 
 const localizer = momentLocalizer(moment)
@@ -334,9 +335,12 @@ export default function LessonCalendar({
   return (
     <div className="bg-white rounded-lg shadow p-6">
       <div className="printable-calendar rounded-lg p-6" style={{ height: '700px', backgroundColor: '#f9fafb' }}>
-        <div className="print-header" style={{ display: 'none' }}>
-          <h1>HomeschoolHQ - {moment(currentDate).format('MMMM YYYY')}</h1>
-          <p>Lesson Schedule</p>
+        <div className="print-header hr-print-header" style={{ display: 'none' }}>
+          <img src="/Cardinal_Mascot.png" alt="HomeschoolReady" className="hr-print-logo-img" />
+          <div className="hr-print-logo-text">
+            <span className="hr-print-logo-name">Homeschool<strong>Ready</strong></span>
+            <span className="hr-print-logo-domain">homeschoolready.app · {moment(currentDate).format('MMMM YYYY')} · Lesson Calendar</span>
+          </div>
         </div>
 
         <div className="print-legend flex flex-wrap gap-2 mb-3">
@@ -379,7 +383,8 @@ export default function LessonCalendar({
           .rbc-event { padding: 2px 5px; font-size: 12px; }
           .rbc-event:hover { opacity: 1 !important; cursor: pointer; }
           .rbc-show-more { color: #3b82f6 !important; font-weight: 600; }
-          @media print { .print-header { display: block !important; } }
+          @media print { .print-header { display: flex !important; } }
+          ${printHeaderCSS()}
         `}</style>
 
         <Calendar

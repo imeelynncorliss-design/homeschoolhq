@@ -44,6 +44,7 @@ function AttendanceContent() {
         .from('kids')
         .select('*')
         .eq('organization_id', orgId)
+        .eq('archived', false)
         .order('created_at', { ascending: false })
 
       setUser(user)

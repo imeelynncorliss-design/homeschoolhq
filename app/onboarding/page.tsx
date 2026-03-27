@@ -7,6 +7,7 @@ import { CANONICAL_SUBJECTS } from '@/src/constants/subjects'
 import { DEFAULT_FLEXIBLE, DEFAULT_STRUCTURED } from '@/components/StylePickerModal'
 import { MI_INTELLIGENCES, MI_CLUSTERS, MI_REMEMBER } from '@/src/lib/learningProfiles'
 import { getVakBridge, getMiTips } from '@/src/lib/teachingBlueprint'
+import { ExternalLink } from '@/components/ExternalLink'
 
 // ── State Data ────────────────────────────────────────────────────────────────
 
@@ -21,9 +22,8 @@ const SUPPORTED_STATES: Record<string, StateData> = {
     code: 'NC', difficulty: 'Moderate', diffColor: '#F59E0B', goalDays: '180',
     note: 'NC is one of the more structured states — but HomeschoolReady handles all of this automatically.',
     reqs: [
-      { icon: '📋', label: 'Notice of Intent', desc: 'File annually with your local school district before Aug 1st or within 30 days of starting.' },
-      { icon: '📅', label: '180 Teaching Days', desc: 'Required minimum per school year across all subjects.' },
-      { icon: '📚', label: '9 Core Subjects', desc: 'English, math, science, social studies, health, PE, arts, foreign language, and computer skills.' },
+      { icon: '📋', label: 'Notice of Intent (NOI)', desc: 'File annually with your local school district before Aug 1st or within 30 days of starting. This is a simple letter notifying the district you are homeschooling.' },
+      { icon: '📅', label: '180 Teaching Days', desc: 'Required minimum per school year.' },
       { icon: '📊', label: 'Annual Assessment', desc: 'Nationally standardized test OR review by a certified teacher required each year.' },
     ],
   },
@@ -31,8 +31,7 @@ const SUPPORTED_STATES: Record<string, StateData> = {
     code: 'TX', difficulty: 'Easy', diffColor: '#10B981', goalDays: '180',
     note: 'Texas is one of the most homeschool-friendly states. Very few requirements.',
     reqs: [
-      { icon: '📋', label: 'No Registration Required', desc: 'Texas does not require you to notify anyone that you are homeschooling.' },
-      { icon: '📚', label: 'Bona Fide Curriculum', desc: 'Must cover reading, spelling, grammar, math, and good citizenship.' },
+      { icon: '📋', label: 'No Registration Required', desc: 'Texas does not require you to notify anyone that you are homeschooling — no NOI, no affidavit.' },
       { icon: '📁', label: 'No Testing Required', desc: 'Texas does not require standardized testing or portfolio reviews.' },
     ],
   },
@@ -40,19 +39,18 @@ const SUPPORTED_STATES: Record<string, StateData> = {
     code: 'FL', difficulty: 'Moderate', diffColor: '#F59E0B', goalDays: '180',
     note: 'Florida requires a portfolio — HomeschoolReady helps you build one automatically.',
     reqs: [
-      { icon: '📋', label: 'Notice of Intent', desc: 'File with your county school superintendent within 30 days of starting.' },
+      { icon: '📋', label: 'Notice of Intent (NOI)', desc: 'File with your county school superintendent within 30 days of starting. A simple letter notifying them you are homeschooling.' },
       { icon: '📅', label: '180 Teaching Days', desc: 'Required minimum per school year.' },
       { icon: '📊', label: 'Annual Evaluation', desc: 'Portfolio review OR standardized test OR licensed psychologist evaluation — your choice.' },
-      { icon: '📁', label: 'Portfolio Required', desc: 'Keep samples of work, log of educational activities, and materials used.' },
+      { icon: '📁', label: 'Portfolio Required', desc: 'Keep samples of work, a log of educational activities, and materials used.' },
     ],
   },
   'New York': {
     code: 'NY', difficulty: 'Strict', diffColor: '#EF4444', goalDays: '180',
     note: "New York has some of the strictest requirements. HomeschoolReady's compliance tools are essential here.",
     reqs: [
-      { icon: '📋', label: 'Annual IHIP', desc: 'Submit an Individualized Home Instruction Plan to your school district by July 1st.' },
+      { icon: '📋', label: 'Annual IHIP', desc: 'An Individualized Home Instruction Plan — a detailed curriculum plan submitted to your school district by July 1st each year. This is New York\'s version of an NOI, but much more involved.' },
       { icon: '📅', label: '900–990 Hours', desc: 'Required minimum depending on grade level.' },
-      { icon: '📚', label: '10+ Subjects', desc: 'Extensive required subject list including patriotism, civics, and fire/traffic safety.' },
       { icon: '📊', label: 'Quarterly Reports', desc: 'Submit quarterly reports AND an annual assessment to your school district.' },
     ],
   },
@@ -60,9 +58,9 @@ const SUPPORTED_STATES: Record<string, StateData> = {
     code: 'PA', difficulty: 'Strict', diffColor: '#EF4444', goalDays: '180',
     note: "Pennsylvania is one of the strictest states — HomeschoolReady's compliance tools are built for this.",
     reqs: [
-      { icon: '📋', label: 'Annual Affidavit', desc: 'File with your school district superintendent by Aug 1st each year.' },
-      { icon: '📅', label: '180 Teaching Days', desc: 'With 900 hours at elementary and 990 hours at secondary level.' },
-      { icon: '📚', label: 'Core Subjects', desc: 'Extensive list including English, math, science, history, geography, art, music, health, and more.' },
+      { icon: '📋', label: 'Annual Affidavit', desc: "Pennsylvania's version of a Notice of Intent — filed with your school district superintendent by Aug 1st each year. Confirms you're operating a home education program." },
+      { icon: '📅', label: '180 Days / 900–990 Hours', desc: '180 days required, with 900 instructional hours at elementary and 990 hours at secondary level.' },
+      { icon: '👨‍🏫', label: 'Instructor Requirement', desc: 'Teaching parent must have a high school diploma or GED, or be a certified teacher.' },
       { icon: '📊', label: 'Portfolio Review', desc: 'Annual evaluation by a licensed psychologist or certified teacher required.' },
     ],
   },
@@ -70,9 +68,8 @@ const SUPPORTED_STATES: Record<string, StateData> = {
     code: 'GA', difficulty: 'Moderate', diffColor: '#F59E0B', goalDays: '180',
     note: 'Georgia has clear requirements that are easy to track with HomeschoolReady.',
     reqs: [
-      { icon: '📋', label: 'Declaration of Intent', desc: 'File annually with your local school superintendent by Sept 1st.' },
+      { icon: '📋', label: 'Declaration of Intent (NOI)', desc: 'File annually with your local school superintendent by Sept 1st. This is Georgia\'s version of a Notice of Intent — a letter declaring you are homeschooling.' },
       { icon: '📅', label: '180 Teaching Days', desc: 'Required minimum, with 4.5 hours per day.' },
-      { icon: '📚', label: 'Core Subjects', desc: 'Reading, language arts, math, social studies, and science required.' },
       { icon: '📊', label: 'Annual Testing', desc: 'Standardized test required every 3 years starting in 3rd grade.' },
     ],
   },
@@ -80,9 +77,8 @@ const SUPPORTED_STATES: Record<string, StateData> = {
     code: 'VA', difficulty: 'Moderate', diffColor: '#F59E0B', goalDays: '180',
     note: 'Virginia has clear annual requirements that HomeschoolReady tracks automatically.',
     reqs: [
-      { icon: '📋', label: 'Notice of Intent', desc: 'File with your school division superintendent by Aug 15th each year.' },
-      { icon: '👨‍🏫', label: 'Instructor Requirement', desc: 'Teaching parent must have a high school diploma or GED, or meet other qualifications.' },
-      { icon: '📚', label: 'Core Subjects', desc: 'Curriculum must include math, science, English, and history.' },
+      { icon: '📋', label: 'Notice of Intent (NOI)', desc: 'File with your school division superintendent by Aug 15th each year. A letter notifying the district you are homeschooling.' },
+      { icon: '👨‍🏫', label: 'Instructor Requirement', desc: 'Teaching parent must have a high school diploma or GED, or meet other qualifications (e.g., using a certified tutor).' },
       { icon: '📊', label: 'Annual Assessment', desc: 'Standardized test, portfolio review, or other evidence of progress required annually.' },
     ],
   },
@@ -90,9 +86,8 @@ const SUPPORTED_STATES: Record<string, StateData> = {
     code: 'TN', difficulty: 'Easy', diffColor: '#10B981', goalDays: '180',
     note: 'Tennessee is relatively homeschool-friendly with two clear paths to choose from.',
     reqs: [
-      { icon: '📋', label: 'Registration', desc: 'Register with your local school district or a church-related school.' },
+      { icon: '📋', label: 'Registration / NOI', desc: 'Register with your local school district or a church-related school. This is Tennessee\'s version of a Notice of Intent.' },
       { icon: '📅', label: '180 Teaching Days', desc: 'Required minimum per school year.' },
-      { icon: '📚', label: 'Core Subjects', desc: 'Reading, language arts, math, science, and social studies required.' },
       { icon: '📊', label: 'Annual Testing', desc: 'Standardized test required in grades 5, 7, and 9 under the independent option.' },
     ],
   },
@@ -100,19 +95,17 @@ const SUPPORTED_STATES: Record<string, StateData> = {
     code: 'CA', difficulty: 'Moderate', diffColor: '#F59E0B', goalDays: '175',
     note: "California's PSA process sounds complex but HomeschoolReady walks you through it.",
     reqs: [
-      { icon: '📋', label: 'Private School Affidavit', desc: 'File annually with the state between Oct 1–15. Registers your home as a private school.' },
+      { icon: '📋', label: 'Private School Affidavit (PSA)', desc: "California's unique approach — instead of filing a Notice of Intent with a school district, you file a PSA with the state (Oct 1–15) to register your home as a private school." },
       { icon: '📅', label: '175 Teaching Days', desc: 'Required minimum per school year.' },
-      { icon: '📚', label: 'Core Subjects', desc: 'English, math, social sciences, science, fine arts, health, and PE.' },
-      { icon: '👨‍🏫', label: 'Instructor Qualification', desc: "Teaching parent must be 'capable of teaching' — no formal credential required." },
+      { icon: '👨‍🏫', label: 'Instructor Qualification', desc: "Teaching parent must be 'capable of teaching' — no formal credential or degree is required by California." },
     ],
   },
   'Ohio': {
     code: 'OH', difficulty: 'Moderate', diffColor: '#F59E0B', goalDays: '180',
     note: "Ohio's requirements are straightforward and easy to manage with HomeschoolReady.",
     reqs: [
-      { icon: '📋', label: 'Annual Notification', desc: 'File with your school district superintendent by the first day of school each year.' },
-      { icon: '📅', label: '900 Hours', desc: 'Required minimum instructional hours per year.' },
-      { icon: '📚', label: 'Core Subjects', desc: 'Language arts, math, science, social studies, health, fine arts, and electives.' },
+      { icon: '📋', label: 'Annual Notification (NOI)', desc: 'File with your school district superintendent by the first day of school each year. Ohio\'s version of a Notice of Intent.' },
+      { icon: '📅', label: '900 Instructional Hours', desc: 'Required minimum per year (no day count — hours are tracked instead).' },
       { icon: '📊', label: 'Annual Assessment', desc: 'Standardized test OR portfolio assessed by a certified teacher.' },
     ],
   },
@@ -148,7 +141,7 @@ const STATE_NAME_TO_CODE: Record<string, string> = {
 // ── Compliance Defaults (all 50 states + DC) ──────────────────────────────────
 
 const COMPLIANCE_DEFAULTS: Record<string, {
-  days: number; hours: number; noi: boolean; level: 'low' | 'moderate' | 'high'
+  days: number; hours: number; noi: boolean; level: 'low' | 'moderate' | 'high'; teacherReq?: string
 }> = {
   AL:{days:180,hours:0,noi:false,level:'moderate'},
   AK:{days:180,hours:0,noi:false,level:'low'},
@@ -183,7 +176,7 @@ const COMPLIANCE_DEFAULTS: Record<string, {
   NM:{days:180,hours:0,noi:false,level:'low'},
   NY:{days:180,hours:900,noi:true,level:'high'},
   NC:{days:180,hours:0,noi:true,level:'moderate'},
-  ND:{days:175,hours:0,noi:true,level:'high'},
+  ND:{days:175,hours:0,noi:true,level:'high',teacherReq:'Teaching parent must have a high school diploma or GED.'},
   OH:{days:182,hours:900,noi:true,level:'moderate'},
   OK:{days:180,hours:0,noi:false,level:'low'},
   OR:{days:180,hours:0,noi:true,level:'moderate'},
@@ -197,7 +190,7 @@ const COMPLIANCE_DEFAULTS: Record<string, {
   VT:{days:175,hours:0,noi:true,level:'moderate'},
   VA:{days:180,hours:0,noi:true,level:'moderate'},
   WA:{days:180,hours:0,noi:true,level:'moderate'},
-  WV:{days:180,hours:0,noi:true,level:'high'},
+  WV:{days:180,hours:0,noi:true,level:'high',teacherReq:'Teaching parent must have a high school diploma.'},
   WI:{days:0,hours:875,noi:false,level:'low'},
   WY:{days:175,hours:0,noi:false,level:'low'},
   DC:{days:180,hours:0,noi:true,level:'moderate'},
@@ -606,16 +599,10 @@ function StatePicker({
                 }`}
               >
                 <span>{name}</span>
-                {SUPPORTED_NAMES.includes(name) && (
-                  <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-700 flex-shrink-0 ml-2">✓</span>
-                )}
               </button>
             ))}
           </div>
-          <p className="text-xs text-gray-400 mt-2">
-            <span className="bg-green-100 text-green-700 rounded-full px-2 py-0.5 font-bold text-xs">✓</span>{' '}
-            {SUPPORTED_NAMES.length} of 50 states fully supported
-          </p>
+          <p className="text-xs text-gray-400 mt-2">All 50 states supported</p>
         </div>
 
         {/* RIGHT — detail panel */}
@@ -643,7 +630,7 @@ function StatePicker({
               <div className="bg-gradient-to-br from-purple-700 via-purple-600 to-pink-500 p-6">
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <p className="text-xs font-bold uppercase tracking-widest text-purple-200 mb-1">✓ Fully Supported</p>
+                    <p className="text-xs font-bold uppercase tracking-widest text-purple-200 mb-1">Requirements pre-loaded</p>
                     <h3 className="text-2xl font-black text-white mb-1">{picked}</h3>
                     <p className="text-sm text-purple-100 italic leading-relaxed">{stateData.note}</p>
                   </div>
@@ -732,10 +719,23 @@ function StatePicker({
                       <div className="flex gap-3 items-start">
                         <div className="w-9 h-9 rounded-xl bg-purple-50 flex items-center justify-center text-base flex-shrink-0">📋</div>
                         <div>
-                          <p className="text-sm font-bold text-gray-900 mb-0.5">Notice of Intent</p>
-                          <p className="text-xs text-gray-500">{defaults.noi ? 'Required — you must file with your school district' : 'Not required in this state'}</p>
+                          <p className="text-sm font-bold text-gray-900 mb-0.5">Notice of Intent (NOI)</p>
+                          <p className="text-xs text-gray-500">
+                            {defaults.noi
+                              ? 'Required — a letter notifying your school district that you are homeschooling.'
+                              : 'Not required in this state — no notification needed to begin homeschooling.'}
+                          </p>
                         </div>
                       </div>
+                      {defaults.teacherReq && (
+                        <div className="flex gap-3 items-start">
+                          <div className="w-9 h-9 rounded-xl bg-purple-50 flex items-center justify-center text-base flex-shrink-0">👨‍🏫</div>
+                          <div>
+                            <p className="text-sm font-bold text-gray-900 mb-0.5">Instructor Requirement</p>
+                            <p className="text-xs text-gray-500">{defaults.teacherReq}</p>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                   <div className="bg-green-50 rounded-xl p-3 flex gap-3 items-start mb-4">
@@ -811,6 +811,7 @@ function OnboardingInner() {
   const [agreementSaving, setAgreementSaving] = useState(false)
 
   // Step 1 has four sub-steps: school name → state picker → compliance → school year
+  const [showWelcome, setShowWelcome] = useState(true)
   const [step1Sub, setStep1Sub] = useState<'name' | 'state' | 'school_year' | 'compliance'>('name')
   const [complianceDays, setComplianceDays] = useState('180')
   const [complianceHours, setComplianceHours] = useState(0)
@@ -838,6 +839,7 @@ function OnboardingInner() {
 
   // Step 4 — First child
   const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
   const [nickname, setNickname]   = useState('')
   const [age, setAge]             = useState('')
   const [grade, setGrade]         = useState('')
@@ -1155,14 +1157,14 @@ function OnboardingInner() {
 
   // ── Save first child → completion screen (step 5) ───────────────────────
   const saveChild = async () => {
-    if (!firstName.trim() || saving || !orgId) return
+    if (!firstName.trim() || !lastName.trim() || saving || !orgId) return
     setSaving(true)
     const displayName = nickname.trim() || firstName.trim()
     const { data, error } = await supabase.from('kids').insert({
       organization_id: orgId,
       user_id: user.id,
       firstname: firstName.trim(),
-      lastname: '',
+      lastname: lastName.trim(),
       displayname: displayName,
       age: age ? parseInt(age) : null,
       grade: grade || null,
@@ -1419,9 +1421,130 @@ function OnboardingInner() {
         <StepIndicator currentStep={step} onBack={step > 1 ? goBack : undefined} />
 
         {/* ══════════════════════════════════════════════════════
+            STEP 1 — Welcome Screen (shown once before name entry)
+        ══════════════════════════════════════════════════════ */}
+        {step === 1 && showWelcome && (
+          <div style={{ maxWidth: 780, margin: '0 auto' }}>
+            {/* Two-column card */}
+            <div style={{
+              background: '#fff', borderRadius: 28,
+              boxShadow: '0 24px 64px rgba(124,58,237,0.12)',
+              overflow: 'hidden', display: 'flex', flexDirection: 'row',
+            }}>
+              {/* Left — Welcome video (or placeholder until video is ready)
+                  ─────────────────────────────────────────────────────────────
+                  TO ADD COURTNEY'S VIDEO: replace the placeholder <div> below
+                  with a <video> tag, e.g.:
+
+                  <video
+                    src="/welcome-courtney.mp4"
+                    controls
+                    poster="/welcome-courtney-poster.jpg"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+
+                  Then remove the surrounding placeholder div and the text below it.
+                  ───────────────────────────────────────────────────────────── */}
+              <div style={{
+                width: 280, flexShrink: 0,
+                background: 'linear-gradient(160deg, #4f46e5 0%, #7c3aed 60%, #a855f7 100%)',
+                display: 'flex', flexDirection: 'column', alignItems: 'center',
+                justifyContent: 'center', padding: '40px 24px', gap: 16,
+              }}>
+                {/* 🎬 VIDEO PLACEHOLDER — swap this div for a <video> tag when ready */}
+                <div style={{
+                  width: 180, height: 180, borderRadius: 20,
+                  background: 'rgba(255,255,255,0.12)', border: '2px dashed rgba(255,255,255,0.35)',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center',
+                  justifyContent: 'center', gap: 8,
+                }}>
+                  <img
+                    src="/Cardinal_Mascot.png"
+                    alt="Scout"
+                    style={{ width: 90, height: 90, objectFit: 'contain' }}
+                  />
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 18, marginBottom: 2 }}>🎬</div>
+                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.75)', fontWeight: 700, letterSpacing: 0.5 }}>
+                      VIDEO COMING SOON
+                    </div>
+                  </div>
+                </div>
+                <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)', textAlign: 'center', lineHeight: 1.4, fontStyle: 'italic' }}>
+                  A welcome message from our founder
+                </div>
+              </div>
+
+              {/* Right — welcome text */}
+              <div style={{ flex: 1, padding: '40px 36px 32px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                <div>
+                  <div style={{ marginBottom: 6 }}>
+                    <span style={{ fontWeight: 900, fontSize: 15, color: '#4f46e5' }}>Homeschool</span>
+                    <span style={{ fontWeight: 900, fontSize: 15, color: '#a855f7' }}>Ready</span>
+                  </div>
+                  <h1 style={{ fontSize: 26, fontWeight: 900, color: '#1e1b4b', margin: '0 0 20px', lineHeight: 1.2 }}>
+                    Welcome to HomeschoolReady!
+                  </h1>
+                  <p style={{ fontSize: 14, color: '#4b5563', lineHeight: 1.7, marginBottom: 20 }}>
+                    We're thrilled to help you streamline your homeschool journey. The following steps will guide you through our setup process.
+                  </p>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 24 }}>
+                    {[
+                      { icon: '🎯', title: 'Tailor Activities', desc: 'Generate lessons and activity suggestions that fit your family\'s rhythm.' },
+                      { icon: '📋', title: 'Simplify Compliance', desc: 'Automate record-keeping and state-specific reporting.' },
+                      { icon: '🏡', title: 'Personalize Your Dashboard', desc: 'Create a workspace that feels like home.' },
+                    ].map(item => (
+                      <div key={item.title} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                        <div style={{
+                          width: 34, height: 34, borderRadius: 10, background: '#f5f3ff',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: 16, flexShrink: 0,
+                        }}>
+                          {item.icon}
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 13, fontWeight: 800, color: '#1e1b4b', marginBottom: 1 }}>{item.title}</div>
+                          <div style={{ fontSize: 12, color: '#6b7280', lineHeight: 1.5 }}>{item.desc}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div style={{
+                    background: '#f5f3ff', borderRadius: 12, padding: '10px 14px',
+                    fontSize: 12, color: '#6b7280', display: 'flex', alignItems: 'center', gap: 8, marginBottom: 24,
+                  }}>
+                    <span style={{ fontSize: 15 }}>⏱️</span>
+                    <span><strong style={{ color: '#4b5563' }}>Setup takes about 5–10 minutes.</strong> Take a deep breath — we're here to handle the logistics so you can focus on the learning.</span>
+                  </div>
+                </div>
+
+                <div>
+                  <button
+                    onClick={() => setShowWelcome(false)}
+                    style={{
+                      width: '100%', padding: '14px 0', borderRadius: 16,
+                      background: 'linear-gradient(90deg, #4f46e5, #7c3aed)',
+                      color: '#fff', fontWeight: 800, fontSize: 15,
+                      border: 'none', cursor: 'pointer', marginBottom: 10,
+                    }}
+                  >
+                    Let's Get Started →
+                  </button>
+                  <p style={{ textAlign: 'center', fontSize: 11, color: '#9ca3af', margin: 0 }}>
+                    ✉️ Need to step away? Just come back and log in — anything you've already confirmed is saved to your account.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ══════════════════════════════════════════════════════
             STEP 1a — School Name
         ══════════════════════════════════════════════════════ */}
-        {step === 1 && step1Sub === 'name' && (
+        {step === 1 && !showWelcome && step1Sub === 'name' && (
           <div>
             <div className="text-center mb-8">
               <div className="text-6xl mb-4">🏠</div>
@@ -1542,7 +1665,8 @@ function OnboardingInner() {
 
                 {/* NOI toggle */}
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">📬 Notice of Intent (NOI)</label>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">📬 Notice of Intent (NOI)</label>
+                  <p className="text-xs text-gray-400 mb-2">A letter filed with your school district (or state) notifying them you are homeschooling. Some states call this an Affidavit, IHIP, or Declaration of Intent — it's the same concept.</p>
                   <div className="flex gap-2">
                     <button
                       onClick={() => setComplianceNOI(true)}
@@ -1620,15 +1744,12 @@ function OnboardingInner() {
                     </div>
                     <div style={{ fontSize: 12, color: '#7c3aed', lineHeight: 1.5 }}>
                       HSLDA keeps the most up-to-date summaries for every state.{' '}
-                      <a
+                      <ExternalLink
                         href={`https://hslda.org/legal/${selectedStateName ? selectedStateName.toLowerCase().replace(/\s+/g, '-') : ''}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
                         style={{ color: '#7c3aed', fontWeight: 800, textDecoration: 'underline' }}
                       >
                         Check {selectedStateName || 'your state'} on HSLDA →
-                      </a>
-                      {' '}(opens in a new tab — come back here when you're done)
+                      </ExternalLink>
                     </div>
                   </div>
                 </div>
@@ -1729,18 +1850,19 @@ function OnboardingInner() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                       <p className="text-xs text-purple-700 leading-relaxed">
-                        These choices shown are places where you can obtain curriculum that aligns with your school's teaching style. Note: HomeschoolReady does not provide curriculum.
+                        The options listed below are external providers where you can obtain materials that align with your school's unique teaching style.
+                        <br /><br />
+                        <strong style={{ color: '#6d28d9' }}>Please Note:</strong> HomeschoolReady is a management and compliance tool; we do not provide, sell, or officially endorse any specific curriculum. Our goal is to help you organize and track the resources you choose for your family.
                       </p>
                     </div>
                   </div>
                   <div className="space-y-2 mb-8">
                     {result.curriculum.map(c => (
-                      <a
+                      <ExternalLink
                         key={c.name}
                         href={c.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-start gap-3 p-4 rounded-2xl border-2 border-gray-100 hover:border-purple-200 hover:bg-purple-50 transition-all group"
+                        className="flex items-start gap-3 p-4 rounded-2xl border-2 border-gray-100 hover:border-purple-200 hover:bg-purple-50 transition-all group w-full text-left"
+                        style={{ background: 'none' }}
                       >
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-0.5">
@@ -1756,7 +1878,7 @@ function OnboardingInner() {
                         <svg className="w-4 h-4 text-gray-300 group-hover:text-purple-500 flex-shrink-0 mt-1 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                         </svg>
-                      </a>
+                      </ExternalLink>
                     ))}
                     <p className="text-xs text-gray-400 pt-1">💡 More resources available in the <strong>Resources</strong> section after setup.</p>
                   </div>
@@ -1799,18 +1921,32 @@ function OnboardingInner() {
     <div className="bg-white rounded-2xl shadow-sm p-6 space-y-5">
 
       {/* Name */}
-      <div>
-        <label className="block text-sm font-bold text-gray-800 mb-2">
-          Child's first name <span className="text-red-500">*</span>
-        </label>
-        <input
-          type="text"
-          value={firstName}
-          onChange={e => setFirstName(e.target.value)}
-          placeholder="e.g. Emma"
-          autoFocus
-          className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-gray-900 focus:border-purple-500 focus:outline-none"
-        />
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-bold text-gray-800 mb-2">
+            First name <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="text"
+            value={firstName}
+            onChange={e => setFirstName(e.target.value)}
+            placeholder="e.g. Emma"
+            autoFocus
+            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-gray-900 focus:border-purple-500 focus:outline-none"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-bold text-gray-800 mb-2">
+            Last name <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="text"
+            value={lastName}
+            onChange={e => setLastName(e.target.value)}
+            placeholder="e.g. Johnson"
+            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-gray-900 focus:border-purple-500 focus:outline-none"
+          />
+        </div>
       </div>
 
       {/* Nickname */}
@@ -2022,7 +2158,7 @@ function OnboardingInner() {
         </button>
         <button
           onClick={saveChild}
-          disabled={!firstName.trim() || learningStyles.length === 0 || saving}
+          disabled={!firstName.trim() || !lastName.trim() || learningStyles.length === 0 || saving}
           className="flex-1 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-bold text-sm hover:opacity-90 disabled:opacity-40 transition-all"
         >
           {saving ? 'Saving...' : 'Next →'}
@@ -2096,7 +2232,7 @@ function OnboardingInner() {
                               {mi.name}
                               <span style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.4)', marginLeft: 6 }}>{mi.fullName !== mi.name ? `(${mi.fullName.replace(mi.name, '').replace(/[()]/g,'').trim()})` : ''}</span>
                             </div>
-                            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)', lineHeight: 1.5 }}>{mi.detail}</div>
+                            <div style={{ fontSize: 15, color: 'rgba(255,255,255,0.75)', lineHeight: 1.5 }}>{mi.detail}</div>
                           </div>
                           <div style={{
                             width: 22, height: 22, borderRadius: '50%', flexShrink: 0, marginTop: 2,
@@ -2280,11 +2416,11 @@ function OnboardingInner() {
                       </span>
                     </div>
                     <p className="text-sm text-gray-500 leading-relaxed mb-3">{c.desc}</p>
-                    <a href={c.url} target="_blank" rel="noopener noreferrer"
+                    <ExternalLink href={c.url}
                       className="inline-flex items-center gap-1.5 text-sm font-bold text-purple-600 border border-purple-300 rounded-xl px-4 py-2 hover:bg-purple-50 transition-all">
                       Visit website →
                       <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-                    </a>
+                    </ExternalLink>
                   </div>
                 ))}
               </div>

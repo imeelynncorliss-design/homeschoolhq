@@ -100,6 +100,7 @@ export function useAttendanceStats({
         .from('kids')
         .select('id')
         .eq('organization_id', organizationId)
+        .eq('archived', false)
 
       const allKidIds = (kidsData || []).map((k: any) => k.id)
       if (allKidIds.length === 0) {

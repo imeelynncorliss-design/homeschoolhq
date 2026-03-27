@@ -70,7 +70,7 @@ function buildTourSteps(
     bullets: [
       '📚 Subjects — see what each child is learning and all their scheduled lessons',
       '📋 Records — attendance, compliance, transcripts, reading logs, and more',
-      "💡 Resources — Teaching Styles, State Laws, Parent's Corner (with your Teaching Blueprint), and My Materials",
+      "💡 Resources — Teaching Styles, State Laws, Parent's Corner, and My Materials",
       '🔧 Tools — import curriculum, bulk schedule, plan vacations, add co-teachers',
     ],
     position: 'top',
@@ -89,16 +89,6 @@ function buildTourSteps(
     ],
     position: 'top',
   })
-
-  // Teaching Blueprint — only if the card is visible on the dashboard
-  if (hasBlueprint) {
-    steps.push({
-      targetId: 'tour-blueprint',
-      title: 'Your Teaching Blueprint',
-      content: "This card bridges your teaching style with how your child learns best — specific tips for your exact combination. Tap 'See full blueprint' to go deeper in Parent's Corner.",
-      position: 'top',
-    })
-  }
 
   // Life Happens — always
   steps.push({

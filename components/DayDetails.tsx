@@ -62,6 +62,7 @@ export default function DayDetails({ date, onClose, userId, organizationId, onEd
       .from('kids')
       .select('id, displayname, photo_url')
       .eq('user_id', userId)
+      .eq('archived', false)
 
       const kidMap: Record<string, any> = {}
       if (kids) kids.forEach((k: any) => { kidMap[k.id] = k })

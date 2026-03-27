@@ -3,18 +3,20 @@
 import { useRouter, usePathname } from 'next/navigation'
 
 const NAV_ITEMS = [
-  { id: 'home',      label: 'Dashboard', icon: '🧭', href: '/dashboard' },
-  { id: 'subjects',  label: 'Subjects',  icon: '📚', href: '/subjects'  },
-  { id: 'records',   label: 'Records',   icon: '📋', href: '/reports'   },
-  { id: 'resources', label: 'Resources', icon: '💡', href: '/resources' },
-  { id: 'tools',     label: 'Tools',     icon: '🔧', href: '/tools'     },
-  { id: 'profile',   label: 'Profile',   icon: '👤', href: '/profile'   },
+  { id: 'home',      label: 'Dashboard', icon: '🧭', href: '/dashboard'       },
+  { id: 'subjects',  label: 'Subjects',  icon: '📚', href: '/subjects'        },
+  { id: 'records',   label: 'Records',   icon: '📋', href: '/reports'         },
+  { id: 'corner',    label: 'For Parents', icon: '🪴', href: '/parents-corner' },
+  { id: 'resources', label: 'Resources', icon: '💡', href: '/resources'       },
+  { id: 'tools',     label: 'Tools',     icon: '🔧', href: '/tools'           },
+  { id: 'profile',   label: 'Profile',   icon: '👤', href: '/profile'         },
 ]
 
 const ACTIVE_MAP: Record<string, string[]> = {
   home:      ['/dashboard'],
   subjects:  ['/subjects'],
   records:   ['/reports', '/attendance', '/transcript', '/portfolio', '/compliance', '/progress', '/courses', '/assessments', '/reading-log', '/field-trips'],
+  corner:    ['/parents-corner'],
   resources: ['/resources', '/materials', '/supply-scout'],
   tools:     ['/tools', '/bulk-schedule', '/lessons', '/calendar'],
   profile:   ['/profile'],
@@ -34,11 +36,11 @@ export default function BottomNav() {
   return (
     <nav id="tour-bottom-nav" style={{
       position: 'fixed', bottom: 0, left: 0, right: 0,
-      background: '#3d3a52',
-      borderTop: '1px solid rgba(124,58,237,0.15)',
+      background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #a855f7 100%)',
+      borderTop: '1px solid rgba(255,255,255,0.1)',
       display: 'flex', zIndex: 100,
       padding: '8px 0 12px',
-      boxShadow: '0 -2px 12px rgba(79,70,229,0.08)',
+      boxShadow: '0 -4px 20px rgba(79,70,229,0.35)',
     }}>
       {NAV_ITEMS.map(item => {
         const isActive = activeId === item.id

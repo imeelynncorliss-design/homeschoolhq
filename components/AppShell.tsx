@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 import AppHeader, { AppHeaderProvider } from '@/components/layout/AppHeader'
 import BottomNav from '@/components/BottomNav'
@@ -22,6 +23,10 @@ const NO_HEADER_ROUTES = [
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const showHeader = !NO_HEADER_ROUTES.some(r => pathname === r || pathname.startsWith(r + '/'))
+
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [pathname])
 
   if (!showHeader) return <ThemeProvider>{children}</ThemeProvider>
 

@@ -326,29 +326,42 @@ ${objectivesHtml}${activitiesHtml}${materialsHtml}${assessmentHtml}
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style={{ padding: '16px 16px 96px' }}>
-      <div className="bg-white rounded-lg max-w-4xl w-full overflow-y-auto p-6" style={{ maxHeight: 'calc(100vh - 112px)' }}>
+    <div className="fixed inset-0 flex items-center justify-center z-50" style={{ background: 'rgba(0,0,0,0.55)', padding: '16px 16px 88px' }}>
+      <div className="bg-white w-full overflow-hidden flex flex-col" style={{
+        maxWidth: step === 3 ? 900 : 560,
+        maxHeight: 'calc(100vh - 104px)',
+        borderRadius: 20,
+        boxShadow: '0 24px 64px rgba(0,0,0,0.22)',
+        fontFamily: "'Nunito', sans-serif",
+      }}>
 
         {/* Header */}
-        <div className="flex justify-between items-center mb-6">
-          <div className="flex items-center gap-3">
-            <img src="/Cardinal_Mascot.png" alt="Scout" style={{ width: 40, height: 40, objectFit: 'contain' }} />
-            <h2 className="text-2xl font-bold text-gray-900">Generate a Lesson</h2>
+        <div style={{
+          background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #a855f7 100%)',
+          padding: '12px 18px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          flexShrink: 0,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <img src="/Cardinal_Mascot.png" alt="Scout" style={{ width: 28, height: 28, objectFit: 'contain' }} />
+            <h2 style={{ fontSize: 16, fontWeight: 900, color: '#fff', margin: 0 }}>Generate a Lesson with Scout</h2>
           </div>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700 text-2xl leading-none">✕</button>
+          <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 8, color: '#fff', width: 28, height: 28, cursor: 'pointer', fontSize: 15, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
         </div>
+
+        <div className="overflow-y-auto" style={{ padding: '14px 18px', flex: 1 }}>
 
         {/* ── Step 1: Who & What ── */}
         {step === 1 && (
-          <div className="space-y-4">
+          <div className="space-y-3">
 
             {/* Child */}
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">Select Student</label>
+              <label className="block text-sm font-medium text-gray-900 mb-1">Select Student</label>
               <select
                 value={formData.childId}
                 onChange={(e) => handleChildSelect(e.target.value)}
-                className="w-full border rounded-lg px-3 py-2 text-gray-900"
+                className="w-full border-2 border-gray-200 rounded-xl px-3 py-1.5 text-gray-900 focus:border-purple-500 focus:outline-none"
               >
                 <option value="">Choose a student…</option>
                 {kids.map(child => (
@@ -361,11 +374,11 @@ ${objectivesHtml}${activitiesHtml}${materialsHtml}${assessmentHtml}
 
             {/* Subject */}
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">Subject</label>
+              <label className="block text-sm font-medium text-gray-900 mb-1">Subject</label>
               <select
                 value={subjectSelect}
                 onChange={(e) => setSubjectSelect(e.target.value)}
-                className="w-full border rounded-lg px-3 py-2 text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full border-2 border-gray-200 rounded-xl px-3 py-1.5 text-gray-900 focus:border-purple-500 focus:outline-none"
               >
                 <option value="">Choose a subject…</option>
                 <optgroup label="Standard Subjects">
@@ -390,7 +403,7 @@ ${objectivesHtml}${activitiesHtml}${materialsHtml}${assessmentHtml}
                     value={subjectCustom}
                     onChange={(e) => setSubjectCustom(e.target.value)}
                     placeholder="e.g., Latin, Robotics, Home Economics"
-                    className="w-full border rounded-lg px-3 py-2 text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full border-2 border-gray-200 rounded-xl px-3 py-1.5 text-gray-900 focus:border-purple-500 focus:outline-none"
                     autoFocus
                   />
                   <p className="text-xs text-gray-500 mt-1">
@@ -403,7 +416,7 @@ ${objectivesHtml}${activitiesHtml}${materialsHtml}${assessmentHtml}
             {/* Course selector — only shown when child + subject are both selected */}
             {formData.childId && resolveSubject() && resolveSubject() !== '__custom__' && (
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-2">
+                <label className="block text-sm font-medium text-gray-900 mb-1">
                   Add to Course <span className="text-gray-400 font-normal">(optional)</span>
                 </label>
                 {loadingCourses ? (
@@ -442,7 +455,7 @@ ${objectivesHtml}${activitiesHtml}${materialsHtml}${assessmentHtml}
 
             {/* Goal / Topic */}
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">
+              <label className="block text-sm font-medium text-gray-900 mb-1">
                 Goal or Topic <span className="text-gray-400 font-normal">(what should this lesson be about?)</span>
               </label>
               <input
@@ -456,13 +469,14 @@ ${objectivesHtml}${activitiesHtml}${materialsHtml}${assessmentHtml}
 
             {/* Duration */}
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">Duration</label>
+              <label className="block text-sm font-medium text-gray-900 mb-1">Duration</label>
               <div className="flex gap-2">
                 {[15, 30, 45, 60].map(min => (
                   <button
                     key={min}
                     onClick={() => setFormData({ ...formData, duration: min })}
-                    className={`px-4 py-2 rounded-lg ${formData.duration === min ? 'bg-blue-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-900'}`}
+                    className={`px-4 py-2 rounded-lg ${formData.duration === min ? 'text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-900'}`}
+                    style={formData.duration === min ? { background: 'linear-gradient(135deg,#4f46e5,#7c3aed)' } : {}}
                   >
                     {min} min
                   </button>
@@ -473,7 +487,7 @@ ${objectivesHtml}${activitiesHtml}${materialsHtml}${assessmentHtml}
             {/* Assign To (collaborators only) */}
             {collaborators.length > 0 && (
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-2">
+                <label className="block text-sm font-medium text-gray-900 mb-1">
                   Assign To <span className="text-gray-400 font-normal">(optional)</span>
                 </label>
                 <select
@@ -491,7 +505,7 @@ ${objectivesHtml}${activitiesHtml}${materialsHtml}${assessmentHtml}
 
             {/* Date */}
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-2">Schedule For</label>
+              <label className="block text-sm font-medium text-gray-900 mb-1">Schedule For</label>
               <input
                 type="date"
                 value={formData.startDate}
@@ -507,7 +521,21 @@ ${objectivesHtml}${activitiesHtml}${materialsHtml}${assessmentHtml}
                 !subjectSelect ||
                 (subjectSelect === '__custom__' && !subjectCustom.trim())
               }
-              className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed font-semibold"
+              className="w-full py-3 rounded-xl font-bold text-sm"
+              style={{
+                background: (!formData.childId || !subjectSelect || (subjectSelect === '__custom__' && !subjectCustom.trim()))
+                  ? '#e5e7eb'
+                  : 'linear-gradient(135deg,#4f46e5 0%,#7c3aed 50%,#a855f7 100%)',
+                color: (!formData.childId || !subjectSelect || (subjectSelect === '__custom__' && !subjectCustom.trim()))
+                  ? '#9ca3af'
+                  : '#fff',
+                boxShadow: (!formData.childId || !subjectSelect || (subjectSelect === '__custom__' && !subjectCustom.trim()))
+                  ? 'none'
+                  : '0 4px 14px rgba(124,58,237,0.35)',
+                cursor: (!formData.childId || !subjectSelect || (subjectSelect === '__custom__' && !subjectCustom.trim()))
+                  ? 'not-allowed'
+                  : 'pointer',
+              }}
             >
               ✨ Generate Lesson Plans
             </button>
@@ -518,7 +546,7 @@ ${objectivesHtml}${activitiesHtml}${materialsHtml}${assessmentHtml}
         {step === 2 && loading && (
           <div className="flex flex-col items-center justify-center py-16 px-8">
             <div className="relative">
-              <div className="w-20 h-20 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+              <div className="w-20 h-20 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin"></div>
               <div className="absolute inset-0 flex items-center justify-center">
                 <img src="/Cardinal_Mascot.png" alt="Scout" style={{ width: 44, height: 44, objectFit: 'contain' }} />
               </div>
@@ -559,8 +587,8 @@ ${objectivesHtml}${activitiesHtml}${materialsHtml}${assessmentHtml}
 
             <div className="grid md:grid-cols-3 gap-4">
               {variations.map((variation, index) => (
-                <div key={index} className="border-2 rounded-lg overflow-hidden hover:border-blue-500 transition-colors bg-white shadow-sm">
-                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 border-b">
+                <div key={index} className="border-2 rounded-xl overflow-hidden hover:border-purple-400 transition-colors bg-white shadow-sm">
+                  <div className="p-4 border-b" style={{ background: 'linear-gradient(135deg,#f5f3ff,#ede9fe)' }}>
                     <h3 className="font-bold text-lg text-gray-900 mb-1">{variation.title}</h3>
                     <p className="text-sm text-gray-600">{variation.description || variation.approach}</p>
                   </div>
@@ -573,7 +601,7 @@ ${objectivesHtml}${activitiesHtml}${materialsHtml}${assessmentHtml}
                             <div key={i} className="bg-gray-50 rounded-lg p-3 border border-gray-200">
                               <div className="flex items-start justify-between gap-2 mb-1">
                                 <p className="font-medium text-sm text-gray-900">{activity.name}</p>
-                                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full whitespace-nowrap">{activity.duration}</span>
+                                <span className="text-xs px-2 py-0.5 rounded-full whitespace-nowrap" style={{ background: '#ede9fe', color: '#7c3aed' }}>{activity.duration}</span>
                               </div>
                               <p className="text-xs text-gray-600">{activity.description}</p>
                             </div>
@@ -596,7 +624,8 @@ ${objectivesHtml}${activitiesHtml}${materialsHtml}${assessmentHtml}
                     <button
                       onClick={() => saveLesson(variation)}
                       disabled={loading}
-                      className="flex-1 bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 disabled:bg-blue-400 font-semibold transition-colors"
+                      className="flex-1 text-white py-3 rounded-xl font-bold text-sm transition-colors disabled:opacity-50"
+                      style={{ background: 'linear-gradient(135deg,#4f46e5,#7c3aed)' }}
                     >
                       {loading ? 'Saving…' : 'Schedule This Lesson'}
                     </button>
@@ -612,10 +641,10 @@ ${objectivesHtml}${activitiesHtml}${materialsHtml}${assessmentHtml}
               ))}
             </div>
 
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center">
+            <div className="rounded-xl p-4 text-center" style={{ background: '#f5f3ff', border: '1px solid #ede9fe' }}>
               <p className="text-sm text-gray-600 mb-3">Don't like these options?</p>
               <div className="flex gap-3">
-                <button onClick={generateLessons} disabled={loading} className="flex-1 bg-purple-600 text-white py-3 rounded-lg hover:bg-purple-700 disabled:bg-purple-400 font-medium">
+                <button onClick={generateLessons} disabled={loading} className="flex-1 text-white py-3 rounded-xl font-bold text-sm disabled:opacity-50" style={{ background: 'linear-gradient(135deg,#4f46e5,#7c3aed)' }}>
                   {loading ? '🔄 Regenerating…' : '🔄 Try Different Options'}
                 </button>
                 <button onClick={() => setStep(1)} className="flex-1 border border-gray-300 py-3 rounded-lg hover:bg-gray-50 text-gray-900">← Change Settings</button>
@@ -644,7 +673,7 @@ ${objectivesHtml}${activitiesHtml}${materialsHtml}${assessmentHtml}
               </select>
             </div>
             <div className="flex gap-2">
-              <button onClick={saveAdaptedLesson} disabled={!adaptTargetChildId} className="flex-1 bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed">
+              <button onClick={saveAdaptedLesson} disabled={!adaptTargetChildId} className="flex-1 text-white py-3 rounded-xl font-bold disabled:bg-gray-300 disabled:cursor-not-allowed" style={{ background: 'linear-gradient(135deg,#4f46e5,#7c3aed)' }}>
                 Save for {adaptTargetChildId ? kids.find(c => c.id === adaptTargetChildId)?.displayname : 'Student'}
               </button>
               <button onClick={() => { setShowAdaptModal(false); setAdaptTargetChildId(''); }} className="flex-1 border border-gray-300 py-3 rounded-lg hover:bg-gray-50 text-gray-900">Cancel</button>
@@ -653,7 +682,8 @@ ${objectivesHtml}${activitiesHtml}${materialsHtml}${assessmentHtml}
           </div>
         )}
 
-      </div>
+        </div>{/* end scrollable content */}
+      </div>{/* end modal card */}
     </div>
   );
 }

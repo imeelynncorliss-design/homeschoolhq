@@ -80,9 +80,14 @@ export default function CompliancePage() {
         return
       }
   
-      const { data: { user } } = await supabase.auth.getUser()
-      const parentName = user?.user_metadata?.full_name || 'Parent'
-      
+      const [{ data: { user } }, { data: orgSettings }] = await Promise.all([
+        supabase.auth.getUser(),
+        supabase.from('organization_settings').select('school_name').eq('organization_id', organizationId!).maybeSingle(),
+      ])
+      const parentName = user?.user_metadata?.full_name
+        || (user?.email ? user.email.split('@')[0].replace(/[._+]/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()) : 'Parent')
+      const organizationName = orgSettings?.school_name || 'My Homeschool'
+
       await generateComplianceReport({
         complianceData,
         settings: {
@@ -92,7 +97,7 @@ export default function CompliancePage() {
           school_year_end_date: currentSettings.school_year_end_date,
         },
         familyHealthScore,
-        organizationName: 'HomeschoolReady Family',
+        organizationName,
         parentName
       })
       
@@ -128,6 +133,7 @@ export default function CompliancePage() {
         .from('kids')
         .select('*')
         .eq('organization_id', orgId)
+        .eq('archived', false)
         .order('created_at', { ascending: true })
 
       if (kidsData) setKids(kidsData)
@@ -136,15 +142,42 @@ export default function CompliancePage() {
     loadData()
   }, [router])
 
-  // Load settings and set state
+  // Load settings and set state — fall back to organizations.state if compliance settings missing
   useEffect(() => {
-    if (settings) {
-      setSelectedState(settings.state_code || '')
-      setSchoolYearStart(settings.school_year_start_date || '')
-      setSchoolYearEnd(settings.school_year_end_date || '')
-      setShowStateSelector(!settings.state_code)
+    if (!settingsLoading && organizationId) {
+      if (settings && settings.state_code) {
+        setSelectedState(settings.state_code)
+        setSchoolYearStart(settings.school_year_start_date || '')
+        setSchoolYearEnd(settings.school_year_end_date || '')
+        setShowStateSelector(false)
+      } else {
+        // Fall back: read state directly from organizations table
+        supabase
+          .from('organizations')
+          .select('state')
+          .eq('id', organizationId)
+          .maybeSingle()
+          .then(async ({ data: org }: { data: { state: string | null } | null }) => {
+            const fallbackState = org?.state || ''
+            if (fallbackState) {
+              setSelectedState(fallbackState)
+              // Auto-save so compliance page works going forward
+              if (organizationId) {
+                await supabase.from('user_compliance_settings').upsert({
+                  organization_id: organizationId,
+                  state_code: fallbackState,
+                  state_name: fallbackState,
+                  updated_at: new Date().toISOString(),
+                }, { onConflict: 'organization_id' })
+                await refreshSettings()
+              }
+            } else {
+              setShowStateSelector(true)
+            }
+          })
+      }
     }
-  }, [settings])
+  }, [settings, settingsLoading, organizationId])
 
   // Save state configuration
   async function handleSaveState() {
@@ -168,6 +201,12 @@ export default function CompliancePage() {
         required_annual_hours: template?.required_hours || 0,
         template_source: 'state_template',
       }
+
+      // Keep organizations.state in sync so profile reflects the same state
+      await supabase
+        .from('organizations')
+        .update({ state: selectedState })
+        .eq('id', organizationId)
 
       if (settings?.id) {
         await supabase
@@ -345,103 +384,144 @@ export default function CompliancePage() {
     )
   }
 
-  if (!settings || showStateSelector) {
-    return (
-      <div className="hr-page" style={{ padding: 32 }}>
-        <div className="max-w-3xl mx-auto">
-          <div className="bg-white rounded-2xl shadow-lg p-8">
-            <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <ShieldCheck className="text-indigo-600" size={32} />
+  // Compliance settings modal (shown on first setup or when editing)
+  const settingsModal = (!settings || showStateSelector) && (
+    <div
+      style={{
+        position: 'fixed', inset: 0, zIndex: 50,
+        background: 'rgba(0,0,0,0.45)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: '16px',
+      }}
+      onClick={(e) => { if (e.target === e.currentTarget && settings) setShowStateSelector(false) }}
+    >
+      <div style={{
+        background: '#fff', borderRadius: 20, width: '100%', maxWidth: 480,
+        maxHeight: '90vh', overflowY: 'auto',
+        boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
+        padding: '24px 24px 20px',
+        fontFamily: "'Nunito', sans-serif",
+      }}>
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#ede9fe', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <ShieldCheck size={20} className="text-purple-600" />
             </div>
-            <h2 className="text-2xl font-black text-gray-900 mb-2 text-center">
-              Configure Compliance Settings
-            </h2>
-            <p className="text-gray-600 mb-6 text-center">
-              Select your state and school year to start tracking compliance
-            </p>
-
-            <div className="space-y-6">
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">Your State</label>
-                <select
-                  value={selectedState}
-                  onChange={(e) => setSelectedState(e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl text-gray-900 font-medium focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 [&>option]:text-gray-900"
-                >
-                  <option value="">Select your state...</option>
-                  {templates.map(t => (
-                    <option key={t.state_code} value={t.state_code}>
-                      {t.state_name} ({t.state_code})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {template && (
-                <div className="p-4 bg-blue-50 rounded-xl border-2 border-blue-200">
-                  <h3 className="font-bold text-gray-900 mb-2">{template.state_name} Requirements</h3>
-                  <div className="space-y-1 text-sm text-gray-700">
-                    {template.required_days > 0 && (
-                      <p>• Days: {template.required_days} ({template.day_requirement_type})</p>
-                    )}
-                    {template.required_hours > 0 && (
-                      <p>• Hours: {template.required_hours} ({template.hour_requirement_type})</p>
-                    )}
-                    {template.parental_qualifications && (
-                      <p>• Parent Qualifications: {template.parental_qualifications}</p>
-                    )}
-                  </div>
-                  <a
-                    href={template.official_source_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 mt-2 text-sm text-blue-600 hover:text-blue-800 font-medium"
-                  >
-                    Verify at {template.official_source_name}
-                    <ExternalLink size={14} />
-                  </a>
-                </div>
-              )}
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">School Year Start</label>
-                  <input
-                    type="date"
-                    value={schoolYearStart}
-                    onChange={(e) => setSchoolYearStart(e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl text-gray-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">School Year End</label>
-                  <input
-                    type="date"
-                    value={schoolYearEnd}
-                    onChange={(e) => setSchoolYearEnd(e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl text-gray-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  />
-                </div>
-              </div>
-
-              {template && (
-                <div className="p-4 bg-yellow-50 border-2 border-yellow-200 rounded-xl">
-                  <p className="text-xs text-gray-700 italic">
-                    ⚠️ {template.disclaimer_text}
-                  </p>
-                </div>
-              )}
-
-              <button
-                onClick={handleSaveState}
-                disabled={saving || !selectedState || !schoolYearStart || !schoolYearEnd}
-                className="w-full px-6 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {saving ? 'Saving...' : 'Save & Continue'}
-              </button>
+            <div>
+              <h2 style={{ margin: 0, fontSize: 16, fontWeight: 900, color: '#1a1a2e' }}>Compliance Settings</h2>
+              <p style={{ margin: 0, fontSize: 12, color: '#6b7280', fontWeight: 600 }}>State &amp; school year</p>
             </div>
           </div>
+          {settings && (
+            <button
+              onClick={() => setShowStateSelector(false)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: '#9ca3af', padding: 4, lineHeight: 1 }}
+            >
+              ✕
+            </button>
+          )}
         </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {/* State selector */}
+          <div>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 800, color: '#4c1d95', letterSpacing: 0.5, marginBottom: 6 }}>YOUR STATE</label>
+            <select
+              value={selectedState}
+              onChange={(e) => setSelectedState(e.target.value)}
+              style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #d1d5db', borderRadius: 10, fontSize: 14, fontWeight: 600, color: '#1a1a2e', fontFamily: "'Nunito', sans-serif", boxSizing: 'border-box' }}
+            >
+              <option value="">Select your state...</option>
+              {templates.map(t => (
+                <option key={t.state_code} value={t.state_code}>
+                  {t.state_name} ({t.state_code})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* State requirements summary */}
+          {template && (
+            <div style={{ padding: '10px 12px', background: '#faf5ff', borderRadius: 10, border: '1.5px solid #ddd6fe' }}>
+              <p style={{ margin: '0 0 4px', fontSize: 13, fontWeight: 800, color: '#5b21b6' }}>{template.state_name} Requirements</p>
+              <div style={{ fontSize: 12, color: '#374151', lineHeight: 1.6 }}>
+                {template.required_days > 0 && <span>📅 {template.required_days} days &nbsp;</span>}
+                {template.required_hours > 0 && <span>⏱ {template.required_hours} hours &nbsp;</span>}
+              </div>
+              <a
+                href={template.official_source_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 4, fontSize: 11, color: '#7c3aed', fontWeight: 700 }}
+              >
+                Verify at {template.official_source_name} <ExternalLink size={11} />
+              </a>
+            </div>
+          )}
+
+          {/* School year dates */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <div>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 800, color: '#4c1d95', letterSpacing: 0.5, marginBottom: 6 }}>YEAR START</label>
+              <input
+                type="date"
+                value={schoolYearStart}
+                onChange={(e) => setSchoolYearStart(e.target.value)}
+                style={{ width: '100%', padding: '10px 10px', border: '1.5px solid #d1d5db', borderRadius: 10, fontSize: 13, fontWeight: 600, color: '#1a1a2e', fontFamily: "'Nunito', sans-serif", boxSizing: 'border-box' }}
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 800, color: '#4c1d95', letterSpacing: 0.5, marginBottom: 6 }}>YEAR END</label>
+              <input
+                type="date"
+                value={schoolYearEnd}
+                onChange={(e) => setSchoolYearEnd(e.target.value)}
+                style={{ width: '100%', padding: '10px 10px', border: '1.5px solid #d1d5db', borderRadius: 10, fontSize: 13, fontWeight: 600, color: '#1a1a2e', fontFamily: "'Nunito', sans-serif", boxSizing: 'border-box' }}
+              />
+            </div>
+          </div>
+
+          {/* Disclaimer */}
+          {template?.disclaimer_text && (
+            <p style={{ margin: 0, fontSize: 11, color: '#6b7280', fontStyle: 'italic', lineHeight: 1.5 }}>
+              ⚠️ {template.disclaimer_text}
+            </p>
+          )}
+
+          {/* Buttons */}
+          <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+            {settings && (
+              <button
+                onClick={() => setShowStateSelector(false)}
+                style={{ flex: 1, padding: '12px 0', borderRadius: 12, border: '1.5px solid #e5e7eb', background: '#f9fafb', color: '#374151', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}
+              >
+                Cancel
+              </button>
+            )}
+            <button
+              onClick={handleSaveState}
+              disabled={saving || !selectedState || !schoolYearStart || !schoolYearEnd}
+              style={{
+                flex: 2, padding: '12px 0', borderRadius: 12, border: 'none',
+                background: (saving || !selectedState || !schoolYearStart || !schoolYearEnd) ? '#c4b5fd' : 'linear-gradient(135deg, #7c3aed, #a855f7)',
+                color: '#fff', fontSize: 14, fontWeight: 800,
+                cursor: (saving || !selectedState || !schoolYearStart || !schoolYearEnd) ? 'not-allowed' : 'pointer',
+                fontFamily: "'Nunito', sans-serif",
+              }}
+            >
+              {saving ? 'Saving…' : 'Save & Continue'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+
+  if (!settings) {
+    return (
+      <div className="hr-page" style={{ minHeight: '100vh' }}>
+        {settingsModal}
       </div>
     )
   }
@@ -451,8 +531,28 @@ export default function CompliancePage() {
     : null
 
   return (
+    <>
     <div className="hr-page" style={{ paddingBottom: 100 }}>
       <div style={{ maxWidth: 1120, margin: '0 auto', padding: '24px 20px 0' }}>
+
+        {/* Settings row */}
+        <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'flex-end' }}>
+          <button
+            onClick={() => {
+              setSchoolYearStart(settings?.school_year_start_date || '')
+              setSchoolYearEnd(settings?.school_year_end_date || '')
+              setShowStateSelector(true)
+            }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '8px 16px', borderRadius: 10, border: '1.5px solid rgba(124,58,237,0.3)',
+              background: '#faf5ff', color: '#7c3aed', fontWeight: 700, fontSize: 13,
+              cursor: 'pointer', fontFamily: "'Nunito', sans-serif",
+            }}
+          >
+            ⚙️ Change State / School Year
+          </button>
+        </div>
 
         {/* View Mode Toggle */}
         <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'center' }}>
@@ -641,7 +741,7 @@ export default function CompliancePage() {
                     onClick={() => setSelectedKidId(data.kid.id)}
                     className={`flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all flex-shrink-0 ${
                       selectedKidId === data.kid.id
-                        ? 'bg-indigo-100 border-2 border-indigo-600 text-indigo-900'
+                        ? 'bg-purple-100 border-2 border-purple-600 text-purple-900'
                         : 'bg-gray-50 border-2 border-transparent text-gray-700 hover:bg-gray-100'
                     }`}
                   >
@@ -686,7 +786,7 @@ export default function CompliancePage() {
               {selectedKidData.requiredDays > 0 && (
                 <div className="bg-white rounded-2xl border-2 border-gray-200 p-6">
                   <div className="flex items-center gap-2 mb-3">
-                    <Calendar size={20} className="text-indigo-600" />
+                    <Calendar size={20} className="text-purple-600" />
                     <h3 className="text-sm font-black text-gray-600 uppercase">School Days</h3>
                   </div>
                   <div className="text-5xl font-black text-gray-900">{selectedKidData.totalDays}</div>
@@ -704,7 +804,7 @@ export default function CompliancePage() {
               {selectedKidData.requiredHours > 0 && (
                 <div className="bg-white rounded-2xl border-2 border-gray-200 p-6">
                   <div className="flex items-center gap-2 mb-3">
-                    <Clock size={20} className="text-indigo-600" />
+                    <Clock size={20} className="text-purple-600" />
                     <h3 className="text-sm font-black text-gray-600 uppercase">Instructional Hours</h3>
                   </div>
                   <div className="text-5xl font-black text-gray-900">{selectedKidData.totalHours}</div>
@@ -750,5 +850,8 @@ export default function CompliancePage() {
         )}
       </div>
     </div>
+
+    {settingsModal}
+    </>
   )
 }

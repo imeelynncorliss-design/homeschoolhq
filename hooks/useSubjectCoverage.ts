@@ -182,6 +182,7 @@ export function useKids() {
           .from('kids')
           .select('id, displayname')
           .eq('user_id', user.id)
+          .eq('archived', false)
           .order('displayname')
 
         if (data) setKids(data.map((k: any) => ({

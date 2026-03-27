@@ -26,6 +26,7 @@ function CoursesContent() {
       .from('kids')
       .select('*')
       .eq('organization_id', orgId)
+      .eq('archived', false)
       .order('created_at', { ascending: false })
 
     if (data && data.length > 0) {

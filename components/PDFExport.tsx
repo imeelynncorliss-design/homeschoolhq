@@ -39,23 +39,55 @@ export default function PDFExport({
 
   async function generatePDF() {
     setIsGenerating(true)
-    
+
     try {
       // Dynamic import to avoid SSR issues
       const jsPDF = (await import('jspdf')).default
       const autoTable = (await import('jspdf-autotable')).default
-      
+
       const doc = new jsPDF()
       let yPos = 20
 
-      // Header
-      doc.setFontSize(20)
+      // ── HomeschoolReady branded header ──
+      try {
+        const img = new Image()
+        img.src = window.location.origin + '/Cardinal_Mascot.png'
+        await new Promise<void>(resolve => { img.onload = () => resolve(); img.onerror = () => resolve() })
+        const canvas = document.createElement('canvas')
+        canvas.width = img.width || 100; canvas.height = img.height || 100
+        canvas.getContext('2d')?.drawImage(img, 0, 0)
+        const imgData = canvas.toDataURL('image/png')
+        doc.addImage(imgData, 'PNG', 14, yPos - 4, 16, 16)
+      } catch { /* logo optional */ }
+
+      doc.setFontSize(16)
       doc.setFont('helvetica', 'bold')
+      doc.setTextColor(28, 27, 75)
+      doc.text('Homeschool', 34, yPos + 2)
+      const hw = doc.getTextWidth('Homeschool')
+      doc.setTextColor(124, 58, 237)
+      doc.text('Ready', 34 + hw, yPos + 2)
+      doc.setTextColor(156, 163, 175)
+      doc.setFontSize(8)
+      doc.setFont('helvetica', 'normal')
+      doc.text('homeschoolready.app', 34, yPos + 8)
+
+      // Purple divider
+      doc.setDrawColor(124, 58, 237)
+      doc.setLineWidth(0.5)
+      doc.line(14, yPos + 14, 196, yPos + 14)
+      yPos += 22
+
+      // Report title
+      doc.setFontSize(18)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(28, 27, 75)
       doc.text('Attendance Report', 105, yPos, { align: 'center' })
-      
-      yPos += 10
+
+      yPos += 8
       doc.setFontSize(12)
       doc.setFont('helvetica', 'normal')
+      doc.setTextColor(55, 65, 81)
       doc.text(organizationName, 105, yPos, { align: 'center' })
       
       if (schoolYear) {
@@ -236,14 +268,14 @@ export default function PDFExport({
         })
       }
 
-      // Footer on last page
+      // Footer on every page
       const pageCount = doc.getNumberOfPages()
       for (let i = 1; i <= pageCount; i++) {
         doc.setPage(i)
         doc.setFontSize(8)
-        doc.setTextColor(128)
+        doc.setTextColor(156, 163, 175)
         doc.text(
-          `Page ${i} of ${pageCount}`,
+          `HomeschoolReady · homeschoolready.app · Page ${i} of ${pageCount}`,
           105,
           doc.internal.pageSize.height - 10,
           { align: 'center' }
@@ -271,7 +303,7 @@ export default function PDFExport({
 
       <button
         onClick={() => setShowOptions(!showOptions)}
-        className="mb-4 text-sm text-blue-600 hover:text-blue-800 font-medium"
+        className="mb-4 text-sm text-purple-600 hover:text-purple-800 font-medium"
       >
         {showOptions ? '▼' : '▶'} Export Options
       </button>
@@ -283,7 +315,7 @@ export default function PDFExport({
               type="checkbox"
               checked={includeDetails}
               onChange={(e) => setIncludeDetails(e.target.checked)}
-              className="w-4 h-4 text-blue-600 rounded"
+              className="w-4 h-4 text-purple-600 rounded"
             />
             <span className="text-sm text-gray-700">Include detailed day-by-day log</span>
           </label>
@@ -293,7 +325,7 @@ export default function PDFExport({
               type="checkbox"
               checked={includeMonthly}
               onChange={(e) => setIncludeMonthly(e.target.checked)}
-              className="w-4 h-4 text-blue-600 rounded"
+              className="w-4 h-4 text-purple-600 rounded"
             />
             <span className="text-sm text-gray-700">Include monthly breakdown</span>
           </label>
@@ -315,7 +347,7 @@ export default function PDFExport({
         <button
           onClick={generatePDF}
           disabled={isGenerating || days.length === 0}
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-medium flex items-center gap-2"
+          className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-medium flex items-center gap-2"
         >
           {isGenerating ? (
             <>

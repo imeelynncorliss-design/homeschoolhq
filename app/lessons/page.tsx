@@ -16,6 +16,7 @@ import { formatLessonDescription } from '@/lib/formatLessonDescription'
 import { DEFAULT_HOLIDAYS_2025_2026 } from '@/app/utils/holidayUtils'
 import { getOrganizationId } from '@/src/lib/getOrganizationId'
 import GenerateAssessmentModal from '@/components/GenerateAssessmentModal'
+import UpgradeModal from '@/components/UpgradeModal'
 import { useAppHeader } from '@/components/layout/AppHeader'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -66,6 +67,7 @@ function LessonsContent() {
   const [userTier, setUserTier] = useState<UserTier>('FREE')
   const [vacationPeriods, setVacationPeriods] = useState<any[]>([])
   const [isCoTeacher, setIsCoTeacher] = useState(false)
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const [stateCode, setStateCode] = useState<string | null>(null)
   const [activeKidId, setActiveKidId] = useState<string | null>(null)
 
@@ -137,6 +139,7 @@ function LessonsContent() {
       .from('kids')
       .select('*')
       .eq('organization_id', resolvedOrgId)
+      .eq('archived', false)
       .order('created_at', { ascending: false })
 
     if (kidsData) {
@@ -168,7 +171,14 @@ function LessonsContent() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/'); return }
       setUser(user)
-      setUserTier(getTierForTesting())
+
+      // Read actual subscription tier from DB, fall back to dev toggle if no subscription row
+      const { data: subData } = await supabase
+        .from('user_subscriptions')
+        .select('tier')
+        .eq('user_id', user.id)
+        .maybeSingle()
+      setUserTier((subData?.tier as UserTier) || getTierForTesting())
 
       const { orgId: resolvedOrgId, isCoTeacher: coTeacher } = await getOrganizationId(user.id)
       if (!resolvedOrgId) { router.push('/onboarding'); return }
@@ -617,10 +627,10 @@ function LessonsContent() {
                 <button
                   onClick={() => {
                     setShowAddLessonSheet(false)
-                    if (hasFeature('ai_generation')) {
+                    if (hasFeature('ai_lesson_generation')) {
                       setShowGenerator(true)
                     } else {
-                      router.push('/pricing')
+                      setShowUpgradeModal(true)
                     }
                   }}
                   style={{
@@ -630,10 +640,10 @@ function LessonsContent() {
                     fontFamily: "'Nunito', sans-serif",
                   }}>
                   <div style={{ fontSize: 15, fontWeight: 800, color: '#7c3aed', marginBottom: 3 }}>
-                    ✨ Generate with Scout{!hasFeature('ai_generation') ? ' 🔒' : ''}
+                    ✨ Generate with Scout{!hasFeature('ai_lesson_generation') ? ' 🔒' : ''}
                   </div>
                   <div style={{ fontSize: 12, fontWeight: 600, color: '#6b7280' }}>
-                    {hasFeature('ai_generation') ? 'Let Scout create a lesson plan for you' : 'Pro feature — upgrade to unlock Scout-generated plans'}
+                    {hasFeature('ai_lesson_generation') ? 'Let Scout create a lesson plan for you' : 'Pro feature — upgrade to unlock Scout-generated plans'}
                   </div>
                 </button>
 
@@ -1108,6 +1118,14 @@ function LessonsContent() {
             setShowImporter(false)
             loadData(user.id, organizationId)
           }}
+        />
+      )}
+
+      {/* ── Upgrade Modal ────────────────────────────────────────────── */}
+      {showUpgradeModal && (
+        <UpgradeModal
+          featureName="Generate with Scout"
+          onClose={() => setShowUpgradeModal(false)}
         />
       )}
 

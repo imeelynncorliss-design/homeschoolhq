@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useTheme } from '@/contexts/ThemeContext'
 
 interface AttendanceGoalsProps {
   totalDays: number
@@ -86,9 +85,6 @@ export default function AttendanceGoals({
     saveGoals({ ...goals, customGoals: updatedGoals })
   }
 
-  const { isDark } = useTheme()
-  const darkCardStyle: React.CSSProperties = isDark ? { backgroundColor: 'var(--hr-bg-surface)', borderColor: 'rgba(255,255,255,0.12)' } : {}
-
   const daysProgress = (totalDays / goals.targetDays) * 100
   const hoursProgress = goals.targetHours ? (totalHours / goals.targetHours) * 100 : undefined
 
@@ -135,7 +131,7 @@ export default function AttendanceGoals({
 
       {/* Edit Mode */}
       {isEditing && (
-        <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200 space-y-4" style={darkCardStyle}>
+        <div className="mb-6 p-4 bg-purple-50 rounded-lg border border-purple-200 space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Target School Days *
@@ -186,10 +182,10 @@ export default function AttendanceGoals({
             {totalDays} / {goals.targetDays} days
           </span>
         </div>
-        <div className="w-full bg-gray-200 rounded-full h-4 mb-2" style={isDark ? { backgroundColor: 'rgba(255,255,255,0.12)' } : {}}>
+        <div className="w-full bg-gray-200 rounded-full h-4 mb-2">
           <div
             className={`h-4 rounded-full transition-all ${
-              daysProgress >= 100 ? 'bg-green-600' : 'bg-blue-600'
+              daysProgress >= 100 ? 'bg-green-600' : 'bg-purple-600'
             }`}
             style={{ width: `${Math.min(daysProgress, 100)}%` }}
           />
@@ -210,7 +206,7 @@ export default function AttendanceGoals({
               {totalHours.toFixed(1)} / {goals.targetHours} hours
             </span>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-4 mb-2" style={isDark ? { backgroundColor: 'rgba(255,255,255,0.12)' } : {}}>
+          <div className="w-full bg-gray-200 rounded-full h-4 mb-2">
             <div
               className={`h-4 rounded-full transition-all ${
                 hoursProgress >= 100 ? 'bg-green-600' : 'bg-purple-600'
@@ -231,7 +227,7 @@ export default function AttendanceGoals({
       )}
 
       {/* Estimated Completion */}
-      <div className="mb-6 p-3 bg-gray-50 rounded-lg" style={darkCardStyle}>
+      <div className="mb-6 p-3 bg-gray-50 rounded-lg">
         <div className="flex items-center justify-between">
           <span className="text-sm text-gray-600">Estimated Completion:</span>
           <span className="font-semibold text-gray-900">{getEstimatedCompletion()}</span>
@@ -268,7 +264,7 @@ export default function AttendanceGoals({
             />
             <button
               onClick={addCustomGoal}
-              className="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm font-medium"
+              className="px-3 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 text-sm font-medium"
             >
               Add
             </button>
@@ -287,7 +283,6 @@ export default function AttendanceGoals({
                   className={`flex items-center justify-between p-2 rounded ${
                     isComplete ? 'bg-green-50' : 'bg-gray-50'
                   }`}
-                  style={darkCardStyle}
                 >
                   <div className="flex items-center gap-2 flex-1">
                     <button
@@ -295,7 +290,7 @@ export default function AttendanceGoals({
                       className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
                         isComplete
                           ? 'bg-green-600 border-green-600 text-white'
-                          : 'border-gray-300 hover:border-blue-500'
+                          : 'border-gray-300 hover:border-purple-500'
                       }`}
                     >
                       {isComplete && '✓'}
@@ -325,11 +320,11 @@ export default function AttendanceGoals({
 
       {/* Motivational Message */}
       {daysProgress >= 100 && (!goals.targetHours || (hoursProgress && hoursProgress >= 100)) && (
-        <div className="mt-6 p-4 bg-green-50 rounded-lg border-2 border-green-200" style={darkCardStyle}>
+        <div className="mt-6 p-4 bg-green-50 rounded-lg border-2 border-green-200">
           <div className="flex items-start gap-3">
             <span className="text-3xl">🎉</span>
             <div>
-              <p className={`font-semibold ${isDark ? 'text-green-400' : 'text-green-900'}`}>Congratulations!</p>
+              <p className="font-semibold text-green-900">Congratulations!</p>
               <p className="text-sm text-gray-700 mt-1">
                 You've met all your attendance goals for the year! Keep up the great work!
               </p>

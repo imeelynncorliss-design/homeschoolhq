@@ -1,6 +1,8 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
+import { useState } from 'react'
+import UpgradeModal from '@/components/UpgradeModal'
 
 interface Lesson {
   id: string
@@ -44,6 +46,7 @@ export default function KidQuickPanel({
   viewMode
 }: KidQuickPanelProps) {
   const router = useRouter()
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false)
 
   const totalLessons = lessons.length
   const completedLessons = lessons.filter(l => l.status === 'completed').length
@@ -54,6 +57,7 @@ export default function KidQuickPanel({
   const totalHours = (totalMinutes / 60).toFixed(1)
 
   return (
+    <>
     <div className="bg-white rounded-lg border border-gray-200 shadow-sm px-4 py-3">
 
       {/* Main row: avatar + name/stats + desktop buttons */}
@@ -115,7 +119,7 @@ export default function KidQuickPanel({
             </button>
           ) : (
             <button
-              onClick={() => router.push('/pricing')}
+              onClick={() => setShowUpgradeModal(true)}
               className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-gray-50 text-gray-400 border border-gray-200 cursor-not-allowed flex items-center gap-1"
               title="Upgrade to Pro"
             >
@@ -174,7 +178,7 @@ export default function KidQuickPanel({
             📊 Coverage
           </button>
         ) : (
-          <button onClick={() => router.push('/pricing')} className="flex-1 py-1.5 rounded-lg text-xs font-semibold bg-gray-50 text-gray-400 border border-gray-200 text-center">
+          <button onClick={() => setShowUpgradeModal(true)} className="flex-1 py-1.5 rounded-lg text-xs font-semibold bg-gray-50 text-gray-400 border border-gray-200 text-center">
             📊 Coverage 🔒
           </button>
         )}
@@ -196,5 +200,12 @@ export default function KidQuickPanel({
         </button>
       </div>
     </div>
+    {showUpgradeModal && (
+      <UpgradeModal
+        featureName="Standards Coverage"
+        onClose={() => setShowUpgradeModal(false)}
+      />
+    )}
+    </>
   )
 }

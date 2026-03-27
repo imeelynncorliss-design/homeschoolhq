@@ -51,6 +51,7 @@ interface Kid {
   subjects: string[]
   learning_style?: string | null   // comma-separated e.g. "visual, aural"
   mi_profile?: string[] | null
+  archived?: boolean
 }
 
 // ─── Bottom Nav ───────────────────────────────────────────────────────────────
@@ -98,6 +99,9 @@ function ProfileContent() {
   const [editingKid,     setEditingKid]     = useState<any | null>(null)
   const [addingKid,      setAddingKid]      = useState(false)
   const [orgId,          setOrgId]          = useState<string | null>(null)
+  const [kidMenuOpen,    setKidMenuOpen]    = useState<string | null>(null)
+  const [showArchived,   setShowArchived]   = useState(false)
+  const [savingKid,      setSavingKid]      = useState(false)
 
   useEffect(() => {
     const init = async () => {
@@ -131,7 +135,7 @@ function ProfileContent() {
           .eq('organization_id', orgId)
           .maybeSingle(),
         supabase.from('kids')
-          .select('id, displayname, grade, learning_style, mi_profile')
+          .select('id, displayname, grade, learning_style, mi_profile, archived')
           .eq('organization_id', orgId)
           .order('displayname'),
         supabase.from('user_organizations')
@@ -188,7 +192,7 @@ function ProfileContent() {
           subsByKid[row.kid_id].add(row.subject)
         }
 
-        setKids(kidsData.map((k: { id: string; displayname: string; grade?: string; learning_style?: string | null; mi_profile?: string[] }) => ({
+        setKids(kidsData.map((k: { id: string; displayname: string; grade?: string; learning_style?: string | null; mi_profile?: string[]; archived?: boolean }) => ({
           ...k,
           subjects: subsByKid[k.id] ? Array.from(subsByKid[k.id]).slice(0, 5) : [],
         })))
@@ -245,24 +249,35 @@ function ProfileContent() {
   }
 
   const handleAddKid = async (data: any) => {
-    if (!orgId) return
-    const { photoFile, id: _id, ...fields } = data
-    const { data: newKid } = await supabase
-      .from('kids')
-      .insert({ ...fields, organization_id: orgId })
-      .select('id, displayname, grade')
-      .single()
-    if (newKid && photoFile) {
-      const ext  = photoFile.name.split('.').pop()
-      const path = `kids/${newKid.id}/avatar.${ext}`
-      await supabase.storage.from('avatars').upload(path, photoFile, { upsert: true })
-      const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path)
-      await supabase.from('kids').update({ photo_url: publicUrl }).eq('id', newKid.id)
+    if (!orgId || savingKid) return
+    setSavingKid(true)
+    try {
+      const { photoFile, id: _id, ...fields } = data
+      const { data: newKid } = await supabase
+        .from('kids')
+        .insert({ ...fields, organization_id: orgId })
+        .select('id, displayname, grade')
+        .single()
+      if (newKid && photoFile) {
+        const ext  = photoFile.name.split('.').pop()
+        const path = `kids/${newKid.id}/avatar.${ext}`
+        await supabase.storage.from('avatars').upload(path, photoFile, { upsert: true })
+        const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path)
+        await supabase.from('kids').update({ photo_url: publicUrl }).eq('id', newKid.id)
+      }
+      if (newKid) {
+        setKids(prev => [...prev, { id: newKid.id, displayname: newKid.displayname, grade: newKid.grade, subjects: [] }])
+      }
+      setAddingKid(false)
+    } finally {
+      setSavingKid(false)
     }
-    if (newKid) {
-      setKids(prev => [...prev, { id: newKid.id, displayname: newKid.displayname, grade: newKid.grade, subjects: [] }])
-    }
-    setAddingKid(false)
+  }
+
+  const handleArchiveKid = async (kidId: string, archive: boolean) => {
+    await supabase.from('kids').update({ archived: archive }).eq('id', kidId)
+    setKids(prev => prev.map(k => k.id === kidId ? { ...k, archived: archive } : k))
+    setKidMenuOpen(null)
   }
 
   const tierInfo  = TIER_INFO[tier]
@@ -278,6 +293,10 @@ function ProfileContent() {
 
   return (
     <>
+    {/* Close kid menu on backdrop click */}
+    {kidMenuOpen && (
+      <div style={{ position: 'fixed', inset: 0, zIndex: 40 }} onClick={() => setKidMenuOpen(null)} />
+    )}
     <div className="hr-page" style={{ fontFamily: "'Nunito', sans-serif", paddingBottom: 88 }}>
       <style>{`.profile-kid-row:hover { background: rgba(124,58,237,0.04) !important; }`}</style>
 
@@ -488,18 +507,17 @@ function ProfileContent() {
           CHILDREN
         </div>
         <div className="hr-card" style={{ marginBottom: 20, overflow: 'hidden' }}>
-          {kids.map((kid, idx) => {
+          {kids.filter(k => !k.archived).map((kid, idx) => {
             const color = KID_COLORS[idx % KID_COLORS.length]
-            const grade = kid.grade
-            const subjectLine = kid.subjects.join(', ')
-            const subtitle = [grade, subjectLine].filter(Boolean).join(' · ')
+            const subtitle = [kid.grade, kid.subjects.join(', ')].filter(Boolean).join(' · ')
+            const menuOpen = kidMenuOpen === kid.id
             return (
               <div key={kid.id} className="profile-kid-row"
                 style={{
                   display: 'flex', alignItems: 'center', gap: 14,
                   padding: '14px 20px',
                   borderBottom: '1px solid rgba(0,0,0,0.06)',
-                  transition: 'background 0.1s',
+                  transition: 'background 0.1s', position: 'relative',
                 }}>
                 <div
                   style={{ display: 'flex', alignItems: 'center', gap: 14, flex: 1, cursor: 'pointer' }}
@@ -530,6 +548,38 @@ function ProfileContent() {
                   }}>
                   Edit
                 </button>
+                {/* ⋯ menu */}
+                <div style={{ position: 'relative' }}>
+                  <button
+                    onClick={() => setKidMenuOpen(menuOpen ? null : kid.id)}
+                    style={{
+                      background: 'none', border: 'none', cursor: 'pointer',
+                      fontSize: 18, color: '#9ca3af', padding: '4px 6px', lineHeight: 1,
+                      fontFamily: "'Nunito', sans-serif",
+                    }}>
+                    ⋯
+                  </button>
+                  {menuOpen && (
+                    <div style={{
+                      position: 'absolute', right: 0, top: '100%', zIndex: 50,
+                      background: '#fff', borderRadius: 12,
+                      boxShadow: '0 8px 28px rgba(0,0,0,0.14)',
+                      border: '1px solid rgba(0,0,0,0.08)',
+                      minWidth: 160, overflow: 'hidden',
+                    }}>
+                      <button
+                        onClick={() => handleArchiveKid(kid.id, true)}
+                        style={{
+                          display: 'block', width: '100%', textAlign: 'left',
+                          padding: '12px 16px', background: 'none', border: 'none',
+                          fontSize: 13, fontWeight: 700, color: '#f59e0b',
+                          cursor: 'pointer', fontFamily: "'Nunito', sans-serif",
+                        }}>
+                        📦 Archive child
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             )
           })}
@@ -551,6 +601,53 @@ function ProfileContent() {
             </div>
             <span style={{ fontSize: 14, fontWeight: 700, color: '#7c3aed' }}>Add another child</span>
           </div>
+
+          {/* Archived children */}
+          {kids.some(k => k.archived) && (
+            <div style={{ borderTop: '1px solid rgba(0,0,0,0.06)' }}>
+              <button
+                onClick={() => setShowArchived(v => !v)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  width: '100%', padding: '12px 20px',
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  fontSize: 12, fontWeight: 700, color: '#9ca3af',
+                  fontFamily: "'Nunito', sans-serif",
+                }}>
+                <span style={{ transform: showArchived ? 'rotate(90deg)' : 'none', display: 'inline-block', transition: 'transform 0.15s' }}>▶</span>
+                Archived ({kids.filter(k => k.archived).length})
+              </button>
+              {showArchived && kids.filter(k => k.archived).map(kid => (
+                <div key={kid.id} style={{
+                  display: 'flex', alignItems: 'center', gap: 14,
+                  padding: '12px 20px', borderTop: '1px solid rgba(0,0,0,0.04)',
+                  background: '#fafafa', opacity: 0.75,
+                }}>
+                  <div style={{
+                    width: 38, height: 38, borderRadius: '50%', flexShrink: 0,
+                    background: '#d1d5db',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 14, fontWeight: 900, color: '#fff',
+                  }}>
+                    {kid.displayname[0].toUpperCase()}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: '#6b7280' }}>{kid.displayname}</div>
+                    {kid.grade && <div style={{ fontSize: 11, color: '#9ca3af' }}>{kid.grade}</div>}
+                  </div>
+                  <button
+                    onClick={() => handleArchiveKid(kid.id, false)}
+                    style={{
+                      background: 'none', border: '1.5px solid #d1d5db', borderRadius: 8,
+                      padding: '5px 10px', fontSize: 11, fontWeight: 700, color: '#6b7280',
+                      cursor: 'pointer', fontFamily: "'Nunito', sans-serif",
+                    }}>
+                    Restore
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* ── Account ── */}

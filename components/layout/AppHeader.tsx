@@ -895,87 +895,108 @@ export default function AppHeader() {
           )}
 
 
-          {/* Scout proactive button */}
-          {userId && scoutNudge && (
-            <button
-              onClick={() => { setShowScoutBubble(v => !v); setScoutDot(false) }}
-              style={{
-                position: 'relative', background: 'none', border: 'none',
-                padding: 4, cursor: 'pointer', flexShrink: 0,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}
-              title="Scout says…"
-            >
-              <img src="/Cardinal_Mascot.png" alt="Scout" style={{ width: 32, height: 32, objectFit: 'contain' }} />
-              {scoutDot && (
-                <span style={{
-                  position: 'absolute', top: 2, right: 2,
-                  width: 10, height: 10, borderRadius: '50%',
-                  background: '#f59e0b', border: '2px solid #7c3aed',
-                  animation: 'scout-dot-pulse 1.8s ease-in-out infinite',
-                }} />
-              )}
-            </button>
-          )}
-
         </div>
       </header>
 
-      {/* Scout nudge bubble */}
-      {scoutNudge && showScoutBubble && (
-        <div style={{
-          position: 'fixed', top: 64, right: 16, zIndex: 9995,
-          width: 290, fontFamily: "'Nunito', sans-serif",
-          animation: 'scout-bubble-in 0.3s ease forwards',
-        }}>
-          {/* Tail pointing up-right */}
-          <div style={{
-            width: 0, height: 0, borderStyle: 'solid',
-            borderWidth: '0 0 10px 10px',
-            borderColor: 'transparent transparent #fff transparent',
-            marginLeft: 'auto', marginRight: 18, marginBottom: -1,
-          }} />
-          <div style={{
-            background: '#fff', borderRadius: 18,
-            boxShadow: '0 16px 48px rgba(0,0,0,0.18), 0 2px 8px rgba(124,58,237,0.12)',
-            border: '1.5px solid rgba(124,58,237,0.15)',
-            overflow: 'hidden',
-          }}>
-            {/* Header strip */}
+      {/* ── Floating Scout FAB (bottom-right, always visible) ── */}
+      {userId && (
+        <>
+          {/* Nudge bubble — appears above the FAB */}
+          {scoutNudge && showScoutBubble && (
             <div style={{
-              background: 'linear-gradient(135deg, #7c3aed, #4f46e5)',
-              padding: '10px 14px',
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              position: 'fixed', top: 152, right: 12, zIndex: 9995,
+              width: 290, fontFamily: "'Nunito', sans-serif",
+              animation: 'scout-bubble-in 0.3s ease forwards',
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <img src="/Cardinal_Mascot.png" alt="Scout" style={{ width: 28, height: 28, objectFit: 'contain' }} />
-                <div style={{ fontWeight: 800, fontSize: 13, color: '#fff' }}>Scout</div>
-              </div>
-              <button
-                onClick={() => setShowScoutBubble(false)}
-                style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 6, color: '#fff', fontSize: 13, cursor: 'pointer', padding: '2px 6px', fontWeight: 700 }}
-              >✕</button>
-            </div>
-            {/* Message */}
-            <div style={{ padding: '14px 16px' }}>
-              <p style={{ fontSize: 13, color: '#374151', lineHeight: 1.65, margin: '0 0 14px', fontWeight: 600 }}>
-                {scoutNudge}
-              </p>
-              <button
-                onClick={() => { setShowScoutBubble(false); setShowCopilot(true) }}
-                style={{
-                  width: '100%', padding: '10px 14px', borderRadius: 10, border: 'none',
+              {/* Tail pointing up toward Scout FAB */}
+              <div style={{
+                width: 0, height: 0, borderStyle: 'solid',
+                borderWidth: '0 10px 10px 10px',
+                borderColor: 'transparent transparent #fff transparent',
+                marginLeft: 'auto', marginRight: 28,
+              }} />
+              <div style={{
+                background: '#fff', borderRadius: 18,
+                boxShadow: '0 16px 48px rgba(0,0,0,0.18), 0 2px 8px rgba(124,58,237,0.12)',
+                border: '1.5px solid rgba(124,58,237,0.15)',
+                overflow: 'hidden',
+              }}>
+                <div style={{
                   background: 'linear-gradient(135deg, #7c3aed, #4f46e5)',
-                  color: '#fff', fontWeight: 800, fontSize: 13, cursor: 'pointer',
-                  fontFamily: "'Nunito', sans-serif",
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                }}
-              >
-                Chat with Scout →
-              </button>
+                  padding: '10px 14px',
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <img src="/Cardinal_Mascot.png" alt="Scout" style={{ width: 28, height: 28, objectFit: 'contain' }} />
+                    <div style={{ fontWeight: 800, fontSize: 13, color: '#fff' }}>Scout</div>
+                  </div>
+                  <button
+                    onClick={() => setShowScoutBubble(false)}
+                    style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 6, color: '#fff', fontSize: 13, cursor: 'pointer', padding: '2px 6px', fontWeight: 700 }}
+                  >✕</button>
+                </div>
+                <div style={{ padding: '14px 16px' }}>
+                  <p style={{ fontSize: 13, color: '#374151', lineHeight: 1.65, margin: '0 0 14px', fontWeight: 600 }}>
+                    {scoutNudge}
+                  </p>
+                  <button
+                    onClick={() => { setShowScoutBubble(false); setShowCopilot(true) }}
+                    style={{
+                      width: '100%', padding: '10px 14px', borderRadius: 10, border: 'none',
+                      background: 'linear-gradient(135deg, #7c3aed, #4f46e5)',
+                      color: '#fff', fontWeight: 800, fontSize: 13, cursor: 'pointer',
+                      fontFamily: "'Nunito', sans-serif",
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                    }}
+                  >
+                    Chat with Scout →
+                  </button>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
+          )}
+
+          {/* FAB button — sits clearly above BottomNav on mobile */}
+          <button
+            className="scout-fab"
+            onClick={() => {
+              if (scoutNudge && !showCopilot) {
+                setShowScoutBubble(v => !v)
+                setScoutDot(false)
+              } else {
+                setShowCopilot(v => !v)
+              }
+            }}
+            title="Chat with Scout"
+            style={{
+              position: 'fixed', top: 64, right: 12, zIndex: 9994,
+              width: 80, height: 80, borderRadius: '50%',
+              background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #a855f7 100%)',
+              border: '3px solid rgba(255,255,255,0.9)', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 8px 28px rgba(124,58,237,0.55), 0 3px 10px rgba(0,0,0,0.25)',
+              transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+            }}
+            onMouseEnter={e => {
+              (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1.08)'
+              ;(e.currentTarget as HTMLButtonElement).style.boxShadow = '0 10px 36px rgba(124,58,237,0.7), 0 3px 10px rgba(0,0,0,0.25)'
+            }}
+            onMouseLeave={e => {
+              (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)'
+              ;(e.currentTarget as HTMLButtonElement).style.boxShadow = '0 8px 28px rgba(124,58,237,0.55), 0 3px 10px rgba(0,0,0,0.25)'
+            }}
+          >
+            <img src="/Cardinal_Mascot.png" alt="Scout" style={{ width: 54, height: 54, objectFit: 'contain' }} />
+            {scoutDot && (
+              <span style={{
+                position: 'absolute', top: 4, right: 4,
+                width: 14, height: 14, borderRadius: '50%',
+                background: '#f59e0b', border: '2.5px solid #fff',
+                animation: 'scout-dot-pulse 1.8s ease-in-out infinite',
+              }} />
+            )}
+          </button>
+        </>
       )}
 
       {showFeedback && userId && orgId && (
@@ -1256,7 +1277,11 @@ const HEADER_STYLES = `
     50% { transform: scale(1.4); opacity: 0.7; }
   }
   @keyframes scout-bubble-in {
-    from { opacity: 0; transform: translateY(-8px) scale(0.97); }
+    from { opacity: 0; transform: translateY(8px) scale(0.97); }
     to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  /* On desktop, no BottomNav — drop FAB closer to the edge */
+  @media (min-width: 768px) {
+    .scout-fab { bottom: 32px !important; left: auto !important; right: 28px !important; transform: none !important; }
   }
 `

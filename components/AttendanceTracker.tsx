@@ -6,11 +6,11 @@ import CalendarView from './CalendarView'
 import CalendarFilters from './CalendarFilters'
 import ReconciliationPanel from './ReconciliationPanel'
 import AttendanceInsights from './AttendanceInsights'
-import ComplianceChecker from './ComplianceChecker'
 import AttendanceGoals from './AttendanceGoals'
 import PDFExport from './PDFExport'
 import DayDetails from './DayDetails'
 import ResolveAttendanceModal from './ResolveAttendanceModal'
+import BackfillModal from './BackfillModal'
 import { parseLocalDate } from '@/src/lib/utils'
 import { useTheme } from '@/contexts/ThemeContext'
 
@@ -71,12 +71,9 @@ interface SuggestedDay {
 }
 
 type ViewMode = 'list' | 'calendar'
-type TabMode = 'overview' | 'insights' | 'goals' | 'compliance' | 'reports'
+type TabMode = 'overview' | 'insights' | 'goals'
 
 export default function AttendanceTracker({ kids, organizationId, userId }: AttendanceTrackerProps) {
-  const { isDark } = useTheme()
-  const darkCardStyle: React.CSSProperties = isDark ? { backgroundColor: 'var(--hr-bg-surface)', borderColor: 'rgba(255,255,255,0.12)' } : {}
-
   const supabase = useMemo(() => createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -93,6 +90,7 @@ export default function AttendanceTracker({ kids, organizationId, userId }: Atte
   const [monthGroups, setMonthGroups] = useState<MonthGroup[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [showMarkModal, setShowMarkModal] = useState(false)
+  const [showBackfill, setShowBackfill] = useState(false)
   const [markingDate, setMarkingDate] = useState<string>(new Date().toLocaleDateString('en-CA'))
   const [markingDefaultHours, setMarkingDefaultHours] = useState<number | undefined>(undefined)
   const [viewMode, setViewMode] = useState<ViewMode>('list')
@@ -102,13 +100,10 @@ export default function AttendanceTracker({ kids, organizationId, userId }: Atte
   const [dismissedSuggestions, setDismissedSuggestions] = useState<Set<string>>(new Set())
   const [attendanceMarkedToday, setAttendanceMarkedToday] = useState(false)
   const [selectedDate, setSelectedDate] = useState<string | null>(null)  
-  const [stateInfo, setStateInfo] = useState<any>(null)
-  const [loadingState, setLoadingState] = useState(true)
-  const [organizationName, setOrganizationName] = useState<string>('My Homeschool')
-  const [schoolYear, setSchoolYear] = useState<string>('2025-2026')
   const [requiredDays, setRequiredDays] = useState(180)
   const [schoolYearStart, setSchoolYearStart] = useState<string>('')
   const [schoolYearEnd, setSchoolYearEnd] = useState<string>('')
+  const [organizationName, setOrganizationName] = useState<string>('')
   const [resolveDate, setResolveDate] = useState<string | null>(null)
   const [resolveAttendance, setResolveAttendance] = useState<ManualAttendance | null>(null)
   const [dismissedDiscrepancies, setDismissedDiscrepancies] = useState<Set<string>>(new Set())
@@ -152,69 +147,39 @@ useEffect(() => {
     if (!organizationId) return
     
     async function loadStateFromSettings() {
-      setLoadingState(true)
       try {
-        // After setting stateInfo, also read the user's goal:
-        const { data: complianceData, error: complianceError } = await supabase
-        .from('user_compliance_settings')
-        .select('annual_days_goal')
-        .eq('organization_id', organizationId)
-        .maybeSingle() 
+        const { data: complianceData } = await supabase
+          .from('user_compliance_settings')
+          .select('annual_days_goal')
+          .eq('organization_id', organizationId)
+          .maybeSingle()
+        if (complianceData?.annual_days_goal) setRequiredDays(complianceData.annual_days_goal)
 
-          if (complianceData?.annual_days_goal) {
-          setRequiredDays(complianceData.annual_days_goal)
-          }
-        // CRITICAL: Wait for auth session first
-        const { data: { session } } = await supabase.auth.getSession()
-        
-        if (!session) {
-          setLoadingState(false)
-          return
-        }
-        
-        const { data, error } = await supabase
-        .from('school_year_settings')
-        .select('selected_state, custom_state_name, school_year_start, school_year_end')
-        .eq('organization_id', organizationId)
-        .single()
-
-      if (error) {
-        if (error.code === 'PGRST116') {
-          // No settings record yet — perfectly normal for new orgs
-        } else {
-          console.error('🚨 Supabase error:', error)
-        }
-      }
+        const { data } = await supabase
+          .from('school_year_settings')
+          .select('school_year_start, school_year_end')
+          .eq('organization_id', organizationId)
+          .maybeSingle()
         if (data?.school_year_start) setSchoolYearStart(data.school_year_start)
         if (data?.school_year_end)   setSchoolYearEnd(data.school_year_end)
-        
-        if (data?.selected_state) {
-          
-          if (data.selected_state === 'CUSTOM') {
-            setStateInfo({
-              state_code: 'CUSTOM',
-              state_name: data.custom_state_name || 'Custom',
-              isCustom: true
-            })
-          } else {
-            const { data: stateData } = await supabase
-              .from('state_compliance_templates')
-              .select('*')
-              .eq('state_code', data.selected_state)
-              .single()
-            
-            if (stateData) {
-              setStateInfo({
-                ...stateData,
-                isCustom: false
-              })
-            }
-          }
+
+        const { data: orgSettings } = await supabase
+          .from('organization_settings')
+          .select('school_name')
+          .eq('organization_id', organizationId)
+          .maybeSingle()
+        if (orgSettings?.school_name) {
+          setOrganizationName(orgSettings.school_name)
+        } else {
+          const { data: orgData } = await supabase
+            .from('organizations')
+            .select('name')
+            .eq('id', organizationId)
+            .maybeSingle()
+          if (orgData?.name) setOrganizationName(orgData.name)
         }
       } catch (error) {
         console.error('❌ Exception in loadStateFromSettings:', error)
-      } finally {
-        setLoadingState(false)
       }
     }
     
@@ -294,6 +259,7 @@ useEffect(() => {
       if (enrollmentsError && enrollmentsError.code !== 'PGRST116') {
         console.error('Error loading co-op enrollments:', enrollmentsError)
       }
+
 
       setLessons(lessonsData || [])
       setManualAttendance(attendanceData || [])
@@ -808,23 +774,32 @@ useEffect(() => {
           <p className="text-gray-600">Track school days and instructional hours</p>
         </div>
         {attendanceMarkedToday ? (
-        <div className="flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 rounded-lg border border-green-200" style={darkCardStyle}>
-          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', background: '#ede9fe', border: '1.5px solid rgba(124,58,237,0.3)', borderRadius: 10, color: '#5b21b6', fontWeight: 700, fontSize: 14, fontFamily: "'Nunito', sans-serif" }}>
+          <svg style={{ width: 18, height: 18, flexShrink: 0 }} fill="currentColor" viewBox="0 0 20 20">
             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
           </svg>
-          <span className="font-medium">Today's attendance recorded</span>
+          Today's attendance recorded
         </div>
       ) : (
-        <button
-          onClick={() => {
-            setMarkingDate(new Date().toLocaleDateString('en-CA'))
-            setShowMarkModal(true)
-          }}
-          className="px-4 py-2 text-white rounded-lg font-medium"
-          style={{ background: 'linear-gradient(135deg, #7c3aed, #a855f7)' }}
-        >
-          ✓ Mark Today
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowBackfill(true)}
+            className="px-4 py-2 rounded-lg font-medium text-purple-700 border border-purple-200 bg-purple-50 hover:bg-purple-100 transition-colors"
+            style={{ fontSize: 13 }}
+          >
+            📅 Backfill Past Days
+          </button>
+          <button
+            onClick={() => {
+              setMarkingDate(new Date().toLocaleDateString('en-CA'))
+              setShowMarkModal(true)
+            }}
+            className="px-4 py-2 text-white rounded-lg font-medium"
+            style={{ background: 'linear-gradient(135deg, #7c3aed, #a855f7)' }}
+          >
+            ✓ Mark Today
+          </button>
+        </div>
       )}
       </div>
 
@@ -861,7 +836,7 @@ useEffect(() => {
           <p className="text-sm font-medium text-gray-900">Progress to {stats.required} days</p>
           <p className="text-sm text-gray-600">{stats.totalDays} days completed</p>
         </div>
-        <div className="w-full bg-gray-200 rounded-full h-3" style={isDark ? { backgroundColor: 'rgba(255,255,255,0.12)' } : {}}>
+        <div className="w-full bg-gray-200 rounded-full h-3">
           <div 
             className="bg-red-600 h-3 rounded-full transition-all duration-300"
             style={{ width: `${Math.min((stats.totalDays / stats.required) * 100, 100)}%` }}
@@ -878,7 +853,7 @@ useEffect(() => {
               onClick={() => setActiveTab('overview')}
               className={`px-3 py-3 text-sm md:px-6 font-medium whitespace-nowrap border-b-2 transition-colors ${
                 activeTab === 'overview'
-                  ? 'border-blue-600 text-blue-600'
+                  ? 'border-purple-600 text-purple-600'
                   : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
               }`}
             >
@@ -888,7 +863,7 @@ useEffect(() => {
               onClick={() => setActiveTab('insights')}
               className={`px-6 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
                 activeTab === 'insights'
-                  ? 'border-blue-600 text-blue-600'
+                  ? 'border-purple-600 text-purple-600'
                   : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
               }`}
             >
@@ -898,31 +873,11 @@ useEffect(() => {
               onClick={() => setActiveTab('goals')}
               className={`px-6 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
                 activeTab === 'goals'
-                  ? 'border-blue-600 text-blue-600'
+                  ? 'border-purple-600 text-purple-600'
                   : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
               }`}
             >
               🎯 Goals
-            </button>
-            <button
-              onClick={() => setActiveTab('compliance')}
-              className={`px-6 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
-                activeTab === 'compliance'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
-              }`}
-            >
-              ✅ Compliance
-            </button>
-            <button
-              onClick={() => setActiveTab('reports')}
-              className={`px-6 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
-                activeTab === 'reports'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
-              }`}
-            >
-              📄 Reports
             </button>
           </div>
         </div>
@@ -932,6 +887,17 @@ useEffect(() => {
           {/* Overview Tab */}
           {activeTab === 'overview' && (
             <div className="space-y-6">
+              {/* PDF Export */}
+              <PDFExport
+                days={allDays}
+                totalDays={stats.totalDays}
+                totalHours={stats.totalHoursNumber}
+                requiredDays={stats.required}
+                organizationName={organizationName || undefined}
+                studentNames={kids.map((k: any) => k.displayname)}
+                schoolYear={schoolYearStart && schoolYearEnd ? `${schoolYearStart} – ${schoolYearEnd}` : undefined}
+              />
+
               {/* Reconciliation Panel */}
               {(suggestions.length > 0 || discrepancies.length > 0) && (
                 <ReconciliationPanel
@@ -1163,6 +1129,7 @@ useEffect(() => {
                   )}
                 </div>
               )}
+
             </div>
           )}
 
@@ -1223,27 +1190,6 @@ useEffect(() => {
               />
             )}
 
-        {activeTab === 'compliance' && organizationId && (
-          <ComplianceChecker
-            totalDays={stats.totalDays}
-            totalHours={stats.totalHoursNumber}
-            stateInfo={stateInfo}
-            loadingState={loadingState}
-          />
-        )}
-
-          {activeTab === 'reports'&& organizationId && (
-            <PDFExport
-              days={allDays}
-              totalDays={stats.totalDays}
-              totalHours={stats.totalHoursNumber}
-              requiredDays={stats.required}
-              organizationName={organizationName}
-              studentNames={kids.map(k => k.displayname)}
-              schoolYear={schoolYear}
-              state={stateInfo?.state_code || 'Not Set'}
-            />
-          )}
         </div>
       </div>
 
@@ -1293,6 +1239,15 @@ useEffect(() => {
     }}
   />
 )}
+      {showBackfill && (
+        <BackfillModal
+          organizationId={organizationId}
+          schoolYearStart={schoolYearStart || undefined}
+          existingDates={manualAttendance.map(a => a.attendance_date)}
+          onClose={() => setShowBackfill(false)}
+          onComplete={() => { setShowBackfill(false); loadData() }}
+        />
+      )}
     </div>
   )
 }

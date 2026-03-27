@@ -22,7 +22,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   // Load saved preference on mount
   useEffect(() => {
     const saved = localStorage.getItem('hr_theme') as Theme | null
-    const preferred = saved ?? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+    // The app uses a fixed #3d3a52 theme — dark mode CSS vars are identical to light.
+    // We ignore system dark-mode preference so darkCardStyle never fires unexpectedly.
+    const preferred: Theme = saved ?? 'light'
     setTheme(preferred)
     document.documentElement.classList.toggle('dark', preferred === 'dark')
   }, [])

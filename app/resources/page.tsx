@@ -3,13 +3,12 @@
 import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import AuthGuard from '@/components/AuthGuard'
+import { ExternalLink } from '@/components/ExternalLink'
 import { supabase } from '@/src/lib/supabase'
 import { getOrganizationId } from '@/src/lib/getOrganizationId'
 import { useAppHeader } from '@/components/layout/AppHeader'
 import { pageShell } from '@/src/lib/designTokens'
 import MaterialsHelpModal from '@/components/MaterialsHelpModal'
-import { MI_INTELLIGENCES, MI_CLUSTERS, MI_REMEMBER, VAK_TIPS } from '@/src/lib/learningProfiles'
-import { getVakBridge, getMiTips } from '@/src/lib/teachingBlueprint'
 
 // ─── Static Data ──────────────────────────────────────────────────────────────
 
@@ -171,19 +170,6 @@ const COMPLIANCE_TERMS = [
 ]
 
 // ─── Guides Data ─────────────────────────────────────────────────────────────
-
-const DESCHOOLING_TASKS = [
-  { id: 'd1', phase: 'Week 1', title: 'Disable the Alarm', desc: 'Let the natural sleep cycle dictate the start of the day. Observe when focus peaks.' },
-  { id: 'd2', phase: 'Week 1', title: 'The "Boredom" Audit', desc: 'Watch what they do when screens are off. This is their natural curiosity surfacing.' },
-  { id: 'd3', phase: 'Week 2', title: 'Mid-Day Micro-Adventure', desc: 'Take a 20-minute walk or lunch-break park visit with zero "educational" goals.' },
-  { id: 'd4', phase: 'Week 3', title: 'Work-Sync Trial', desc: 'Practice a 30-minute block where you work and they engage in an "Independent Quest" like LEGOs.' },
-]
-
-const PORTFOLIO_TASKS = [
-  { id: 'p1', phase: 'Samples', title: 'The "Before" Snapshot', desc: 'Save one piece of work from their last month in traditional school for future comparison.' },
-  { id: 'p2', phase: 'Compliance', title: 'Attendance Log', desc: 'Start a simple calendar. Mark days where learning happened — museum visits count!' },
-  { id: 'p3', phase: 'Memory', title: 'Photo of the Week', desc: 'Snap a photo of a project, a messy science experiment, or a focused reading moment.' },
-]
 
 // ─── State Laws Data ──────────────────────────────────────────────────────────
 
@@ -496,7 +482,9 @@ function CurriculumTab({ initialStyle }: { initialStyle: string }) {
         color: '#6b7280',
         lineHeight: 1.6,
       }}>
-        <strong style={{ color: '#374151' }}>Disclosure:</strong> The resources listed here are for informational purposes only. HomeschoolReady does not endorse, recommend, or receive any compensation in connection with any curriculum or product listed. We have no affiliate relationships with these providers. Always do your own research to find what's right for your family.
+The options listed below are external providers where you can obtain materials that align with your school's unique teaching style.
+        <br /><br />
+        <strong style={{ color: '#374151' }}>Please Note:</strong> HomeschoolReady is a management and compliance tool; we do not provide, sell, or officially endorse any specific curriculum. Our goal is to help you organize and track the resources you choose for your family.
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -519,22 +507,18 @@ function CurriculumTab({ initialStyle }: { initialStyle: string }) {
               </div>
               <p style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.6, margin: 0 }}>{item.desc}</p>
             </div>
-            <a
+            <ExternalLink
               href={item.url}
-              target="_blank"
-              rel="noopener noreferrer"
               style={{
                 background: 'none',
                 border: '1.5px solid #7c3aed',
                 borderRadius: 8, padding: '7px 14px',
                 fontSize: 12, fontWeight: 700, color: '#7c3aed',
-                cursor: 'pointer', flexShrink: 0,
-                textDecoration: 'none', display: 'inline-block',
-                whiteSpace: 'nowrap',
+                flexShrink: 0, whiteSpace: 'nowrap',
               }}
             >
               Visit site →
-            </a>
+            </ExternalLink>
           </div>
         ))}
       </div>
@@ -542,495 +526,88 @@ function CurriculumTab({ initialStyle }: { initialStyle: string }) {
   )
 }
 
-// ─── Guides Tab ───────────────────────────────────────────────────────────────
 
-function GuidesTab() {
-  const [activeGuide, setActiveGuide] = useState<'deschooling' | 'portfolio'>('deschooling')
-  const [showPhilosophy, setShowPhilosophy] = useState(false)
-  const [showHoursGuide, setShowHoursGuide] = useState(false)
+// ─── High School Tab ──────────────────────────────────────────────────────────
 
-  const tasks = activeGuide === 'deschooling' ? DESCHOOLING_TASKS : PORTFOLIO_TASKS
-
+function HighSchoolTab() {
+  const [expanded, setExpanded] = useState<string | null>('credits')
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 24, alignItems: 'start' }}>
-
-      {/* Left — tasks */}
-      <div>
-        {/* Guide toggle */}
-        <div style={{ display: 'flex', gap: 8, background: 'rgba(237,233,254,0.5)', padding: 6, borderRadius: 16, width: 'fit-content', marginBottom: 20, border: '1px solid #ede9fe' }}>
-          {[
-            { id: 'deschooling' as const, label: '🌱 Deschooling Guide' },
-            { id: 'portfolio' as const,   label: '📋 Portfolio Tracker' },
-          ].map(g => (
-            <button
-              key={g.id}
-              onClick={() => setActiveGuide(g.id)}
-              style={{
-                padding: '9px 20px', borderRadius: 12, cursor: 'pointer', border: 'none',
-                fontSize: 13, fontWeight: 700, transition: 'all 0.15s',
-                background: activeGuide === g.id ? '#fff' : 'transparent',
-                color: activeGuide === g.id ? '#4f46e5' : '#4b5563',
-                boxShadow: activeGuide === g.id ? '0 2px 8px rgba(0,0,0,0.08)' : 'none',
-              }}
-            >
-              {g.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Intro blurb — swaps with active guide */}
-        {activeGuide === 'deschooling' ? (
-          <div style={{ background: '#f5f3ff', borderRadius: 14, padding: '16px 20px', border: '1px solid #ede9fe', marginBottom: 16 }}>
-            <div style={{ fontSize: 14, fontWeight: 800, color: '#1e1b4b', marginBottom: 6 }}>🌱 What is deschooling?</div>
-            <p style={{ fontSize: 13, color: '#4b5563', lineHeight: 1.7, margin: '0 0 10px' }}>
-              Deschooling is the intentional transition period between traditional school and homeschooling. It's not a break from learning — it's a reset. Children (and parents) need time to shed the habits and expectations of institutional school before a new rhythm can take hold.
-            </p>
-            <a
-              href="https://hslda.org/post/deschooling-making-the-switch-from-traditional-school-to-homeschooling"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ fontSize: 12, fontWeight: 700, color: '#7c3aed', textDecoration: 'none' }}
-            >
-              Read HSLDA's guide to deschooling →
-            </a>
-          </div>
-        ) : (
-          <div style={{ background: '#f0fdf4', borderRadius: 14, padding: '16px 20px', border: '1px solid #d1fae5', marginBottom: 16 }}>
-            <div style={{ fontSize: 14, fontWeight: 800, color: '#14532d', marginBottom: 6 }}>📋 What is a portfolio?</div>
-            <p style={{ fontSize: 13, color: '#4b5563', lineHeight: 1.7, margin: 0 }}>
-              A homeschool portfolio is an organized collection of your child's work — attendance records, photos, projects, and samples that document learning over time. Many states accept a portfolio as proof of compliance, and it doubles as a meaningful keepsake. Start simple: a folder, a calendar, and a few photos go a long way.
-            </p>
-          </div>
-        )}
-
-        {/* Guide cards — read only */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {tasks.map(task => (
-            <div key={task.id} style={{
-              background: '#fff', borderRadius: 16, padding: '18px 20px',
-              border: '1px solid #e5e7eb', boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-            }}>
-              <div style={{ fontSize: 10, fontWeight: 800, color: '#7c3aed', letterSpacing: '0.07em', textTransform: 'uppercase', marginBottom: 3 }}>
-                {task.phase}
-              </div>
-              <div style={{ fontSize: 15, fontWeight: 700, color: '#111827', marginBottom: 4 }}>
-                {task.title}
-              </div>
-              <div style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.6 }}>{task.desc}</div>
-            </div>
-          ))}
-        </div>
+    <div>
+      <div style={css.infoBanner}>
+        🎓 Homeschool high school is completely legal and well-recognized. Colleges, employers, and the military all accept homeschool transcripts and diplomas — here is everything you need to know.
       </div>
-
-      {/* Right — sidebar */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-
-        {/* Golden Rule card */}
-        <div style={{
-          background: '#1e1b4b', borderRadius: 24, padding: 28, color: '#fff',
-          boxShadow: '0 8px 32px rgba(30,27,75,0.25)', position: 'relative', overflow: 'hidden',
-        }}>
-          <div style={{
-            position: 'absolute', top: -20, right: -20, width: 100, height: 100,
-            background: 'rgba(99,102,241,0.2)', borderRadius: '50%', filter: 'blur(20px)',
-          }} />
-          <div style={{ fontSize: 28, marginBottom: 16 }}>💡</div>
-          <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 10, letterSpacing: -0.3 }}>The Golden Rule</div>
-          <p style={{ fontSize: 13, color: 'rgba(199,210,254,0.85)', lineHeight: 1.7, marginBottom: 20 }}>
-            For every year your child was in traditional school, allow <strong style={{ color: '#fff' }}>one month</strong> of deschooling before pushing academic rigor.
-          </p>
-          <button
-            onClick={() => setShowPhilosophy(true)}
-            style={{
-              width: '100%', padding: '10px 0', background: 'rgba(255,255,255,0.1)',
-              border: '1px solid rgba(255,255,255,0.2)', borderRadius: 12,
-              fontSize: 12, fontWeight: 700, color: '#fff', cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-            }}
-          >
-            Read Philosophy Guide ›
-          </button>
-        </div>
-
-        {/* Quick Resources */}
-        <div style={{ background: '#fff', borderRadius: 20, padding: '20px 18px', border: '1px solid #e5e7eb', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
-          <div style={{ fontSize: 13, fontWeight: 800, color: '#111827', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
-            📄 Quick Resources
-          </div>
-          {[
-            { icon: '📋', label: 'State Legal Maps', sub: 'Via HSLDA.org', bg: '#ede9fe', href: 'https://hslda.org/legal' },
-            { icon: '⏱️', label: 'What Counts as "Hours"?', sub: 'Tracking Guide', bg: '#f5f3ff', href: null },
-          ].map(r => {
-            const inner = (
-              <div key={r.label} style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '10px 12px', borderRadius: 12, cursor: 'pointer',
-                transition: 'background 0.12s', marginBottom: 6,
-              }}
-                onClick={r.href ? undefined : () => setShowHoursGuide(true)}
-                onMouseEnter={e => (e.currentTarget.style.background = '#f5f3ff')}
-                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <div style={{ width: 36, height: 36, borderRadius: 10, background: r.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>
-                    {r.icon}
-                  </div>
-                  <div>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: '#374151', display: 'block' }}>{r.label}</span>
-                    <span style={{ fontSize: 10, fontWeight: 700, color: '#6b7280', letterSpacing: '0.05em', textTransform: 'uppercase' }}>{r.sub}</span>
-                  </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {HS_SECTIONS.map(section => {
+          const isOpen = expanded === section.id
+          return (
+            <div key={section.id} style={{ background: '#fff', borderRadius: 14, border: `2px solid ${isOpen ? section.color : '#e5e7eb'}`, overflow: 'hidden', transition: 'border-color 0.2s' }}>
+              <div onClick={() => setExpanded(isOpen ? null : section.id)} style={{ padding: '16px 18px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 14 }}>
+                <div style={{ width: 44, height: 44, borderRadius: 10, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, background: isOpen ? `linear-gradient(135deg, ${section.color}, #ec4899)` : section.bg, transition: 'background 0.2s' }}>
+                  {section.emoji}
                 </div>
-                <span style={{ fontSize: 14, color: '#d1d5db' }}>›</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: '#111827', marginBottom: 2 }}>{section.title}</div>
+                  <div style={{ fontSize: 12, color: '#6b7280', fontStyle: 'italic' }}>{section.summary}</div>
+                </div>
+                <span style={{ color: '#9ca3af', fontSize: 14, transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }}>▾</span>
               </div>
-            )
-            return r.href ? (
-              <a key={r.label} href={r.href} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
-                {inner}
-              </a>
-            ) : inner
-          })}
-        </div>
-
-
-      </div>
-
-      {/* ── Philosophy Modal ── */}
-      {showPhilosophy && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,14,46,0.6)', backdropFilter: 'blur(4px)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div style={{ background: '#fff', borderRadius: 28, width: '100%', maxWidth: 560, maxHeight: '80vh', overflowY: 'auto', padding: 36, boxShadow: '0 24px 64px rgba(0,0,0,0.18)', position: 'relative' }}>
-            <button onClick={() => setShowPhilosophy(false)} style={{ position: 'absolute', top: 20, right: 20, background: 'none', border: 'none', fontSize: 18, color: '#9ca3af', cursor: 'pointer' }}>✕</button>
-            <h2 style={{ fontSize: 26, fontWeight: 800, color: '#1e1b4b', marginBottom: 20 }}>Deschooling Philosophy</h2>
-            <div style={{ color: '#4b5563', lineHeight: 1.8, fontSize: 14 }}>
-              <p style={{ fontWeight: 700, color: '#6366f1', fontStyle: 'italic', marginBottom: 16 }}>"The first step to homeschooling isn't teaching; it's unlearning."</p>
-              <p style={{ marginBottom: 16 }}>For working parents, the instinct is to immediately fill the child's time. However, jumping straight into a rigid curriculum can lead to burnout.</p>
-              <p style={{ fontWeight: 700, color: '#111827', marginBottom: 10 }}>Why the 1-month-per-year rule?</p>
-              <ul style={{ paddingLeft: 20, marginBottom: 16 }}>
-                <li style={{ marginBottom: 8 }}><strong>Reclaiming Curiosity:</strong> Help them find their own "inner engine."</li>
-                <li style={{ marginBottom: 8 }}><strong>Stress Reduction:</strong> Shed the anxiety of bells and rigid schedules.</li>
-                <li style={{ marginBottom: 8 }}><strong>Relationship Building:</strong> Use this time to bond before you become "Teacher."</li>
-              </ul>
-            </div>
-            <button onClick={() => setShowPhilosophy(false)} style={{ marginTop: 12, width: '100%', padding: '14px 0', background: '#6366f1', color: '#fff', fontWeight: 700, fontSize: 15, borderRadius: 16, border: 'none', cursor: 'pointer' }}>
-              Got it, let's reset
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ── Hours Guide Modal ── */}
-      {showHoursGuide && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,14,46,0.6)', backdropFilter: 'blur(4px)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div style={{ background: '#fff', borderRadius: 28, width: '100%', maxWidth: 560, maxHeight: '80vh', overflowY: 'auto', padding: 36, boxShadow: '0 24px 64px rgba(0,0,0,0.18)', position: 'relative' }}>
-            <button onClick={() => setShowHoursGuide(false)} style={{ position: 'absolute', top: 20, right: 20, background: 'none', border: 'none', fontSize: 18, color: '#9ca3af', cursor: 'pointer' }}>✕</button>
-            <h2 style={{ fontSize: 26, fontWeight: 800, color: '#1e1b4b', marginBottom: 20 }}>What Counts as "School"?</h2>
-            <div style={{ color: '#4b5563', lineHeight: 1.8, fontSize: 14 }}>
-              <p style={{ marginBottom: 16, color: '#6b7280', fontSize: 15 }}>
-                One of the biggest hurdles for new homeschoolers is the <strong style={{ color: '#1e1b4b' }}>"Desk Trap."</strong> You do not need to sit at a desk for 6 hours a day.
-              </p>
-              <div style={{ background: '#eef2ff', borderRadius: 16, padding: 20, border: '1px solid #e0e7ff', marginBottom: 16 }}>
-                <p style={{ fontWeight: 700, color: '#3730a3', marginBottom: 14 }}>The "Everyday" Education List:</p>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                  {[
-                    { emoji: '🎨', label: 'Art', sub: 'Drawing, visiting a gallery, messy play.' },
-                    { emoji: '🍳', label: 'Life Skills', sub: 'Cooking, laundry, gardening.' },
-                    { emoji: '🎧', label: 'Audio', sub: 'Podcasts or audiobooks on the go.' },
-                    { emoji: '🌲', label: 'PE/Science', sub: 'Nature walks or park play.' },
-                  ].map(item => (
-                    <div key={item.label} style={{ background: '#fff', borderRadius: 12, padding: '12px 14px', display: 'flex', gap: 10, border: '1px solid #e0e7ff' }}>
-                      <span style={{ fontSize: 20 }}>{item.emoji}</span>
-                      <div>
-                        <span style={{ fontWeight: 700, color: '#374151', fontSize: 13, display: 'block' }}>{item.label}</span>
-                        <span style={{ color: '#6b7280', fontSize: 12 }}>{item.sub}</span>
-                      </div>
+              {isOpen && (
+                <div style={{ padding: '0 18px 18px', borderTop: '1px solid #f3f4f6' }}>
+                  {section.content.map((item, i) => (
+                    <div key={i} style={{ marginTop: 16, paddingBottom: 16, borderBottom: i < section.content.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
+                      <div style={{ fontSize: 12, fontWeight: 800, color: section.color, textTransform: 'uppercase' as const, letterSpacing: '0.05em', marginBottom: 6 }}>{item.label}</div>
+                      <div style={{ fontSize: 13, color: '#4b5563', lineHeight: 1.7, whiteSpace: 'pre-line' as const }}>{item.text}</div>
                     </div>
                   ))}
                 </div>
-              </div>
-              <p style={{ fontSize: 12, color: '#6b7280', fontStyle: 'italic' }}>In most states, "educational activity" is broadly defined. If they are engaged and learning, it counts!</p>
+              )}
             </div>
-          </div>
+          )
+        })}
+      </div>
+      <div style={{ marginTop: 20, background: '#fdf2f8', borderRadius: 14, padding: '16px 20px', border: '1px solid #fbcfe8' }}>
+        <div style={{ fontSize: 13, fontWeight: 800, color: '#9d174d', marginBottom: 8 }}>📚 Helpful Resources</div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+          {[
+            { name: 'HomeschoolReady Transcript Builder', url: '/transcript' },
+            { name: 'College Board (SAT)', url: 'https://collegeboard.org' },
+            { name: 'ACT for Homeschoolers', url: 'https://act.org' },
+            { name: 'Common App Homeschool FAQ', url: 'https://commonapp.org' },
+          ].map(link => (
+            link.url.startsWith('/') ? (
+              <a key={link.name} href={link.url} style={{ background: '#fff', borderRadius: 10, padding: '10px 14px', fontSize: 12, fontWeight: 700, color: '#7c3aed', textDecoration: 'none', border: '1px solid #e5e7eb', display: 'block' }}>→ {link.name}</a>
+            ) : (
+              <ExternalLink key={link.name} href={link.url} style={{ background: '#fff', borderRadius: 10, padding: '10px 14px', fontSize: 12, fontWeight: 700, color: '#7c3aed', border: '1px solid #e5e7eb', display: 'block', textAlign: 'left' as const, width: '100%' }}>→ {link.name}</ExternalLink>
+            )
+          ))}
         </div>
-      )}
+      </div>
     </div>
   )
 }
 
-// ─── Materials Tab ────────────────────────────────────────────────────────────
+// ─── Data Dictionary Tab ──────────────────────────────────────────────────────
 
-type MaterialType = 'textbook' | 'subscription' | 'physical' | 'digital'
-
-function MaterialsTab({ organizationId }: { organizationId: string }) {
-  const [materials, setMaterials]         = useState<any[]>([])
-  const [loadingMats, setLoadingMats]     = useState(true)
-  const [filterType, setFilterType]       = useState<MaterialType | 'all'>('all')
-  const [searchQuery, setSearchQuery]     = useState('')
-  const [showAddForm, setShowAddForm]     = useState(false)
-  const [editingMaterial, setEditingMaterial] = useState<any>(null)
-  const [showHelpModal, setShowHelpModal] = useState(false)
-  const [isSaving, setIsSaving]           = useState(false)
-  const [collapsed, setCollapsed]         = useState<Set<string>>(new Set())
-
-  const toggleCollapse = (type: string) =>
-    setCollapsed(prev => {
-      const next = new Set(prev)
-      next.has(type) ? next.delete(type) : next.add(type)
-      return next
-    })
-
-  // Form state
-  const [formType, setFormType]               = useState<MaterialType>('textbook')
-  const [formName, setFormName]               = useState('')
-  const [formSubject, setFormSubject]         = useState('')
-  const [formGrade, setFormGrade]             = useState('')
-  const [formQuantity, setFormQuantity]       = useState(1)
-  const [formUrl, setFormUrl]                 = useState('')
-  const [formLoginInfo, setFormLoginInfo]     = useState('')
-  const [formNotes, setFormNotes]             = useState('')
-
-  useEffect(() => { loadMaterials() }, [organizationId, filterType, searchQuery])
-
-  const loadMaterials = async () => {
-    if (!organizationId) return
-    setLoadingMats(true)
-    try {
-      let query = supabase
-        .from('materials')
-        .select('*')
-        .eq('organization_id', organizationId)
-        .order('created_at', { ascending: false })
-      if (filterType !== 'all') query = query.eq('material_type', filterType)
-      if (searchQuery) query = query.ilike('name', `%${searchQuery}%`)
-      const { data } = await query
-      setMaterials(data || [])
-    } catch (e) { console.error(e) }
-    finally { setLoadingMats(false) }
-  }
-
-  const resetForm = () => {
-    setFormType('textbook'); setFormName(''); setFormSubject(''); setFormGrade('')
-    setFormQuantity(1); setFormUrl(''); setFormLoginInfo(''); setFormNotes('')
-    setEditingMaterial(null)
-  }
-
-  const openEdit = (m: any) => {
-    setEditingMaterial(m)
-    setFormType(m.material_type); setFormName(m.name); setFormSubject(m.subject || '')
-    setFormGrade(m.grade_level || ''); setFormQuantity(m.quantity || 1)
-    setFormUrl(m.url || ''); setFormLoginInfo(m.login_info || ''); setFormNotes(m.notes || '')
-    setShowAddForm(true)
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsSaving(true)
-    const payload = {
-      organization_id: organizationId, material_type: formType, name: formName,
-      subject: formSubject || null, grade_level: formGrade || null,
-      quantity: formQuantity, url: formUrl || null,
-      login_info: formLoginInfo || null, notes: formNotes || null,
-    }
-    try {
-      if (editingMaterial) {
-        await supabase.from('materials').update(payload).eq('id', editingMaterial.id)
-      } else {
-        await supabase.from('materials').insert([payload])
-      }
-      setShowAddForm(false); resetForm(); loadMaterials()
-    } catch (err: any) { alert(`Failed to save: ${err.message}`) }
-    finally { setIsSaving(false) }
-  }
-
-  const deleteMaterial = async (id: string) => {
-    if (!confirm('Delete this material?')) return
-    await supabase.from('materials').delete().eq('id', id)
-    loadMaterials()
-  }
-
-  const ICONS: Record<MaterialType, string> = { textbook: '📚', subscription: '🔑', physical: '🧰', digital: '💻' }
-
-  if (loadingMats) return (
-    <div style={{ padding: 40, textAlign: 'center', color: '#7c3aed', fontWeight: 700 }}>Loading materials...</div>
-  )
-
+function DataDictionaryTab() {
   return (
     <div>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
-        <div>
-          <h2 style={{ fontSize: 18, fontWeight: 800, color: '#c4b5fd', margin: 0 }}>Materials & Resources</h2>
-          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', margin: '4px 0 0' }}>Track your curriculum, logins, and supplies</p>
+      <div style={{ background: '#fff', borderRadius: 14, padding: '18px 20px', border: '1px solid #e5e7eb', marginBottom: 14 }}>
+        <div style={{ fontSize: 17, fontWeight: 700, color: '#111827', marginBottom: 6 }}>Homeschool Terms Explained</div>
+        <p style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.7, margin: 0 }}>
+          Every state has different laws governing homeschooling — some require almost nothing, others require annual filings, testing, and portfolio reviews. Here&apos;s what the common terms mean.
+        </p>
+      </div>
+      {COMPLIANCE_TERMS.map(item => (
+        <div key={item.term} style={{ background: '#fff', borderRadius: 14, padding: '15px 18px', border: '1px solid #e5e7eb', marginBottom: 10 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#111827', marginBottom: 5 }}>{item.term}</div>
+          <p style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.6, margin: 0 }}>{item.def}</p>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={() => setShowHelpModal(true)} style={{ background: '#fff', border: '2px solid #e5e7eb', color: '#6b7280', padding: '8px 14px', borderRadius: 10, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}>
-            💡 How this works
-          </button>
-          <button onClick={() => { resetForm(); setShowAddForm(true) }} style={{ background: '#4f46e5', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: 10, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}>
-            + Add Material
-          </button>
-        </div>
+      ))}
+      <div style={css.infoBanner}>
+        💡 HomeschoolReady is not a legal advisor. Always verify requirements at{' '}
+        <ExternalLink href="https://hslda.org" style={{ color: '#7c3aed', fontWeight: 700 }}>HSLDA.org</ExternalLink>{' '}
+        or your state&apos;s Department of Education.
       </div>
-
-      {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 18 }}>
-        {(['textbook', 'subscription', 'physical', 'digital'] as MaterialType[]).map(type => (
-          <div key={type} style={{ background: '#fff', padding: '14px 16px', borderRadius: 14, border: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: 22 }}>{ICONS[type]}</span>
-            <div>
-              <div style={{ fontSize: 9, fontWeight: 800, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.07em' }}>{type}s</div>
-              <div style={{ fontSize: 22, fontWeight: 900, color: '#111827' }}>{materials.filter(m => m.material_type === type).length}</div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Search + filter */}
-      <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e5e7eb', padding: 14, marginBottom: 18, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-        <input type="text" placeholder="🔍 Search materials..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-          style={{ flex: 1, minWidth: 180, padding: '10px 14px', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 10, fontSize: 13, fontWeight: 600, outline: 'none', color: '#111827', fontFamily: "'Nunito', sans-serif" }} />
-        <select value={filterType} onChange={e => setFilterType(e.target.value as any)}
-          style={{ padding: '10px 14px', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer', color: '#111827', fontFamily: "'Nunito', sans-serif" }}>
-          <option value="all">All Types</option>
-          <option value="textbook">Textbooks</option>
-          <option value="subscription">Subscriptions</option>
-          <option value="physical">Physical</option>
-          <option value="digital">Digital</option>
-        </select>
-      </div>
-
-      {/* List */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 14, paddingBottom: 20 }}>
-        {(['textbook', 'subscription', 'physical', 'digital'] as MaterialType[]).map(type => {
-          const typeMats = materials.filter(m => m.material_type === type)
-          if (typeMats.length === 0) return null
-          const isCollapsed = collapsed.has(type)
-          return (
-            <div key={type} style={{ background: '#fff', borderRadius: 14, border: '1px solid #e5e7eb', overflow: 'hidden' }}>
-              <div
-                onClick={() => toggleCollapse(type)}
-                style={{ background: '#f9fafb', padding: '10px 18px', borderBottom: isCollapsed ? 'none' : '1px solid #e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', userSelect: 'none' }}
-              >
-                <span style={{ fontSize: 12, fontWeight: 800, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                  {ICONS[type]} {type}s <span style={{ color: '#c4b5fd', fontWeight: 600 }}>({typeMats.length})</span>
-                </span>
-                <span style={{ fontSize: 13, color: '#6b7280', transform: isCollapsed ? 'rotate(-90deg)' : 'none', transition: 'transform 0.15s', display: 'inline-block' }}>▾</span>
-              </div>
-              {!isCollapsed && typeMats.map(m => (
-                <div key={m.id} style={{ padding: '14px 18px', borderBottom: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 15, fontWeight: 800, color: '#111827' }}>{m.name}</div>
-                    <div style={{ fontSize: 12, color: '#6b7280', marginTop: 3 }}>
-                      {m.subject || 'General'} · {m.grade_level || 'All Grades'}
-                      {m.url && <a href={m.url} target="_blank" rel="noopener noreferrer" style={{ color: '#7c3aed', marginLeft: 10, fontWeight: 700, textDecoration: 'none' }}>🔗 Open</a>}
-                    </div>
-                    {m.login_info && <div style={{ fontSize: 12, color: '#92400e', background: '#fef3c7', padding: '4px 10px', borderRadius: 6, marginTop: 6, display: 'inline-block', fontWeight: 700 }}>🗝️ {m.login_info}</div>}
-                  </div>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <button onClick={() => openEdit(m)} style={{ padding: '6px 14px', background: '#ede9fe', color: '#7c3aed', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}>Edit</button>
-                    <button onClick={() => deleteMaterial(m.id)} style={{ padding: '6px 14px', background: 'none', color: '#ef4444', border: '1px solid #fca5a5', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}>Delete</button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )
-        })}
-
-        {materials.length === 0 && (
-          <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e5e7eb', padding: '48px 24px', textAlign: 'center' }}>
-            <div style={{ fontSize: 48, marginBottom: 12 }}>📦</div>
-            <div style={{ fontSize: 16, fontWeight: 800, color: '#111827', marginBottom: 8 }}>No Materials Yet</div>
-            <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 16 }}>Start building your resource library by adding your first material.</p>
-            <button onClick={() => { resetForm(); setShowAddForm(true) }} style={{ background: '#4f46e5', color: '#fff', border: 'none', padding: '10px 24px', borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}>
-              + Add Your First Material
-            </button>
-          </div>
-        )}
-      </div>
-
-      {showHelpModal && <MaterialsHelpModal onClose={() => setShowHelpModal(false)} />}
-
-      {/* Add / Edit modal */}
-      {showAddForm && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,14,46,0.6)', backdropFilter: 'blur(4px)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div style={{ background: '#fff', borderRadius: 24, padding: 32, maxWidth: 540, width: '100%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 24px 64px rgba(0,0,0,0.18)' }}>
-            <h2 style={{ fontSize: 20, fontWeight: 800, color: '#111827', marginBottom: 24 }}>{editingMaterial ? 'Edit' : 'Add New'} Material</h2>
-            <form onSubmit={handleSubmit}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                <div>
-                  <label style={{ fontSize: 11, fontWeight: 800, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>Resource Name *</label>
-                  <input type="text" value={formName} onChange={e => setFormName(e.target.value)} required
-                    style={{ width: '100%', padding: '10px 14px', background: '#f9fafb', border: '2px solid #e5e7eb', borderRadius: 10, fontSize: 13, fontWeight: 600, outline: 'none', boxSizing: 'border-box', color: '#111827', fontFamily: "'Nunito', sans-serif" }}
-                    placeholder="e.g. Saxon Math 5/4" />
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                  <div>
-                    <label style={{ fontSize: 11, fontWeight: 800, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>Subject</label>
-                    <input type="text" value={formSubject} onChange={e => setFormSubject(e.target.value)}
-                      style={{ width: '100%', padding: '10px 14px', background: '#f9fafb', border: '2px solid #e5e7eb', borderRadius: 10, fontSize: 13, fontWeight: 600, outline: 'none', boxSizing: 'border-box', color: '#111827', fontFamily: "'Nunito', sans-serif" }}
-                      placeholder="e.g. Math" />
-                  </div>
-                  <div>
-                    <label style={{ fontSize: 11, fontWeight: 800, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>Type</label>
-                    {editingMaterial?.material_type === 'physical' ? (
-                      <div style={{ padding: '10px 14px', background: '#f3f4f6', border: '2px solid #e5e7eb', borderRadius: 10, fontSize: 13, fontWeight: 600, color: '#6b7280' }}>🧰 Physical (locked)</div>
-                    ) : (
-                      <select value={formType} onChange={e => setFormType(e.target.value as any)}
-                        style={{ width: '100%', padding: '10px 14px', background: '#f9fafb', border: '2px solid #e5e7eb', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer', color: '#111827', fontFamily: "'Nunito', sans-serif" }}>
-                        <option value="textbook">📚 Textbook</option>
-                        <option value="subscription">🔑 Subscription</option>
-                        <option value="physical">🧰 Physical</option>
-                        <option value="digital">💻 Digital</option>
-                      </select>
-                    )}
-                  </div>
-                </div>
-                {(formType === 'digital' || formType === 'subscription') && (
-                  <div style={{ background: '#f5f3ff', borderRadius: 12, padding: 14, border: '1.5px solid #ede9fe', display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    <div>
-                      <label style={{ fontSize: 11, fontWeight: 800, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>Resource URL</label>
-                      <input type="url" value={formUrl} onChange={e => setFormUrl(e.target.value)}
-                        style={{ width: '100%', padding: '10px 14px', background: '#fff', border: '1.5px solid #ddd6fe', borderRadius: 8, fontSize: 13, outline: 'none', boxSizing: 'border-box', color: '#111827', fontFamily: "'Nunito', sans-serif" }}
-                        placeholder="https://..." />
-                    </div>
-                    {formType === 'subscription' && (
-                      <div>
-                        <label style={{ fontSize: 11, fontWeight: 800, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>Access Credentials</label>
-                        <input type="text" value={formLoginInfo} onChange={e => setFormLoginInfo(e.target.value)}
-                          style={{ width: '100%', padding: '10px 14px', background: '#fff', border: '1.5px solid #ddd6fe', borderRadius: 8, fontSize: 13, outline: 'none', boxSizing: 'border-box', color: '#111827', fontFamily: "'Nunito', sans-serif" }}
-                          placeholder="Username / Password notes" />
-                      </div>
-                    )}
-                  </div>
-                )}
-                {formType === 'physical' && (
-                  <div>
-                    <label style={{ fontSize: 11, fontWeight: 800, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>Quantity</label>
-                    <input type="number" min="1" value={formQuantity} onChange={e => setFormQuantity(parseInt(e.target.value) || 1)}
-                      style={{ width: '100%', padding: '10px 14px', background: '#f9fafb', border: '2px solid #e5e7eb', borderRadius: 10, fontSize: 13, fontWeight: 600, outline: 'none', boxSizing: 'border-box', color: '#111827', fontFamily: "'Nunito', sans-serif" }} />
-                  </div>
-                )}
-                {formNotes !== undefined && (
-                  <div>
-                    <label style={{ fontSize: 11, fontWeight: 800, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>Notes</label>
-                    <input type="text" value={formNotes} onChange={e => setFormNotes(e.target.value)}
-                      style={{ width: '100%', padding: '10px 14px', background: '#f9fafb', border: '2px solid #e5e7eb', borderRadius: 10, fontSize: 13, fontWeight: 600, outline: 'none', boxSizing: 'border-box', color: '#111827', fontFamily: "'Nunito', sans-serif" }}
-                      placeholder="Optional notes" />
-                  </div>
-                )}
-              </div>
-              <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
-                <button type="submit" disabled={isSaving}
-                  style={{ flex: 1, background: '#4f46e5', color: '#fff', border: 'none', padding: '13px 0', borderRadius: 12, fontSize: 14, fontWeight: 800, cursor: isSaving ? 'not-allowed' : 'pointer', opacity: isSaving ? 0.7 : 1, fontFamily: "'Nunito', sans-serif" }}>
-                  {isSaving ? 'Saving...' : `${editingMaterial ? 'Update' : 'Save'} Resource`}
-                </button>
-                <button type="button" onClick={() => { setShowAddForm(false); resetForm() }} disabled={isSaving}
-                  style={{ flex: 1, background: '#f3f4f6', color: '#374151', border: 'none', padding: '13px 0', borderRadius: 12, fontSize: 14, fontWeight: 800, cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}>
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
@@ -1057,59 +634,35 @@ function StateLawsTab() {
   return (
     <div>
       <div style={css.infoBanner}>
-        📌 Requirements vary widely by state — from zero paperwork to annual approval. This is a plain-language summary for reference. Always verify current laws at <strong>hslda.org/legal</strong> or your state homeschool association.
+        📌 Requirements vary widely by state. This is a plain-language summary for reference. Always verify current laws at <strong>hslda.org/legal</strong> or your state homeschool association.
       </div>
-
-      {/* Filters */}
       <div style={{ display: 'flex', gap: 10, marginBottom: 18, flexWrap: 'wrap' }}>
-        <input
-          type="text"
-          placeholder="🔍 Search state..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          style={{ flex: 1, minWidth: 160, padding: '9px 14px', background: '#fff', border: '1px solid #e5e7eb', borderRadius: 10, fontSize: 13, fontWeight: 600, outline: 'none', color: '#111827', fontFamily: "'Nunito', sans-serif" }}
-        />
+        <input type="text" placeholder="🔍 Search state..." value={search} onChange={e => setSearch(e.target.value)}
+          style={{ flex: 1, minWidth: 160, padding: '9px 14px', background: '#fff', border: '1px solid #e5e7eb', borderRadius: 10, fontSize: 13, fontWeight: 600, outline: 'none', color: '#111827', fontFamily: "'Nunito', sans-serif" }} />
         {(['all', 'low', 'moderate', 'high'] as const).map(lvl => {
           const active = levelFilter === lvl
           const meta = lvl === 'all' ? null : LEVEL_META[lvl]
           return (
-            <button
-              key={lvl}
-              onClick={() => setLevelFilter(lvl)}
-              style={{
-                padding: '9px 16px', borderRadius: 20, cursor: 'pointer',
-                fontSize: 12, fontWeight: 700, transition: 'all 0.15s',
-                background: active ? (meta ? meta.bg : G.full) : '#fff',
-                color: active ? (meta ? meta.color : '#fff') : '#6b7280',
-                border: active ? `2px solid ${meta ? meta.dot : 'transparent'}` : '1px solid #e5e7eb',
-                fontFamily: "'Nunito', sans-serif",
-              }}
-            >
+            <button key={lvl} onClick={() => setLevelFilter(lvl)} style={{ padding: '9px 16px', borderRadius: 20, cursor: 'pointer', fontSize: 12, fontWeight: 700, transition: 'all 0.15s', background: active ? (meta ? meta.bg : G.full) : '#fff', color: active ? (meta ? meta.color : '#fff') : '#6b7280', border: active ? `2px solid ${meta ? meta.dot : 'transparent'}` : '1px solid #e5e7eb', fontFamily: "'Nunito', sans-serif" }}>
               {lvl === 'all' ? 'All States' : `${lvl === 'low' ? '🟢' : lvl === 'moderate' ? '🟡' : '🔴'} ${LEVEL_META[lvl].label}`}
             </button>
           )
         })}
       </div>
-
-      {/* Count summary */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 18 }}>
         {(['low', 'moderate', 'high'] as RegLevel[]).map(lvl => {
           const meta = LEVEL_META[lvl]
           const count = STATE_LAWS.filter(s => s.level === lvl).length
           return (
-            <div key={lvl} onClick={() => setLevelFilter(levelFilter === lvl ? 'all' : lvl)} style={{ background: meta.bg, border: `2px solid ${meta.dot}22`, borderRadius: 14, padding: '14px 16px', cursor: 'pointer', textAlign: 'center' }}>
+            <div key={lvl} onClick={() => setLevelFilter(levelFilter === lvl ? 'all' : lvl)} style={{ background: meta.bg, border: `2px solid ${meta.dot}22`, borderRadius: 14, padding: '14px 16px', cursor: 'pointer', textAlign: 'center' as const }}>
               <div style={{ fontSize: 22, fontWeight: 900, color: meta.color }}>{count}</div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: meta.color, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{meta.label} Regulation</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: meta.color, textTransform: 'uppercase' as const, letterSpacing: '0.06em' }}>{meta.label} Regulation</div>
             </div>
           )
         })}
       </div>
-
-      {/* State cards */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {filtered.length === 0 && (
-          <div style={{ padding: 40, textAlign: 'center', color: '#9ca3af', fontWeight: 700 }}>No states match your search.</div>
-        )}
+        {filtered.length === 0 && <div style={{ padding: 40, textAlign: 'center', color: '#9ca3af', fontWeight: 700 }}>No states match your search.</div>}
         {filtered.map(state => {
           const meta = LEVEL_META[state.level]
           const isOpen = expanded === state.abbr
@@ -1122,9 +675,7 @@ function StateLawsTab() {
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
                     <span style={{ fontSize: 15, fontWeight: 700, color: '#111827' }}>{state.name}</span>
-                    <span style={{ background: meta.bg, color: meta.color, fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 10, border: `1px solid ${meta.dot}44` }}>
-                      {meta.label.toUpperCase()} REGULATION
-                    </span>
+                    <span style={{ background: meta.bg, color: meta.color, fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 10, border: `1px solid ${meta.dot}44` }}>{meta.label.toUpperCase()} REGULATION</span>
                   </div>
                   <div style={{ fontSize: 12, color: '#6b7280' }}>{state.requirements[0]}</div>
                 </div>
@@ -1133,7 +684,7 @@ function StateLawsTab() {
               {isOpen && (
                 <div style={{ padding: '0 18px 18px', borderTop: '1px solid #f3f4f6' }}>
                   <div style={{ marginTop: 14, marginBottom: 12 }}>
-                    <div style={{ fontSize: 10, fontWeight: 800, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Requirements</div>
+                    <div style={{ fontSize: 10, fontWeight: 800, color: '#7c3aed', textTransform: 'uppercase' as const, letterSpacing: '0.06em', marginBottom: 8 }}>Requirements</div>
                     {state.requirements.map((r, i) => (
                       <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 6, alignItems: 'flex-start' }}>
                         <span style={{ color: meta.dot, marginTop: 1, flexShrink: 0 }}>✓</span>
@@ -1142,7 +693,7 @@ function StateLawsTab() {
                     ))}
                   </div>
                   <div style={{ background: meta.bg, borderRadius: 10, padding: '11px 14px', border: `1px solid ${meta.dot}22` }}>
-                    <span style={{ fontSize: 10, fontWeight: 800, color: meta.color, textTransform: 'uppercase', letterSpacing: '0.06em' }}>💡 Note  </span>
+                    <span style={{ fontSize: 10, fontWeight: 800, color: meta.color, textTransform: 'uppercase' as const, letterSpacing: '0.06em' }}>💡 Note  </span>
                     <span style={{ fontSize: 12, color: '#4b5563', lineHeight: 1.5 }}>{state.notes}</span>
                   </div>
                 </div>
@@ -1151,404 +702,218 @@ function StateLawsTab() {
           )
         })}
       </div>
-
       <div style={{ marginTop: 20, padding: '14px 18px', background: '#f5f3ff', borderRadius: 14, border: '1px solid #ede9fe', fontSize: 12, color: '#7c3aed', lineHeight: 1.6 }}>
-        <strong>Disclaimer:</strong> Laws change. This summary is for general guidance only. Confirm current requirements with your state homeschool association or HSLDA before making decisions.
+        <strong>Disclaimer:</strong> Laws change. Confirm current requirements with your state homeschool association or HSLDA before making decisions.
       </div>
     </div>
   )
 }
 
-// ─── High School Tab ──────────────────────────────────────────────────────────
+// ─── Materials Tab ─────────────────────────────────────────────────────────────
 
-function HighSchoolTab() {
-  const [expanded, setExpanded] = useState<string | null>('credits')
+type MaterialType = 'textbook' | 'subscription' | 'physical' | 'digital'
+
+function MaterialsTab({ organizationId }: { organizationId: string }) {
+  const [materials, setMaterials]             = useState<any[]>([])
+  const [loadingMats, setLoadingMats]         = useState(true)
+  const [filterType, setFilterType]           = useState<MaterialType | 'all'>('all')
+  const [searchQuery, setSearchQuery]         = useState('')
+  const [showAddForm, setShowAddForm]         = useState(false)
+  const [editingMaterial, setEditingMaterial] = useState<any>(null)
+  const [showHelpModal, setShowHelpModal]     = useState(false)
+  const [isSaving, setIsSaving]               = useState(false)
+  const [collapsed, setCollapsed]             = useState<Set<string>>(new Set())
+  const [formType, setFormType]               = useState<MaterialType>('textbook')
+  const [formName, setFormName]               = useState('')
+  const [formSubject, setFormSubject]         = useState('')
+  const [formGrade, setFormGrade]             = useState('')
+  const [formQuantity, setFormQuantity]       = useState(1)
+  const [formUrl, setFormUrl]                 = useState('')
+  const [formLoginInfo, setFormLoginInfo]     = useState('')
+  const [formNotes, setFormNotes]             = useState('')
+
+  const toggleCollapse = (type: string) =>
+    setCollapsed(prev => { const next = new Set(prev); next.has(type) ? next.delete(type) : next.add(type); return next })
+
+  useEffect(() => { loadMaterials() }, [organizationId, filterType, searchQuery])
+
+  const loadMaterials = async () => {
+    if (!organizationId) return
+    setLoadingMats(true)
+    try {
+      let query = supabase.from('materials').select('*').eq('organization_id', organizationId).order('created_at', { ascending: false })
+      if (filterType !== 'all') query = query.eq('material_type', filterType)
+      if (searchQuery) query = query.ilike('name', `%${searchQuery}%`)
+      const { data } = await query
+      setMaterials(data || [])
+    } catch (e) { console.error(e) }
+    finally { setLoadingMats(false) }
+  }
+
+  const resetForm = () => {
+    setFormType('textbook'); setFormName(''); setFormSubject(''); setFormGrade('')
+    setFormQuantity(1); setFormUrl(''); setFormLoginInfo(''); setFormNotes(''); setEditingMaterial(null)
+  }
+
+  const openEdit = (m: any) => {
+    setEditingMaterial(m); setFormType(m.material_type); setFormName(m.name); setFormSubject(m.subject || '')
+    setFormGrade(m.grade_level || ''); setFormQuantity(m.quantity || 1)
+    setFormUrl(m.url || ''); setFormLoginInfo(m.login_info || ''); setFormNotes(m.notes || '')
+    setShowAddForm(true)
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault(); setIsSaving(true)
+    const payload = { organization_id: organizationId, material_type: formType, name: formName, subject: formSubject || null, grade_level: formGrade || null, quantity: formQuantity, url: formUrl || null, login_info: formLoginInfo || null, notes: formNotes || null }
+    try {
+      if (editingMaterial) { await supabase.from('materials').update(payload).eq('id', editingMaterial.id) }
+      else { await supabase.from('materials').insert([payload]) }
+      setShowAddForm(false); resetForm(); loadMaterials()
+    } catch (err: any) { alert(`Failed to save: ${err.message}`) }
+    finally { setIsSaving(false) }
+  }
+
+  const deleteMaterial = async (id: string) => {
+    if (!confirm('Delete this material?')) return
+    await supabase.from('materials').delete().eq('id', id)
+    loadMaterials()
+  }
+
+  const ICONS: Record<MaterialType, string> = { textbook: '📚', subscription: '🔑', physical: '🧰', digital: '💻' }
+
+  if (loadingMats) return <div style={{ padding: 40, textAlign: 'center', color: '#7c3aed', fontWeight: 700 }}>Loading materials...</div>
 
   return (
     <div>
-      <div style={css.infoBanner}>
-        🎓 Homeschool high school is completely legal and well-recognized. Colleges, employers, and the military all accept homeschool transcripts and diplomas — here is everything you need to know.
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
+        <div>
+          <h2 style={{ fontSize: 18, fontWeight: 800, color: '#c4b5fd', margin: 0 }}>Materials & Resources</h2>
+          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', margin: '4px 0 0' }}>Track your curriculum, logins, and supplies</p>
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={() => setShowHelpModal(true)} style={{ background: '#fff', border: '2px solid #e5e7eb', color: '#6b7280', padding: '8px 14px', borderRadius: 10, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}>💡 How this works</button>
+          <button onClick={() => { resetForm(); setShowAddForm(true) }} style={{ background: '#4f46e5', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: 10, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}>+ Add Material</button>
+        </div>
       </div>
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {HS_SECTIONS.map(section => {
-          const isOpen = expanded === section.id
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 18 }}>
+        {(['textbook', 'subscription', 'physical', 'digital'] as MaterialType[]).map(type => (
+          <div key={type} style={{ background: '#fff', padding: '14px 16px', borderRadius: 14, border: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 22 }}>{ICONS[type]}</span>
+            <div>
+              <div style={{ fontSize: 9, fontWeight: 800, color: '#6b7280', textTransform: 'uppercase' as const, letterSpacing: '0.07em' }}>{type}s</div>
+              <div style={{ fontSize: 22, fontWeight: 900, color: '#111827' }}>{materials.filter(m => m.material_type === type).length}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e5e7eb', padding: 14, marginBottom: 18, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+        <input type="text" placeholder="🔍 Search materials..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} style={{ flex: 1, minWidth: 180, padding: '10px 14px', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 10, fontSize: 13, fontWeight: 600, outline: 'none', color: '#111827', fontFamily: "'Nunito', sans-serif" }} />
+        <select value={filterType} onChange={e => setFilterType(e.target.value as any)} style={{ padding: '10px 14px', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer', color: '#111827', fontFamily: "'Nunito', sans-serif" }}>
+          <option value="all">All Types</option>
+          <option value="textbook">Textbooks</option>
+          <option value="subscription">Subscriptions</option>
+          <option value="physical">Physical</option>
+          <option value="digital">Digital</option>
+        </select>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14, paddingBottom: 20 }}>
+        {(['textbook', 'subscription', 'physical', 'digital'] as MaterialType[]).map(type => {
+          const typeMats = materials.filter(m => m.material_type === type)
+          if (typeMats.length === 0) return null
+          const isCollapsed = collapsed.has(type)
           return (
-            <div key={section.id} style={{ background: '#fff', borderRadius: 14, border: `2px solid ${isOpen ? section.color : '#e5e7eb'}`, overflow: 'hidden', transition: 'border-color 0.2s' }}>
-              <div onClick={() => setExpanded(isOpen ? null : section.id)} style={{ padding: '16px 18px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 14 }}>
-                <div style={{
-                  width: 44, height: 44, borderRadius: 10, flexShrink: 0,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20,
-                  background: isOpen ? `linear-gradient(135deg, ${section.color}, #ec4899)` : section.bg,
-                  transition: 'background 0.2s',
-                }}>
-                  {section.emoji}
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 15, fontWeight: 700, color: '#111827', marginBottom: 2 }}>{section.title}</div>
-                  <div style={{ fontSize: 12, color: '#6b7280', fontStyle: 'italic' }}>{section.summary}</div>
-                </div>
-                <span style={{ color: '#9ca3af', fontSize: 14, transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }}>▾</span>
+            <div key={type} style={{ background: '#fff', borderRadius: 14, border: '1px solid #e5e7eb', overflow: 'hidden' }}>
+              <div onClick={() => toggleCollapse(type)} style={{ background: '#f9fafb', padding: '10px 18px', borderBottom: isCollapsed ? 'none' : '1px solid #e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', userSelect: 'none' as const }}>
+                <span style={{ fontSize: 12, fontWeight: 800, color: '#6b7280', textTransform: 'uppercase' as const, letterSpacing: '0.08em' }}>{ICONS[type]} {type}s <span style={{ color: '#c4b5fd', fontWeight: 600 }}>({typeMats.length})</span></span>
+                <span style={{ fontSize: 13, color: '#6b7280', transform: isCollapsed ? 'rotate(-90deg)' : 'none', transition: 'transform 0.15s', display: 'inline-block' }}>▾</span>
               </div>
-              {isOpen && (
-                <div style={{ padding: '0 18px 18px', borderTop: '1px solid #f3f4f6' }}>
-                  {section.content.map((item, i) => (
-                    <div key={i} style={{ marginTop: 16, paddingBottom: 16, borderBottom: i < section.content.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
-                      <div style={{ fontSize: 12, fontWeight: 800, color: section.color, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>{item.label}</div>
-                      <div style={{ fontSize: 13, color: '#4b5563', lineHeight: 1.7, whiteSpace: 'pre-line' }}>{item.text}</div>
+              {!isCollapsed && typeMats.map(m => (
+                <div key={m.id} style={{ padding: '14px 18px', borderBottom: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' as const }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: '#111827' }}>{m.name}</div>
+                    <div style={{ fontSize: 12, color: '#6b7280', marginTop: 3 }}>
+                      {m.subject || 'General'} · {m.grade_level || 'All Grades'}
+                      {m.url && <ExternalLink href={m.url} style={{ color: '#7c3aed', marginLeft: 10, fontWeight: 700 }}>🔗 Open</ExternalLink>}
                     </div>
-                  ))}
+                    {m.login_info && <div style={{ fontSize: 12, color: '#92400e', background: '#fef3c7', padding: '4px 10px', borderRadius: 6, marginTop: 6, display: 'inline-block', fontWeight: 700 }}>🗝️ {m.login_info}</div>}
+                  </div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button onClick={() => openEdit(m)} style={{ padding: '6px 14px', background: '#ede9fe', color: '#7c3aed', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}>Edit</button>
+                    <button onClick={() => deleteMaterial(m.id)} style={{ padding: '6px 14px', background: 'none', color: '#ef4444', border: '1px solid #fca5a5', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}>Delete</button>
+                  </div>
                 </div>
-              )}
+              ))}
             </div>
           )
         })}
+        {materials.length === 0 && (
+          <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e5e7eb', padding: '48px 24px', textAlign: 'center' as const }}>
+            <div style={{ fontSize: 48, marginBottom: 12 }}>📦</div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: '#111827', marginBottom: 8 }}>No Materials Yet</div>
+            <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 16 }}>Start building your resource library by adding your first material.</p>
+            <button onClick={() => { resetForm(); setShowAddForm(true) }} style={{ background: '#4f46e5', color: '#fff', border: 'none', padding: '10px 24px', borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}>+ Add Your First Material</button>
+          </div>
+        )}
       </div>
-
-      <div style={{ marginTop: 20, background: '#fdf2f8', borderRadius: 14, padding: '16px 20px', border: '1px solid #fbcfe8' }}>
-        <div style={{ fontSize: 13, fontWeight: 800, color: '#9d174d', marginBottom: 8 }}>📚 Helpful Resources</div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-          {[
-            { name: 'HomeschoolReady Transcript Builder', url: '/transcript' },
-            { name: 'College Board (SAT Registration)', url: 'https://collegeboard.org' },
-            { name: 'ACT for Homeschoolers', url: 'https://act.org' },
-            { name: 'Common App Homeschool FAQ', url: 'https://commonapp.org' },
-          ].map(link => (
-            <a key={link.name} href={link.url} {...(link.url.startsWith('/') ? {} : { target: '_blank', rel: 'noopener noreferrer' })} style={{ background: '#fff', borderRadius: 10, padding: '10px 14px', fontSize: 12, fontWeight: 700, color: '#7c3aed', textDecoration: 'none', border: '1px solid #e5e7eb', display: 'block' }}>
-              → {link.name}
-            </a>
-          ))}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ─── Data Dictionary Tab ──────────────────────────────────────────────────────
-
-function DataDictionaryTab() {
-  return (
-    <div>
-      <div style={{ background: '#fff', borderRadius: 14, padding: '18px 20px', border: '1px solid #e5e7eb', marginBottom: 14 }}>
-        <div style={{ fontSize: 17, fontWeight: 700, color: '#111827', marginBottom: 6 }}>Homeschool Terms Explained</div>
-        <p style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.7, margin: 0 }}>
-          Every state has different laws governing homeschooling — some require almost nothing, others
-          require annual filings, testing, and portfolio reviews. Here's what the common terms mean.
-        </p>
-      </div>
-      {COMPLIANCE_TERMS.map(item => (
-        <div key={item.term} style={{ background: '#fff', borderRadius: 14, padding: '15px 18px', border: '1px solid #e5e7eb', marginBottom: 10 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: '#111827', marginBottom: 5 }}>{item.term}</div>
-          <p style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.6, margin: 0 }}>{item.def}</p>
-        </div>
-      ))}
-      <div style={css.infoBanner}>
-        💡 HomeschoolReady is not a legal advisor. Always verify requirements at{' '}
-        <a href="https://hslda.org" target="_blank" rel="noopener noreferrer" style={{ color: '#7c3aed', fontWeight: 700 }}>HSLDA.org</a>{' '}
-        or your state's Department of Education.
-      </div>
-    </div>
-  )
-}
-
-// ─── Parent's Corner Tab ──────────────────────────────────────────────────────
-
-type BlueprintKid = { id: string; displayname: string; learning_style?: string | null; mi_profile?: string[] | null }
-
-function ParentsCornerTab({ blueprintKids, blueprintOrgStyle }: { blueprintKids: BlueprintKid[]; blueprintOrgStyle: string | null }) {
-  const [miProfile, setMiProfile] = useState<string[]>([])
-  const [expandedVak, setExpandedVak] = useState<string | null>(null)
-  const [activeSection, setActiveSection] = useState<'blueprint' | 'mi' | 'vak' | 'highschool' | 'guides'>('blueprint')
-  const [selectedKidId, setSelectedKidId] = useState<string | null>(blueprintKids[0]?.id ?? null)
-
-  // Keep selectedKidId in sync if kids load after mount
-  useEffect(() => {
-    if (!selectedKidId && blueprintKids.length > 0) setSelectedKidId(blueprintKids[0].id)
-  }, [blueprintKids, selectedKidId])
-
-  const toggleMi = (id: string) => {
-    setMiProfile(prev =>
-      prev.includes(id) ? prev.filter(x => x !== id) : prev.length < 3 ? [...prev, id] : prev
-    )
-  }
-
-  return (
-    <div>
-      {/* Section nav */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 24, flexWrap: 'wrap' as const }}>
-        {[
-          { id: 'blueprint' as const,  label: '🗺️ Teaching Blueprint' },
-          { id: 'mi' as const,         label: '🧠 MI Self-Assessment' },
-          { id: 'vak' as const,        label: '👁️ Learning Style Tips' },
-          { id: 'highschool' as const, label: '🎓 High School Planning' },
-          { id: 'guides' as const,     label: '🌱 Guides' },
-        ].map(s => (
-          <button
-            key={s.id}
-            onClick={() => setActiveSection(s.id)}
-            style={{
-              padding: '7px 16px', borderRadius: 99, fontSize: 13, fontWeight: 700,
-              border: '1.5px solid',
-              borderColor: activeSection === s.id ? '#7c3aed' : 'rgba(124,58,237,0.2)',
-              background: activeSection === s.id ? '#7c3aed' : 'rgba(255,255,255,0.7)',
-              color: activeSection === s.id ? '#fff' : '#7c3aed',
-              cursor: 'pointer', fontFamily: "'Nunito', sans-serif",
-            }}
-          >
-            {s.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Teaching Blueprint */}
-      {activeSection === 'blueprint' && (() => {
-        const styleMap: Record<string, string> = { charlotte_mason: 'charlotte', unit_studies: 'unit' }
-        const vakMap: Record<string, string> = { aural: 'auditory' }
-        const blueprintOrgStyleId = styleMap[blueprintOrgStyle ?? ''] ?? blueprintOrgStyle ?? ''
-        const kid = blueprintKids.find(k => k.id === selectedKidId) ?? blueprintKids[0]
-
-        if (!blueprintOrgStyle || blueprintKids.length === 0) {
-          return (
-            <div style={{ background: '#fff', borderRadius: 14, padding: 24, border: '1px solid #e5e7eb', textAlign: 'center' as const }}>
-              <div style={{ fontSize: 32, marginBottom: 10 }}>🗺️</div>
-              <div style={{ fontSize: 15, fontWeight: 800, color: '#111827', marginBottom: 6 }}>No blueprint yet</div>
-              <p style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.6, margin: 0 }}>
-                Complete onboarding and set your child&apos;s learning style to generate your Teaching Blueprint.
-              </p>
-            </div>
-          )
-        }
-
-        const vakStyles = kid?.learning_style ? kid.learning_style.split(',').map(s => s.trim()).filter(Boolean) : []
-        // Find the first style that has a VAK bridge (read_write has no bridge entry)
-        let bridge = null
-        let topVak: string | null = null
-        for (const s of vakStyles) {
-          const mapped = vakMap[s] ?? s
-          const b = getVakBridge(blueprintOrgStyleId, mapped)
-          if (b) { bridge = b; topVak = mapped; break }
-        }
-        const extraStyles = vakStyles.filter(s => (vakMap[s] ?? s) !== topVak)
-        const miTips = (kid?.mi_profile?.length ?? 0) > 0 ? getMiTips(kid!.mi_profile!, blueprintOrgStyleId) : []
-
-        return (
-          <div>
-            {/* Child selector */}
-            {blueprintKids.length > 1 && (
-              <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' as const }}>
-                {blueprintKids.map(k => (
-                  <button
-                    key={k.id}
-                    onClick={() => setSelectedKidId(k.id)}
-                    style={{
-                      padding: '6px 14px', borderRadius: 99, fontSize: 13, fontWeight: 700,
-                      border: '1.5px solid',
-                      borderColor: selectedKidId === k.id ? '#7c3aed' : 'rgba(124,58,237,0.2)',
-                      background: selectedKidId === k.id ? '#7c3aed' : 'rgba(255,255,255,0.7)',
-                      color: selectedKidId === k.id ? '#fff' : '#7c3aed',
-                      cursor: 'pointer', fontFamily: "'Nunito', sans-serif",
-                    }}
-                  >{k.displayname}</button>
-                ))}
-              </div>
-            )}
-
-            {!bridge && miTips.length === 0 ? (
-              <div style={{ background: '#fff', borderRadius: 14, padding: 24, border: '1px solid #e5e7eb', textAlign: 'center' as const }}>
-                <div style={{ fontSize: 32, marginBottom: 10 }}>🗺️</div>
-                <div style={{ fontSize: 15, fontWeight: 800, color: '#111827', marginBottom: 6 }}>
-                  No learning profile for {kid?.displayname ?? 'this child'}
+      {showHelpModal && <MaterialsHelpModal onClose={() => setShowHelpModal(false)} />}
+      {showAddForm && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,14,46,0.6)', backdropFilter: 'blur(4px)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div style={{ background: '#fff', borderRadius: 24, padding: 32, maxWidth: 540, width: '100%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 24px 64px rgba(0,0,0,0.18)' }}>
+            <h2 style={{ fontSize: 20, fontWeight: 800, color: '#111827', marginBottom: 24 }}>{editingMaterial ? 'Edit' : 'Add New'} Material</h2>
+            <form onSubmit={handleSubmit}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div>
+                  <label style={{ fontSize: 11, fontWeight: 800, color: '#374151', textTransform: 'uppercase' as const, letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>Resource Name *</label>
+                  <input type="text" value={formName} onChange={e => setFormName(e.target.value)} required placeholder="e.g. Saxon Math 5/4" style={{ width: '100%', padding: '10px 14px', background: '#f9fafb', border: '2px solid #e5e7eb', borderRadius: 10, fontSize: 13, fontWeight: 600, outline: 'none', boxSizing: 'border-box' as const, color: '#111827', fontFamily: "'Nunito', sans-serif" }} />
                 </div>
-                <p style={{ fontSize: 14, color: '#6b7280', lineHeight: 1.6, margin: 0 }}>
-                  Set their learning style and MI profile in Profile → Edit Child to unlock their blueprint.
-                </p>
-              </div>
-            ) : (
-              <div style={{ background: '#fff', borderRadius: 14, padding: 20, border: '1px solid #e5e7eb' }}>
-                {bridge && (
-                  <>
-                    <div style={{ fontSize: 17, fontWeight: 800, color: '#111827', marginBottom: 4 }}>{bridge.headline}</div>
-                    {extraStyles.length > 0 && (
-                      <div style={{ fontSize: 12, color: '#9ca3af', fontWeight: 600, marginBottom: 8 }}>
-                        Also selected: {extraStyles.map(s => s === 'read_write' ? 'Read/Write' : s.charAt(0).toUpperCase() + s.slice(1)).join(', ')}
-                        {extraStyles.includes('read_write') && ' — Read/Write learners benefit from written notes and outlines; ask Scout to create written summaries for any lesson.'}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 800, color: '#374151', textTransform: 'uppercase' as const, letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>Subject</label>
+                    <input type="text" value={formSubject} onChange={e => setFormSubject(e.target.value)} placeholder="e.g. Math" style={{ width: '100%', padding: '10px 14px', background: '#f9fafb', border: '2px solid #e5e7eb', borderRadius: 10, fontSize: 13, fontWeight: 600, outline: 'none', boxSizing: 'border-box' as const, color: '#111827', fontFamily: "'Nunito', sans-serif" }} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 800, color: '#374151', textTransform: 'uppercase' as const, letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>Type</label>
+                    <select value={formType} onChange={e => setFormType(e.target.value as any)} style={{ width: '100%', padding: '10px 14px', background: '#f9fafb', border: '2px solid #e5e7eb', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer', color: '#111827', fontFamily: "'Nunito', sans-serif" }}>
+                      <option value="textbook">📚 Textbook</option>
+                      <option value="subscription">🔑 Subscription</option>
+                      <option value="physical">🧰 Physical</option>
+                      <option value="digital">💻 Digital</option>
+                    </select>
+                  </div>
+                </div>
+                {(formType === 'digital' || formType === 'subscription') && (
+                  <div style={{ background: '#f5f3ff', borderRadius: 12, padding: 14, border: '1.5px solid #ede9fe', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <div>
+                      <label style={{ fontSize: 11, fontWeight: 800, color: '#7c3aed', textTransform: 'uppercase' as const, letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>Resource URL</label>
+                      <input type="url" value={formUrl} onChange={e => setFormUrl(e.target.value)} placeholder="https://..." style={{ width: '100%', padding: '10px 14px', background: '#fff', border: '1.5px solid #ddd6fe', borderRadius: 8, fontSize: 13, outline: 'none', boxSizing: 'border-box' as const, color: '#111827', fontFamily: "'Nunito', sans-serif" }} />
+                    </div>
+                    {formType === 'subscription' && (
+                      <div>
+                        <label style={{ fontSize: 11, fontWeight: 800, color: '#7c3aed', textTransform: 'uppercase' as const, letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>Access Credentials</label>
+                        <input type="text" value={formLoginInfo} onChange={e => setFormLoginInfo(e.target.value)} placeholder="Username / Password notes" style={{ width: '100%', padding: '10px 14px', background: '#fff', border: '1.5px solid #ddd6fe', borderRadius: 8, fontSize: 13, outline: 'none', boxSizing: 'border-box' as const, color: '#111827', fontFamily: "'Nunito', sans-serif" }} />
                       </div>
                     )}
-                    <p style={{ fontSize: 14, color: '#6b7280', lineHeight: 1.7, margin: '0 0 16px' }}>{bridge.intro}</p>
-                    <ul style={{ margin: '0 0 16px', padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column' as const, gap: 8 }}>
-                      {bridge.tips.map((tip, i) => (
-                        <li key={i} style={{ display: 'flex', gap: 10, fontSize: 14, color: '#374151', lineHeight: 1.6 }}>
-                          <span style={{ color: '#7c3aed', flexShrink: 0, marginTop: 2 }}>•</span>
-                          <span>{tip}</span>
-                        </li>
-                      ))}
-                    </ul>
-                    {bridge.scoutTip && (
-                      <button
-                        onClick={() => window.dispatchEvent(new CustomEvent('open-scout-copilot', { detail: { prompt: bridge.scoutTip } }))}
-                        style={{ background: '#f5f3ff', borderRadius: 12, padding: '12px 14px', display: 'flex', gap: 10, alignItems: 'flex-start', marginBottom: miTips.length > 0 ? 20 : 0, border: '1.5px solid #ede9fe', cursor: 'pointer', textAlign: 'left', width: '100%', transition: 'background 0.15s' }}
-                        onMouseEnter={e => (e.currentTarget.style.background = '#ede9fe')}
-                        onMouseLeave={e => (e.currentTarget.style.background = '#f5f3ff')}
-                      >
-                        <img src="/Cardinal_Mascot.png" alt="Scout" style={{ width: 24, height: 24, objectFit: 'contain', flexShrink: 0 }} />
-                        <div style={{ flex: 1 }}>
-                          <p style={{ margin: '0 0 4px', fontSize: 15, color: '#6d28d9', lineHeight: 1.6 }}>{bridge.scoutTip}</p>
-                          <span style={{ fontSize: 11, fontWeight: 700, color: '#a78bfa' }}>Tap to ask Scout →</span>
-                        </div>
-                      </button>
-                    )}
-                  </>
-                )}
-
-                {miTips.length > 0 && (
-                  <div style={bridge ? { paddingTop: 16, borderTop: '1px solid #f3f4f6' } : {}}>
-                    <div style={{ fontSize: 11, fontWeight: 800, color: '#9ca3af', textTransform: 'uppercase' as const, letterSpacing: '0.06em', marginBottom: 12 }}>
-                      {kid?.displayname}&apos;s Intelligence Strengths
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 12 }}>
-                      {(kid?.mi_profile ?? []).map((miId, i) => {
-                        const miDef = MI_INTELLIGENCES.find(m => m.id === miId)
-                        const tipEntry = miTips[i]
-                        if (!miDef || !tipEntry) return null
-                        return (
-                          <div key={miId}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                              <span style={{ fontSize: 20 }}>{miDef.emoji}</span>
-                              <span style={{ fontSize: 13, fontWeight: 800, color: '#1e1b4b' }}>{miDef.fullName}</span>
-                            </div>
-                            <p style={{ margin: '0 0 4px 28px', fontSize: 13, color: '#6b7280', lineHeight: 1.6 }}>{miDef.detail}</p>
-                            {tipEntry.styleTip && (
-                              <div style={{ margin: '0 0 0 28px', fontSize: 13, color: '#7c3aed', fontWeight: 600, lineHeight: 1.5 }}>
-                                → {tipEntry.styleTip}
-                              </div>
-                            )}
-                          </div>
-                        )
-                      })}
-                    </div>
                   </div>
                 )}
-              </div>
-            )}
-          </div>
-        )
-      })()}
-
-      {/* MI Self-Assessment */}
-      {activeSection === 'mi' && (
-        <div>
-          <div style={{ background: '#fff', borderRadius: 14, padding: '20px', border: '1px solid #e5e7eb', marginBottom: 16 }}>
-            <div style={{ fontSize: 17, fontWeight: 800, color: '#111827', marginBottom: 6 }}>Your Multiple Intelligences Profile</div>
-            <p style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.7, margin: '0 0 16px' }}>
-              How you learn often shapes how you teach — even unconsciously. Pick your top 3 intelligences to build your own MI profile. Use this alongside your child's profile to find your best teaching fit.
-            </p>
-
-            {/* Cards by cluster */}
-            {(['analytical', 'introspective', 'interactive'] as const).map(cluster => {
-              const clusterInfo = MI_CLUSTERS[cluster]
-              const items = MI_INTELLIGENCES.filter(mi => mi.cluster === cluster)
-              return (
-                <div key={cluster} style={{ marginBottom: 16 }}>
-                  <div style={{ fontSize: 10, fontWeight: 800, color: clusterInfo.color, letterSpacing: 1, textTransform: 'uppercase' as const, marginBottom: 8 }}>
-                    {clusterInfo.label} — <span style={{ fontWeight: 600, textTransform: 'none' as const, color: '#9ca3af' }}>{clusterInfo.tagline}</span>
+                {formType === 'physical' && (
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 800, color: '#374151', textTransform: 'uppercase' as const, letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>Quantity</label>
+                    <input type="number" min="1" value={formQuantity} onChange={e => setFormQuantity(parseInt(e.target.value) || 1)} style={{ width: '100%', padding: '10px 14px', background: '#f9fafb', border: '2px solid #e5e7eb', borderRadius: 10, fontSize: 13, fontWeight: 600, outline: 'none', boxSizing: 'border-box' as const, color: '#111827', fontFamily: "'Nunito', sans-serif" }} />
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-                    {items.map(mi => {
-                      const selected = miProfile.includes(mi.id)
-                      const maxed = miProfile.length >= 3 && !selected
-                      return (
-                        <button
-                          key={mi.id}
-                          onClick={() => toggleMi(mi.id)}
-                          disabled={maxed}
-                          style={{
-                            padding: '14px 10px', borderRadius: 12,
-                            border: `2px solid ${selected ? '#7c3aed' : '#e5e7eb'}`,
-                            background: selected ? '#f5f3ff' : '#fafafa',
-                            cursor: maxed ? 'not-allowed' : 'pointer',
-                            opacity: maxed ? 0.4 : 1,
-                            textAlign: 'center' as const,
-                            transition: 'all 0.15s',
-                            position: 'relative' as const,
-                            fontFamily: "'Nunito', sans-serif",
-                          }}
-                        >
-                          {selected && (
-                            <div style={{ position: 'absolute', top: 6, right: 6, width: 16, height: 16, borderRadius: '50%', background: '#7c3aed', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, color: '#fff', fontWeight: 900 }}>✓</div>
-                          )}
-                          <div style={{ fontSize: 26, marginBottom: 6 }}>{mi.emoji}</div>
-                          <div style={{ fontSize: 11, fontWeight: 800, color: selected ? '#7c3aed' : '#1e1b4b', marginBottom: 3 }}>{mi.name}</div>
-                          <div style={{ fontSize: 10, color: '#6b7280', lineHeight: 1.4 }}>{mi.desc}</div>
-                        </button>
-                      )
-                    })}
-                  </div>
+                )}
+                <div>
+                  <label style={{ fontSize: 11, fontWeight: 800, color: '#374151', textTransform: 'uppercase' as const, letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>Notes</label>
+                  <input type="text" value={formNotes} onChange={e => setFormNotes(e.target.value)} placeholder="Optional notes" style={{ width: '100%', padding: '10px 14px', background: '#f9fafb', border: '2px solid #e5e7eb', borderRadius: 10, fontSize: 13, fontWeight: 600, outline: 'none', boxSizing: 'border-box' as const, color: '#111827', fontFamily: "'Nunito', sans-serif" }} />
                 </div>
-              )
-            })}
-
-            {miProfile.length > 0 && (
-              <div style={{ marginTop: 16, padding: '14px 16px', background: '#f5f3ff', borderRadius: 12, border: '1.5px solid #e9d5ff' }}>
-                <div style={{ fontSize: 12, fontWeight: 800, color: '#7c3aed', marginBottom: 8 }}>YOUR PROFILE: {miProfile.map(id => MI_INTELLIGENCES.find(m => m.id === id)?.name).join(' · ')}</div>
-                {miProfile.map(id => {
-                  const mi = MI_INTELLIGENCES.find(m => m.id === id)
-                  if (!mi) return null
-                  return (
-                    <div key={id} style={{ marginBottom: 8 }}>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: '#1e1b4b' }}>{mi.emoji} {mi.fullName}</div>
-                      <div style={{ fontSize: 12, color: '#6b7280', lineHeight: 1.5 }}>{mi.detail}</div>
-                    </div>
-                  )
-                })}
               </div>
-            )}
-
-            <div style={{ marginTop: 14, padding: '10px 14px', background: '#f9fafb', borderRadius: 10, border: '1px solid #e5e7eb' }}>
-              <div style={{ fontSize: 10, fontWeight: 800, color: '#9ca3af', letterSpacing: 0.5, marginBottom: 6, textTransform: 'uppercase' as const }}>Remember</div>
-              {MI_REMEMBER.map(r => <div key={r} style={{ fontSize: 11, color: '#6b7280', fontWeight: 600 }}>· {r}</div>)}
-            </div>
+              <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
+                <button type="submit" disabled={isSaving} style={{ flex: 1, background: '#4f46e5', color: '#fff', border: 'none', padding: '13px 0', borderRadius: 12, fontSize: 14, fontWeight: 800, cursor: isSaving ? 'not-allowed' : 'pointer', opacity: isSaving ? 0.7 : 1, fontFamily: "'Nunito', sans-serif" }}>{isSaving ? 'Saving...' : `${editingMaterial ? 'Update' : 'Save'} Resource`}</button>
+                <button type="button" onClick={() => { setShowAddForm(false); resetForm() }} style={{ flex: 1, background: '#f3f4f6', color: '#374151', border: 'none', padding: '13px 0', borderRadius: 12, fontSize: 14, fontWeight: 800, cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}>Cancel</button>
+              </div>
+            </form>
           </div>
         </div>
       )}
-
-      {/* VAK Learning Style Tips */}
-      {activeSection === 'vak' && (
-        <div>
-          <div style={{ background: '#fff', borderRadius: 14, padding: '20px', border: '1px solid #e5e7eb', marginBottom: 16 }}>
-            <div style={{ fontSize: 17, fontWeight: 800, color: '#111827', marginBottom: 6 }}>Learning Style Tips (VAK)</div>
-            <p style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.7, margin: '0 0 16px' }}>
-              Visual, Auditory, and Kinesthetic — the three modes of how information is best received. Use these tips to shape how you deliver lessons to your child.
-            </p>
-            {Object.entries(VAK_TIPS).map(([key, vak]) => (
-              <div key={key} style={{ border: '1.5px solid', borderColor: expandedVak === key ? '#7c3aed' : '#e5e7eb', borderRadius: 12, marginBottom: 10, overflow: 'hidden' }}>
-                <button
-                  onClick={() => setExpandedVak(expandedVak === key ? null : key)}
-                  style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', background: expandedVak === key ? '#f5f3ff' : '#fff', border: 'none', cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}
-                >
-                  <span style={{ fontSize: 14, fontWeight: 700, color: '#111827' }}>{vak.emoji} {vak.label} Learners</span>
-                  <span style={{ fontSize: 18, color: '#9ca3af' }}>{expandedVak === key ? '−' : '+'}</span>
-                </button>
-                {expandedVak === key && (
-                  <div style={{ padding: '0 16px 16px' }}>
-                    {vak.tips.map((tip, i) => (
-                      <div key={i} style={{ display: 'flex', gap: 10, padding: '8px 0', borderTop: '1px solid #f3f4f6' }}>
-                        <span style={{ color: '#7c3aed', fontWeight: 800, flexShrink: 0 }}>→</span>
-                        <span style={{ fontSize: 13, color: '#374151', lineHeight: 1.5 }}>{tip}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* High School Planning */}
-      {activeSection === 'highschool' && <HighSchoolTab />}
-
-      {/* Guides */}
-      {activeSection === 'guides' && <GuidesTab />}
     </div>
   )
 }
@@ -1559,7 +924,7 @@ function ResourcesContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   useAppHeader({ title: '💡 Resources' })
-  const validTabs = ['styles', 'statelaws', 'dictionary', 'parents', 'materials'] as const
+  const validTabs = ['styles', 'statelaws', 'dictionary', 'materials', 'highschool'] as const
   type TabId = typeof validTabs[number]
   const initialTab = validTabs.includes(searchParams.get('tab') as TabId) ? searchParams.get('tab') as TabId : 'styles'
   const [activeTab, setActiveTab] = useState<TabId>(initialTab)
@@ -1568,8 +933,6 @@ function ResourcesContent() {
   const [userStyle, setUserStyle] = useState<string | null>(null)
   const [organizationId, setOrganizationId] = useState<string>('')
   const [loading, setLoading] = useState(true)
-  const [blueprintKids, setBlueprintKids] = useState<{ id: string; displayname: string; learning_style?: string | null; mi_profile?: string[] | null }[]>([])
-  const [blueprintOrgStyle, setBlueprintOrgStyle] = useState<string | null>(null)
 
   useEffect(() => {
     const init = async () => {
@@ -1580,13 +943,10 @@ function ResourcesContent() {
       if (orgId) {
         setOrganizationId(orgId)
 
-        const [orgSettingsRes, orgRes, kidsRes] = await Promise.all([
+        const [orgSettingsRes] = await Promise.all([
           supabase.from('organization_settings').select('teaching_style').eq('organization_id', orgId).maybeSingle(),
-          supabase.from('organizations').select('teaching_style').eq('id', orgId).maybeSingle(),
-          supabase.from('kids').select('id, displayname, learning_style, mi_profile').eq('organization_id', orgId).order('displayname'),
         ])
 
-        // Teaching style for styles tab
         if (orgSettingsRes.data?.teaching_style) {
           const styleId = orgSettingsRes.data.teaching_style.toLowerCase().replace(/\s+/g, '')
           const matched = TEACHING_STYLES.find(
@@ -1597,11 +957,6 @@ function ResourcesContent() {
             setCurriculumStyle(matched.id)
           }
         }
-
-        // Teaching style + kids for blueprint
-        const orgStyle = orgRes.data?.teaching_style ?? orgSettingsRes.data?.teaching_style ?? null
-        setBlueprintOrgStyle(orgStyle)
-        setBlueprintKids(kidsRes.data ?? [])
       }
       setLoading(false)
     }
@@ -1609,11 +964,11 @@ function ResourcesContent() {
   }, [])
 
   const TABS = [
-    { id: 'styles' as const,     icon: '🎨', label: 'Teaching Styles & Curriculum' },
-    { id: 'statelaws' as const,  icon: '⚖️', label: 'State Laws'                   },
-    { id: 'dictionary' as const, icon: '📖', label: 'Data Dictionary'              },
-    { id: 'parents' as const,    icon: '🪴', label: "Parent's Corner"              },
-    { id: 'materials' as const,  icon: '🗂️', label: 'My Materials'                 },
+    { id: 'styles' as const,      icon: '🎨', label: 'Teaching Styles & Curriculum' },
+    { id: 'statelaws' as const,   icon: '⚖️', label: 'State Laws'                   },
+    { id: 'dictionary' as const,  icon: '📖', label: 'Data Dictionary'              },
+    { id: 'materials' as const,   icon: '🗂️', label: 'My Materials'                 },
+    { id: 'highschool' as const,  icon: '🎓', label: 'High School Planning'         },
   ]
 
   const handleViewCurriculum = (styleId: string) => {
@@ -1636,7 +991,7 @@ function ResourcesContent() {
 
       <div style={{ maxWidth: (activeTab === 'statelaws' || activeTab === 'materials') ? 1060 : 860, margin: '0 auto', padding: '24px 24px 48px' }}>
 
-        <div className="hr-section-label" style={{ marginBottom: 14 }}>TEACHING STYLES · STATE LAWS · DATA DICTIONARY · PARENT'S CORNER</div>
+        <div className="hr-section-label" style={{ marginBottom: 14 }}>TEACHING STYLES · STATE LAWS · DATA DICTIONARY · MY MATERIALS · HIGH SCHOOL</div>
 
         {/* Tab pills */}
         <div className="hr-pill-row" style={{ marginBottom: 24, flexWrap: 'wrap' }}>
@@ -1687,8 +1042,8 @@ function ResourcesContent() {
         {activeTab === 'dictionary' && (
           <DataDictionaryTab />
         )}
-        {activeTab === 'parents' && (
-          <ParentsCornerTab blueprintKids={blueprintKids} blueprintOrgStyle={blueprintOrgStyle} />
+        {activeTab === 'highschool' && (
+          <HighSchoolTab />
         )}
         {activeTab === 'materials' && organizationId && (
           <MaterialsTab organizationId={organizationId} />

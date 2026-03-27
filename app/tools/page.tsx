@@ -35,6 +35,7 @@ function ToolsContent() {
         .from('kids')
         .select('id, displayname')
         .eq('organization_id', oid)
+        .eq('archived', false)
         .order('displayname')
 
       setOrgId(oid)

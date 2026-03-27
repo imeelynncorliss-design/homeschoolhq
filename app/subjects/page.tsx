@@ -223,7 +223,7 @@ function SubjectsContent() {
 
       const [kidsResult, lessonsResult, subjectsResult] = await Promise.all([
         supabase.from('kids').select('id, displayname, grade')
-          .eq('organization_id', resolvedOrgId).order('created_at', { ascending: true }),
+          .eq('organization_id', resolvedOrgId).eq('archived', false).order('created_at', { ascending: true }),
         supabase.from('lessons')
           .select('id, title, subject, status, lesson_date, start_time, description, notes, kid_id, duration_minutes, lesson_source')
           .eq('organization_id', resolvedOrgId).order('lesson_date', { ascending: true }),

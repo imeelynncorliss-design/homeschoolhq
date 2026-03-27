@@ -29,6 +29,7 @@ function FieldTripsContent() {
         .from('kids')
         .select('id, displayname')
         .eq('organization_id', orgId)
+        .eq('archived', false)
         .order('created_at', { ascending: false })
 
       setOrganizationId(orgId)

@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation'
 import moment from 'moment'
 import { calculateTotalSchoolDays, isValidHomeschoolDay } from '@/utils/schoolYearUtils'
 import { DEFAULT_HOLIDAYS_2025_2026, Holiday } from '@/app/utils/holidayUtils'
-import { generateComplianceReport } from '@/src/utils/generateComplianceReport'
 import { useAttendanceStats } from '@/src/hooks/useAttendanceStats'
 
 interface ProgressDashboardProps {
@@ -14,7 +13,7 @@ interface ProgressDashboardProps {
   organizationId: string   // ← now a required prop; do NOT derive from kids table
 }
 
-type Tab = 'overview' | 'insights' | 'goals' | 'compliance' | 'reports'
+type Tab = 'overview' | 'insights' | 'goals'
 
 type LessonRow = {
   id: string
@@ -36,9 +35,7 @@ export default function ProgressDashboard({ userId, organizationId }: ProgressDa
   const [settings, setSettings] = useState<any>(null)
   const [vacationHolidays, setVacationHolidays] = useState<Holiday[]>([])
   const [allLessons, setAllLessons] = useState<LessonRow[]>([])
-  const [isExporting, setIsExporting] = useState(false)
   const [requiredDays, setRequiredDays] = useState(180)
-  const [selectedState, setSelectedState] = useState('')
   const [kids, setKids] = useState<Kid[]>([])
   const [selectedKidId, setSelectedKidId] = useState<string | null>(null)
   const [fieldTripHours, setFieldTripHours] = useState(0)
@@ -48,6 +45,7 @@ export default function ProgressDashboard({ userId, organizationId }: ProgressDa
   const attendanceStats = useAttendanceStats({
     organizationId,
     userId,
+    kidId: selectedKidId || 'all',
     startDate: settings?.school_year_start || undefined,
     endDate: settings?.school_year_end || undefined,
     requiredDays,
@@ -86,7 +84,6 @@ export default function ProgressDashboard({ userId, organizationId }: ProgressDa
 
       if (settingsData) {
         setSettings(settingsData)
-        setSelectedState(settingsData.selected_state || '')
       }
 
       // Compliance goal override
@@ -121,6 +118,7 @@ export default function ProgressDashboard({ userId, organizationId }: ProgressDa
         .from('kids')
         .select('id, displayname')
         .eq('organization_id', organizationId)
+        .eq('archived', false)
 
       const kidList = (kidsData || []) as Kid[]
       setKids(kidList)
@@ -181,70 +179,6 @@ export default function ProgressDashboard({ userId, organizationId }: ProgressDa
       .sort((a, b) => b.total - a.total)
   }
 
-  const handleExportReport = async () => {
-    if (!organizationId) return
-    setIsExporting(true)
-    try {
-      const { data: kidsData } = await supabase
-        .from('kids')
-        .select('id, displayname, firstname, lastname, photo_url, grade, age')
-        .eq('organization_id', organizationId)
-
-      if (!kidsData || kidsData.length === 0) { alert('No students found.'); return }
-
-      const kidIds = kidsData.map((k: any) => k.id)
-      const { data: lessons } = await supabase
-        .from('lessons')
-        .select('id, kid_id, status, duration_minutes')
-        .in('kid_id', kidIds)
-
-      const complianceData = kidsData.map((kid: any) => {
-        const kidLessons = (lessons ?? []).filter((l: any) => l.kid_id === kid.id)
-        const completedMinutes = kidLessons
-          .filter((l: any) => l.status === 'completed')
-          .reduce((sum: number, l: any) => sum + (l.duration_minutes ?? 0), 0)
-        const totalHours = Math.round((completedMinutes / 60) * 10) / 10
-        // Use shared hook totals for consistency
-        const totalDays = attendanceStats.totalDays
-        const daysScore = requiredDays > 0 ? Math.min(100, Math.round((totalDays / requiredDays) * 100)) : 100
-        const hoursScore = attendanceStats.totalHours > 0
-          ? Math.min(100, Math.round((totalHours / attendanceStats.totalHours) * 100))
-          : 100
-        const healthScore = Math.round(daysScore * 0.6 + hoursScore * 0.4)
-        return {
-          kid,
-          totalHours,
-          totalDays,
-          healthScore,
-          requiredHours: attendanceStats.totalHours,
-          requiredDays,
-          hoursRemaining: 0,
-          daysRemaining: Math.max(0, requiredDays - totalDays),
-          onTrack: healthScore >= 60,
-        }
-      })
-
-      const familyHealthScore = Math.round(
-        complianceData.reduce((sum: number, d: { healthScore: number }) => sum + d.healthScore, 0) / complianceData.length
-      )
-
-      await generateComplianceReport({
-        complianceData,
-        settings: {
-          state_code: selectedState || undefined,
-          school_year_start_date: settings?.school_year_start,
-          school_year_end_date: settings?.school_year_end,
-          required_annual_days: requiredDays,
-        },
-        familyHealthScore,
-      })
-    } catch (err) {
-      console.error('Export failed:', err)
-      alert('Failed to generate report. Please try again.')
-    } finally {
-      setIsExporting(false)
-    }
-  }
 
   if (loading || attendanceStats.loading) {
     return <div className="text-center py-8">Loading progress data...</div>
@@ -272,8 +206,6 @@ export default function ProgressDashboard({ userId, organizationId }: ProgressDa
     { id: 'overview',   icon: '📋', label: 'Overview'   },
     { id: 'insights',   icon: '📊', label: 'Insights'   },
     { id: 'goals',      icon: '🎯', label: 'Goals'      },
-    { id: 'compliance', icon: '✅', label: 'Compliance' },
-    { id: 'reports',    icon: '📄', label: 'Reports'    },
   ]
 
   const KID_COLORS = ['#7c3aed', '#0d9488', '#ec4899', '#f59e0b', '#3b82f6']
@@ -301,8 +233,8 @@ export default function ProgressDashboard({ userId, organizationId }: ProgressDa
         <p style={{ fontSize: 13, color: '#6b7280', fontWeight: 600, margin: 0 }}>Monitor your annual learning goals and stay on track</p>
       </div>
 
-      {/* Kid filter pills — Insights only */}
-      {kids.length > 1 && activeTab === 'insights' && (
+      {/* Kid filter pills — Overview + Insights */}
+      {kids.length > 1 && (activeTab === 'overview' || activeTab === 'insights') && (
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <button onClick={() => setSelectedKidId(null)} style={{ padding: '7px 16px', borderRadius: 999, fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 13, cursor: 'pointer', border: selectedKidId === null ? '2px solid #7c3aed' : '2px solid #e5e7eb', background: selectedKidId === null ? '#ede9fe' : '#fff', color: selectedKidId === null ? '#7c3aed' : '#6b7280' }}>
             All kids
@@ -502,73 +434,6 @@ export default function ProgressDashboard({ userId, organizationId }: ProgressDa
         </div>
       )}
 
-      {/* ── Compliance ── */}
-      {activeTab === 'compliance' && (
-        <div style={{ background: '#f5f3ff', border: '1.5px solid rgba(124,58,237,0.12)', borderRadius: 14, padding: '20px' }}>
-          <div style={{ fontSize: 15, fontWeight: 900, color: '#1a1a2e', marginBottom: 16, fontFamily: "'Nunito', sans-serif" }}>✅ Compliance Status</div>
-          {!selectedState ? infoBox(
-            <><span style={{ fontWeight: 800, color: '#1a1a2e' }}>No state selected.</span>{' '}
-            <button onClick={() => router.push('/school-year')} style={{ background: 'none', border: 'none', color: '#7c3aed', fontWeight: 700, cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>Set your state in School Year settings</button>{' '}to see compliance requirements.</>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div style={{ background: percentComplete >= 80 ? '#ecfdf5' : percentComplete >= 40 ? '#fffbeb' : '#fef2f2', border: `2px solid ${percentComplete >= 80 ? '#a7f3d0' : percentComplete >= 40 ? '#fde68a' : '#fca5a5'}`, borderRadius: 12, padding: '16px', display: 'flex', alignItems: 'center', gap: 14 }}>
-                <div style={{ fontSize: 36 }}>{percentComplete >= 80 ? '✅' : percentComplete >= 40 ? '⚠️' : '🚨'}</div>
-                <div>
-                  <div style={{ fontWeight: 800, fontSize: 14, color: '#1a1a2e' }}>{selectedState} Compliance</div>
-                  <div style={{ fontSize: 13, color: '#4b5563', fontWeight: 600 }}>{completed} of {goal} required days logged · {percentComplete}% complete</div>
-                  {attendanceStats.lessonInferredDays > 0 && <div style={{ fontSize: 11, color: '#92400e', fontWeight: 600, marginTop: 4 }}>⚠️ {attendanceStats.lessonInferredDays} days are lesson-inferred and not yet manually confirmed.</div>}
-                </div>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                <div style={{ background: 'rgba(255,255,255,0.7)', border: '1.5px solid rgba(124,58,237,0.1)', borderRadius: 12, padding: '14px 16px' }}>
-                  <div style={{ fontSize: 11, color: '#6b7280', fontWeight: 700, marginBottom: 4 }}>Days Logged</div>
-                  <div style={{ fontSize: 24, fontWeight: 900, color: '#1a1a2e', fontFamily: "'Nunito', sans-serif" }}>{completed}</div>
-                  <div style={{ fontSize: 11, color: '#9ca3af', fontWeight: 600 }}>of {goal} required</div>
-                </div>
-                <div style={{ background: 'rgba(255,255,255,0.7)', border: '1.5px solid rgba(124,58,237,0.1)', borderRadius: 12, padding: '14px 16px' }}>
-                  <div style={{ fontSize: 11, color: '#6b7280', fontWeight: 700, marginBottom: 4 }}>Days Remaining</div>
-                  <div style={{ fontSize: 24, fontWeight: 900, color: '#f59e0b', fontFamily: "'Nunito', sans-serif" }}>{daysRemaining}</div>
-                  <div style={{ fontSize: 11, color: '#9ca3af', fontWeight: 600 }}>{settings?.school_year_end ? `by ${moment(settings.school_year_end).format('MMM D, YYYY')}` : 'no end date set'}</div>
-                </div>
-              </div>
-              {infoBox(<>💡 HomeschoolReady is not a legal advisor. Always verify requirements at{' '}<a href="https://hslda.org" target="_blank" rel="noopener noreferrer" style={{ color: '#7c3aed', fontWeight: 700 }}>HSLDA.org</a>{' '}or your state's Department of Education.</>)}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ── Reports ── */}
-      {activeTab === 'reports' && (
-        <div style={{ background: '#f5f3ff', border: '1.5px solid rgba(124,58,237,0.12)', borderRadius: 14, padding: '20px' }}>
-          <div style={{ fontSize: 15, fontWeight: 900, color: '#1a1a2e', marginBottom: 4, fontFamily: "'Nunito', sans-serif" }}>📄 Compliance Report</div>
-          <div style={{ fontSize: 13, color: '#6b7280', fontWeight: 600, marginBottom: 20 }}>
-            Generate a PDF compliance report showing attendance, lesson completion, and health scores for each student.
-          </div>
-          <div style={{ background: 'rgba(255,255,255,0.7)', border: '1.5px solid rgba(124,58,237,0.1)', borderRadius: 12, padding: '14px 16px', marginBottom: 20, display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {[
-              { label: 'School Year', value: settings?.school_year_start ? `${moment(settings.school_year_start).format('MMM D, YYYY')} – ${moment(settings.school_year_end).format('MMM D, YYYY')}` : 'Not configured' },
-              { label: 'State', value: selectedState || 'Not set' },
-              { label: 'Days Logged', value: `${completed} / ${goal}` },
-              { label: 'Lessons Completed', value: String(completedLessons) },
-            ].map(row => (
-              <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
-                <span style={{ color: '#6b7280', fontWeight: 600 }}>{row.label}</span>
-                <span style={{ fontWeight: 800, color: '#1a1a2e' }}>{row.value}</span>
-              </div>
-            ))}
-          </div>
-          <button
-            onClick={handleExportReport}
-            disabled={isExporting || !settings?.school_year_start}
-            style={{ width: '100%', padding: '13px 20px', background: 'linear-gradient(135deg, #7c3aed, #a855f7)', color: '#fff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 800, cursor: isExporting || !settings?.school_year_start ? 'not-allowed' : 'pointer', opacity: isExporting || !settings?.school_year_start ? 0.6 : 1, fontFamily: "'Nunito', sans-serif" }}
-          >
-            {isExporting ? '⏳ Generating...' : '⬇️ Download PDF Report'}
-          </button>
-          {!settings?.school_year_start && (
-            <p style={{ fontSize: 12, color: '#9ca3af', fontWeight: 600, textAlign: 'center', marginTop: 8 }}>Configure school year dates before generating a report.</p>
-          )}
-        </div>
-      )}
     </div>
   )
 }

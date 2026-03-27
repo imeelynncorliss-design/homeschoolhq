@@ -2,7 +2,6 @@
 
 import { useMemo } from 'react'
 import { useStateComplianceTemplates } from '@/src/hooks/useStateComplianceTemplates'
-import { useTheme } from '@/contexts/ThemeContext'
 
 interface ComplianceCheckerProps {
   totalDays: number
@@ -30,7 +29,6 @@ export default function ComplianceChecker({
   kidId,
   organizationId
 }: ComplianceCheckerProps) {
-  const { isDark } = useTheme()
   const { templates, loading, getTemplate } = useStateComplianceTemplates()
 
   const compliance = useMemo(() => {
@@ -181,11 +179,6 @@ export default function ComplianceChecker({
     return 'bg-orange-600'
   }
 
-  // In dark mode, override light-colored Tailwind backgrounds so text is legible
-  const darkCardStyle: React.CSSProperties = isDark
-    ? { backgroundColor: 'var(--hr-bg-surface)', borderColor: 'rgba(255,255,255,0.12)' }
-    : {}
-
   const getRequirementBorderColor = (req: ComplianceRequirement) => {
     if (req.type?.toLowerCase() === 'none') return 'border-gray-200 bg-gray-50'
     if (req.type?.toLowerCase() === 'guideline')
@@ -228,7 +221,7 @@ export default function ComplianceChecker({
           </p>
           <a 
             href="/admin" 
-            className="text-xs text-blue-600 hover:text-blue-800 hover:underline"
+            className="text-xs text-purple-600 hover:text-purple-800 hover:underline"
           >
             Change in Settings →
           </a>
@@ -237,24 +230,24 @@ export default function ComplianceChecker({
 
       {/* No State Configured Message */}
       {!stateInfo && (
-        <div className="mb-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200" style={darkCardStyle}>
+        <div className="mb-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
           <p className="text-sm text-gray-700 font-medium mb-1">⚠️ No state configured</p>
           <p className="text-sm text-gray-600">
-            Go to <a href="/admin" className="text-blue-600 hover:underline">School Year Setup</a> to select your state and enable compliance tracking.
+            Go to <a href="/admin" className="text-purple-600 hover:underline">School Year Setup</a> to select your state and enable compliance tracking.
           </p>
         </div>
       )}
 
       {/* State Description with Link */}
       {stateInfo && !stateInfo.isCustom && (
-        <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200" style={darkCardStyle}>
+        <div className="mb-4 p-3 bg-purple-50 rounded-lg border border-purple-200">
           <p className="text-sm text-gray-700">{compliance.description}</p>
           {compliance.template && (
             <a 
               href={compliance.template.official_source_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-xs text-blue-600 hover:text-blue-800 underline mt-1 inline-block"
+              className="text-xs text-purple-600 hover:text-purple-800 underline mt-1 inline-block"
             >
               Verify at {compliance.template.official_source_name} →
             </a>
@@ -264,11 +257,11 @@ export default function ComplianceChecker({
 
       {/* Custom State Message */}
       {stateInfo?.isCustom && (
-        <div className="mb-4 p-3 bg-purple-50 rounded-lg border border-purple-200" style={darkCardStyle}>
+        <div className="mb-4 p-3 bg-purple-50 rounded-lg border border-purple-200">
           <p className="text-sm text-gray-700 font-medium">📋 Custom Compliance Settings</p>
           <p className="text-xs text-gray-600 mt-1">
             You're using custom compliance settings for {stateInfo.state_name}. 
-            Update your requirements in <a href="/admin" className="text-blue-600 hover:underline">Settings</a>.
+            Update your requirements in <a href="/admin" className="text-purple-600 hover:underline">Settings</a>.
           </p>
         </div>
       )}
@@ -282,7 +275,7 @@ export default function ComplianceChecker({
               {compliance.percentComplete}%
             </span>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-3" style={isDark ? { backgroundColor: 'rgba(255,255,255,0.12)' } : {}}>
+          <div className="w-full bg-gray-200 rounded-full h-3">
             <div
               className={`h-3 rounded-full transition-all ${getProgressColor()}`}
               style={{ width: `${compliance.percentComplete}%` }}
@@ -298,7 +291,6 @@ export default function ComplianceChecker({
             <div
               key={index}
               className={`p-4 rounded-lg border-2 ${getRequirementBorderColor(req)}`}
-              style={darkCardStyle}
             >
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
@@ -362,12 +354,11 @@ export default function ComplianceChecker({
               ? 'bg-green-50 border-2 border-green-200'
               : 'bg-orange-50 border-2 border-orange-200'
           }`}
-          style={darkCardStyle}
         >
           <div className="flex items-start gap-3">
             <span className="text-2xl">{compliance.allMet ? '🎉' : '📋'}</span>
             <div>
-              <p className={`font-semibold ${compliance.allMet ? (isDark ? 'text-green-400' : 'text-green-900') : (isDark ? 'text-orange-400' : 'text-orange-900')}`}>
+              <p className={`font-semibold ${compliance.allMet ? 'text-green-900' : 'text-orange-900'}`}>
                 {compliance.allMet 
                   ? `You're meeting all ${stateInfo?.state_name} requirements!` 
                   : 'Keep going! You\'re making progress.'}

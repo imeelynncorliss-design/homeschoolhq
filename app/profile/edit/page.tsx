@@ -63,6 +63,11 @@ function EditProfileContent() {
           .update({ name: orgName.trim() })
           .eq('id', orgId)
         if (orgErr) throw new Error(orgErr.message)
+
+        // Keep organization_settings.school_name in sync so attendance/compliance PDFs use the same name
+        await supabase
+          .from('organization_settings')
+          .upsert({ organization_id: orgId, school_name: orgName.trim() }, { onConflict: 'organization_id' })
       }
 
       setSuccess(
