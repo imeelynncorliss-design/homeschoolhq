@@ -222,33 +222,40 @@ export const TIER_DISPLAY: Record<UserTier, {
 
 export const PRICING_COMPARISON_ROWS: { name: string; values: string[] }[] = [
   // Students
-  { name: 'Students',                    values: ['1',           'Unlimited',  'Unlimited',  'Unlimited'] },
+  { name: 'Students',                          values: ['1',           'Unlimited',  'Unlimited',  'Unlimited'] },
+  // Dashboard
+  { name: 'Personalized teaching dashboard',   values: ['✓',           '✓',          '✓',          '✓'] },
+  { name: 'Teaching Blueprint & learning styles', values: ['✓',        '✓',          '✓',          '✓'] },
   // Scout generation
-  { name: 'Scout lesson generation',     values: ['10 / mo',     '25 / mo',    'Unlimited',  'Unlimited'] },
-  { name: 'Scout activity generation',   values: ['5 / mo',      '15 / mo',    'Unlimited',  'Unlimited'] },
-  { name: 'Scout chat messages',         values: ['20 / mo',     '50 / mo',    'Unlimited',  'Unlimited'] },
-  { name: 'Scout state standards import',values: ['–',           '–',          '✓',          '✓'] },
-  { name: 'Curriculum import (PDF)',     values: ['–',           '–',          '✓',          '✓'] },
+  { name: 'Scout lesson generation',           values: ['10 / mo',     '25 / mo',    'Unlimited',  'Unlimited'] },
+  { name: 'Scout activity generation',         values: ['5 / mo',      '15 / mo',    'Unlimited',  'Unlimited'] },
+  { name: 'Scout chat messages',               values: ['20 / mo',     '50 / mo',    'Unlimited',  'Unlimited'] },
+  { name: 'Scout state standards import',      values: ['–',           '–',          '✓',          '✓'] },
+  { name: 'Curriculum import (PDF)',            values: ['–',           '–',          '✓',          '✓'] },
   // Planning
-  { name: 'Lesson planning & calendar',  values: ['✓',           '✓',          '✓',          '✓'] },
-  { name: 'Bulk lesson scheduler',       values: ['–',           '✓',          '✓',          '✓'] },
-  { name: 'Vacation planner',            values: ['–',           '✓',          '✓',          '✓'] },
+  { name: 'Lesson planning & calendar',        values: ['✓',           '✓',          '✓',          '✓'] },
+  { name: 'Bulk lesson scheduler',             values: ['–',           '✓',          '✓',          '✓'] },
+  { name: 'Vacation / life happens planner',   values: ['–',           '✓',          '✓',          '✓'] },
+  { name: 'Field trip log',                    values: ['–',           '✓',          '✓',          '✓'] },
+  { name: 'Reading log',                       values: ['–',           '✓',          '✓',          '✓'] },
   // Compliance & tracking
-  { name: 'State compliance tracking',   values: ['Basic',       '✓',          '✓',          '✓'] },
-  { name: 'Attendance tracking',         values: ['–',           '✓',          '✓',          '✓'] },
-  { name: 'Progress check-ins',          values: ['–',           '✓',          '✓',          '✓'] },
-  { name: 'Standards management',        values: ['–',           '✓',          '✓',          '✓'] },
-  { name: 'PDF compliance export',       values: ['–',           '✓',          '✓',          '✓'] },
+  { name: 'State compliance tracking',         values: ['Basic',       '✓',          '✓',          '✓'] },
+  { name: 'Attendance tracking',               values: ['–',           '✓',          '✓',          '✓'] },
+  { name: 'Attendance PDF export',             values: ['–',           '✓',          '✓',          '✓'] },
+  { name: 'Progress check-ins',                values: ['–',           '✓',          '✓',          '✓'] },
+  { name: 'Standards management',              values: ['–',           '✓',          '✓',          '✓'] },
+  { name: 'PDF compliance report',             values: ['–',           '✓',          '✓',          '✓'] },
   // Reporting
-  { name: 'Transcript generator',        values: ['–',           '–',          '✓',          '✓'] },
-  { name: 'Google Calendar sync',        values: ['–',           '–',          '✓',          '✓'] },
-  // Collaboration
-  { name: 'Co-teacher collaboration',    values: ['–',           '–',          '✓',          '✓'] },
-  { name: 'Co-op class management',      values: ['–',           '–',          '–',          '✓'] },
-  { name: 'Organization switcher',       values: ['–',           '–',          '–',          '✓'] },
+  { name: 'Transcript generator',              values: ['–',           '–',          '✓',          '✓'] },
+  { name: 'Google Calendar sync',              values: ['–',           '–',          '✓',          '✓'] },
+  // Collaboration & community
+  { name: 'Co-teacher collaboration',          values: ['–',           '–',          '✓',          '✓'] },
+  { name: 'Social events calendar',            values: ['–',           '–',          '✓',          '✓'] },
+  { name: 'Co-op class management',            values: ['–',           '–',          '–',          '✓'] },
+  { name: 'Organization switcher',             values: ['–',           '–',          '–',          '✓'] },
   // Support
-  { name: 'Scout Copilot',               values: ['Basic',       'Basic',      'Full',       'Full'] },
-  { name: 'Priority support',            values: ['–',           '–',          '–',          '✓'] },
+  { name: 'Scout Copilot',                     values: ['Basic',       'Basic',      'Full',       'Full'] },
+  { name: 'Priority support',                  values: ['–',           '–',          '–',          '✓'] },
 ]
 
 // ── Helper functions ──────────────────────────────────────────────────────────
