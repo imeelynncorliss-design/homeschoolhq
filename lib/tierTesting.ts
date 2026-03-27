@@ -238,6 +238,10 @@ export const PRICING_COMPARISON_ROWS: { name: string; values: string[] }[] = [
   { name: 'Vacation / life happens planner',   values: ['–',           '✓',          '✓',          '✓'] },
   { name: 'Field trip log',                    values: ['–',           '✓',          '✓',          '✓'] },
   { name: 'Reading log',                       values: ['–',           '✓',          '✓',          '✓'] },
+  // Lessons & portfolio
+  { name: 'Printable lessons & activities',    values: ['✓',           '✓',          '✓',          '✓'] },
+  { name: 'Lesson check-ins (red/yellow/green)', values: ['✓',         '✓',          '✓',          '✓'] },
+  { name: 'Student portfolio & work uploads',  values: ['–',           '✓',          '✓',          '✓'] },
   // Compliance & tracking
   { name: 'State compliance tracking',         values: ['Basic',       '✓',          '✓',          '✓'] },
   { name: 'Attendance tracking',               values: ['–',           '✓',          '✓',          '✓'] },
