@@ -226,6 +226,7 @@ export const PRICING_COMPARISON_ROWS: { name: string; values: string[] }[] = [
   // Scout generation
   { name: 'Scout lesson generation',     values: ['10 / mo',     '25 / mo',    'Unlimited',  'Unlimited'] },
   { name: 'Scout activity generation',   values: ['5 / mo',      '15 / mo',    'Unlimited',  'Unlimited'] },
+  { name: 'Scout chat messages',         values: ['20 / mo',     '50 / mo',    'Unlimited',  'Unlimited'] },
   { name: 'Scout state standards import',values: ['–',           '–',          '✓',          '✓'] },
   { name: 'Curriculum import (PDF)',     values: ['–',           '–',          '✓',          '✓'] },
   // Planning
