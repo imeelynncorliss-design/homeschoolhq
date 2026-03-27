@@ -851,30 +851,30 @@ function LessonsContent() {
       {/* ── Edit Lesson Modal ─────────────────────────────────────────── */}
       {showLessonEditModal && editingLessonId && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div style={{ background: '#fff', borderRadius: 20, width: '100%', maxWidth: 480, maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 64px rgba(0,0,0,0.22)', fontFamily: "'Nunito', sans-serif" }}>
+          <div style={{ background: '#fff', borderRadius: 20, width: '100%', maxWidth: 480, maxHeight: '80vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 64px rgba(0,0,0,0.22)', fontFamily: "'Nunito', sans-serif" }}>
 
             {/* Header */}
-            <div style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #a855f7 100%)', padding: '14px 20px', borderRadius: '20px 20px 0 0', flexShrink: 0 }}>
+            <div style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #a855f7 100%)', padding: '10px 16px', borderRadius: '20px 20px 0 0', flexShrink: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <h3 style={{ margin: 0, fontSize: 17, fontWeight: 900, color: '#fff' }}>✏️ Edit Lesson</h3>
-                <button onClick={cancelEditLesson} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 8, color: '#fff', width: 28, height: 28, cursor: 'pointer', fontSize: 16, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+                <h3 style={{ margin: 0, fontSize: 15, fontWeight: 900, color: '#fff' }}>✏️ Edit Lesson</h3>
+                <button onClick={cancelEditLesson} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 8, color: '#fff', width: 26, height: 26, cursor: 'pointer', fontSize: 14, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
               </div>
               {selectedLessonChild && (
-                <p style={{ margin: '4px 0 0', fontSize: 13, color: 'rgba(255,255,255,0.8)', fontWeight: 600 }}>
+                <p style={{ margin: '2px 0 0', fontSize: 12, color: 'rgba(255,255,255,0.8)', fontWeight: 600 }}>
                   {selectedLessonChild.displayname}{selectedLessonChild.grade ? ` • Grade ${selectedLessonChild.grade}` : ''}
                 </p>
               )}
             </div>
 
             {/* Scrollable body */}
-            <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12, overflowY: 'auto', flex: 1 }}>
+            <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 10, overflowY: 'auto', flex: 1 }}>
 
               <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 800, color: '#4c1d95', letterSpacing: 0.5, marginBottom: 5 }}>SUBJECT *</label>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 800, color: '#4c1d95', letterSpacing: 0.5, marginBottom: 3 }}>SUBJECT *</label>
                 <select
                   value={editLessonSubjectSelect}
                   onChange={(e) => setEditLessonSubjectSelect(e.target.value)}
-                  style={{ width: '100%', padding: '9px 12px', border: '1.5px solid #d1d5db', borderRadius: 10, fontSize: 14, fontWeight: 600, color: '#1a1a2e', fontFamily: "'Nunito', sans-serif", boxSizing: 'border-box' }}
+                  style={{ width: '100%', padding: '7px 10px', border: '1.5px solid #d1d5db', borderRadius: 10, fontSize: 13, fontWeight: 600, color: '#1a1a2e', fontFamily: "'Nunito', sans-serif", boxSizing: 'border-box' }}
                   required
                 >
                   <option value="">Choose a subject...</option>
@@ -886,7 +886,7 @@ function LessonsContent() {
                     type="text"
                     value={editLessonSubjectCustom}
                     onChange={(e) => setEditLessonSubjectCustom(e.target.value)}
-                    style={{ marginTop: 6, width: '100%', padding: '9px 12px', border: '1.5px solid #7c3aed', borderRadius: 10, fontSize: 14, fontWeight: 600, color: '#1a1a2e', fontFamily: "'Nunito', sans-serif", boxSizing: 'border-box' }}
+                    style={{ marginTop: 4, width: '100%', padding: '7px 10px', border: '1.5px solid #7c3aed', borderRadius: 10, fontSize: 13, fontWeight: 600, color: '#1a1a2e', fontFamily: "'Nunito', sans-serif", boxSizing: 'border-box' }}
                     placeholder="e.g., Latin, Robotics, Home Economics"
                     required autoFocus
                   />
@@ -894,29 +894,29 @@ function LessonsContent() {
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 800, color: '#4c1d95', letterSpacing: 0.5, marginBottom: 5 }}>LESSON TITLE *</label>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 800, color: '#4c1d95', letterSpacing: 0.5, marginBottom: 3 }}>LESSON TITLE *</label>
                 <input
                   type="text"
                   value={editLessonTitle}
                   onChange={(e) => setEditLessonTitle(e.target.value)}
-                  style={{ width: '100%', padding: '9px 12px', border: '1.5px solid #d1d5db', borderRadius: 10, fontSize: 14, fontWeight: 600, color: '#1a1a2e', fontFamily: "'Nunito', sans-serif", boxSizing: 'border-box' }}
+                  style={{ width: '100%', padding: '7px 10px', border: '1.5px solid #d1d5db', borderRadius: 10, fontSize: 13, fontWeight: 600, color: '#1a1a2e', fontFamily: "'Nunito', sans-serif", boxSizing: 'border-box' }}
                   required
                 />
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 800, color: '#4c1d95', letterSpacing: 0.5, marginBottom: 5 }}>DESCRIPTION <span style={{ fontWeight: 600, color: '#9ca3af' }}>(optional)</span></label>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 800, color: '#4c1d95', letterSpacing: 0.5, marginBottom: 3 }}>DESCRIPTION <span style={{ fontWeight: 600, color: '#9ca3af' }}>(optional)</span></label>
                 <textarea
                   value={editLessonDescription}
                   onChange={(e) => setEditLessonDescription(e.target.value)}
-                  style={{ width: '100%', padding: '9px 12px', border: '1.5px solid #d1d5db', borderRadius: 10, fontSize: 14, fontWeight: 600, color: '#1a1a2e', fontFamily: "'Nunito', sans-serif", boxSizing: 'border-box', resize: 'none' }}
+                  style={{ width: '100%', padding: '7px 10px', border: '1.5px solid #d1d5db', borderRadius: 10, fontSize: 13, fontWeight: 600, color: '#1a1a2e', fontFamily: "'Nunito', sans-serif", boxSizing: 'border-box', resize: 'none' }}
                   rows={2}
                 />
               </div>
 
               {/* Status */}
               <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 800, color: '#4c1d95', letterSpacing: 0.5, marginBottom: 5 }}>STATUS</label>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 800, color: '#4c1d95', letterSpacing: 0.5, marginBottom: 3 }}>STATUS</label>
                 <div style={{ display: 'flex', gap: 6 }}>
                   {(['not_started', 'in_progress', 'completed'] as const).map((s) => {
                     const labels = { not_started: '⬜ Not Started', in_progress: '🔵 In Progress', completed: '✅ Complete' }
@@ -949,11 +949,11 @@ function LessonsContent() {
 
               {collaborators.length > 0 && (
                 <div>
-                  <label style={{ display: 'block', fontSize: 12, fontWeight: 800, color: '#4c1d95', letterSpacing: 0.5, marginBottom: 5 }}>ASSIGN TO <span style={{ fontWeight: 600, color: '#9ca3af' }}>(optional)</span></label>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 800, color: '#4c1d95', letterSpacing: 0.5, marginBottom: 3 }}>ASSIGN TO <span style={{ fontWeight: 600, color: '#9ca3af' }}>(optional)</span></label>
                   <select
                     value={editLessonAssignedTo}
                     onChange={(e) => setEditLessonAssignedTo(e.target.value)}
-                    style={{ width: '100%', padding: '9px 12px', border: '1.5px solid #d1d5db', borderRadius: 10, fontSize: 14, fontWeight: 600, color: '#1a1a2e', fontFamily: "'Nunito', sans-serif", boxSizing: 'border-box' }}
+                    style={{ width: '100%', padding: '7px 10px', border: '1.5px solid #d1d5db', borderRadius: 10, fontSize: 13, fontWeight: 600, color: '#1a1a2e', fontFamily: "'Nunito', sans-serif", boxSizing: 'border-box' }}
                   >
                     <option value="">Me (primary teacher)</option>
                     {collaborators.map(c => (
@@ -964,9 +964,9 @@ function LessonsContent() {
               )}
 
               {/* Duration */}
-              <div style={{ background: '#faf5ff', border: '1.5px solid #ddd6fe', borderRadius: 12, padding: '12px 14px' }}>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 800, color: '#4c1d95', letterSpacing: 0.5, marginBottom: 8 }}>DURATION</label>
-                <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+              <div style={{ background: '#faf5ff', border: '1.5px solid #ddd6fe', borderRadius: 12, padding: '10px 12px' }}>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 800, color: '#4c1d95', letterSpacing: 0.5, marginBottom: 6 }}>DURATION</label>
+                <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
                   {[15, 30, 45, 60].map(min => (
                     <button
                       key={min}
@@ -1004,7 +1004,7 @@ function LessonsContent() {
               </div>
 
               {/* Schedule */}
-              <div style={{ background: '#faf5ff', border: '1.5px solid #ddd6fe', borderRadius: 12, padding: '12px 14px' }}>
+              <div style={{ background: '#faf5ff', border: '1.5px solid #ddd6fe', borderRadius: 12, padding: '10px 12px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <input
                     type="checkbox"
@@ -1016,7 +1016,7 @@ function LessonsContent() {
                     }}
                     style={{ accentColor: '#7c3aed', width: 16, height: 16 }}
                   />
-                  <label htmlFor="edit-schedule-date" style={{ fontSize: 13, fontWeight: 700, color: '#4c1d95', cursor: 'pointer' }}>
+                  <label htmlFor="edit-schedule-date" style={{ fontSize: 12, fontWeight: 700, color: '#4c1d95', cursor: 'pointer' }}>
                     Schedule for a specific date
                   </label>
                 </div>
@@ -1025,7 +1025,7 @@ function LessonsContent() {
                     type="date"
                     value={editLessonDate}
                     onChange={(e) => setEditLessonDate(e.target.value)}
-                    style={{ marginTop: 8, width: '100%', padding: '7px 10px', border: '1.5px solid #d1d5db', borderRadius: 8, fontSize: 14, fontWeight: 600, color: '#1a1a2e', fontFamily: "'Nunito', sans-serif", boxSizing: 'border-box' }}
+                    style={{ marginTop: 6, width: '100%', padding: '6px 10px', border: '1.5px solid #d1d5db', borderRadius: 8, fontSize: 13, fontWeight: 600, color: '#1a1a2e', fontFamily: "'Nunito', sans-serif", boxSizing: 'border-box' }}
                   />
                 )}
               </div>
@@ -1035,14 +1035,14 @@ function LessonsContent() {
                 <button
                   type="button"
                   onClick={cancelEditLesson}
-                  style={{ flex: 1, padding: '12px 0', borderRadius: 12, border: '1.5px solid #e5e7eb', background: '#f9fafb', color: '#374151', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}
+                  style={{ flex: 1, padding: '10px 0', borderRadius: 12, border: '1.5px solid #e5e7eb', background: '#f9fafb', color: '#374151', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}
                 >
                   Cancel
                 </button>
                 <button
                   type="button"
                   onClick={() => saveEditLesson(editingLessonId)}
-                  style={{ flex: 2, padding: '12px 0', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg, #7c3aed, #a855f7)', color: '#fff', fontSize: 14, fontWeight: 800, cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}
+                  style={{ flex: 2, padding: '10px 0', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg, #7c3aed, #a855f7)', color: '#fff', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}
                 >
                   Save Changes
                 </button>
