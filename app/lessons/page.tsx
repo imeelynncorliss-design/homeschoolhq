@@ -672,24 +672,23 @@ function LessonsContent() {
       {/* ── Add Lesson Modal ──────────────────────────────────────────── */}
       {showLessonForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
-            <div className="bg-gradient-to-r from-green-500 to-teal-500 px-6 py-4 rounded-t-xl">
-              <div className="flex justify-between items-center">
-                <h3 className="text-xl font-bold text-white">+ Add New Lesson</h3>
-                <button
-                  onClick={() => { setShowLessonForm(false); resetForm() }}
-                  className="text-white hover:text-gray-200 text-2xl leading-none font-light"
-                >×</button>
-              </div>
+          <div style={{ background: '#fff', borderRadius: 20, width: '100%', maxWidth: 480, maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 64px rgba(0,0,0,0.22)', fontFamily: "'Nunito', sans-serif" }}>
+
+            {/* Header */}
+            <div style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #a855f7 100%)', padding: '14px 20px', borderRadius: '20px 20px 0 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+              <h3 style={{ margin: 0, fontSize: 17, fontWeight: 900, color: '#fff' }}>Add New Lesson</h3>
+              <button onClick={() => { setShowLessonForm(false); resetForm() }} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 8, color: '#fff', width: 28, height: 28, cursor: 'pointer', fontSize: 16, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
             </div>
 
-            <form onSubmit={addLesson} className="p-6 space-y-4">
+            {/* Scrollable form body */}
+            <form onSubmit={addLesson} style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 12, overflowY: 'auto', flex: 1 }}>
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Select Child *</label>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 800, color: '#4c1d95', letterSpacing: 0.5, marginBottom: 5 }}>SELECT CHILD *</label>
                 <select
                   value={selectedKidForLesson}
                   onChange={(e) => setSelectedKidForLesson(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  style={{ width: '100%', padding: '9px 12px', border: '1.5px solid #d1d5db', borderRadius: 10, fontSize: 14, fontWeight: 600, color: '#1a1a2e', fontFamily: "'Nunito', sans-serif", boxSizing: 'border-box' }}
                   required
                 >
                   <option value="">Choose a child...</option>
@@ -702,11 +701,11 @@ function LessonsContent() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Subject *</label>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 800, color: '#4c1d95', letterSpacing: 0.5, marginBottom: 5 }}>SUBJECT *</label>
                 <select
                   value={lessonSubjectSelect}
                   onChange={(e) => setLessonSubjectSelect(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  style={{ width: '100%', padding: '9px 12px', border: '1.5px solid #d1d5db', borderRadius: 10, fontSize: 14, fontWeight: 600, color: '#1a1a2e', fontFamily: "'Nunito', sans-serif", boxSizing: 'border-box' }}
                   required
                 >
                   <option value="">Choose a subject...</option>
@@ -718,7 +717,7 @@ function LessonsContent() {
                     type="text"
                     value={lessonSubjectCustom}
                     onChange={(e) => setLessonSubjectCustom(e.target.value)}
-                    className="mt-2 w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    style={{ marginTop: 6, width: '100%', padding: '9px 12px', border: '1.5px solid #7c3aed', borderRadius: 10, fontSize: 14, fontWeight: 600, color: '#1a1a2e', fontFamily: "'Nunito', sans-serif", boxSizing: 'border-box' }}
                     placeholder="e.g., Latin, Robotics, Home Economics"
                     required
                     autoFocus
@@ -727,37 +726,35 @@ function LessonsContent() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Lesson Title *</label>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 800, color: '#4c1d95', letterSpacing: 0.5, marginBottom: 5 }}>LESSON TITLE *</label>
                 <input
                   type="text"
                   value={lessonTitle}
                   onChange={(e) => setLessonTitle(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  style={{ width: '100%', padding: '9px 12px', border: '1.5px solid #d1d5db', borderRadius: 10, fontSize: 14, fontWeight: 600, color: '#1a1a2e', fontFamily: "'Nunito', sans-serif", boxSizing: 'border-box' }}
                   placeholder="e.g., Introduction to Fractions"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Description (optional)</label>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 800, color: '#4c1d95', letterSpacing: 0.5, marginBottom: 5 }}>DESCRIPTION <span style={{ fontWeight: 600, color: '#9ca3af' }}>(optional)</span></label>
                 <textarea
                   value={lessonDescription}
                   onChange={(e) => setLessonDescription(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  style={{ width: '100%', padding: '9px 12px', border: '1.5px solid #d1d5db', borderRadius: 10, fontSize: 14, fontWeight: 600, color: '#1a1a2e', fontFamily: "'Nunito', sans-serif", boxSizing: 'border-box', resize: 'none' }}
                   placeholder="What will you cover in this lesson?"
-                  rows={3}
+                  rows={2}
                 />
               </div>
 
               {collaborators.length > 0 && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Assign To <span className="text-gray-400 font-normal">(optional)</span>
-                  </label>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 800, color: '#4c1d95', letterSpacing: 0.5, marginBottom: 5 }}>ASSIGN TO <span style={{ fontWeight: 600, color: '#9ca3af' }}>(optional)</span></label>
                   <select
                     value={lessonAssignedTo}
                     onChange={(e) => setLessonAssignedTo(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    style={{ width: '100%', padding: '9px 12px', border: '1.5px solid #d1d5db', borderRadius: 10, fontSize: 14, fontWeight: 600, color: '#1a1a2e', fontFamily: "'Nunito', sans-serif", boxSizing: 'border-box' }}
                   >
                     <option value="">Me (primary teacher)</option>
                     {collaborators.map(c => (
@@ -767,36 +764,38 @@ function LessonsContent() {
                 </div>
               )}
 
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
-                <label className="block text-sm font-medium text-gray-700">How long will this lesson take?</label>
-                <div className="flex gap-2">
+              {/* Duration */}
+              <div style={{ background: '#faf5ff', border: '1.5px solid #ddd6fe', borderRadius: 12, padding: '12px 14px' }}>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 800, color: '#4c1d95', letterSpacing: 0.5, marginBottom: 8 }}>DURATION</label>
+                <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
                   {[15, 30, 45, 60].map(min => (
                     <button
                       key={min}
                       type="button"
                       onClick={() => { setLessonDurationValue(min); setLessonDurationUnit('minutes') }}
-                      className={`flex-1 px-3 py-2 rounded-lg font-medium transition-all ${
-                        lessonDurationValue === min && lessonDurationUnit === 'minutes'
-                          ? 'bg-blue-600 text-white shadow-md'
-                          : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
-                      }`}
+                      style={{
+                        flex: 1, padding: '7px 0', borderRadius: 8, fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 13, cursor: 'pointer', border: 'none',
+                        background: lessonDurationValue === min && lessonDurationUnit === 'minutes' ? 'linear-gradient(135deg,#7c3aed,#a855f7)' : '#fff',
+                        color: lessonDurationValue === min && lessonDurationUnit === 'minutes' ? '#fff' : '#374151',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+                      }}
                     >
                       {min} min
                     </button>
                   ))}
                 </div>
-                <div className="flex gap-2">
+                <div style={{ display: 'flex', gap: 8 }}>
                   <input
                     type="number"
                     min="1"
                     value={lessonDurationValue}
                     onChange={(e) => setLessonDurationValue(parseInt(e.target.value) || 1)}
-                    className="w-24 px-3 py-2 border border-gray-300 rounded-lg text-gray-900"
+                    style={{ width: 70, padding: '7px 10px', border: '1.5px solid #d1d5db', borderRadius: 8, fontSize: 14, fontWeight: 600, color: '#1a1a2e', fontFamily: "'Nunito', sans-serif" }}
                   />
                   <select
                     value={lessonDurationUnit}
                     onChange={(e) => setLessonDurationUnit(e.target.value as DurationUnit)}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-gray-900"
+                    style={{ flex: 1, padding: '7px 10px', border: '1.5px solid #d1d5db', borderRadius: 8, fontSize: 14, fontWeight: 600, color: '#1a1a2e', fontFamily: "'Nunito', sans-serif" }}
                   >
                     <option value="minutes">minutes</option>
                     <option value="days">days</option>
@@ -805,19 +804,20 @@ function LessonsContent() {
                 </div>
               </div>
 
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4 space-y-3">
-                <div className="flex items-center gap-2">
+              {/* Schedule */}
+              <div style={{ background: '#faf5ff', border: '1.5px solid #ddd6fe', borderRadius: 12, padding: '12px 14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <input
                     type="checkbox"
                     id="schedule-now"
                     checked={!!lessonDate}
                     onChange={(e) => {
                       if (!e.target.checked) setLessonDate('')
-                      else setLessonDate(new Date().toLocaleDateString('en-CA'))  // ← local date
+                      else setLessonDate(new Date().toLocaleDateString('en-CA'))
                     }}
-                    className="rounded"
+                    style={{ accentColor: '#7c3aed', width: 16, height: 16 }}
                   />
-                  <label htmlFor="schedule-now" className="text-sm font-medium text-gray-700">
+                  <label htmlFor="schedule-now" style={{ fontSize: 13, fontWeight: 700, color: '#4c1d95', cursor: 'pointer' }}>
                     Schedule for a specific date
                   </label>
                 </div>
@@ -826,7 +826,7 @@ function LessonsContent() {
                     type="date"
                     value={lessonDate}
                     onChange={(e) => setLessonDate(e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-900"
+                    style={{ marginTop: 8, width: '100%', padding: '7px 10px', border: '1.5px solid #d1d5db', borderRadius: 8, fontSize: 14, fontWeight: 600, color: '#1a1a2e', fontFamily: "'Nunito', sans-serif", boxSizing: 'border-box' }}
                   />
                 )}
               </div>
@@ -834,9 +834,14 @@ function LessonsContent() {
               <button
                 type="submit"
                 disabled={addingLesson}
-                className="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-medium transition-colors"
+                style={{
+                  width: '100%', padding: '13px 0', borderRadius: 12, border: 'none',
+                  background: addingLesson ? '#c4b5fd' : 'linear-gradient(135deg, #7c3aed, #a855f7)',
+                  color: '#fff', fontSize: 15, fontWeight: 800, cursor: addingLesson ? 'not-allowed' : 'pointer',
+                  fontFamily: "'Nunito', sans-serif", flexShrink: 0,
+                }}
               >
-                {addingLesson ? 'Adding Lesson...' : 'Add Lesson'}
+                {addingLesson ? 'Adding Lesson…' : 'Add Lesson'}
               </button>
             </form>
           </div>
