@@ -245,15 +245,17 @@ function StuckModal({ onClose, onGenerateLesson, onGenerateActivity, onAskScout 
 // ─── Today's Learning Modal ───────────────────────────────────────────────────
 
 function TodaysLearningModal({
-  onClose, kidPulses, todayLessons, onLessonClick,
+  onClose, kidPulses, todayLessons, weekLessons, onLessonClick,
 }: {
   onClose: () => void
   kidPulses: KidPulse[]
   todayLessons: Record<string, any[]>
+  weekLessons: Record<string, { lesson: any; kid: Kid }[]>
   onLessonClick: (lesson: any, kidName: string) => void
 }) {
   const router = useRouter()
   const trapRef = useFocusTrap(true)
+  const [view, setView] = useState<'today' | 'week'>('today')
   const css = {
     overlay: {
       position: 'fixed' as const,
@@ -354,9 +356,21 @@ ${childSections}
     <div style={css.overlay} onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="todays-learning-title">
       <div ref={trapRef} style={{ ...css.modalBox, maxWidth: 640, maxHeight: '80vh', overflowY: 'auto' as const }}
         onClick={e => e.stopPropagation()}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22 }}>
-          <div id="todays-learning-title" style={{ fontWeight: 900, fontSize: 20, color: '#2d1b69' }}>Today's Learning</div>
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+          <div id="todays-learning-title" style={{ fontWeight: 900, fontSize: 20, color: '#2d1b69' }}>
+            {view === 'today' ? "Today's Learning" : 'This Week'}
+          </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {view === 'today' && (
+              <button
+                onClick={handlePrintDailyPlan}
+                title="Print Daily Lesson Plan"
+                style={{ background: '#f3f4f6', border: '1px solid #e5e7eb', borderRadius: 8, padding: '5px 12px', fontSize: 13, fontWeight: 700, cursor: 'pointer', color: '#374151' }}
+              >
+                🖨️ Print
+              </button>
+            )}
             <button
               onClick={() => { onClose(); router.push('/calendar') }}
               title="View Calendar"
@@ -364,18 +378,31 @@ ${childSections}
             >
               📅 Calendar
             </button>
-            <button
-              onClick={handlePrintDailyPlan}
-              title="Print Daily Lesson Plan"
-              style={{ background: '#f3f4f6', border: '1px solid #e5e7eb', borderRadius: 8, padding: '5px 12px', fontSize: 13, fontWeight: 700, cursor: 'pointer', color: '#374151' }}
-            >
-              🖨️ Print
-            </button>
             <button onClick={onClose} aria-label="Close today's learning" style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: '#4b5563', lineHeight: 1 }}>✕</button>
           </div>
         </div>
 
-        {kidPulses.map(pulse => {
+        {/* Today / This Week toggle */}
+        <div style={{ display: 'flex', background: '#f3f0ff', borderRadius: 12, padding: 4, marginBottom: 20 }}>
+          {(['today', 'week'] as const).map(v => (
+            <button
+              key={v}
+              onClick={() => setView(v)}
+              style={{
+                flex: 1, padding: '8px 0', borderRadius: 9, border: 'none', cursor: 'pointer',
+                fontFamily: "'Nunito', sans-serif", fontWeight: 800, fontSize: 13,
+                background: view === v ? '#7c3aed' : 'transparent',
+                color: view === v ? '#fff' : '#7c3aed',
+                transition: 'all 0.15s',
+              }}
+            >
+              {v === 'today' ? '📝 Today' : '📅 This Week'}
+            </button>
+          ))}
+        </div>
+
+        {/* Today view */}
+        {view === 'today' && kidPulses.map(pulse => {
           const lessons = todayLessons[pulse.kid.id] || []
           // Group by status
           const complete   = lessons.filter((l: any) => l.status === 'completed')
@@ -432,6 +459,77 @@ ${childSections}
             </div>
           )
         })}
+
+        {/* Week view */}
+        {view === 'week' && (() => {
+          const today = new Date()
+          const days = Array.from({ length: 7 }, (_, i) => {
+            const d = new Date(today)
+            const dayOfWeek = today.getDay()
+            const monday = new Date(today)
+            monday.setDate(today.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1))
+            const day = new Date(monday)
+            day.setDate(monday.getDate() + i)
+            const key = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`
+            const isToday = key === `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+            const entries = weekLessons[key] || []
+            const dayLabel = day.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+            return { key, dayLabel, entries, isToday, isWeekend: day.getDay() === 0 || day.getDay() === 6 }
+          })
+
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {days.map(({ key, dayLabel, entries, isToday, isWeekend }) => (
+                <div key={key} style={{
+                  borderRadius: 12, overflow: 'hidden',
+                  border: isToday ? '2px solid #7c3aed' : '1px solid #e5e7eb',
+                  opacity: isWeekend && entries.length === 0 ? 0.45 : 1,
+                }}>
+                  <div style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '10px 14px',
+                    background: isToday ? 'linear-gradient(135deg,#ede9fe,#ddd6fe)' : '#f9fafb',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      {isToday && <span style={{ fontSize: 10, fontWeight: 900, background: '#7c3aed', color: '#fff', borderRadius: 6, padding: '2px 7px' }}>TODAY</span>}
+                      <span style={{ fontWeight: 800, fontSize: 13, color: isToday ? '#4c1d95' : '#374151' }}>{dayLabel}</span>
+                    </div>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: '#6b7280' }}>
+                      {entries.length === 0 ? 'No lessons' : `${entries.length} lesson${entries.length !== 1 ? 's' : ''}`}
+                    </span>
+                  </div>
+                  {entries.length > 0 && (
+                    <div style={{ padding: '8px 14px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {entries.map(({ lesson, kid }) => (
+                        <button
+                          key={lesson.id}
+                          onClick={() => onLessonClick(lesson, kid.displayname)}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: 10,
+                            background: 'rgba(255,255,255,0.9)', borderRadius: 8,
+                            padding: '7px 12px', border: '1px solid rgba(0,0,0,0.06)',
+                            cursor: 'pointer', width: '100%', textAlign: 'left',
+                            fontFamily: "'Nunito', sans-serif",
+                          }}
+                        >
+                          <div style={{
+                            width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
+                            background: lesson.status === 'completed' ? '#10b981' : lesson.status === 'in_progress' ? '#f59e0b' : '#d1d5db',
+                          }} />
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: 700, fontSize: 12, color: '#2d1b69' }}>{lesson.title}</div>
+                            <div style={{ fontSize: 11, color: '#6b7280' }}>{kid.displayname} · {lesson.subject}</div>
+                          </div>
+                          <span style={{ fontSize: 14, color: '#c4b5fd' }}>›</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )
+        })()}
       </div>
     </div>
   )
@@ -1673,12 +1771,12 @@ function DashboardContent() {
             {/* ── Dynamic grid driven by pinnedFeatures ── */}
             {(() => {
               // Structured mode always gets Today's Learning first
-              const todayBtn = homeschoolStyle === 'structured' ? [{
+              const todayBtn = [{
                 key: '__today__',
-                emoji: '📝', label: "Today's Learning", sub: "All children's agenda",
+                emoji: '📝', label: "Today's Learning", sub: "Today & this week's agenda",
                 bg: 'linear-gradient(135deg,#ede9fe,#ddd6fe)', iconBg: '#7c3aed', color: '#4c1d95', subColor: '#7c3aed',
                 onClick: () => setShowToday(true),
-              }] : []
+              }]
 
               // Pinned features (skip pulse_check — that's a section toggle, not a button)
               const pinnedBtns = pinnedFeatures
@@ -1806,6 +1904,7 @@ function DashboardContent() {
             onClose={() => setShowToday(false)}
             kidPulses={kidPulses}
             todayLessons={todayLessons}
+            weekLessons={weekLessons}
             onLessonClick={(lesson, kidName) => {
               setShowToday(false)
               setSelectedLesson(lesson as LessonViewModalLesson)
