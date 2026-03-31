@@ -1680,7 +1680,7 @@ function DashboardContent() {
         {/* ── Header ── */}
         <header style={css.header}>
           <div style={css.headerInner}>
-            <div style={css.headerLeft}>
+            <div style={css.headerLeft}></div>
             <div style={css.cardinalWrap}>
               <div style={css.bubble}>
                 <div style={css.bubbleBold}>{greeting.line1}{parentName ? `, ${parentName}!` : '!'}</div>
