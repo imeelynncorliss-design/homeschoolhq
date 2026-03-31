@@ -2062,6 +2062,10 @@ function OnboardingInner() {
           </p>
         )}
 
+        <p className="text-xs text-gray-500 font-semibold mt-3">
+          🪴 Navigate to the <strong>For Parents</strong> icon in the toolbar for tips on how to utilize these concepts in your child&apos;s lessons &amp; activities.
+        </p>
+
         {/* Not sure? Quiz trigger */}
         {!showLsQuiz && (
           <button
@@ -2283,9 +2287,13 @@ function OnboardingInner() {
             <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 10, padding: '12px 16px', marginBottom: 16 }}>
               <div style={{ fontSize: 11, fontWeight: 800, color: 'rgba(255,255,255,0.4)', letterSpacing: 0.5, marginBottom: 6, textTransform: 'uppercase' }}>Remember</div>
               <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 4 }}>
+                <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)', fontWeight: 700 }}>· This is your child&apos;s superpower! 🌟</div>
                 {MI_REMEMBER.map(r => (
                   <div key={r} style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', fontWeight: 600 }}>· {r}</div>
                 ))}
+              </div>
+              <div style={{ marginTop: 10, fontSize: 12, color: 'rgba(255,255,255,0.4)', fontWeight: 600, lineHeight: 1.5 }}>
+                🪴 Navigate to the <strong style={{ color: 'rgba(255,255,255,0.55)' }}>For Parents</strong> icon in the toolbar for tips on how to utilize these concepts in your child&apos;s lessons &amp; activities.
               </div>
             </div>
 

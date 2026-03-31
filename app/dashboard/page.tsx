@@ -1681,22 +1681,6 @@ function DashboardContent() {
         <header style={css.header}>
           <div style={css.headerInner}>
             <div style={css.headerLeft}>
-              <div style={css.logo}>
-                {/* Line 1: house-H + OMESCHOOL */}
-                <div style={{ display: 'flex', alignItems: 'flex-end', gap: 1 }}>
-                  <svg viewBox="0 0 18 20" width="22" height="25" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0, marginBottom: 2 }}>
-                    <polygon points="9,0 18,8 0,8" fill="#7c3aed" />
-                    <rect x="1" y="8" width="5" height="12" rx="0.5" fill="#7c3aed" />
-                    <rect x="12" y="8" width="5" height="12" rx="0.5" fill="#7c3aed" />
-                    <rect x="1" y="12.5" width="16" height="4" rx="0.5" fill="#7c3aed" />
-                  </svg>
-                  <span style={css.logoH}>OMESCHOOL</span>
-                </div>
-                {/* Line 2: READY + checkmark in teal */}
-                <div style={css.logoR}>READY ✓</div>
-              </div>
-              <div style={css.dateStr}>{dateStr}</div>
-            </div>
             <div style={css.cardinalWrap}>
               <div style={css.bubble}>
                 <div style={css.bubbleBold}>{greeting.line1}{parentName ? `, ${parentName}!` : '!'}</div>

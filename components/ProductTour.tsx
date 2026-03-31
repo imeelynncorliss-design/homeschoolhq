@@ -70,7 +70,8 @@ function buildTourSteps(
     bullets: [
       '📚 Subjects — see what each child is learning and all their scheduled lessons',
       '📋 Records — attendance, compliance, transcripts, reading logs, and more',
-      "💡 Resources — Teaching Styles, State Laws, Parent's Corner, and My Materials",
+      "🪴 For Parents — Teaching Blueprint, MI Tips, Learning Style Tips, and Guides",
+      "💡 Resources — Teaching Styles, State Laws, and My Materials",
       '🔧 Tools — import curriculum, bulk schedule, plan vacations, add co-teachers',
     ],
     position: 'top',
@@ -95,6 +96,14 @@ function buildTourSteps(
     targetId: 'tour-life-happens',
     title: 'Life Happens 🌤️',
     content: "Sick day? Field trip? Just need a break? Tap the sun button to log it. Life Happens lets you record what happened, adjust your school day, and keep your attendance records accurate — without stress.",
+    position: 'top',
+  })
+
+  // For Parents — always
+  steps.push({
+    targetId: 'tour-bottom-nav',
+    title: "For Parents 🪴",
+    content: "Find your personalized Teaching Blueprint, MI Tips, and Learning Style Tips under the For Parents tab in the bottom nav. It's your go-to guide for translating your child's strengths into everyday lessons.",
     position: 'top',
   })
 

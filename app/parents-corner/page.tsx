@@ -71,10 +71,11 @@ function ParentsCornerContent() {
   const [blueprintKids, setBlueprintKids] = useState<BlueprintKid[]>([])
   const [blueprintOrgStyle, setBlueprintOrgStyle] = useState<string | null>(null)
 
-  const [activeSection, setActiveSection] = useState<'blueprint' | 'mi' | 'vak' | 'guides'>('blueprint')
+  const [activeSection, setActiveSection] = useState<'blueprint' | 'vak' | 'mi' | 'mi_tips' | 'guides'>('blueprint')
   const [selectedKidId, setSelectedKidId] = useState<string | null>(null)
   const [miProfile, setMiProfile] = useState<string[]>([])
   const [expandedVak, setExpandedVak] = useState<string | null>(null)
+  const [expandedMiTip, setExpandedMiTip] = useState<string | null>(null)
 
   useEffect(() => {
     const init = async () => {
@@ -115,8 +116,9 @@ function ParentsCornerContent() {
 
   const SECTIONS = [
     { id: 'blueprint' as const, label: '🗺️ Teaching Blueprint' },
-    { id: 'mi' as const,        label: '🧠 MI Self-Assessment' },
     { id: 'vak' as const,       label: '👁️ Learning Style Tips' },
+    { id: 'mi' as const,        label: '🧠 Parent Self-Assessment' },
+    { id: 'mi_tips' as const,   label: '💡 MI Tips' },
     { id: 'guides' as const,    label: '🌱 Guides' },
   ]
 
@@ -124,7 +126,7 @@ function ParentsCornerContent() {
     <div style={{ ...pageShell.root, paddingBottom: 80 }}>
       <div style={{ maxWidth: 860, margin: '0 auto', padding: '24px 24px 48px' }}>
 
-        <div className="hr-section-label" style={{ marginBottom: 14 }}>TEACHING BLUEPRINT · MI ASSESSMENT · LEARNING TIPS · GUIDES</div>
+        <div className="hr-section-label" style={{ marginBottom: 14 }}>TEACHING BLUEPRINT · LEARNING STYLE TIPS · PARENT SELF-ASSESSMENT · MI TIPS · GUIDES</div>
 
         {/* Section pills */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 24, flexWrap: 'wrap' as const }}>
@@ -273,11 +275,11 @@ function ParentsCornerContent() {
           )
         })()}
 
-        {/* ── MI Self-Assessment ── */}
+        {/* ── Parent Self-Assessment ── */}
         {activeSection === 'mi' && (
           <div>
             <div style={{ background: '#fff', borderRadius: 14, padding: '20px', border: '1px solid #e5e7eb', marginBottom: 16 }}>
-              <div style={{ fontSize: 17, fontWeight: 800, color: '#111827', marginBottom: 6 }}>Your Multiple Intelligences Profile</div>
+              <div style={{ fontSize: 17, fontWeight: 800, color: '#111827', marginBottom: 6 }}>Parent Self-Assessment</div>
               <p style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.7, margin: '0 0 16px' }}>
                 How you learn often shapes how you teach — even unconsciously. Pick your top 3 intelligences to build your own MI profile. Use this alongside your child&apos;s profile to find your best teaching fit.
               </p>
@@ -374,6 +376,126 @@ function ParentsCornerContent() {
                   )}
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── MI Tips ── */}
+        {activeSection === 'mi_tips' && (
+          <div>
+            <div style={{ background: '#fff', borderRadius: 14, padding: '20px', border: '1px solid #e5e7eb', marginBottom: 16 }}>
+              <div style={{ fontSize: 17, fontWeight: 800, color: '#111827', marginBottom: 6 }}>MI Tips for Parents</div>
+              <p style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.7, margin: '0 0 16px' }}>
+                Each intelligence type comes with a unique superpower and practical strategies you can use right now. Expand any type to see how to bring it to life in your child&apos;s lessons.
+              </p>
+              {[
+                {
+                  id: 'linguistic',
+                  emoji: '📝',
+                  name: 'Linguistic',
+                  badge: '"Word Smart"',
+                  description: 'Thinks in words; loves reading, writing, storytelling, and wordplay.',
+                  superpower: 'You love stories, puns, and the "why" behind words.',
+                  strategy: 'Have them narrate the lesson back to you or write a "journal entry" from a historical figure\'s POV.',
+                },
+                {
+                  id: 'logical',
+                  emoji: '🔢',
+                  name: 'Logical-Mathematical',
+                  badge: '"Number Smart"',
+                  description: 'Reasons by logic, patterns, and cause-and-effect.',
+                  superpower: 'You see patterns, categories, and cause-and-effect everywhere.',
+                  strategy: 'Use timelines for history, logic puzzles for breaks, and "if/then" scenarios for science.',
+                },
+                {
+                  id: 'spatial',
+                  emoji: '🎨',
+                  name: 'Spatial',
+                  badge: '"Picture Smart"',
+                  description: 'Thinks visually; excels at maps, puzzles, and 3D reasoning.',
+                  superpower: 'You think in 3D and remember what you see better than what you hear.',
+                  strategy: 'Swap a written report for a poster, a mind-map, or a Minecraft build of the lesson topic.',
+                },
+                {
+                  id: 'kinesthetic',
+                  emoji: '🤸',
+                  name: 'Kinesthetic',
+                  badge: '"Body Smart"',
+                  description: 'Learns through movement, hands-on activities, and physical sensation.',
+                  superpower: 'You learn by doing. Sitting still is your biggest "learning tax."',
+                  strategy: 'Use "math manipulatives" (blocks/beads), take "nature walks" for science, or use a standing desk.',
+                },
+                {
+                  id: 'musical',
+                  emoji: '🎵',
+                  name: 'Musical',
+                  badge: '"Music Smart"',
+                  description: 'Sensitive to rhythm, pitch, and sound patterns.',
+                  superpower: 'You are sensitive to rhythm, pitch, and patterns in sound.',
+                  strategy: 'Turn facts into a rap/song, use background music to set the "mood" of a lesson, or use a metronome for math facts.',
+                },
+                {
+                  id: 'interpersonal',
+                  emoji: '🤝',
+                  name: 'Interpersonal',
+                  badge: '"People Smart"',
+                  description: 'Understands and connects with others easily.',
+                  superpower: 'You process information best when talking it through with others.',
+                  strategy: 'Host a family "debate," have them "tutor" a younger sibling, or use a "Socratic seminar" style of questioning.',
+                },
+                {
+                  id: 'intrapersonal',
+                  emoji: '🧘',
+                  name: 'Intrapersonal',
+                  badge: '"Self Smart"',
+                  description: 'Self-aware and reflective; understands their own emotions and goals.',
+                  superpower: 'You need quiet time to "mull things over" and set your own goals.',
+                  strategy: 'Give them a quiet corner, let them choose their own project topics, and encourage "self-reflection" logs.',
+                },
+                {
+                  id: 'naturalist',
+                  emoji: '🌿',
+                  name: 'Naturalist',
+                  badge: '"Nature Smart"',
+                  description: 'Energized by the natural world; excels at categorizing living things.',
+                  superpower: 'You are energized by the outdoors and categorizing the living world.',
+                  strategy: 'Move the classroom outside, use "real-world" examples (leaves, bugs, rocks), and connect lessons to the environment.',
+                },
+              ].map(mi => {
+                const isOpen = expandedMiTip === mi.id
+                return (
+                  <div key={mi.id} style={{ border: `1.5px solid ${isOpen ? '#7c3aed' : '#e5e7eb'}`, borderRadius: 12, marginBottom: 10, overflow: 'hidden' }}>
+                    <button
+                      onClick={() => setExpandedMiTip(isOpen ? null : mi.id)}
+                      style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', background: isOpen ? '#f5f3ff' : '#fff', border: 'none', cursor: 'pointer', fontFamily: "'Nunito', sans-serif", gap: 10 }}
+                    >
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <span style={{ fontSize: 20 }}>{mi.emoji}</span>
+                        <span style={{ textAlign: 'left' as const }}>
+                          <span style={{ fontSize: 14, fontWeight: 700, color: '#111827', display: 'block' }}>{mi.name} <span style={{ color: '#9ca3af', fontWeight: 600 }}>{mi.badge}</span></span>
+                          <span style={{ fontSize: 12, color: '#6b7280' }}>{mi.description}</span>
+                        </span>
+                      </span>
+                      <span style={{ fontSize: 18, color: '#9ca3af', flexShrink: 0 }}>{isOpen ? '−' : '+'}</span>
+                    </button>
+                    {isOpen && (
+                      <div style={{ padding: '0 16px 16px', display: 'flex', flexDirection: 'column' as const, gap: 10 }}>
+                        <div style={{ paddingTop: 12, borderTop: '1px solid #f3f4f6' }}>
+                          <div style={{ fontSize: 11, fontWeight: 800, color: '#7c3aed', textTransform: 'uppercase' as const, letterSpacing: '0.06em', marginBottom: 4 }}>The Student&apos;s Superpower ✨</div>
+                          <p style={{ margin: 0, fontSize: 13, color: '#374151', lineHeight: 1.6, fontStyle: 'italic' }}>&ldquo;{mi.superpower}&rdquo;</p>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 11, fontWeight: 800, color: '#059669', textTransform: 'uppercase' as const, letterSpacing: '0.06em', marginBottom: 4 }}>Parent Strategy: Try This...</div>
+                          <div style={{ display: 'flex', gap: 8, fontSize: 13, color: '#374151', lineHeight: 1.6 }}>
+                            <span style={{ color: '#7c3aed', fontWeight: 800, flexShrink: 0 }}>→</span>
+                            <span>{mi.strategy}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
             </div>
           </div>
         )}

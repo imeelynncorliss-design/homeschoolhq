@@ -857,7 +857,14 @@ export default function AppHeader() {
         {/* Left */}
         <div style={s.left}>
           <button style={s.logoBtn} onClick={() => router.push('/dashboard')} aria-label="Go to Dashboard">
-            <div style={s.logoMark}>H</div>
+            <div style={s.logoMark}>
+              <svg viewBox="0 0 18 20" width="16" height="18" xmlns="http://www.w3.org/2000/svg">
+                <polygon points="9,0 18,8 0,8" fill="#7c3aed" />
+                <rect x="1" y="8" width="5" height="12" rx="0.5" fill="#7c3aed" />
+                <rect x="12" y="8" width="5" height="12" rx="0.5" fill="#7c3aed" />
+                <rect x="1" y="12.5" width="16" height="4" rx="0.5" fill="#7c3aed" />
+              </svg>
+            </div>
             <span style={{ display: 'flex', fontFamily: 'system-ui, sans-serif', lineHeight: '1' }}>
               <span style={{ color: 'rgba(255,255,255,0.9)', fontWeight: 400, fontSize: 15 }}>Homeschool</span>
               <span style={{ color: '#ffffff', fontWeight: 800, fontSize: 15 }}>Ready</span>
