@@ -40,16 +40,19 @@ function buildTourSteps(
     position: 'bottom',
   })
 
-  // Pulse check — only if structured OR user pinned it
-  const hasPulse = homeschoolStyle !== 'flexible' || pinnedFeatures.includes('pulse_check')
-  if (hasPulse) {
-    steps.push({
-      targetId: 'tour-pulse',
-      title: 'Daily Progress Rings',
-      content: "Each ring shows how much of today's work a child has completed. Tap a ring to see their full lesson list and mark things done.",
-      position: 'bottom',
-    })
-  }
+  // Child profile cards — always shown
+  steps.push({
+    targetId: 'tour-pulse',
+    title: 'Your Learners 🐦',
+    content: 'Each card shows your child\'s bird avatar with a progress ring — the white arc fills as they complete today\'s lessons. Tap any card to see their:',
+    bullets: [
+      '🎨 Learning style (Visual, Auditory, Kinesthetic, Read/Write)',
+      '✨ MI Superpowers — their natural intelligence strengths',
+      '📚 Today\'s lesson list',
+      '✏️ Quick link to edit their profile',
+    ],
+    position: 'bottom',
+  })
 
   // Quick actions — always present, copy adapts by mode
   const isFlexible = homeschoolStyle === 'flexible'
