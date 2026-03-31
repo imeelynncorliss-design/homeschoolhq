@@ -921,7 +921,7 @@ function OnboardingInner() {
   }, [])
 
   const saveSubjects = async () => {
-    if (!orgId || !kidId || selectedSubjects.length === 0) { setStep(6); return }
+    if (isPreview || !orgId || !kidId || selectedSubjects.length === 0) { setStep(6); return }
     setSubjectsSaving(true)
     const allSubjectData = ONBOARDING_SUBJECTS.reduce(
       (acc, s) => { acc[s.name] = s; return acc },
@@ -943,7 +943,14 @@ function OnboardingInner() {
   useEffect(() => {
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.push('/'); return }
+      if (!user) {
+        if (isPreview) {
+          setUser({ id: 'preview', email: 'preview@demo.com' })
+          setStep(1)
+          return
+        }
+        router.push('/'); return
+      }
 
       // ── 1. Agreement gate — must agree before onboarding ──────────────────
       const { data: agreement } = await supabase
@@ -1030,6 +1037,14 @@ function OnboardingInner() {
   // ── State confirmed → save + advance to step 2 ────────────────────────────
   const handleStateConfirmed = async (stateName: string, stateCode: string, goalDays: string) => {
     if (saving) return
+    if (isPreview) {
+      setSelectedStateName(stateName); setSelectedState(stateCode); setAnnualGoal(goalDays)
+      const defaults = COMPLIANCE_DEFAULTS[stateCode] ?? null
+      setComplianceDays(defaults ? (defaults.days > 0 ? String(defaults.days) : '180') : '180')
+      setComplianceHours(defaults?.hours ?? 0)
+      setComplianceNOI(defaults?.noi ?? false)
+      setStep1Sub('compliance'); return
+    }
     setSaving(true)
   
     let resolvedOrgId = orgId
@@ -1091,6 +1106,7 @@ function OnboardingInner() {
 
   // ── Compliance confirmed → save to user_compliance_settings + advance to school year ─
   const handleComplianceConfirmed = async (skip = false) => {
+    if (isPreview) { setStep1Sub('school_year'); return }
     if (saving || !orgId) return
     setSaving(true)
     const days = skip ? 180 : (parseInt(complianceDays) || 180)
@@ -1111,6 +1127,7 @@ function OnboardingInner() {
 
   // ── School year confirmed → save + backfill compliance dates + advance to step 2 ─
   const handleSchoolYearConfirmed = async (startDate: string, endDate: string) => {
+    if (isPreview) { setSchoolYearStart(startDate); setSchoolYearEnd(endDate); setStep(2); setQuizQuestion(1); return }
     if (saving || !orgId) return
     setSaving(true)
     setSchoolYearStart(startDate)
@@ -1147,9 +1164,11 @@ function OnboardingInner() {
     } else {
       const style = calculateStyle(newAnswers)
       setTeachingStyle(style)
-      await supabase.from('organizations')
-        .update({ teaching_style: style, updated_at: new Date().toISOString() })
-        .eq('user_id', user.id)
+      if (!isPreview) {
+        await supabase.from('organizations')
+          .update({ teaching_style: style, updated_at: new Date().toISOString() })
+          .eq('user_id', user.id)
+      }
       // quizQuestion 4 = result card
       setTimeout(() => setQuizQuestion(4), 180)
     }
@@ -1157,7 +1176,9 @@ function OnboardingInner() {
 
   // ── Save first child → completion screen (step 5) ───────────────────────
   const saveChild = async () => {
-    if (!firstName.trim() || !lastName.trim() || saving || !orgId) return
+    if (!firstName.trim() || !lastName.trim() || saving) return
+    if (isPreview) { setStep4Sub('mi'); return }
+    if (!orgId) return
     setSaving(true)
     const displayName = nickname.trim() || firstName.trim()
     const { data, error } = await supabase.from('kids').insert({
@@ -1179,7 +1200,7 @@ function OnboardingInner() {
   }
 
   const saveMiAndProceed = async () => {
-    if (kidId) {
+    if (kidId && !isPreview) {
       await supabase.from('kids').update({ mi_profile: miProfile }).eq('id', kidId)
     }
     setStep(5)
@@ -1312,6 +1333,13 @@ function OnboardingInner() {
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#3d3a52', position: 'relative' }}>
+
+      {/* Preview Mode Banner */}
+      {isPreview && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9999, background: 'linear-gradient(135deg, #f59e0b, #d97706)', padding: '8px 16px', textAlign: 'center', fontSize: 13, fontWeight: 800, color: '#fff', fontFamily: "'Nunito', sans-serif", letterSpacing: 0.3 }}>
+          👀 Preview Mode — no data is saved
+        </div>
+      )}
 
       {/* Teaching Style Browser Modal */}
       {showStyleBrowser && (
