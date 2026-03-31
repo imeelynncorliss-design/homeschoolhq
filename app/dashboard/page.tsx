@@ -1202,8 +1202,9 @@ function DashboardContent() {
   const [showGenerator, setShowGenerator]     = useState(false)
   const [activePulseKidId, setActivePulseKidId] = useState<string | null>(null)
   const [childProfileKidId, setChildProfileKidId] = useState<string | null>(null)
-  const [profileTab, setProfileTab] = useState<'today' | 'style' | 'mi'>('today')
+  const [profileTab, setProfileTab] = useState<'today' | 'style' | 'mi' | 'look'>('today')
   const [editChildId, setEditChildId] = useState<string | null>(null)
+  const [editChildDefaultTab, setEditChildDefaultTab] = useState<'info' | 'style' | 'mi' | 'look'>('info')
   const [homeschoolStyle, setHomeschoolStyle] = useState<'flexible' | 'structured' | null | undefined>(undefined)
   const [pinnedFeatures, setPinnedFeatures]   = useState<string[]>([])
   const [showStylePicker, setShowStylePicker] = useState(false)
@@ -1740,7 +1741,7 @@ function DashboardContent() {
                   const avatarIdx = pulse.kid.avatar_index ?? idx
                   const gradient  = CARD_GRADIENTS[colorIdx % CARD_GRADIENTS.length]
                   const styles = pulse.kid.learning_style
-                    ? pulse.kid.learning_style.split(',').map((s: string) => s.trim()).filter(Boolean)
+                    ? pulse.kid.learning_style.split(',').map((s: string) => s.trim().toLowerCase()).filter(Boolean)
                     : []
                   const hasProfile = styles.length > 0 || (pulse.kid.mi_profile && pulse.kid.mi_profile.length > 0)
                   const showRing = homeschoolStyle === 'structured' || pinnedFeatures.includes('pulse_check')
@@ -2263,7 +2264,7 @@ function DashboardContent() {
           const colorIdx  = pulse.kid.color_index  ?? idx
           const gradient  = CARD_GRADIENTS[colorIdx % CARD_GRADIENTS.length]
           const styles    = pulse.kid.learning_style
-            ? pulse.kid.learning_style.split(',').map((s: string) => s.trim()).filter(Boolean)
+            ? pulse.kid.learning_style.split(',').map((s: string) => s.trim().toLowerCase()).filter(Boolean)
             : []
           const miIds     = pulse.kid.mi_profile ?? []
           const lessons   = todayLessons[pulse.kid.id] || []
@@ -2290,21 +2291,22 @@ function DashboardContent() {
                   </div>
 
                   {/* Tab pills */}
-                  <div style={{ display: 'flex', gap: 6, padding: '12px 14px 0', flexShrink: 0 }}>
+                  <div style={{ display: 'flex', gap: 5, padding: '12px 14px 0', flexShrink: 0 }}>
                     {([
                       { id: 'today', label: '📚 Today' },
                       { id: 'style', label: '🎨 Style' },
                       { id: 'mi',    label: '✨ MI' },
+                      { id: 'look',  label: '🐦 Look' },
                     ] as const).map(tab => (
                       <button
                         key={tab.id}
                         onClick={() => setProfileTab(tab.id)}
                         style={{
-                          flex: 1, padding: '8px 4px', borderRadius: 10,
+                          flex: 1, padding: '7px 2px', borderRadius: 10,
                           border: profileTab === tab.id ? 'none' : '1.5px solid #e5e7eb',
                           background: profileTab === tab.id ? 'linear-gradient(135deg,#7c3aed,#a855f7)' : '#f9fafb',
                           color: profileTab === tab.id ? '#fff' : '#6b7280',
-                          fontSize: 12, fontWeight: 800, cursor: 'pointer',
+                          fontSize: 11, fontWeight: 800, cursor: 'pointer',
                           fontFamily: "'Nunito', sans-serif",
                         }}
                       >{tab.label}</button>
@@ -2370,7 +2372,7 @@ function DashboardContent() {
                           </div>
                         )}
                         <button
-                          onClick={() => { setChildProfileKidId(null); setEditChildId(childProfileKidId) }}
+                          onClick={() => { setChildProfileKidId(null); setEditChildDefaultTab('style'); setEditChildId(childProfileKidId) }}
                           style={{ width: '100%', padding: '11px 0', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: '#fff', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}
                         >✏️ Edit Learning Style</button>
                       </div>
@@ -2403,9 +2405,26 @@ function DashboardContent() {
                           </div>
                         )}
                         <button
-                          onClick={() => { setChildProfileKidId(null); setEditChildId(childProfileKidId) }}
+                          onClick={() => { setChildProfileKidId(null); setEditChildDefaultTab('mi'); setEditChildId(childProfileKidId) }}
                           style={{ width: '100%', padding: '11px 0', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: '#fff', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}
                         >✏️ Edit MI Profile</button>
+                      </div>
+                    )}
+
+                    {/* ── Look tab ── */}
+                    {profileTab === 'look' && (
+                      <div>
+                        {/* Card preview */}
+                        <div style={{ display: 'flex', justifyContent: 'center' as const, marginBottom: 16 }}>
+                          <div style={{ background: gradient, borderRadius: 16, padding: '16px 24px', display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 8, minWidth: 120 }}>
+                            <BirdAvatar index={avatarIdx} size={56} />
+                            <div style={{ fontSize: 13, fontWeight: 900, color: '#fff' }}>{pulse.kid.displayname}</div>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => { setChildProfileKidId(null); setEditChildDefaultTab('look'); setEditChildId(childProfileKidId) }}
+                          style={{ width: '100%', padding: '11px 0', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: '#fff', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}
+                        >🐦 Change Bird &amp; Color</button>
                       </div>
                     )}
 
@@ -2419,7 +2438,8 @@ function DashboardContent() {
         {editChildId && (
           <EditChildModal
             kidId={editChildId}
-            onClose={() => setEditChildId(null)}
+            defaultTab={editChildDefaultTab}
+            onClose={() => { setEditChildId(null); setEditChildDefaultTab('info') }}
             onSaved={(updated) => {
               setKidPulses(prev => prev.map(p =>
                 p.kid.id === updated.id
