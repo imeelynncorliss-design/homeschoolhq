@@ -40,11 +40,14 @@ function buildTourSteps(
     position: 'bottom',
   })
 
-  // Child profile cards — always shown
+  // Child profile cards — always shown; ring only for structured or pinned pulse
+  const showRing = homeschoolStyle === 'structured' || pinnedFeatures.includes('pulse_check')
   steps.push({
     targetId: 'tour-pulse',
     title: 'Your Learners 🐦',
-    content: 'Each card shows your child\'s bird avatar with a progress ring — the white arc fills as they complete today\'s lessons. Tap any card to see their:',
+    content: showRing
+      ? 'Each card shows your child\'s bird avatar with a progress ring — the white arc fills as they complete today\'s lessons. Tap any card to see their:'
+      : 'Each card shows your child\'s bird avatar. Tap any card to see their profile — and pin the Progress Ring card in Quick Actions to track lesson completion here.',
     bullets: [
       '🎨 Learning style (Visual, Auditory, Kinesthetic, Read/Write)',
       '✨ MI Superpowers — their natural intelligence strengths',

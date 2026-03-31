@@ -17,13 +17,14 @@ import ProductTour from '@/components/ProductTour'
 import { getVakBridge } from '@/src/lib/teachingBlueprint'
 import { BirdAvatar, CARD_GRADIENTS, MI_SUPERPOWERS } from '@/components/BirdAvatar'
 import { MI_INTELLIGENCES } from '@/src/lib/learningProfiles'
+import EditChildModal from '@/components/EditChildModal'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface Kid {
   id: string
   displayname: string
-  grade_level?: string
+  grade?: string
   learning_style?: string | null
   mi_profile?: string[] | null
 }
@@ -1198,6 +1199,7 @@ function DashboardContent() {
   const [showGenerator, setShowGenerator]     = useState(false)
   const [activePulseKidId, setActivePulseKidId] = useState<string | null>(null)
   const [childProfileKidId, setChildProfileKidId] = useState<string | null>(null)
+  const [editChildId, setEditChildId] = useState<string | null>(null)
   const [homeschoolStyle, setHomeschoolStyle] = useState<'flexible' | 'structured' | null | undefined>(undefined)
   const [pinnedFeatures, setPinnedFeatures]   = useState<string[]>([])
   const [showStylePicker, setShowStylePicker] = useState(false)
@@ -1344,7 +1346,7 @@ function DashboardContent() {
             )].slice(0, 3) as string[]
 
             return {
-              kid: { id: kid.id, displayname: kid.displayname, grade_level: kid.grade_level, learning_style: kid.learning_style, mi_profile: kid.mi_profile },
+              kid: { id: kid.id, displayname: kid.displayname, grade: kid.grade, learning_style: kid.learning_style, mi_profile: kid.mi_profile },
               totalToday: total,
               completedToday: completed,
               pct: total > 0 ? Math.round((completed / total) * 100) : 0,
@@ -1382,7 +1384,7 @@ function DashboardContent() {
             if (kid && byDate[lesson.lesson_date]) {
               byDate[lesson.lesson_date].push({
                 lesson,
-                kid: { id: kid.id, displayname: kid.displayname, grade_level: kid.grade_level, learning_style: kid.learning_style, mi_profile: kid.mi_profile },
+                kid: { id: kid.id, displayname: kid.displayname, grade: kid.grade, learning_style: kid.learning_style, mi_profile: kid.mi_profile },
               })
             }
           }
@@ -1735,6 +1737,7 @@ function DashboardContent() {
                     ? pulse.kid.learning_style.split(',').map((s: string) => s.trim()).filter(Boolean)
                     : []
                   const hasProfile = styles.length > 0 || (pulse.kid.mi_profile && pulse.kid.mi_profile.length > 0)
+                  const showRing = homeschoolStyle === 'structured' || pinnedFeatures.includes('pulse_check')
                   const ringR = 44
                   const ringC = 2 * Math.PI * ringR
                   return (
@@ -1745,24 +1748,26 @@ function DashboardContent() {
                     >
                       {/* Avatar with progress ring */}
                       <div style={{ position: 'relative', width: 96, height: 96 }}>
-                        <svg width={96} height={96} style={{ position: 'absolute', top: 0, left: 0, transform: 'rotate(-90deg)', display: 'block' }}>
-                          <circle cx={48} cy={48} r={ringR} fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth={8} />
-                          <circle cx={48} cy={48} r={ringR} fill="none" stroke="#fff" strokeWidth={8}
-                            strokeDasharray={`${(pulse.pct / 100) * ringC} ${ringC - (pulse.pct / 100) * ringC}`}
-                            strokeLinecap="round"
-                            style={{ transition: 'stroke-dasharray 1s cubic-bezier(0.4,0,0.2,1)' }}
-                          />
-                        </svg>
-                        <div style={{ position: 'absolute', top: 8, left: 8 }}>
-                          <BirdAvatar index={idx} size={80} />
+                        {showRing && (
+                          <svg width={96} height={96} style={{ position: 'absolute', top: 0, left: 0, transform: 'rotate(-90deg)', display: 'block' }}>
+                            <circle cx={48} cy={48} r={ringR} fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth={8} />
+                            <circle cx={48} cy={48} r={ringR} fill="none" stroke="#fff" strokeWidth={8}
+                              strokeDasharray={`${(pulse.pct / 100) * ringC} ${ringC - (pulse.pct / 100) * ringC}`}
+                              strokeLinecap="round"
+                              style={{ transition: 'stroke-dasharray 1s cubic-bezier(0.4,0,0.2,1)' }}
+                            />
+                          </svg>
+                        )}
+                        <div style={{ position: 'absolute', top: showRing ? 8 : 0, left: showRing ? 8 : 0, width: showRing ? 80 : 96, height: showRing ? 80 : 96 }}>
+                          <BirdAvatar index={idx} size={showRing ? 80 : 96} />
                         </div>
                       </div>
 
                       {/* Name + grade */}
                       <div style={{ textAlign: 'center' as const }}>
                         <div style={{ fontSize: 14, fontWeight: 900, color: '#fff', lineHeight: 1.2 }}>{pulse.kid.displayname}</div>
-                        {pulse.kid.grade_level && (
-                          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.75)', fontWeight: 600, marginTop: 2 }}>{pulse.kid.grade_level}</div>
+                        {pulse.kid.grade && (
+                          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.75)', fontWeight: 600, marginTop: 2 }}>{pulse.kid.grade}</div>
                         )}
                       </div>
 
@@ -1786,10 +1791,12 @@ function DashboardContent() {
                         </div>
                       )}
 
-                      {/* Progress */}
-                      <div style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.7)' }}>
-                        {pulse.totalToday > 0 ? `${pulse.completedToday}/${pulse.totalToday} done today` : 'No lessons today'}
-                      </div>
+                      {/* Progress — only when ring is active */}
+                      {showRing && (
+                        <div style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.7)' }}>
+                          {pulse.totalToday > 0 ? `${pulse.completedToday}/${pulse.totalToday} done today` : 'No lessons today'}
+                        </div>
+                      )}
                     </div>
                   )
                 })}
@@ -1961,7 +1968,7 @@ function DashboardContent() {
         )}
         {showGenerator && (
           <LessonGenerator
-            kids={kidPulses.map(p => ({ id: p.kid.id, displayname: p.kid.displayname, grade: p.kid.grade_level }))}
+            kids={kidPulses.map(p => ({ id: p.kid.id, displayname: p.kid.displayname, grade: p.kid.grade }))}
             userId={user?.id ?? ''}
             homeschoolStyle={homeschoolStyle ?? null}
             onClose={() => setShowGenerator(false)}
@@ -2265,7 +2272,7 @@ function DashboardContent() {
                   <BirdAvatar index={idx} size={58} />
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 20, fontWeight: 900, color: '#fff', lineHeight: 1.1 }}>{pulse.kid.displayname}</div>
-                    {pulse.kid.grade_level && <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)', fontWeight: 600, marginTop: 2 }}>{pulse.kid.grade_level}</div>}
+                    {pulse.kid.grade && <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)', fontWeight: 600, marginTop: 2 }}>{pulse.kid.grade}</div>}
                     <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', fontWeight: 600, marginTop: 4 }}>
                       {pulse.totalToday > 0 ? `${pulse.completedToday}/${pulse.totalToday} lessons done today · ${pulse.pct}%` : 'No lessons today'}
                     </div>
@@ -2347,7 +2354,7 @@ function DashboardContent() {
                       📚 Today&apos;s Lessons
                     </button>
                     <button
-                      onClick={() => { setChildProfileKidId(null); router.push('/profile') }}
+                      onClick={() => { setChildProfileKidId(null); setEditChildId(childProfileKidId) }}
                       style={{ flex: 1, padding: '12px 0', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: '#fff', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}
                     >
                       ✏️ Edit Profile
@@ -2359,6 +2366,21 @@ function DashboardContent() {
             </>
           )
         })()}
+
+        {editChildId && (
+          <EditChildModal
+            kidId={editChildId}
+            onClose={() => setEditChildId(null)}
+            onSaved={(updated) => {
+              setKidPulses(prev => prev.map(p =>
+                p.kid.id === updated.id
+                  ? { ...p, kid: { ...p.kid, displayname: updated.displayname, grade: updated.grade ?? undefined, learning_style: updated.learning_style, mi_profile: updated.mi_profile } }
+                  : p
+              ))
+              setEditChildId(null)
+            }}
+          />
+        )}
 
         {activePulseKidId && (() => {
           const activePulse = kidPulses.find(p => p.kid.id === activePulseKidId)
