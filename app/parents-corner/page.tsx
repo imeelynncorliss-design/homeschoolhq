@@ -471,16 +471,14 @@ function ParentsCornerContent() {
                     >
                       <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <span style={{ fontSize: 20 }}>{mi.emoji}</span>
-                        <span style={{ textAlign: 'left' as const }}>
-                          <span style={{ fontSize: 14, fontWeight: 700, color: '#111827', display: 'block' }}>{mi.name} <span style={{ color: '#9ca3af', fontWeight: 600 }}>{mi.badge}</span></span>
-                          <span style={{ fontSize: 12, color: '#6b7280' }}>{mi.description}</span>
-                        </span>
+                        <span style={{ fontSize: 14, fontWeight: 700, color: '#111827' }}>{mi.name} <span style={{ color: '#9ca3af', fontWeight: 600 }}>{mi.badge}</span></span>
                       </span>
                       <span style={{ fontSize: 18, color: '#9ca3af', flexShrink: 0 }}>{isOpen ? '−' : '+'}</span>
                     </button>
                     {isOpen && (
                       <div style={{ padding: '0 16px 16px', display: 'flex', flexDirection: 'column' as const, gap: 10 }}>
                         <div style={{ paddingTop: 12, borderTop: '1px solid #f3f4f6' }}>
+                          <p style={{ margin: '0 0 10px', fontSize: 13, color: '#6b7280', lineHeight: 1.6 }}>{mi.description}</p>
                           <div style={{ fontSize: 11, fontWeight: 800, color: '#7c3aed', textTransform: 'uppercase' as const, letterSpacing: '0.06em', marginBottom: 4 }}>The Student&apos;s Superpower ✨</div>
                           <p style={{ margin: 0, fontSize: 13, color: '#374151', lineHeight: 1.6, fontStyle: 'italic' }}>&ldquo;{mi.superpower}&rdquo;</p>
                         </div>
