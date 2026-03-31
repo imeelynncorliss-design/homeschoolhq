@@ -27,6 +27,9 @@ interface Kid {
   grade?: string
   learning_style?: string | null
   mi_profile?: string[] | null
+  avatar_index?: number | null
+  color_index?: number | null
+  current_hook?: string | null
 }
 
 interface KidPulse {
@@ -1347,7 +1350,7 @@ function DashboardContent() {
             )].slice(0, 3) as string[]
 
             return {
-              kid: { id: kid.id, displayname: kid.displayname, grade: kid.grade, learning_style: kid.learning_style, mi_profile: kid.mi_profile },
+              kid: { id: kid.id, displayname: kid.displayname, grade: kid.grade, learning_style: kid.learning_style, mi_profile: kid.mi_profile, avatar_index: kid.avatar_index, color_index: kid.color_index, current_hook: kid.current_hook },
               totalToday: total,
               completedToday: completed,
               pct: total > 0 ? Math.round((completed / total) * 100) : 0,
@@ -1385,7 +1388,7 @@ function DashboardContent() {
             if (kid && byDate[lesson.lesson_date]) {
               byDate[lesson.lesson_date].push({
                 lesson,
-                kid: { id: kid.id, displayname: kid.displayname, grade: kid.grade, learning_style: kid.learning_style, mi_profile: kid.mi_profile },
+                kid: { id: kid.id, displayname: kid.displayname, grade: kid.grade, learning_style: kid.learning_style, mi_profile: kid.mi_profile, avatar_index: kid.avatar_index, color_index: kid.color_index, current_hook: kid.current_hook },
               })
             }
           }
@@ -1733,7 +1736,9 @@ function DashboardContent() {
             ) : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 170px))', justifyContent: 'center', gap: 14 }}>
                 {kidPulses.map((pulse, idx) => {
-                  const gradient = CARD_GRADIENTS[idx % CARD_GRADIENTS.length]
+                  const colorIdx  = pulse.kid.color_index  ?? idx
+                  const avatarIdx = pulse.kid.avatar_index ?? idx
+                  const gradient  = CARD_GRADIENTS[colorIdx % CARD_GRADIENTS.length]
                   const styles = pulse.kid.learning_style
                     ? pulse.kid.learning_style.split(',').map((s: string) => s.trim()).filter(Boolean)
                     : []
@@ -1760,7 +1765,7 @@ function DashboardContent() {
                           </svg>
                         )}
                         <div style={{ position: 'absolute', top: showRing ? 8 : 0, left: showRing ? 8 : 0, width: showRing ? 80 : 96, height: showRing ? 80 : 96 }}>
-                          <BirdAvatar index={idx} size={showRing ? 80 : 96} />
+                          <BirdAvatar index={avatarIdx} size={showRing ? 80 : 96} />
                         </div>
                       </div>
 
@@ -2254,7 +2259,9 @@ function DashboardContent() {
           const pulse = kidPulses.find(p => p.kid.id === childProfileKidId)
           const idx   = kidPulses.findIndex(p => p.kid.id === childProfileKidId)
           if (!pulse) return null
-          const gradient  = CARD_GRADIENTS[idx % CARD_GRADIENTS.length]
+          const avatarIdx = pulse.kid.avatar_index ?? idx
+          const colorIdx  = pulse.kid.color_index  ?? idx
+          const gradient  = CARD_GRADIENTS[colorIdx % CARD_GRADIENTS.length]
           const styles    = pulse.kid.learning_style
             ? pulse.kid.learning_style.split(',').map((s: string) => s.trim()).filter(Boolean)
             : []
@@ -2273,10 +2280,11 @@ function DashboardContent() {
 
                   {/* Compact gradient header */}
                   <div style={{ background: gradient, borderRadius: '20px 20px 0 0', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
-                    <BirdAvatar index={idx} size={46} />
+                    <BirdAvatar index={avatarIdx} size={46} />
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: 17, fontWeight: 900, color: '#fff', lineHeight: 1.1 }}>{pulse.kid.displayname}</div>
                       {pulse.kid.grade && <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.8)', fontWeight: 600, marginTop: 1 }}>{pulse.kid.grade}</div>}
+                      {pulse.kid.current_hook && <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', fontWeight: 600, marginTop: 2 }}>🎯 {pulse.kid.current_hook}</div>}
                     </div>
                     <button onClick={() => setChildProfileKidId(null)} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '50%', width: 30, height: 30, fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', flexShrink: 0 }}>×</button>
                   </div>
@@ -2415,7 +2423,7 @@ function DashboardContent() {
             onSaved={(updated) => {
               setKidPulses(prev => prev.map(p =>
                 p.kid.id === updated.id
-                  ? { ...p, kid: { ...p.kid, displayname: updated.displayname, grade: updated.grade ?? undefined, learning_style: updated.learning_style, mi_profile: updated.mi_profile } }
+                  ? { ...p, kid: { ...p.kid, displayname: updated.displayname, grade: updated.grade ?? undefined, learning_style: updated.learning_style, mi_profile: updated.mi_profile, avatar_index: updated.avatar_index, color_index: updated.color_index, current_hook: updated.current_hook } }
                   : p
               ))
               setEditChildId(null)

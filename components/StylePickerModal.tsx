@@ -204,7 +204,7 @@ export default function StylePickerModal({ userId, stateAbbr, isFirstTime, onCom
             <div style={{ display: 'flex', gap: 10, padding: '0 24px 24px' }}>
               <button onClick={() => setStep(1)} style={btnGhost}>← Back</button>
               <button onClick={handleSave} disabled={saving} style={{ ...btnPrimary, flex: 1 }}>
-                {saving ? 'Saving…' : 'Set up my home screen →'}
+                {saving ? 'Saving…' : '✓ Save & Set Up My Dashboard'}
               </button>
             </div>
           </div>

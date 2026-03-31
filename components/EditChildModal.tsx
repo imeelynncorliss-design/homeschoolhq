@@ -3,6 +3,9 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/src/lib/supabase'
 import { MI_INTELLIGENCES, MI_CLUSTERS, MI_REMEMBER } from '@/src/lib/learningProfiles'
+import { BirdAvatar, CARD_GRADIENTS } from '@/components/BirdAvatar'
+
+const BIRD_NAMES = ['Owl', 'Blue Jay', 'Robin', 'Hummingbird', 'Goldfinch', 'Dove', 'Cardinal']
 
 const GRADES = [
   'Pre-K','Kindergarten','1st','2nd','3rd','4th','5th',
@@ -19,7 +22,7 @@ const LEARNING_STYLES = [
 interface Props {
   kidId: string
   onClose: () => void
-  onSaved: (updated: { id: string; displayname: string; grade: string | null; learning_style: string | null; mi_profile: string[] | null }) => void
+  onSaved: (updated: { id: string; displayname: string; grade: string | null; learning_style: string | null; mi_profile: string[] | null; avatar_index: number | null; color_index: number | null; current_hook: string | null }) => void
 }
 
 export default function EditChildModal({ kidId, onClose, onSaved }: Props) {
@@ -29,15 +32,21 @@ export default function EditChildModal({ kidId, onClose, onSaved }: Props) {
   const [grade, setGrade]               = useState('')
   const [learningStyles, setLearningStyles] = useState<string[]>([])
   const [miProfile, setMiProfile]       = useState<string[]>([])
+  const [avatarIndex, setAvatarIndex]   = useState<number>(0)
+  const [colorIndex, setColorIndex]     = useState<number>(0)
+  const [currentHook, setCurrentHook]   = useState('')
 
   useEffect(() => {
     const load = async () => {
-      const { data } = await supabase.from('kids').select('displayname, grade, learning_style, mi_profile').eq('id', kidId).single()
+      const { data } = await supabase.from('kids').select('displayname, grade, learning_style, mi_profile, avatar_index, color_index, current_hook').eq('id', kidId).single()
       if (data) {
         setDisplayname(data.displayname ?? '')
         setGrade(data.grade ?? '')
         setLearningStyles(data.learning_style ? data.learning_style.split(',').map((s: string) => s.trim()).filter(Boolean) : [])
         setMiProfile(data.mi_profile ?? [])
+        setAvatarIndex(data.avatar_index ?? 0)
+        setColorIndex(data.color_index ?? 0)
+        setCurrentHook(data.current_hook ?? '')
       }
       setLoading(false)
     }
@@ -58,6 +67,9 @@ export default function EditChildModal({ kidId, onClose, onSaved }: Props) {
       grade: grade || null,
       learning_style: learningStyles.length > 0 ? learningStyles.join(', ') : null,
       mi_profile: miProfile.length > 0 ? miProfile : null,
+      avatar_index: avatarIndex,
+      color_index: colorIndex,
+      current_hook: currentHook.trim() || null,
       updated_at: new Date().toISOString(),
     }
     await supabase.from('kids').update(fields).eq('id', kidId)
@@ -117,6 +129,79 @@ export default function EditChildModal({ kidId, onClose, onSaved }: Props) {
                     <option value="">Select grade...</option>
                     {GRADES.map(g => <option key={g} value={g}>{g}</option>)}
                   </select>
+                </div>
+              </div>
+
+              {/* ── Current Interests ── */}
+              <div>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 800, color: '#4c1d95', letterSpacing: 0.5, marginBottom: 3 }}>WHAT ARE THEY INTO RIGHT NOW?</label>
+                <p style={{ fontSize: 12, color: '#6b7280', fontWeight: 600, margin: '0 0 6px' }}>Scout weaves their interests into lessons to make them more engaging</p>
+                <input
+                  value={currentHook}
+                  onChange={e => setCurrentHook(e.target.value)}
+                  placeholder="e.g. Minecraft, Dinosaurs, Drawing animals, Space..."
+                  style={{ width: '100%', padding: '8px 11px', border: '1.5px solid #d1d5db', borderRadius: 10, fontSize: 14, fontWeight: 600, color: '#1a1a2e', fontFamily: "'Nunito', sans-serif", boxSizing: 'border-box' as const }}
+                />
+              </div>
+
+              {/* ── Avatar & Card Color ── */}
+              <div>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 800, color: '#4c1d95', letterSpacing: 0.5, marginBottom: 8 }}>BIRD & CARD COLOR</label>
+
+                {/* Bird picker */}
+                <div style={{ marginBottom: 10 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#6b7280', marginBottom: 6 }}>Choose a bird</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 6 }}>
+                    {BIRD_NAMES.map((name, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        title={name}
+                        onClick={() => setAvatarIndex(i)}
+                        style={{
+                          padding: 4, borderRadius: 10,
+                          border: `2px solid ${avatarIndex === i ? '#7c3aed' : '#e5e7eb'}`,
+                          background: avatarIndex === i ? '#f5f3ff' : '#fff',
+                          cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}
+                      >
+                        <BirdAvatar index={i} size={32} />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Color picker */}
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#6b7280', marginBottom: 6 }}>Choose a card color</div>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' as const }}>
+                    {CARD_GRADIENTS.map((grad, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => setColorIndex(i)}
+                        style={{
+                          width: 36, height: 36, borderRadius: '50%',
+                          background: grad,
+                          border: colorIndex === i ? '3px solid #7c3aed' : '3px solid transparent',
+                          outline: colorIndex === i ? '2px solid #7c3aed' : 'none',
+                          outlineOffset: 2,
+                          cursor: 'pointer',
+                          flexShrink: 0,
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Preview */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 12, background: '#f9fafb', borderRadius: 12, padding: '10px 14px' }}>
+                  <div style={{ width: 40, height: 40, borderRadius: '50%', background: CARD_GRADIENTS[colorIndex % CARD_GRADIENTS.length], display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <BirdAvatar index={avatarIndex} size={34} />
+                  </div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#374151' }}>
+                    {displayname || 'Preview'} · {BIRD_NAMES[avatarIndex % BIRD_NAMES.length]}
+                  </div>
                 </div>
               </div>
 

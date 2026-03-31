@@ -388,109 +388,74 @@ function ParentsCornerContent() {
               <p style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.7, margin: '0 0 16px' }}>
                 Each intelligence type comes with a unique superpower and practical strategies you can use right now. Expand any type to see how to bring it to life in your child&apos;s lessons.
               </p>
-              {[
+
+              {([
                 {
-                  id: 'linguistic',
-                  emoji: '📝',
-                  name: 'Linguistic',
-                  badge: '"Word Smart"',
-                  description: 'Thinks in words; loves reading, writing, storytelling, and wordplay.',
-                  superpower: 'You love stories, puns, and the "why" behind words.',
-                  strategy: 'Have them narrate the lesson back to you or write a "journal entry" from a historical figure\'s POV.',
+                  cluster: 'analytical' as const,
+                  items: [
+                    { id: 'linguistic',  emoji: '📝', name: 'Linguistic',           badge: '"Word Smart"',   description: 'Thinks in words; loves reading, writing, storytelling, and wordplay.',       superpower: 'You love stories, puns, and the "why" behind words.',                               strategy: 'Have them narrate the lesson back to you or write a "journal entry" from a historical figure\'s POV.' },
+                    { id: 'logical',     emoji: '🔢', name: 'Logical-Mathematical', badge: '"Number Smart"', description: 'Reasons by logic, patterns, and cause-and-effect.',                          superpower: 'You see patterns, categories, and cause-and-effect everywhere.',                      strategy: 'Use timelines for history, logic puzzles for breaks, and "if/then" scenarios for science.' },
+                    { id: 'spatial',     emoji: '🎨', name: 'Spatial',              badge: '"Picture Smart"', description: 'Thinks visually; excels at maps, puzzles, and 3D reasoning.',               superpower: 'You think in 3D and remember what you see better than what you hear.',                 strategy: 'Swap a written report for a poster, a mind-map, or a Minecraft build of the lesson topic.' },
+                    { id: 'musical',     emoji: '🎵', name: 'Musical',              badge: '"Music Smart"',  description: 'Sensitive to rhythm, pitch, and sound patterns.',                            superpower: 'You are sensitive to rhythm, pitch, and patterns in sound.',                          strategy: 'Turn facts into a rap/song, use background music to set the "mood" of a lesson, or use a metronome for math facts.' },
+                    { id: 'naturalist',  emoji: '🌿', name: 'Naturalist',           badge: '"Nature Smart"', description: 'Energized by the natural world; excels at categorizing living things.',       superpower: 'You are energized by the outdoors and categorizing the living world.',                 strategy: 'Move the classroom outside, use "real-world" examples (leaves, bugs, rocks), and connect lessons to the environment.' },
+                  ],
                 },
                 {
-                  id: 'logical',
-                  emoji: '🔢',
-                  name: 'Logical-Mathematical',
-                  badge: '"Number Smart"',
-                  description: 'Reasons by logic, patterns, and cause-and-effect.',
-                  superpower: 'You see patterns, categories, and cause-and-effect everywhere.',
-                  strategy: 'Use timelines for history, logic puzzles for breaks, and "if/then" scenarios for science.',
+                  cluster: 'introspective' as const,
+                  items: [
+                    { id: 'intrapersonal', emoji: '🧘', name: 'Intrapersonal', badge: '"Self Smart"',    description: 'Self-aware and reflective; understands their own emotions and goals.',         superpower: 'You need quiet time to "mull things over" and set your own goals.',                   strategy: 'Give them a quiet corner, let them choose their own project topics, and encourage "self-reflection" logs.' },
+                    { id: 'existential',   emoji: '🌌', name: 'Existential',   badge: '"Big-Picture"',  description: 'Drawn to deep questions about life, meaning, and the universe.',               superpower: 'You ask the big "why" questions and connect learning to meaning.',                     strategy: 'Frame lessons with the big "why" — connect history to human nature, science to the universe, math to beauty.' },
+                  ],
                 },
                 {
-                  id: 'spatial',
-                  emoji: '🎨',
-                  name: 'Spatial',
-                  badge: '"Picture Smart"',
-                  description: 'Thinks visually; excels at maps, puzzles, and 3D reasoning.',
-                  superpower: 'You think in 3D and remember what you see better than what you hear.',
-                  strategy: 'Swap a written report for a poster, a mind-map, or a Minecraft build of the lesson topic.',
+                  cluster: 'interactive' as const,
+                  items: [
+                    { id: 'interpersonal', emoji: '🤝', name: 'Interpersonal', badge: '"People Smart"', description: 'Understands and connects with others easily.',                                  superpower: 'You process information best when talking it through with others.',                   strategy: 'Host a family "debate," have them "tutor" a younger sibling, or use a "Socratic seminar" style of questioning.' },
+                    { id: 'kinesthetic',   emoji: '🤸', name: 'Kinesthetic',   badge: '"Body Smart"',   description: 'Learns through movement, hands-on activities, and physical sensation.',         superpower: 'You learn by doing. Sitting still is your biggest "learning tax."',                   strategy: 'Use "math manipulatives" (blocks/beads), take "nature walks" for science, or use a standing desk.' },
+                  ],
                 },
-                {
-                  id: 'kinesthetic',
-                  emoji: '🤸',
-                  name: 'Kinesthetic',
-                  badge: '"Body Smart"',
-                  description: 'Learns through movement, hands-on activities, and physical sensation.',
-                  superpower: 'You learn by doing. Sitting still is your biggest "learning tax."',
-                  strategy: 'Use "math manipulatives" (blocks/beads), take "nature walks" for science, or use a standing desk.',
-                },
-                {
-                  id: 'musical',
-                  emoji: '🎵',
-                  name: 'Musical',
-                  badge: '"Music Smart"',
-                  description: 'Sensitive to rhythm, pitch, and sound patterns.',
-                  superpower: 'You are sensitive to rhythm, pitch, and patterns in sound.',
-                  strategy: 'Turn facts into a rap/song, use background music to set the "mood" of a lesson, or use a metronome for math facts.',
-                },
-                {
-                  id: 'interpersonal',
-                  emoji: '🤝',
-                  name: 'Interpersonal',
-                  badge: '"People Smart"',
-                  description: 'Understands and connects with others easily.',
-                  superpower: 'You process information best when talking it through with others.',
-                  strategy: 'Host a family "debate," have them "tutor" a younger sibling, or use a "Socratic seminar" style of questioning.',
-                },
-                {
-                  id: 'intrapersonal',
-                  emoji: '🧘',
-                  name: 'Intrapersonal',
-                  badge: '"Self Smart"',
-                  description: 'Self-aware and reflective; understands their own emotions and goals.',
-                  superpower: 'You need quiet time to "mull things over" and set your own goals.',
-                  strategy: 'Give them a quiet corner, let them choose their own project topics, and encourage "self-reflection" logs.',
-                },
-                {
-                  id: 'naturalist',
-                  emoji: '🌿',
-                  name: 'Naturalist',
-                  badge: '"Nature Smart"',
-                  description: 'Energized by the natural world; excels at categorizing living things.',
-                  superpower: 'You are energized by the outdoors and categorizing the living world.',
-                  strategy: 'Move the classroom outside, use "real-world" examples (leaves, bugs, rocks), and connect lessons to the environment.',
-                },
-              ].map(mi => {
-                const isOpen = expandedMiTip === mi.id
+              ] as const).map(({ cluster, items }) => {
+                const clusterInfo = MI_CLUSTERS[cluster]
                 return (
-                  <div key={mi.id} style={{ border: `1.5px solid ${isOpen ? '#7c3aed' : '#e5e7eb'}`, borderRadius: 12, marginBottom: 10, overflow: 'hidden' }}>
-                    <button
-                      onClick={() => setExpandedMiTip(isOpen ? null : mi.id)}
-                      style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', background: isOpen ? '#f5f3ff' : '#fff', border: 'none', cursor: 'pointer', fontFamily: "'Nunito', sans-serif", gap: 10 }}
-                    >
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <span style={{ fontSize: 20 }}>{mi.emoji}</span>
-                        <span style={{ fontSize: 14, fontWeight: 700, color: '#111827' }}>{mi.name} <span style={{ color: '#9ca3af', fontWeight: 600 }}>{mi.badge}</span></span>
-                      </span>
-                      <span style={{ fontSize: 18, color: '#9ca3af', flexShrink: 0 }}>{isOpen ? '−' : '+'}</span>
-                    </button>
-                    {isOpen && (
-                      <div style={{ padding: '0 16px 16px', display: 'flex', flexDirection: 'column' as const, gap: 10 }}>
-                        <div style={{ paddingTop: 12, borderTop: '1px solid #f3f4f6' }}>
-                          <p style={{ margin: '0 0 10px', fontSize: 13, color: '#6b7280', lineHeight: 1.6 }}>{mi.description}</p>
-                          <div style={{ fontSize: 11, fontWeight: 800, color: '#7c3aed', textTransform: 'uppercase' as const, letterSpacing: '0.06em', marginBottom: 4 }}>The Student&apos;s Superpower ✨</div>
-                          <p style={{ margin: 0, fontSize: 13, color: '#374151', lineHeight: 1.6, fontStyle: 'italic' }}>&ldquo;{mi.superpower}&rdquo;</p>
+                  <div key={cluster} style={{ marginBottom: 20 }}>
+                    {/* Cluster heading */}
+                    <div style={{ fontSize: 10, fontWeight: 800, color: clusterInfo.color, letterSpacing: 1, textTransform: 'uppercase' as const, marginBottom: 8 }}>
+                      {clusterInfo.label} — <span style={{ fontWeight: 600, textTransform: 'none' as const, color: '#9ca3af' }}>{clusterInfo.tagline}</span>
+                    </div>
+                    {/* MI cards in this cluster */}
+                    {items.map(mi => {
+                      const isOpen = expandedMiTip === mi.id
+                      return (
+                        <div key={mi.id} style={{ border: `1.5px solid ${isOpen ? '#7c3aed' : '#e5e7eb'}`, borderRadius: 12, marginBottom: 8, overflow: 'hidden' }}>
+                          <button
+                            onClick={() => setExpandedMiTip(isOpen ? null : mi.id)}
+                            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 16px', background: isOpen ? '#f5f3ff' : '#fff', border: 'none', cursor: 'pointer', fontFamily: "'Nunito', sans-serif", gap: 10 }}
+                          >
+                            <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                              <span style={{ fontSize: 20 }}>{mi.emoji}</span>
+                              <span style={{ fontSize: 14, fontWeight: 700, color: '#111827' }}>{mi.name} <span style={{ color: '#9ca3af', fontWeight: 600 }}>{mi.badge}</span></span>
+                            </span>
+                            <span style={{ fontSize: 18, color: '#9ca3af', flexShrink: 0 }}>{isOpen ? '−' : '+'}</span>
+                          </button>
+                          {isOpen && (
+                            <div style={{ padding: '0 16px 16px', display: 'flex', flexDirection: 'column' as const, gap: 10 }}>
+                              <div style={{ paddingTop: 12, borderTop: '1px solid #f3f4f6' }}>
+                                <p style={{ margin: '0 0 10px', fontSize: 13, color: '#6b7280', lineHeight: 1.6 }}>{mi.description}</p>
+                                <div style={{ fontSize: 11, fontWeight: 800, color: '#7c3aed', textTransform: 'uppercase' as const, letterSpacing: '0.06em', marginBottom: 4 }}>The Student&apos;s Superpower ✨</div>
+                                <p style={{ margin: 0, fontSize: 13, color: '#374151', lineHeight: 1.6, fontStyle: 'italic' }}>&ldquo;{mi.superpower}&rdquo;</p>
+                              </div>
+                              <div>
+                                <div style={{ fontSize: 11, fontWeight: 800, color: '#059669', textTransform: 'uppercase' as const, letterSpacing: '0.06em', marginBottom: 4 }}>Parent Strategy: Try This...</div>
+                                <div style={{ display: 'flex', gap: 8, fontSize: 13, color: '#374151', lineHeight: 1.6 }}>
+                                  <span style={{ color: '#7c3aed', fontWeight: 800, flexShrink: 0 }}>→</span>
+                                  <span>{mi.strategy}</span>
+                                </div>
+                              </div>
+                            </div>
+                          )}
                         </div>
-                        <div>
-                          <div style={{ fontSize: 11, fontWeight: 800, color: '#059669', textTransform: 'uppercase' as const, letterSpacing: '0.06em', marginBottom: 4 }}>Parent Strategy: Try This...</div>
-                          <div style={{ display: 'flex', gap: 8, fontSize: 13, color: '#374151', lineHeight: 1.6 }}>
-                            <span style={{ color: '#7c3aed', fontWeight: 800, flexShrink: 0 }}>→</span>
-                            <span>{mi.strategy}</span>
-                          </div>
-                        </div>
-                      </div>
-                    )}
+                      )
+                    })}
                   </div>
                 )
               })}
