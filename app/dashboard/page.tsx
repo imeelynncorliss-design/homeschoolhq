@@ -1199,6 +1199,7 @@ function DashboardContent() {
   const [showGenerator, setShowGenerator]     = useState(false)
   const [activePulseKidId, setActivePulseKidId] = useState<string | null>(null)
   const [childProfileKidId, setChildProfileKidId] = useState<string | null>(null)
+  const [profileTab, setProfileTab] = useState<'today' | 'style' | 'mi'>('today')
   const [editChildId, setEditChildId] = useState<string | null>(null)
   const [homeschoolStyle, setHomeschoolStyle] = useState<'flexible' | 'structured' | null | undefined>(undefined)
   const [pinnedFeatures, setPinnedFeatures]   = useState<string[]>([])
@@ -1743,7 +1744,7 @@ function DashboardContent() {
                   return (
                     <div
                       key={pulse.kid.id}
-                      onClick={() => setChildProfileKidId(pulse.kid.id)}
+                      onClick={() => { setChildProfileKidId(pulse.kid.id); setProfileTab('today') }}
                       style={{ background: gradient, borderRadius: 20, padding: '18px 12px 16px', cursor: 'pointer', display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 8, boxShadow: '0 4px 20px rgba(0,0,0,0.18)' }}
                     >
                       {/* Avatar with progress ring */}
@@ -2248,119 +2249,159 @@ function DashboardContent() {
           />
         )}
 
-        {/* ── Kid Today Panel (slide-up) ── */}
-        {/* ── Child Profile Modal ── */}
+        {/* ── Child Profile Card (compact, tabbed) ── */}
         {childProfileKidId && (() => {
           const pulse = kidPulses.find(p => p.kid.id === childProfileKidId)
           const idx   = kidPulses.findIndex(p => p.kid.id === childProfileKidId)
           if (!pulse) return null
-          const gradient = CARD_GRADIENTS[idx % CARD_GRADIENTS.length]
-          const styles = pulse.kid.learning_style
+          const gradient  = CARD_GRADIENTS[idx % CARD_GRADIENTS.length]
+          const styles    = pulse.kid.learning_style
             ? pulse.kid.learning_style.split(',').map((s: string) => s.trim()).filter(Boolean)
             : []
-          const miIds = pulse.kid.mi_profile ?? []
-          const hasLs = styles.length > 0
-          const hasMi = miIds.length > 0
-          const hasProfile = hasLs || hasMi
+          const miIds     = pulse.kid.mi_profile ?? []
+          const lessons   = todayLessons[pulse.kid.id] || []
+          const STATUS_CONFIG = {
+            completed:   { label: 'Done',        bg: '#d1fae5', color: '#065f46', dot: '#10b981' },
+            in_progress: { label: 'In Progress', bg: '#fef3c7', color: '#92400e', dot: '#f59e0b' },
+            not_started: { label: 'Not Started', bg: '#f3f4f6', color: '#374151', dot: '#9ca3af' },
+          }
           return (
             <>
               <div onClick={() => setChildProfileKidId(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 200, backdropFilter: 'blur(2px)' }} />
-              <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: '#fff', borderRadius: '24px 24px 0 0', boxShadow: '0 -8px 40px rgba(0,0,0,0.18)', zIndex: 201, maxHeight: '85vh', display: 'flex', flexDirection: 'column', fontFamily: "'Nunito', sans-serif" }}>
+              <div style={{ position: 'fixed', inset: 0, zIndex: 201, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, pointerEvents: 'none' }}>
+                <div style={{ background: '#fff', borderRadius: 20, width: '100%', maxWidth: 360, maxHeight: '80vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 64px rgba(0,0,0,0.28)', pointerEvents: 'all', fontFamily: "'Nunito', sans-serif" }}>
 
-                {/* Gradient header */}
-                <div style={{ background: gradient, borderRadius: '24px 24px 0 0', padding: '20px 20px 16px', display: 'flex', alignItems: 'center', gap: 14, flexShrink: 0 }}>
-                  <BirdAvatar index={idx} size={58} />
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 20, fontWeight: 900, color: '#fff', lineHeight: 1.1 }}>{pulse.kid.displayname}</div>
-                    {pulse.kid.grade && <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)', fontWeight: 600, marginTop: 2 }}>{pulse.kid.grade}</div>}
-                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', fontWeight: 600, marginTop: 4 }}>
-                      {pulse.totalToday > 0 ? `${pulse.completedToday}/${pulse.totalToday} lessons done today · ${pulse.pct}%` : 'No lessons today'}
+                  {/* Compact gradient header */}
+                  <div style={{ background: gradient, borderRadius: '20px 20px 0 0', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+                    <BirdAvatar index={idx} size={46} />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 17, fontWeight: 900, color: '#fff', lineHeight: 1.1 }}>{pulse.kid.displayname}</div>
+                      {pulse.kid.grade && <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.8)', fontWeight: 600, marginTop: 1 }}>{pulse.kid.grade}</div>}
                     </div>
+                    <button onClick={() => setChildProfileKidId(null)} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '50%', width: 30, height: 30, fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', flexShrink: 0 }}>×</button>
                   </div>
-                  <button onClick={() => setChildProfileKidId(null)} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '50%', width: 36, height: 36, fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', flexShrink: 0 }}>×</button>
-                </div>
 
-                {/* Scrollable body */}
-                <div style={{ flex: 1, overflowY: 'auto', padding: '20px 20px 100px' }}>
-
-                  {!hasProfile ? (
-                    /* No profile yet */
-                    <div style={{ background: '#faf5ff', borderRadius: 16, padding: '20px', border: '1.5px dashed #c4b5fd', textAlign: 'center' as const, marginBottom: 16 }}>
-                      <div style={{ fontSize: 32, marginBottom: 8 }}>✏️</div>
-                      <div style={{ fontSize: 15, fontWeight: 800, color: '#4c1d95', marginBottom: 6 }}>Complete {pulse.kid.displayname}&apos;s profile</div>
-                      <p style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.6, margin: '0 0 14px' }}>
-                        Add their learning style and Multiple Intelligences to unlock personalized lessons, a Teaching Blueprint, and MI Tips.
-                      </p>
+                  {/* Tab pills */}
+                  <div style={{ display: 'flex', gap: 6, padding: '12px 14px 0', flexShrink: 0 }}>
+                    {([
+                      { id: 'today', label: '📚 Today' },
+                      { id: 'style', label: '🎨 Style' },
+                      { id: 'mi',    label: '✨ MI' },
+                    ] as const).map(tab => (
                       <button
-                        onClick={() => { setChildProfileKidId(null); router.push('/profile') }}
-                        style={{ background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: '#fff', border: 'none', borderRadius: 12, padding: '11px 24px', fontSize: 14, fontWeight: 800, cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}
-                      >
-                        Go to Profile →
-                      </button>
-                    </div>
-                  ) : (
-                    <>
-                      {/* Learning Style */}
-                      {hasLs && (
-                        <div style={{ marginBottom: 16 }}>
-                          <div style={{ fontSize: 11, fontWeight: 800, color: '#9ca3af', textTransform: 'uppercase' as const, letterSpacing: '0.06em', marginBottom: 10 }}>Learning Style</div>
-                          <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 8 }}>
+                        key={tab.id}
+                        onClick={() => setProfileTab(tab.id)}
+                        style={{
+                          flex: 1, padding: '8px 4px', borderRadius: 10,
+                          border: profileTab === tab.id ? 'none' : '1.5px solid #e5e7eb',
+                          background: profileTab === tab.id ? 'linear-gradient(135deg,#7c3aed,#a855f7)' : '#f9fafb',
+                          color: profileTab === tab.id ? '#fff' : '#6b7280',
+                          fontSize: 12, fontWeight: 800, cursor: 'pointer',
+                          fontFamily: "'Nunito', sans-serif",
+                        }}
+                      >{tab.label}</button>
+                    ))}
+                  </div>
+
+                  {/* Tab content */}
+                  <div style={{ flex: 1, overflowY: 'auto', padding: '14px 14px 18px' }}>
+
+                    {/* ── Today tab ── */}
+                    {profileTab === 'today' && (
+                      <div>
+                        {lessons.length === 0 ? (
+                          <div style={{ textAlign: 'center' as const, padding: '24px 0 12px', color: '#9ca3af' }}>
+                            <div style={{ fontSize: 28, marginBottom: 8 }}>📭</div>
+                            <div style={{ fontSize: 13, fontWeight: 700 }}>No lessons scheduled today</div>
+                          </div>
+                        ) : (
+                          lessons.map((lesson: any) => {
+                            const sc = STATUS_CONFIG[lesson.status as keyof typeof STATUS_CONFIG] || STATUS_CONFIG.not_started
+                            return (
+                              <div
+                                key={lesson.id}
+                                onClick={() => { setChildProfileKidId(null); setSelectedLesson(lesson as LessonViewModalLesson); setSelectedKidName(pulse.kid.displayname) }}
+                                style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#f9fafb', borderRadius: 12, padding: '10px 12px', marginBottom: 8, cursor: 'pointer', border: '1.5px solid #f3f4f6' }}
+                              >
+                                <div style={{ width: 9, height: 9, borderRadius: '50%', background: sc.dot, flexShrink: 0 }} />
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div style={{ fontSize: 13, fontWeight: 800, color: '#1a1a2e', whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' }}>{lesson.title}</div>
+                                  {lesson.subject && <div style={{ fontSize: 11, color: '#6b7280', fontWeight: 600, marginTop: 1 }}>{lesson.subject}</div>}
+                                </div>
+                                <div style={{ fontSize: 10, fontWeight: 700, color: sc.color, background: sc.bg, borderRadius: 99, padding: '3px 7px', flexShrink: 0 }}>{sc.label}</div>
+                              </div>
+                            )
+                          })
+                        )}
+                        <button
+                          onClick={() => { setChildProfileKidId(null); setActivePulseKidId(childProfileKidId) }}
+                          style={{ width: '100%', padding: '10px 0', borderRadius: 12, border: '1.5px solid #e5e7eb', background: '#f9fafb', color: '#6b7280', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: "'Nunito', sans-serif", marginTop: 4 }}
+                        >📅 View This Week →</button>
+                      </div>
+                    )}
+
+                    {/* ── Style tab ── */}
+                    {profileTab === 'style' && (
+                      <div>
+                        {styles.length === 0 ? (
+                          <div style={{ textAlign: 'center' as const, padding: '16px 0 10px', color: '#9ca3af' }}>
+                            <div style={{ fontSize: 24, marginBottom: 6 }}>🎨</div>
+                            <div style={{ fontSize: 13, fontWeight: 700, color: '#6b7280', marginBottom: 14 }}>No learning style set yet</div>
+                          </div>
+                        ) : (
+                          <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 8, marginBottom: 14 }}>
                             {styles.map((s: string) => {
                               const d = LS_DISPLAY[s]
                               return (
-                                <div key={s} style={{ background: '#f5f3ff', border: '1.5px solid #ede9fe', borderRadius: 12, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 8 }}>
-                                  <span style={{ fontSize: 20 }}>{d?.emoji || '📚'}</span>
-                                  <span style={{ fontSize: 14, fontWeight: 700, color: '#4c1d95' }}>{d?.label || s}</span>
+                                <div key={s} style={{ background: '#f5f3ff', border: '1.5px solid #ede9fe', borderRadius: 12, padding: '9px 14px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                                  <span style={{ fontSize: 18 }}>{d?.emoji || '📚'}</span>
+                                  <span style={{ fontSize: 13, fontWeight: 700, color: '#4c1d95' }}>{d?.label || s}</span>
                                 </div>
                               )
                             })}
                           </div>
-                        </div>
-                      )}
+                        )}
+                        <button
+                          onClick={() => { setChildProfileKidId(null); setEditChildId(childProfileKidId) }}
+                          style={{ width: '100%', padding: '11px 0', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: '#fff', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}
+                        >✏️ Edit Learning Style</button>
+                      </div>
+                    )}
 
-                      {/* MI Superpowers */}
-                      {hasMi && (
-                        <div style={{ marginBottom: 16 }}>
-                          <div style={{ fontSize: 11, fontWeight: 800, color: '#9ca3af', textTransform: 'uppercase' as const, letterSpacing: '0.06em', marginBottom: 10 }}>✨ Superpowers</div>
-                          <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 10 }}>
+                    {/* ── MI tab ── */}
+                    {profileTab === 'mi' && (
+                      <div>
+                        {miIds.length === 0 ? (
+                          <div style={{ textAlign: 'center' as const, padding: '16px 0 10px' }}>
+                            <div style={{ fontSize: 24, marginBottom: 6 }}>✨</div>
+                            <div style={{ fontSize: 13, fontWeight: 700, color: '#6b7280', marginBottom: 14 }}>No MI profile set yet</div>
+                          </div>
+                        ) : (
+                          <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 8, marginBottom: 14 }}>
                             {miIds.map((miId: string) => {
                               const miDef = MI_INTELLIGENCES.find(m => m.id === miId)
                               const superpower = MI_SUPERPOWERS[miId]
                               if (!miDef) return null
                               return (
-                                <div key={miId} style={{ background: '#faf5ff', border: '1.5px solid #ede9fe', borderRadius: 12, padding: '12px 14px' }}>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                                    <span style={{ fontSize: 20 }}>{miDef.emoji}</span>
-                                    <span style={{ fontSize: 14, fontWeight: 800, color: '#4c1d95' }}>{miDef.fullName}</span>
+                                <div key={miId} style={{ background: '#faf5ff', border: '1.5px solid #ede9fe', borderRadius: 12, padding: '10px 12px' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
+                                    <span style={{ fontSize: 18 }}>{miDef.emoji}</span>
+                                    <span style={{ fontSize: 13, fontWeight: 800, color: '#4c1d95' }}>{miDef.fullName}</span>
                                   </div>
-                                  {superpower && (
-                                    <p style={{ margin: 0, fontSize: 13, color: '#6b7280', lineHeight: 1.6, fontStyle: 'italic' }}>&ldquo;{superpower}&rdquo;</p>
-                                  )}
+                                  {superpower && <p style={{ margin: 0, fontSize: 12, color: '#6b7280', lineHeight: 1.5, fontStyle: 'italic' }}>&ldquo;{superpower}&rdquo;</p>}
                                 </div>
                               )
                             })}
                           </div>
-                        </div>
-                      )}
-                    </>
-                  )}
+                        )}
+                        <button
+                          onClick={() => { setChildProfileKidId(null); setEditChildId(childProfileKidId) }}
+                          style={{ width: '100%', padding: '11px 0', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: '#fff', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}
+                        >✏️ Edit MI Profile</button>
+                      </div>
+                    )}
 
-                  {/* Action buttons */}
-                  <div style={{ display: 'flex', gap: 10 }}>
-                    <button
-                      onClick={() => { setChildProfileKidId(null); setActivePulseKidId(childProfileKidId) }}
-                      style={{ flex: 1, padding: '12px 0', borderRadius: 12, border: '1.5px solid #e5e7eb', background: '#f9fafb', color: '#374151', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}
-                    >
-                      📚 Today&apos;s Lessons
-                    </button>
-                    <button
-                      onClick={() => { setChildProfileKidId(null); setEditChildId(childProfileKidId) }}
-                      style={{ flex: 1, padding: '12px 0', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: '#fff', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}
-                    >
-                      ✏️ Edit Profile
-                    </button>
                   </div>
-
                 </div>
               </div>
             </>
