@@ -70,7 +70,6 @@ const QUICK_ACTION_CONFIG: Record<string, {
   transcript:  { emoji: '🎓', label: 'Transcript',          sub: 'GPA, courses, college records',      bg: 'linear-gradient(135deg,#fefce8,#fef08a)', iconBg: '#d97706', color: '#78350f', subColor: '#d97706', action: 'route',    href: '/transcript' },
   mastery:     { emoji: '🏆', label: 'Mastery Tracker',     sub: 'Standards & skill mastery',          bg: 'linear-gradient(135deg,#eff6ff,#dbeafe)', iconBg: '#2563eb', color: '#1e3a5f', subColor: '#3b82f6', action: 'route',    href: '/mastery' },
   portfolio:    { emoji: '🗂️', label: 'Portfolio',           sub: 'Work samples & highlights',          bg: 'linear-gradient(135deg,#fdf4ff,#fae8ff)', iconBg: '#9333ea', color: '#4a044e', subColor: '#a855f7', action: 'route',    href: '/portfolio' },
-  supply_scout: { emoji: '🔍', label: 'Supply Scout',        sub: 'Materials needed this week & next',   bg: 'linear-gradient(135deg,#fefce8,#fef9c3)', iconBg: '#ca8a04', color: '#713f12', subColor: '#ca8a04', action: 'route',    href: '/supply-scout' },
 }
 
 const DAY_CARDINAL: Record<number, string> = {
@@ -1979,7 +1978,7 @@ function DashboardContent() {
 
               // Pinned features (skip pulse_check — that's a section toggle, not a button)
               const pinnedBtns = pinnedFeatures
-                .filter(fid => fid !== 'pulse_check' && fid !== 'supply_scout' && QUICK_ACTION_CONFIG[fid])
+                .filter(fid => fid !== 'pulse_check' && QUICK_ACTION_CONFIG[fid])
                 .map(fid => {
                   const c = QUICK_ACTION_CONFIG[fid]
                   const onClick =
