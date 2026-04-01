@@ -1878,6 +1878,9 @@ function DashboardContent() {
             )}
           </section>
 
+          {/* Supply Scout + Quick Actions — wrapped together for tour highlight */}
+          <div id="tour-quick-actions">
+
           {/* Supply Scout card */}
           <section>
             <button
@@ -1919,7 +1922,7 @@ function DashboardContent() {
           </section>
 
           {/* Quick Actions — style-aware */}
-          <section id="tour-quick-actions">
+          <section>
             <div style={{ ...css.sectionRow, justifyContent: 'space-between' }}>
               <span style={css.secTitle}>
                 {homeschoolStyle === 'flexible' ? 'QUICK LOG' : 'QUICK ACTIONS'}
@@ -2048,6 +2051,7 @@ function DashboardContent() {
             </div>
           </section>
 
+          </div>{/* end tour-quick-actions wrapper */}
 
         </main>
 
