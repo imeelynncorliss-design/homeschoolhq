@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { usePlanningAutoComplete } from '@/lib/usePlanningAutoComplete';
 import { CANONICAL_SUBJECTS } from '@/src/constants/subjects';
+import { getScoutFrequencyTip } from '@/lib/scoutFrequency';
 
 interface Lesson {
   title: string;
@@ -45,6 +46,8 @@ export default function CurriculumImporter({ childId, childName, onClose, onImpo
   // Start date for scheduling
   const [useStartDate, setUseStartDate] = useState<boolean>(false);
   const [startDate, setStartDate] = useState<string>('');
+  // Which weekdays to schedule on (0=Sun … 6=Sat); default Mon–Fri
+  const [scheduleDays, setScheduleDays] = useState<Set<number>>(new Set([1, 2, 3, 4, 5]));
 
   // Planning mode
   const { triggerAutoComplete } = usePlanningAutoComplete();
@@ -55,6 +58,12 @@ export default function CurriculumImporter({ childId, childName, onClose, onImpo
     end_date: string;
   } | null>(null);
   const [organizationId, setOrganizationId] = useState<string>('');
+  const [stateCode, setStateCode] = useState<string | null>(null);
+  const [showScoutTip, setShowScoutTip] = useState(false);
+
+  // Manual entry mode (no TOC to upload)
+  const [uploadMode, setUploadMode] = useState<'file' | 'manual'>('file');
+  const [manualText, setManualText] = useState('');
 
   // ── Load existing subjects from DB (real user org, not hardcoded) ──────────
   useEffect(() => {
@@ -101,6 +110,14 @@ export default function CurriculumImporter({ childId, childName, onClose, onImpo
         .maybeSingle();
 
       if (period) setActivePlanningPeriod(period);
+
+      // Load state code for Scout tip context
+      const { data: schoolSettings } = await supabase
+        .from('school_year_settings')
+        .select('state_code')
+        .eq('organization_id', orgId)
+        .maybeSingle();
+      if (schoolSettings?.state_code) setStateCode(schoolSettings.state_code);
     };
 
     loadSubjectsAndOrg();
@@ -193,6 +210,37 @@ export default function CurriculumImporter({ childId, childName, onClose, onImpo
     setLessonDurations(prev => ({ ...prev, [index]: { value, unit } }));
   };
 
+  const parseManualLessons = () => {
+    const finalSubject = selectedSubject === '__custom__' ? customSubject.trim() : selectedSubject;
+    if (!finalSubject) { setError('Please select or enter a subject first'); return; }
+    if (!manualText.trim()) { setError('Please enter at least one lesson name'); return; }
+
+    const lines = manualText
+      .split('\n')
+      .map(l => l.trim())
+      .filter(l => l.length > 0);
+
+    const lessons: Lesson[] = lines.map(line => ({
+      title: line,
+      subject: finalSubject,
+      duration: '',
+      lesson_date: '',
+      description: '',
+    }));
+
+    setExtractedLessons(lessons);
+    setSelectedLessons(new Set(lessons.map((_, i) => i)));
+
+    if (applyBulkDuration) {
+      const bulkDurations: { [key: number]: { value: number; unit: DurationUnit } } = {};
+      lessons.forEach((_, i) => { bulkDurations[i] = { value: bulkDurationValue, unit: bulkDurationUnit }; });
+      setLessonDurations(bulkDurations);
+    }
+
+    setError('');
+    setStep('preview');
+  };
+
   const importLessons = async () => {
     setLoading(true);
 
@@ -228,34 +276,45 @@ export default function CurriculumImporter({ childId, childName, onClose, onImpo
 
       const duplicateCount = lessonsToImport.length - newLessons.length;
 
+      // Helper: advance date to the next allowed weekday (inclusive of current)
+      const snapToAllowedDay = (d: Date): Date => {
+        const result = new Date(d);
+        const activeDays = scheduleDays.size > 0 ? scheduleDays : new Set([1, 2, 3, 4, 5]);
+        let safety = 0;
+        while (!activeDays.has(result.getDay()) && safety++ < 14) {
+          result.setDate(result.getDate() + 1);
+        }
+        return result;
+      };
+
+      // Helper: advance to the NEXT allowed weekday after a given date
+      const nextAllowedDay = (d: Date): Date => {
+        const result = new Date(d);
+        result.setDate(result.getDate() + 1);
+        return snapToAllowedDay(result);
+      };
+
       const lessonsToInsert = [];
-      let currentDate = useStartDate && startDate ? new Date(startDate) : null;
+      let currentDate = useStartDate && startDate
+        ? snapToAllowedDay(new Date(startDate + 'T12:00:00'))
+        : null;
 
       for (let i = 0; i < extractedLessons.length; i++) {
         const lesson = extractedLessons[i];
         if (selectedLessons.has(i) && newLessons.includes(lesson)) {
           let durationMinutes = null;
-          let durationDays = 0;
 
           if (lessonDurations[i]) {
             const { value, unit } = lessonDurations[i];
-            if (unit === 'minutes') {
-              durationMinutes = value;
-              durationDays = 0;
-            } else if (unit === 'days') {
-              durationMinutes = value * 6 * 60;
-              durationDays = value;
-            } else if (unit === 'weeks') {
-              durationMinutes = value * 5 * 6 * 60;
-              durationDays = value * 5;
-            }
+            if (unit === 'minutes') durationMinutes = value;
+            else if (unit === 'days')  durationMinutes = value * 6 * 60;
+            else if (unit === 'weeks') durationMinutes = value * 5 * 6 * 60;
           }
 
           let lessonDate = null;
           if (currentDate) {
             lessonDate = currentDate.toISOString().split('T')[0];
-            currentDate = new Date(currentDate);
-            currentDate.setDate(currentDate.getDate() + (durationDays > 0 ? durationDays : 1));
+            currentDate = nextAllowedDay(currentDate);
           }
 
           lessonsToInsert.push({
@@ -286,7 +345,7 @@ export default function CurriculumImporter({ childId, childName, onClose, onImpo
           await supabase.from('curriculum_imports').insert({
             organization_id: organizationId,
             planning_period_id: activePlanningPeriod.id,
-            import_source: file?.type.includes('pdf') ? 'pdf' : 'image',
+            import_source: uploadMode === 'manual' ? 'manual' : file?.type.includes('pdf') ? 'pdf' : 'image',
             lessons_created: lessonsToInsert.length,
             file_url: file?.name,
             metadata: {
@@ -329,20 +388,23 @@ export default function CurriculumImporter({ childId, childName, onClose, onImpo
   ];
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4 pt-4 pb-24">
-      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
-          <h2 className="text-2xl font-bold text-gray-900">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full flex flex-col" style={{ maxHeight: 'calc(100vh - 2rem)' }}>
+
+        {/* ── Fixed header with X ── */}
+        <div className="bg-white border-b px-6 py-4 flex justify-between items-center rounded-t-lg flex-shrink-0">
+          <h2 className="text-xl font-bold text-gray-900">
             📥 Import Curriculum for {childName}
           </h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700 text-2xl">×</button>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-700 text-2xl leading-none">×</button>
         </div>
 
-        <div className="p-6">
+        {/* ── Scrollable body ── */}
+        <div className="p-6 overflow-y-auto flex-1">
           {step === 'upload' && (
             <div className="space-y-4">
               <p className="text-gray-600">
-                Upload your curriculum's <strong>table of contents</strong> (PDF or image, max 15MB) and we'll extract the lesson plans automatically.
+                Have a table of contents? Upload it and we'll extract your lessons automatically. No TOC? Type or paste your lesson names directly.
               </p>
 
               {error && (
@@ -375,7 +437,7 @@ export default function CurriculumImporter({ childId, childName, onClose, onImpo
 
                 <select
                   value={selectedSubject}
-                  onChange={(e) => setSelectedSubject(e.target.value)}
+                  onChange={(e) => { setSelectedSubject(e.target.value); setShowScoutTip(false) }}
                   className="w-full border border-gray-300 rounded-lg px-4 py-2 text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 >
                   <option value="">-- Select Subject --</option>
@@ -417,6 +479,67 @@ export default function CurriculumImporter({ childId, childName, onClose, onImpo
                   </div>
                 )}
               </div>
+
+              {/* ── Scout Frequency Nudge ── */}
+              {(() => {
+                const effectiveSubject = selectedSubject === '__custom__' ? customSubject : selectedSubject
+                if (!effectiveSubject) return null
+                const tip = getScoutFrequencyTip(effectiveSubject, stateCode)
+                return (
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => setShowScoutTip(prev => !prev)}
+                      className="flex items-center gap-2 text-sm font-bold text-purple-600 hover:text-purple-800 transition-colors"
+                    >
+                      <img src="/Cardinal_Mascot.png" alt="Scout" style={{ width: 28, height: 28, objectFit: 'contain' }} />
+                      Not sure about frequency? Ask Scout
+                      <span style={{ fontSize: 11 }}>{showScoutTip ? '▲' : '▼'}</span>
+                    </button>
+
+                    {showScoutTip && (
+                      <div style={{
+                        marginTop: 10, background: '#ede9fe', borderRadius: 14,
+                        padding: '14px 16px', border: '1.5px solid #ddd6fe',
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                          <img src="/Cardinal_Mascot.png" alt="Scout" style={{ width: 48, height: 48, objectFit: 'contain', flexShrink: 0 }} />
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: 800, fontSize: 13, color: '#5b21b6', marginBottom: 4 }}>
+                              Scout recommends <strong>{tip.label}</strong> for {effectiveSubject}
+                            </div>
+                            <div style={{ fontSize: 12, color: '#4b5563', lineHeight: 1.55, marginBottom: tip.stateNote ? 8 : 0 }}>
+                              {tip.reason}
+                            </div>
+                            {tip.stateNote && (
+                              <div style={{ fontSize: 11, color: '#7c3aed', fontWeight: 600, marginTop: 4 }}>
+                                📋 {tip.stateNote}
+                              </div>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setBulkDurationValue(tip.perWeek)
+                                setBulkDurationUnit('days')
+                                setApplyBulkDuration(true)
+                                setShowScoutTip(false)
+                              }}
+                              style={{
+                                marginTop: 10, padding: '7px 14px', borderRadius: 20,
+                                background: 'linear-gradient(135deg, #7c3aed, #a855f7)',
+                                color: '#fff', border: 'none', fontSize: 12, fontWeight: 800,
+                                cursor: 'pointer', fontFamily: 'inherit',
+                              }}
+                            >
+                              Use Scout's suggestion ({tip.perWeek}× a week) →
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )
+              })()}
 
               {/* ── Bulk Duration Settings ── */}
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
@@ -472,17 +595,56 @@ export default function CurriculumImporter({ childId, childName, onClose, onImpo
                 </div>
 
                 {useStartDate ? (
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     <input
                       type="date"
                       value={startDate}
                       onChange={(e) => setStartDate(e.target.value)}
                       className="w-full border border-gray-300 rounded-lg px-4 py-2 text-gray-900"
                     />
-                    <p className="text-xs text-gray-600">
-                      📅 Lessons will be scheduled sequentially based on their duration, starting from this date.
-                      If no duration is set, each lesson will be 1 day apart.
-                    </p>
+
+                    {/* Day picker */}
+                    <div>
+                      <p className="text-xs font-medium text-gray-700 mb-2">Which days will you teach this subject?</p>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        {[
+                          { label: 'Mon', day: 1 },
+                          { label: 'Tue', day: 2 },
+                          { label: 'Wed', day: 3 },
+                          { label: 'Thu', day: 4 },
+                          { label: 'Fri', day: 5 },
+                          { label: 'Sat', day: 6 },
+                        ].map(({ label, day }) => {
+                          const active = scheduleDays.has(day)
+                          return (
+                            <button
+                              key={day}
+                              type="button"
+                              onClick={() => setScheduleDays(prev => {
+                                const next = new Set(prev)
+                                next.has(day) ? next.delete(day) : next.add(day)
+                                return next
+                              })}
+                              style={{
+                                flex: 1, padding: '7px 2px', borderRadius: 8,
+                                border: `2px solid ${active ? '#7c3aed' : '#e5e7eb'}`,
+                                background: active ? '#f5f3ff' : '#fafafa',
+                                color: active ? '#5b21b6' : '#6b7280',
+                                fontSize: 11, fontWeight: 800, cursor: 'pointer',
+                                fontFamily: 'inherit',
+                              }}
+                            >{label}</button>
+                          )
+                        })}
+                      </div>
+                      {scheduleDays.size === 0 && (
+                        <p className="text-xs text-red-500 mt-1">Select at least one day</p>
+                      )}
+                      <p className="text-xs text-gray-500 mt-2">
+                        📅 One lesson per selected day, starting {startDate || 'your chosen date'}.
+                        {scheduleDays.size > 0 && ` (${scheduleDays.size}× a week)`}
+                      </p>
+                    </div>
                   </div>
                 ) : (
                   <p className="text-xs text-gray-600">
@@ -491,39 +653,122 @@ export default function CurriculumImporter({ childId, childName, onClose, onImpo
                 )}
               </div>
 
-              {/* ── File Upload ── */}
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-                <input
-                  type="file"
-                  accept="application/pdf,image/jpeg,image/png"
-                  onChange={handleFileChange}
-                  className="hidden"
-                  id="pdf-upload"
-                />
-                <label
-                  htmlFor="pdf-upload"
-                  className="cursor-pointer inline-block text-white px-6 py-3 rounded-xl font-bold"
-                  style={{ background: 'linear-gradient(135deg, #7c3aed, #a855f7)', fontFamily: "'Nunito', sans-serif" }}
+              {/* ── Upload mode picker ── */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <button
+                  type="button"
+                  onClick={() => setUploadMode('file')}
+                  style={{
+                    padding: '14px 12px', borderRadius: 14, cursor: 'pointer', textAlign: 'left',
+                    border: `2px solid ${uploadMode === 'file' ? '#7c3aed' : '#e5e7eb'}`,
+                    background: uploadMode === 'file' ? '#f5f3ff' : '#fafafa',
+                    fontFamily: 'inherit',
+                  }}
                 >
-                  Choose File (PDF or Image)
-                </label>
-                {file && (
-                  <p className="mt-4 text-gray-700">
-                    Selected: <span className="font-semibold">{file.name}</span>
-                  </p>
-                )}
+                  <div style={{ fontSize: 22, marginBottom: 4 }}>📄</div>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: uploadMode === 'file' ? '#5b21b6' : '#374151' }}>
+                    Upload TOC
+                  </div>
+                  <div style={{ fontSize: 11, color: '#6b7280', marginTop: 2, lineHeight: 1.4 }}>
+                    PDF or photo of your curriculum's table of contents
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setUploadMode('manual')}
+                  style={{
+                    padding: '14px 12px', borderRadius: 14, cursor: 'pointer', textAlign: 'left',
+                    border: `2px solid ${uploadMode === 'manual' ? '#7c3aed' : '#e5e7eb'}`,
+                    background: uploadMode === 'manual' ? '#f5f3ff' : '#fafafa',
+                    fontFamily: 'inherit',
+                  }}
+                >
+                  <div style={{ fontSize: 22, marginBottom: 4 }}>✏️</div>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: uploadMode === 'manual' ? '#5b21b6' : '#374151' }}>
+                    Type or paste it in
+                  </div>
+                  <div style={{ fontSize: 11, color: '#6b7280', marginTop: 2, lineHeight: 1.4 }}>
+                    No TOC to upload? Enter lesson names directly
+                  </div>
+                </button>
               </div>
 
-              {file && (
-                <button
-                  onClick={extractLessons}
-                  disabled={loading}
-                  className="w-full text-white py-3 rounded-xl font-bold disabled:opacity-50"
-                  style={{ background: 'linear-gradient(135deg, #7c3aed, #a855f7)', fontFamily: "'Nunito', sans-serif" }}
-                >
-                  {loading ? 'Extracting Lessons...' : 'Extract Lessons'}
-                </button>
+              {/* ── File upload path ── */}
+              {uploadMode === 'file' && (
+                <>
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                    <input
+                      type="file"
+                      accept="application/pdf,image/jpeg,image/png"
+                      onChange={handleFileChange}
+                      className="hidden"
+                      id="pdf-upload"
+                    />
+                    <label
+                      htmlFor="pdf-upload"
+                      className="cursor-pointer inline-block text-white px-6 py-3 rounded-xl font-bold"
+                      style={{ background: 'linear-gradient(135deg, #7c3aed, #a855f7)', fontFamily: "'Nunito', sans-serif" }}
+                    >
+                      Choose File (PDF or Image)
+                    </label>
+                    {file && (
+                      <p className="mt-4 text-gray-700">
+                        Selected: <span className="font-semibold">{file.name}</span>
+                      </p>
+                    )}
+                  </div>
+                  {file && (
+                    <button
+                      onClick={extractLessons}
+                      disabled={loading || (useStartDate && scheduleDays.size === 0)}
+                      className="w-full text-white py-3 rounded-xl font-bold disabled:opacity-50"
+                      style={{ background: 'linear-gradient(135deg, #7c3aed, #a855f7)', fontFamily: "'Nunito', sans-serif" }}
+                    >
+                      {loading ? 'Extracting Lessons...' : 'Extract Lessons'}
+                    </button>
+                  )}
+                </>
               )}
+
+              {/* ── Manual entry path ── */}
+              {uploadMode === 'manual' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {/* Scout tip */}
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, background: '#ede9fe', borderRadius: 12, padding: '12px 14px', border: '1.5px solid #ddd6fe' }}>
+                    <img src="/Cardinal_Mascot.png" alt="Scout" style={{ width: 36, height: 36, objectFit: 'contain', flexShrink: 0 }} />
+                    <div style={{ fontSize: 12, color: '#4b5563', lineHeight: 1.55 }}>
+                      <strong style={{ color: '#5b21b6', display: 'block', marginBottom: 2 }}>No TOC? No problem — Scout says:</strong>
+                      Type or paste your lesson or chapter names below, one per line. You can copy them from your curriculum's website, a digital guide, or just type what you know you'll cover. Each line becomes one lesson.
+                    </div>
+                  </div>
+
+                  <textarea
+                    value={manualText}
+                    onChange={e => setManualText(e.target.value)}
+                    rows={7}
+                    placeholder={`Chapter 1: Introduction to Fractions\nChapter 2: Adding and Subtracting Fractions\nChapter 3: Multiplying Fractions\nChapter 4: Dividing Fractions\n...`}
+                    style={{
+                      width: '100%', padding: '12px 14px', border: '2px solid #e5e7eb',
+                      borderRadius: 12, fontSize: 13, fontFamily: 'inherit', color: '#1a1a2e',
+                      resize: 'vertical', lineHeight: 1.6, boxSizing: 'border-box',
+                    }}
+                  />
+                  <p style={{ fontSize: 11, color: '#9ca3af', marginTop: -4 }}>
+                    {manualText.split('\n').filter(l => l.trim()).length} lesson{manualText.split('\n').filter(l => l.trim()).length !== 1 ? 's' : ''} detected
+                  </p>
+
+                  <button
+                    type="button"
+                    onClick={parseManualLessons}
+                    disabled={!manualText.trim() || (useStartDate && scheduleDays.size === 0)}
+                    className="w-full text-white py-3 rounded-xl font-bold disabled:opacity-50"
+                    style={{ background: 'linear-gradient(135deg, #7c3aed, #a855f7)', fontFamily: "'Nunito', sans-serif" }}
+                  >
+                    Preview Lessons →
+                  </button>
+                </div>
+              )}
+
             </div>
           )}
 
@@ -675,6 +920,21 @@ export default function CurriculumImporter({ childId, childName, onClose, onImpo
             </div>
           )}
         </div>
+
+        {/* ── Sticky footer — Cancel always visible ── */}
+        {step !== 'success' && (
+          <div className="border-t px-6 py-3 flex-shrink-0 bg-white rounded-b-lg">
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-full py-2.5 border border-gray-200 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-50 transition-colors"
+              style={{ fontFamily: "'Nunito', sans-serif" }}
+            >
+              Cancel
+            </button>
+          </div>
+        )}
+
       </div>
     </div>
   );

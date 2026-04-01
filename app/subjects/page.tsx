@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, Suspense } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/src/lib/supabase/client'
 import AuthGuard from '@/components/AuthGuard'
 import LessonViewModal, { type LessonViewModalLesson } from '@/components/LessonViewModal'
@@ -122,8 +122,9 @@ function getThisWeekBounds(): { mon: string; sun: string } {
 // ─── Subject Content ──────────────────────────────────────────────────────────
 
 function SubjectsContent() {
-  const router   = useRouter()
-  const supabase = createClient()
+  const router       = useRouter()
+  const searchParams = useSearchParams()
+  const supabase     = createClient()
   const css = {
     root: {
       fontFamily: "'Nunito', sans-serif",
@@ -233,7 +234,9 @@ function SubjectsContent() {
 
       const kidsList = kidsResult.data || []
       setKids(kidsList)
-      if (kidsList.length > 0) setActiveKidId(kidsList[0].id)
+      const kidParam = searchParams?.get('kid')
+      const defaultKid = kidParam && kidsList.find((k: Kid) => k.id === kidParam) ? kidParam : kidsList[0]?.id
+      if (defaultKid) setActiveKidId(defaultKid)
       setAllLessons(lessonsResult.data || [])
       setAllSubjects(subjectsResult.data || [])
       setLoading(false)

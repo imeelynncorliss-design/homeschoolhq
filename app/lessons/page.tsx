@@ -1119,17 +1119,21 @@ function LessonsContent() {
         />
       )}
 
-      {showImporter && selectedKidForImport && (
-        <CurriculumImporter
-          childId={selectedKidForImport.id}
-          childName={selectedKidForImport.displayname}
-          onClose={() => setShowImporter(false)}
-          onImportComplete={() => {
-            setShowImporter(false)
-            loadData(user.id, organizationId)
-          }}
-        />
-      )}
+      {showImporter && (() => {
+        const importKid = selectedKidForImport || kids.find(k => k.id === addLessonKidId)
+        if (!importKid) return null
+        return (
+          <CurriculumImporter
+            childId={importKid.id}
+            childName={importKid.displayname}
+            onClose={() => setShowImporter(false)}
+            onImportComplete={() => {
+              setShowImporter(false)
+              loadData(user.id, organizationId)
+            }}
+          />
+        )
+      })()}
 
       {/* ── Upgrade Modal ────────────────────────────────────────────── */}
       {showUpgradeModal && (

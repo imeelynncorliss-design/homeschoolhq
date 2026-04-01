@@ -8,6 +8,7 @@ import { DEFAULT_FLEXIBLE, DEFAULT_STRUCTURED } from '@/components/StylePickerMo
 import { MI_INTELLIGENCES, MI_CLUSTERS, MI_REMEMBER } from '@/src/lib/learningProfiles'
 import { getVakBridge, getMiTips } from '@/src/lib/teachingBlueprint'
 import { ExternalLink } from '@/components/ExternalLink'
+import { getOnboardingFrequencyTip } from '@/lib/scoutFrequency'
 
 // ── State Data ────────────────────────────────────────────────────────────────
 
@@ -2547,10 +2548,32 @@ function OnboardingInner() {
               ))}
             </div>
 
+            {/* Scout frequency tip */}
+            {selectedSubjects.length > 0 && (() => {
+              const tip = getOnboardingFrequencyTip(selectedSubjects, selectedState || null)
+              return (
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 0, marginBottom: 16 }}>
+                  <div style={{ background: '#ede9fe', borderRadius: 16, padding: '14px 18px', boxShadow: '0 4px 20px rgba(0,0,0,0.15)', flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 800, fontSize: 14, color: '#1a1a2e', marginBottom: 4 }}>
+                      Not sure about frequency? Scout says:
+                    </div>
+                    <div style={{ fontSize: 13, color: '#4b5563', lineHeight: 1.6 }}>
+                      {tip.split(/\*\*([^*]+)\*\*/g).map((part, i) =>
+                        i % 2 === 1
+                          ? <strong key={i} style={{ color: '#7c3aed' }}>{part}</strong>
+                          : part
+                      )}
+                    </div>
+                  </div>
+                  <img src="/Cardinal_Mascot.png" alt="Scout" style={{ width: 90, height: 90, objectFit: 'contain', flexShrink: 0, marginLeft: -20 }} />
+                </div>
+              )
+            })()}
+
             {/* School days per week */}
             <div className="bg-white rounded-2xl shadow-sm p-5 mb-6">
               <p className="text-xs font-bold uppercase tracking-widest text-purple-600 mb-1">How many days a week do you typically school?</p>
-              <p className="text-xs text-gray-400 mb-4">This sets the weekly target for all subjects — you can adjust each one individually later.</p>
+              <p className="text-xs text-gray-400 mb-4">This sets the weekly target for all subjects — you can fine-tune each one individually in the Subjects tab.</p>
               <div className="flex gap-2 flex-wrap">
                 {[3, 4, 5].map(n => (
                   <button

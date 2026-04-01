@@ -1202,7 +1202,8 @@ function DashboardContent() {
   const [showGenerator, setShowGenerator]     = useState(false)
   const [activePulseKidId, setActivePulseKidId] = useState<string | null>(null)
   const [childProfileKidId, setChildProfileKidId] = useState<string | null>(null)
-  const [profileTab, setProfileTab] = useState<'today' | 'style' | 'mi' | 'look'>('today')
+  const [profileTab, setProfileTab] = useState<'today' | 'style' | 'mi' | 'look' | 'subjects'>('today')
+  const [kidSubjects, setKidSubjects] = useState<any[]>([])
   const [editChildId, setEditChildId] = useState<string | null>(null)
   const [editChildDefaultTab, setEditChildDefaultTab] = useState<'info' | 'style' | 'mi' | 'look'>('info')
   const [homeschoolStyle, setHomeschoolStyle] = useState<'flexible' | 'structured' | null | undefined>(undefined)
@@ -1750,7 +1751,14 @@ function DashboardContent() {
                   return (
                     <div
                       key={pulse.kid.id}
-                      onClick={() => { setChildProfileKidId(pulse.kid.id); setProfileTab('today') }}
+                      onClick={() => {
+                        setChildProfileKidId(pulse.kid.id)
+                        setProfileTab('today')
+                        setKidSubjects([])
+                        supabase.from('subjects').select('id,name,emoji,color,weekly_frequency').eq('kid_id', pulse.kid.id).order('name').then(({ data }) => {
+                          if (data) setKidSubjects(data)
+                        })
+                      }}
                       style={{ background: gradient, borderRadius: 20, padding: '18px 12px 16px', cursor: 'pointer', display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 8, boxShadow: '0 4px 20px rgba(0,0,0,0.18)' }}
                     >
                       {/* Avatar with progress ring */}
@@ -2291,22 +2299,23 @@ function DashboardContent() {
                   </div>
 
                   {/* Tab pills */}
-                  <div style={{ display: 'flex', gap: 5, padding: '12px 14px 0', flexShrink: 0 }}>
+                  <div style={{ display: 'flex', gap: 4, padding: '12px 14px 0', flexShrink: 0 }}>
                     {([
-                      { id: 'today', label: '📚 Today' },
-                      { id: 'style', label: '🎨 Style' },
-                      { id: 'mi',    label: '✨ MI' },
-                      { id: 'look',  label: '🐦 Look' },
+                      { id: 'today',    label: '📚 Today' },
+                      { id: 'subjects', label: '📖 Subjects' },
+                      { id: 'style',    label: '🎨 Style' },
+                      { id: 'mi',       label: '✨ MI' },
+                      { id: 'look',     label: '🐦 Look' },
                     ] as const).map(tab => (
                       <button
                         key={tab.id}
                         onClick={() => setProfileTab(tab.id)}
                         style={{
-                          flex: 1, padding: '7px 2px', borderRadius: 10,
+                          flex: 1, padding: '6px 1px', borderRadius: 10,
                           border: profileTab === tab.id ? 'none' : '1.5px solid #e5e7eb',
                           background: profileTab === tab.id ? 'linear-gradient(135deg,#7c3aed,#a855f7)' : '#f9fafb',
                           color: profileTab === tab.id ? '#fff' : '#6b7280',
-                          fontSize: 11, fontWeight: 800, cursor: 'pointer',
+                          fontSize: 10, fontWeight: 800, cursor: 'pointer',
                           fontFamily: "'Nunito', sans-serif",
                         }}
                       >{tab.label}</button>
@@ -2347,6 +2356,39 @@ function DashboardContent() {
                           onClick={() => { setChildProfileKidId(null); setActivePulseKidId(childProfileKidId) }}
                           style={{ width: '100%', padding: '10px 0', borderRadius: 12, border: '1.5px solid #e5e7eb', background: '#f9fafb', color: '#6b7280', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: "'Nunito', sans-serif", marginTop: 4 }}
                         >📅 View This Week →</button>
+                      </div>
+                    )}
+
+                    {/* ── Subjects tab ── */}
+                    {profileTab === 'subjects' && (
+                      <div>
+                        {kidSubjects.length === 0 ? (
+                          <div style={{ textAlign: 'center' as const, padding: '20px 0 12px', color: '#9ca3af' }}>
+                            <div style={{ fontSize: 28, marginBottom: 8 }}>📖</div>
+                            <div style={{ fontSize: 13, fontWeight: 700 }}>No subjects set up yet</div>
+                          </div>
+                        ) : (
+                          <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 7, marginBottom: 14 }}>
+                            {kidSubjects.map((s: any) => (
+                              <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#f9fafb', borderRadius: 11, padding: '9px 12px', border: '1.5px solid #f3f4f6' }}>
+                                <span style={{ fontSize: 18, flexShrink: 0 }}>{s.emoji || '📚'}</span>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div style={{ fontSize: 13, fontWeight: 800, color: '#1a1a2e' }}>{s.name}</div>
+                                </div>
+                                {s.weekly_frequency && (
+                                  <div style={{ fontSize: 10, fontWeight: 700, color: '#7c3aed', background: '#f5f3ff', borderRadius: 99, padding: '3px 8px', flexShrink: 0, whiteSpace: 'nowrap' as const }}>
+                                    {s.weekly_frequency}×/wk
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        <a
+                          href={`/subjects?kid=${pulse.kid.id}`}
+                          onClick={() => setChildProfileKidId(null)}
+                          style={{ display: 'block', width: '100%', padding: '11px 0', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: '#fff', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: "'Nunito', sans-serif", textAlign: 'center' as const, textDecoration: 'none', boxSizing: 'border-box' as const }}
+                        >📖 Manage Subjects →</a>
                       </div>
                     )}
 
