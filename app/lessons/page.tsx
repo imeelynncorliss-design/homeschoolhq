@@ -418,30 +418,37 @@ function LessonsContent() {
     setShowLessonEditModal(true)
   }
 
-  const handleCycleStatus = async (lessonId: string, currentStatus: string) => {
+  // Optimistic local update — UI responds instantly, DB write happens in background
+  const applyStatusOptimistic = (lessonId: string, newStatus: 'not_started' | 'in_progress' | 'completed') => {
+    const completedAt = newStatus === 'completed' ? new Date().toISOString() : null
+    setLessonsByKid(prev => {
+      const next = { ...prev }
+      for (const kidId of Object.keys(next)) {
+        next[kidId] = next[kidId].map(l =>
+          l.id === lessonId ? { ...l, status: newStatus } : l
+        )
+      }
+      return next
+    })
+    const updates: any = { status: newStatus, completed_at: completedAt }
+    supabase.from('lessons').update(updates).eq('id', lessonId)
+  }
+
+  const handleCycleStatus = (lessonId: string, currentStatus: string) => {
     const next: Record<string, 'not_started' | 'in_progress' | 'completed'> = {
       not_started: 'in_progress',
       in_progress: 'completed',
       completed: 'not_started',
     }
     const newStatus = next[currentStatus] ?? 'not_started'
-    // Confirm before marking complete
     if (newStatus === 'completed') {
       if (!confirm('Mark this lesson as complete?')) return
     }
-    const updates: any = { status: newStatus }
-    if (newStatus === 'completed') updates.completed_at = new Date().toISOString()
-    if (newStatus === 'not_started') updates.completed_at = null
-    await supabase.from('lessons').update(updates).eq('id', lessonId)
-    await loadData(user.id, organizationId)
+    applyStatusOptimistic(lessonId, newStatus)
   }
 
-  const handleSetStatus = async (lessonId: string, status: 'not_started' | 'in_progress' | 'completed') => {
-    const updates: any = { status }
-    if (status === 'completed') updates.completed_at = new Date().toISOString()
-    if (status === 'not_started') updates.completed_at = null
-    await supabase.from('lessons').update(updates).eq('id', lessonId)
-    await loadData(user.id, organizationId)
+  const handleSetStatus = (lessonId: string, status: 'not_started' | 'in_progress' | 'completed') => {
+    applyStatusOptimistic(lessonId, status)
   }
 
 
