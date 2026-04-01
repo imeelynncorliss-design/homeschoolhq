@@ -232,7 +232,7 @@ export default function EditChildModal({ kidId, defaultTab = 'info', onClose, on
               {/* ── MI tab ── */}
               {activeTab === 'mi' && (
                 <div>
-                  <p style={{ fontSize: 12, color: '#6b7280', fontWeight: 600, margin: '0 0 12px' }}>Pick up to 3 strongest intelligences</p>
+                  <p style={{ fontSize: 12, color: '#6b7280', fontWeight: 600, margin: '0 0 12px' }}>Select all that apply — pick as many as fit your child</p>
                   {(['analytical', 'introspective', 'interactive'] as const).map(cluster => {
                     const info  = MI_CLUSTERS[cluster]
                     const items = MI_INTELLIGENCES.filter(mi => mi.cluster === cluster)

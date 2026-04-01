@@ -11,6 +11,6 @@ export default function PlanningPage() {
 }
 
 export const metadata = {
-  title: 'Planning Mode | HomeschoolHQ',
+  title: 'Planning Mode | HomeschoolReady',
   description: 'Organize and plan your homeschool schedule',
 };

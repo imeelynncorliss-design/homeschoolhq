@@ -1,5 +1,5 @@
 // ============================================================================
-// HomeschoolHQ - Standards Utilities
+// HomeschoolReady - Standards Utilities
 // Database query helpers for standards system
 // ============================================================================
 

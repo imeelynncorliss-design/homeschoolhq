@@ -1,4 +1,4 @@
-// Canonical subject list for HomeschoolHQ
+// Canonical subject list for HomeschoolReady
 // Used for dropdown suggestions in lesson creation, editing, AI generation, and curriculum import.
 // BulkLessonScheduler uses a separate dynamic query (DISTINCT subject FROM lessons) for filtering.
 

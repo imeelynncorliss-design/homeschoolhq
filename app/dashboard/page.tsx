@@ -1218,6 +1218,9 @@ function DashboardContent() {
   const [tourFromWelcome, setTourFromWelcome] = useState(false)
   const [weekLessons, setWeekLessons]           = useState<Record<string, { lesson: any; kid: Kid }[]>>({})
   const [selectedWeekDay, setSelectedWeekDay]   = useState<string | null>(null)
+  const [weeklyMaterialsCount, setWeeklyMaterialsCount] = useState(0)
+  const [todayAttendance, setTodayAttendance] = useState<Set<string>>(new Set()) // kid IDs marked present today
+  const [attendanceSaving, setAttendanceSaving] = useState<Set<string>>(new Set())
 
   const now         = new Date()
   const dow         = now.getDay()
@@ -1378,12 +1381,13 @@ function DashboardContent() {
         if (kidIds.length > 0) {
           const { data: weekData } = await supabase
             .from('lessons')
-            .select('id, title, status, subject, start_time, lesson_date, duration_minutes, kid_id, description, lesson_source')
+            .select('id, title, status, subject, start_time, lesson_date, duration_minutes, kid_id, description, lesson_source, materials_needed')
             .in('kid_id', kidIds)
             .in('lesson_date', weekDays)
             .order('start_time', { ascending: true })
           const byDate: Record<string, { lesson: any; kid: Kid }[]> = {}
           for (const d of weekDays) byDate[d] = []
+          let matCount = 0
           for (const lesson of weekData ?? []) {
             if (!lesson.lesson_date) continue
             const kid = kidsData.find((k: any) => k.id === lesson.kid_id)
@@ -1393,9 +1397,28 @@ function DashboardContent() {
                 kid: { id: kid.id, displayname: kid.displayname, grade: kid.grade, learning_style: kid.learning_style, mi_profile: kid.mi_profile, avatar_index: kid.avatar_index, color_index: kid.color_index, current_hook: kid.current_hook },
               })
             }
+            // Count materials_needed items
+            if (Array.isArray(lesson.materials_needed)) matCount += lesson.materials_needed.length
+            // Count Scout JSON materials
+            if (lesson.description) {
+              try {
+                const parsed = JSON.parse(lesson.description.trim())
+                if (Array.isArray(parsed?.materials)) matCount += parsed.materials.length
+              } catch { /* not JSON */ }
+            }
           }
           setWeekLessons(byDate)
+          setWeeklyMaterialsCount(matCount)
         }
+
+        // Fetch today's attendance
+        const { data: attData } = await supabase
+          .from('daily_attendance')
+          .select('kid_id')
+          .eq('organization_id', orgId)
+          .eq('attendance_date', todayStr)
+          .in('kid_id', uniqueKids.map((k: any) => k.id))
+        setTodayAttendance(new Set((attData || []).map((a: any) => a.kid_id)))
       }
 
       setLoading(false)
@@ -1432,6 +1455,18 @@ function DashboardContent() {
       }
     }
     setWeekLessons(byDate)
+  }
+
+  const markAttendanceToday = async (kidId: string) => {
+    if (!organizationId) return
+    setAttendanceSaving(prev => new Set(prev).add(kidId))
+    const todayStr = new Date().toISOString().split('T')[0]
+    await supabase.from('daily_attendance').upsert(
+      { organization_id: organizationId, kid_id: kidId, attendance_date: todayStr, status: 'full_day', hours: 6 },
+      { onConflict: 'organization_id,kid_id,attendance_date' }
+    )
+    setTodayAttendance(prev => new Set(prev).add(kidId))
+    setAttendanceSaving(prev => { const n = new Set(prev); n.delete(kidId); return n })
   }
 
   // Dispatch Scout nudge once data is loaded
@@ -1812,11 +1847,76 @@ function DashboardContent() {
                           {pulse.totalToday > 0 ? `${pulse.completedToday}/${pulse.totalToday} done today` : 'No lessons today'}
                         </div>
                       )}
+
+                      {/* Attendance button */}
+                      {(() => {
+                        const isPresent = todayAttendance.has(pulse.kid.id)
+                        const isSaving = attendanceSaving.has(pulse.kid.id)
+                        return (
+                          <button
+                            onClick={e => { e.stopPropagation(); if (!isPresent) markAttendanceToday(pulse.kid.id) }}
+                            disabled={isPresent || isSaving}
+                            style={{
+                              marginTop: 4, width: '100%',
+                              padding: '6px 10px', borderRadius: 10,
+                              border: 'none',
+                              background: isPresent ? 'rgba(255,255,255,0.30)' : 'rgba(255,255,255,0.20)',
+                              color: isPresent ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.85)',
+                              fontSize: 11, fontWeight: 800,
+                              cursor: isPresent ? 'default' : 'pointer',
+                              fontFamily: "'Nunito', sans-serif",
+                              transition: 'all 0.15s',
+                            }}
+                          >
+                            {isPresent ? '✓ Present today' : isSaving ? '...' : '✅ Mark present'}
+                          </button>
+                        )
+                      })()}
                     </div>
                   )
                 })}
               </div>
             )}
+          </section>
+
+          {/* Supply Scout card */}
+          <section>
+            <button
+              onClick={() => router.push('/supply-scout')}
+              style={{
+                width: '100%', background: weeklyMaterialsCount > 0
+                  ? 'linear-gradient(135deg,#fffbeb,#fef3c7)'
+                  : 'rgba(255,255,255,0.75)',
+                border: weeklyMaterialsCount > 0 ? '1.5px solid #fcd34d' : '1.5px solid rgba(209,213,219,0.6)',
+                borderRadius: 16, padding: '14px 18px',
+                display: 'flex', alignItems: 'center', gap: 14,
+                cursor: 'pointer', textAlign: 'left' as const,
+                boxShadow: weeklyMaterialsCount > 0 ? '0 2px 12px rgba(245,158,11,0.18)' : 'none',
+                fontFamily: "'Nunito', sans-serif", transition: 'all 0.15s',
+              }}
+            >
+              <div style={{
+                width: 44, height: 44, borderRadius: 12, flexShrink: 0,
+                background: weeklyMaterialsCount > 0 ? 'linear-gradient(135deg,#f59e0b,#d97706)' : '#e5e7eb',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22,
+              }}>🛒</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 14, fontWeight: 900, color: '#1a1a2e', marginBottom: 2 }}>Supply Scout</div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: weeklyMaterialsCount > 0 ? '#b45309' : '#6b7280' }}>
+                  {weeklyMaterialsCount > 0
+                    ? `${weeklyMaterialsCount} item${weeklyMaterialsCount !== 1 ? 's' : ''} needed this week — tap to review`
+                    : 'No supplies needed this week'}
+                </div>
+              </div>
+              {weeklyMaterialsCount > 0 && (
+                <div style={{
+                  background: '#f59e0b', color: '#fff', borderRadius: 20,
+                  padding: '4px 10px', fontSize: 13, fontWeight: 900, flexShrink: 0,
+                }}>
+                  🚩 {weeklyMaterialsCount}
+                </div>
+              )}
+            </button>
           </section>
 
           {/* Quick Actions — style-aware */}

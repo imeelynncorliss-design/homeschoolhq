@@ -367,7 +367,7 @@ export default function KidProfileForm({ kid, onSave, onCancel }: KidProfileForm
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-1">
                   Multiple Intelligences{' '}
-                  <span className="font-normal text-gray-400">(optional — pick up to 3)</span>
+                  <span className="font-normal text-gray-400">(optional)</span>
                 </label>
                 <p className="text-xs text-gray-400 mb-3">
                   Where do they naturally shine? This powers the Teaching Blueprint.

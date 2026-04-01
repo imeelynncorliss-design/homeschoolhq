@@ -131,7 +131,7 @@ export default function AssessmentsHelpModal({ onClose }: AssessmentsHelpModalPr
     <div>
       <h4 className="font-black text-amber-900 mb-2">Important: Parent Responsibility</h4>
       <p className="text-amber-800 text-sm leading-relaxed">
-        Standards are provided for convenience only. <strong>Parents are responsible for verifying the accuracy and currency of all standards</strong> with their state requirements, curriculum provider, or educational guidelines. HomeschoolHQ does not maintain or update standards - we provide tools for YOU to import and manage the standards that matter to your family.
+        Standards are provided for convenience only. <strong>Parents are responsible for verifying the accuracy and currency of all standards</strong> with their state requirements, curriculum provider, or educational guidelines. HomeschoolReady does not maintain or update standards - we provide tools for YOU to import and manage the standards that matter to your family.
       </p>
     </div>
   </div>

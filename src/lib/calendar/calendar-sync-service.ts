@@ -524,7 +524,7 @@ export class CalendarSyncService {
   }
 
   /**
-   * Auto-block work events in HomeschoolHQ calendar
+   * Auto-block work events in HomeschoolReady calendar
    */
   async autoBlockWorkEvents(
     organizationId: string,

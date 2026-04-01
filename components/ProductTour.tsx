@@ -47,10 +47,11 @@ function buildTourSteps(
     title: 'Your Learners 🐦',
     content: showRing
       ? 'Each card shows your child\'s bird avatar with a progress ring — the white arc fills as they complete today\'s lessons. Tap any card to see their:'
-      : 'Each card shows your child\'s bird avatar. Tap any card to see their profile — and pin the Progress Ring card in Quick Actions to track lesson completion here.',
+      : 'Each card shows your child\'s bird avatar. Tap any card to see their profile. Progress rings appear automatically for Structured-style families, or you can pin the Progress Dials card in Quick Actions to add them.',
     bullets: [
       '🎨 Learning style (Visual, Auditory, Kinesthetic, Read/Write)',
       '✨ MI Superpowers — their natural intelligence strengths',
+      '📖 Subjects — see what they\'re studying and their weekly schedule',
       '📚 Today\'s lesson list',
       '✏️ Quick link to edit their profile',
     ],
@@ -65,6 +66,9 @@ function buildTourSteps(
     content: isFlexible
       ? "Shortcuts for logging what you do each day. Tap any card to jump right in — and tap 'Ask Scout' anytime I can help."
       : "Jump to Today's Learning, log attendance, check compliance, or plan a lesson. Tap 'Ask Scout' anytime you have a question.",
+    bullets: [
+      '🛒 Supply Scout — shows how many materials you need this week, right on your dashboard. Tap it to review and check off as you gather.',
+    ],
     position: 'bottom',
   })
 

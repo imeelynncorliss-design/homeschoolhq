@@ -72,7 +72,7 @@ export async function POST(request: Request) {
       let html = '';
       try {
         const webRes = await fetch(url, {
-          headers: { 'User-Agent': 'Mozilla/5.0 (compatible; HomeschoolHQ/1.0)' },
+          headers: { 'User-Agent': 'Mozilla/5.0 (compatible; HomeschoolReady/1.0)' },
           signal: AbortSignal.timeout(10000),
         });
         html = await webRes.text();

@@ -1,6 +1,6 @@
 /**
  * useDashboardStats.ts
- * Fetches all 4 stats bar values for the HomeschoolHQ dashboard.
+ * Fetches all 4 stats bar values for the HomeschoolReady dashboard.
  *
  * Stats:
  *  1. Today's lessons   — lessons scheduled for today (by org)

@@ -2234,8 +2234,8 @@ function OnboardingInner() {
               const clusterItems = MI_INTELLIGENCES.filter(mi => mi.cluster === cluster)
               return (
                 <div key={cluster} style={{ marginBottom: 20 }}>
-                  <div style={{ fontSize: 11, fontWeight: 800, color: clusterInfo.color, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 6, opacity: 0.9 }}>
-                    {clusterInfo.label} — <span style={{ fontWeight: 600, textTransform: 'none', letterSpacing: 0 }}>{clusterInfo.tagline}</span>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: clusterInfo.color, letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 8, opacity: 1 }}>
+                    {clusterInfo.label} — <span style={{ fontWeight: 600, textTransform: 'none', letterSpacing: 0, fontSize: 13 }}>{clusterInfo.tagline}</span>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     {clusterItems.map(mi => {
@@ -2261,11 +2261,11 @@ function OnboardingInner() {
                         >
                           <div style={{ fontSize: 28, flexShrink: 0, lineHeight: 1 }}>{mi.emoji}</div>
                           <div style={{ flex: 1 }}>
-                            <div style={{ fontSize: 15, fontWeight: 800, color: selected ? '#e9d5ff' : '#c4b5fd', marginBottom: 4, lineHeight: 1.2 }}>
+                            <div style={{ fontSize: 17, fontWeight: 800, color: selected ? '#e9d5ff' : '#c4b5fd', marginBottom: 5, lineHeight: 1.2 }}>
                               {mi.name}
-                              <span style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.4)', marginLeft: 6 }}>{mi.fullName !== mi.name ? `(${mi.fullName.replace(mi.name, '').replace(/[()]/g,'').trim()})` : ''}</span>
+                              <span style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.5)', marginLeft: 6 }}>{mi.fullName !== mi.name ? `(${mi.fullName.replace(mi.name, '').replace(/[()]/g,'').trim()})` : ''}</span>
                             </div>
-                            <div style={{ fontSize: 15, color: 'rgba(255,255,255,0.75)', lineHeight: 1.5 }}>{mi.detail}</div>
+                            <div style={{ fontSize: 15, color: 'rgba(255,255,255,0.82)', lineHeight: 1.6 }}>{mi.detail}</div>
                           </div>
                           <div style={{
                             width: 22, height: 22, borderRadius: '50%', flexShrink: 0, marginTop: 2,

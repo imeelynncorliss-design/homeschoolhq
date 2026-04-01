@@ -1,5 +1,5 @@
 // ============================================================================
-// HomeschoolHQ - Standards Alignment Types
+// HomeschoolReady - Standards Alignment Types
 // TypeScript type definitions for standards system
 // ============================================================================
 

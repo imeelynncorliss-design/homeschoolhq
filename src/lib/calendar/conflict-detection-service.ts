@@ -1,5 +1,5 @@
 // src/lib/calendar/conflict-detection.service.ts
-// Conflict Detection between Work Calendar and HomeschoolHQ Lessons
+// Conflict Detection between Work Calendar and HomeschoolReady Lessons
 
 import { createClient } from '@/src/lib/supabase/server';
 import type {

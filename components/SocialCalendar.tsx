@@ -361,7 +361,7 @@ export default function SocialCalendar({ userId }: SocialCalendarProps) {
                 className="w-4 h-4"
               />
               <label className="text-sm text-gray-700">
-                Make this event public (visible to all HomeschoolHQ families)
+                Make this event public (visible to all HomeschoolReady families)
               </label>
             </div>
           </div>

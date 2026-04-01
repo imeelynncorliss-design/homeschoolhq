@@ -123,6 +123,29 @@ export default function AllChildrenList({
     setLocalLessonsByKid(lessonsByKid)
   }, [lessonsByKid])
 
+  const [openStatusPicker, setOpenStatusPicker] = useState<string | null>(null)
+  const [pendingStatus, setPendingStatus] = useState<Record<string, 'not_started' | 'in_progress' | 'completed'>>({})
+  const [savedFlash, setSavedFlash] = useState<string | null>(null)
+
+  const openPicker = (lesson: Lesson) => {
+    setOpenStatusPicker(lesson.id)
+    setPendingStatus(prev => ({ ...prev, [lesson.id]: lesson.status }))
+  }
+
+  const commitStatus = (lessonId: string) => {
+    const status = pendingStatus[lessonId]
+    if (!status) return
+    const currentLesson = Object.values(localLessonsByKid).flat().find(l => l.id === lessonId)
+    if (currentLesson && status !== currentLesson.status) {
+      showStatusToast(lessonId, currentLesson.status, status)
+      if (onSetStatus) onSetStatus(lessonId, status)
+      else onCycleStatus(lessonId, currentLesson.status)
+    }
+    setOpenStatusPicker(null)
+    setSavedFlash(lessonId)
+    setTimeout(() => setSavedFlash(prev => prev === lessonId ? null : prev), 1500)
+  }
+
   const [selectedLessons, setSelectedLessons] = useState<Set<string>>(new Set())
   const [bulkDate, setBulkDate] = useState(new Date().toISOString().split('T')[0])
   
@@ -534,32 +557,78 @@ export default function AllChildrenList({
                                                   className="mt-1 w-5 h-5 cursor-pointer"
                                                   onClick={(e) => e.stopPropagation()}
                                                 />
-                                                <button
-                                                  onClick={(e) => {
-                                                    e.stopPropagation()
-                                                    const next: Record<string, 'not_started' | 'in_progress' | 'completed'> = {
-                                                      not_started: 'in_progress',
-                                                      in_progress: 'completed',
-                                                      completed: 'not_started',
-                                                    }
-                                                    const newStatus = next[lesson.status] ?? 'not_started'
-                                                    showStatusToast(lesson.id, lesson.status, newStatus)
-                                                    onCycleStatus(lesson.id, lesson.status)
-                                                  }}
-                                                  style={{
-                                                    marginTop: 2, display: 'flex', alignItems: 'center', gap: 4,
-                                                    padding: '2px 8px', borderRadius: 999, fontSize: 12, fontWeight: 600,
-                                                    cursor: 'pointer', flexShrink: 0, transition: 'all 0.15s',
-                                                    ...(lesson.status === 'completed'
-                                                      ? { background: '#f0fdf4', border: '1px solid #86efac', color: '#15803d' }
-                                                      : lesson.status === 'in_progress'
-                                                      ? { background: '#fefce8', border: '1px solid #fde047', color: '#a16207' }
-                                                      : { background: '#f5f3ff', border: '1px solid #c4b5fd', color: '#7c3aed' })
-                                                  }}
-                                                >
-                                                  <span>{lesson.status === 'completed' ? '✅' : lesson.status === 'in_progress' ? '🔵' : '⬜'}</span>
-                                                  <span>{lesson.status === 'completed' ? 'Done' : lesson.status === 'in_progress' ? 'In Progress' : 'Not Started'}</span>
-                                                </button>
+                                                <div style={{ flexShrink: 0, marginTop: 2 }}>
+                                                  {openStatusPicker === lesson.id ? (
+                                                    <div
+                                                      onClick={e => e.stopPropagation()}
+                                                      style={{ display: 'flex', flexDirection: 'column', gap: 6, background: '#fff', border: '1.5px solid #e5e7eb', borderRadius: 12, padding: '10px 12px', boxShadow: '0 4px 16px rgba(0,0,0,0.10)', minWidth: 180 }}
+                                                    >
+                                                      <div style={{ fontSize: 11, fontWeight: 700, color: '#6b7280', marginBottom: 2 }}>Update status:</div>
+                                                      {([
+                                                        { value: 'not_started', emoji: '⬜', label: 'Not Started', bg: '#f5f3ff', border: '#c4b5fd', color: '#7c3aed' },
+                                                        { value: 'in_progress', emoji: '🔵', label: 'In Progress', bg: '#fefce8', border: '#fde047', color: '#a16207' },
+                                                        { value: 'completed',   emoji: '✅', label: 'Done',        bg: '#f0fdf4', border: '#86efac', color: '#15803d' },
+                                                      ] as const).map(opt => {
+                                                        const isSelected = (pendingStatus[lesson.id] ?? lesson.status) === opt.value
+                                                        return (
+                                                          <button
+                                                            key={opt.value}
+                                                            onClick={() => setPendingStatus(prev => ({ ...prev, [lesson.id]: opt.value }))}
+                                                            style={{
+                                                              display: 'flex', alignItems: 'center', gap: 6,
+                                                              padding: '5px 10px', borderRadius: 8, fontSize: 12, fontWeight: 600,
+                                                              cursor: 'pointer', transition: 'all 0.1s', textAlign: 'left',
+                                                              background: isSelected ? opt.bg : 'transparent',
+                                                              border: isSelected ? `1.5px solid ${opt.border}` : '1.5px solid transparent',
+                                                              color: isSelected ? opt.color : '#6b7280',
+                                                            }}
+                                                          >
+                                                            <span>{opt.emoji}</span><span>{opt.label}</span>
+                                                          </button>
+                                                        )
+                                                      })}
+                                                      <div style={{ display: 'flex', gap: 6, marginTop: 2 }}>
+                                                        <button
+                                                          onClick={() => setOpenStatusPicker(null)}
+                                                          style={{ flex: 1, padding: '5px 0', borderRadius: 8, border: '1px solid #e5e7eb', background: '#f9fafb', color: '#6b7280', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                                                        >
+                                                          Cancel
+                                                        </button>
+                                                        <button
+                                                          onClick={() => commitStatus(lesson.id)}
+                                                          style={{ flex: 1, padding: '5px 0', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg,#7c3aed,#4f46e5)', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
+                                                        >
+                                                          Save
+                                                        </button>
+                                                      </div>
+                                                    </div>
+                                                  ) : (
+                                                    <button
+                                                      onClick={(e) => { e.stopPropagation(); openPicker(lesson) }}
+                                                      style={{
+                                                        display: 'flex', alignItems: 'center', gap: 4,
+                                                        padding: '2px 8px', borderRadius: 999, fontSize: 12, fontWeight: 600,
+                                                        cursor: 'pointer', transition: 'all 0.15s',
+                                                        ...(savedFlash === lesson.id
+                                                          ? { background: '#f0fdf4', border: '1px solid #86efac', color: '#15803d' }
+                                                          : lesson.status === 'completed'
+                                                          ? { background: '#f0fdf4', border: '1px solid #86efac', color: '#15803d' }
+                                                          : lesson.status === 'in_progress'
+                                                          ? { background: '#fefce8', border: '1px solid #fde047', color: '#a16207' }
+                                                          : { background: '#f5f3ff', border: '1px solid #c4b5fd', color: '#7c3aed' })
+                                                      }}
+                                                    >
+                                                      {savedFlash === lesson.id ? (
+                                                        <><span>✓</span><span>Saved!</span></>
+                                                      ) : (
+                                                        <>
+                                                          <span>{lesson.status === 'completed' ? '✅' : lesson.status === 'in_progress' ? '🔵' : '⬜'}</span>
+                                                          <span>{lesson.status === 'completed' ? 'Done' : lesson.status === 'in_progress' ? 'In Progress' : 'Not Started'}</span>
+                                                        </>
+                                                      )}
+                                                    </button>
+                                                  )}
+                                                </div>
                                                 <div
                                                   className="flex-1 cursor-pointer hover:bg-gray-50 -m-2 p-2 rounded transition-colors"
                                                   onClick={() => setSelectedModalLesson(lesson)}

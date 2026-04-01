@@ -23,6 +23,7 @@ interface LessonRow {
   kid_id: string
   description?: string | null
   lesson_source?: string | null
+  materials_needed?: string[] | null
 }
 
 interface DayGroup {
@@ -60,24 +61,34 @@ function getWeekDates(weekOffset: 0 | 1): { dateStrs: string[]; dates: Date[]; l
   return { dateStrs, dates, label }
 }
 
-function extractMaterials(description?: string | null, lesson_source?: string | null): string[] {
-  if (!description) return []
-  const trimmed = description.trim()
-  if (lesson_source !== 'scout' && !trimmed.startsWith('{')) return []
-  try {
-    const parsed = JSON.parse(trimmed)
-    if (parsed?.materials && Array.isArray(parsed.materials)) {
-      return parsed.materials.filter((m: unknown) => typeof m === 'string' && (m as string).trim())
+function extractMaterials(description?: string | null, lesson_source?: string | null, materials_needed?: string[] | null): string[] {
+  const results: string[] = []
+  // Parent-added materials (any lesson type)
+  if (Array.isArray(materials_needed)) {
+    materials_needed.forEach(m => { if (typeof m === 'string' && m.trim()) results.push(m.trim()) })
+  }
+  // Scout-generated materials from JSON description
+  if (description) {
+    const trimmed = description.trim()
+    if (lesson_source === 'scout' || trimmed.startsWith('{')) {
+      try {
+        const parsed = JSON.parse(trimmed)
+        if (parsed?.materials && Array.isArray(parsed.materials)) {
+          parsed.materials.forEach((m: unknown) => {
+            if (typeof m === 'string' && m.trim() && !results.includes(m.trim())) results.push(m.trim())
+          })
+        }
+      } catch { /* not JSON */ }
     }
-  } catch { /* not JSON */ }
-  return []
+  }
+  return results
 }
 
 // ─── Main Content ─────────────────────────────────────────────────────────────
 
 function SupplyScoutContent() {
   const router = useRouter()
-  useAppHeader({ title: '🔍 Supply Scout', backHref: '/tools' })
+  useAppHeader({ title: '🔍 Supply Scout', backHref: '/dashboard' })
   const supabase = createClient()
 
   const [loading, setLoading]         = useState(true)
@@ -107,7 +118,7 @@ function SupplyScoutContent() {
       const [kidsResult, lessonsResult] = await Promise.all([
         supabase.from('kids').select('id, displayname').eq('organization_id', orgId).order('created_at', { ascending: true }),
         supabase.from('lessons')
-          .select('id, title, subject, lesson_date, kid_id, description, lesson_source')
+          .select('id, title, subject, lesson_date, kid_id, description, lesson_source, materials_needed')
           .eq('organization_id', orgId)
           .gte('lesson_date', thisW.dateStrs[0])
           .lte('lesson_date', nextW.dateStrs[4])
@@ -127,7 +138,7 @@ function SupplyScoutContent() {
             .map(l => ({
               lesson: l,
               kidName: kidMap[l.kid_id] || 'Unknown',
-              materials: extractMaterials(l.description, l.lesson_source),
+              materials: extractMaterials(l.description, l.lesson_source, l.materials_needed),
             }))
           return { dateStr, date, lessons: dayLessons }
         })

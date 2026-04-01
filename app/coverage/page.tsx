@@ -2,7 +2,7 @@ import { SubjectCoverageTracker } from '@/components/coverage/SubjectCoverageTra
 
 
 export const metadata = {
-  title: 'Subject Coverage | HomeschoolHQ',
+  title: 'Subject Coverage | HomeschoolReady',
 }
 
 export default function CoveragePage() {

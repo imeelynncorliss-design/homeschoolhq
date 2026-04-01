@@ -1,14 +1,16 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useEffect, useState, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/src/lib/supabase'
 import { colors, gradients, typography } from '@/src/lib/designTokens'
 import { useTheme } from '@/contexts/ThemeContext'
 
-export default function AgreePage() {
+function AgreeContent() {
   const router = useRouter()
   const { isDark } = useTheme()
+  const searchParams = useSearchParams()
+  const isPreview = searchParams?.get('preview') === '1'
 
   const css: Record<string, React.CSSProperties> = {
     page: {
@@ -156,6 +158,7 @@ export default function AgreePage() {
   const [saving, setSaving]           = useState(false)
   const [ageConfirmed, setAgeConfirmed] = useState(false)
   const [tosConfirmed, setTosConfirmed] = useState(false)
+  const [ndaConfirmed, setNdaConfirmed] = useState(false)
   const [error, setError]             = useState<string | null>(null)
   const [userId, setUserId]           = useState<string | null>(null)
 
@@ -167,11 +170,11 @@ export default function AgreePage() {
       // If user has already fully agreed, skip ahead
       const { data: existing } = await supabase
         .from('user_agreements')
-        .select('age_confirmed, tos_confirmed')
+        .select('age_confirmed, tos_confirmed, beta_nda_confirmed')
         .eq('user_id', user.id)
         .maybeSingle()
 
-      if (existing?.age_confirmed && existing?.tos_confirmed) {
+      if (existing?.age_confirmed && existing?.tos_confirmed && existing?.beta_nda_confirmed && !isPreview) {
         router.replace('/onboarding')
         return
       }
@@ -183,7 +186,7 @@ export default function AgreePage() {
   }, [])
 
   const handleContinue = async () => {
-    if (!ageConfirmed || !tosConfirmed || !userId || saving) return
+    if (!ageConfirmed || !tosConfirmed || !ndaConfirmed || !userId || saving) return
     setSaving(true)
     setError(null)
 
@@ -191,10 +194,11 @@ export default function AgreePage() {
       .from('user_agreements')
       .upsert(
         {
-          user_id:       userId,
-          age_confirmed: true,
-          tos_confirmed: true,
-          agreed_at:     new Date().toISOString(),
+          user_id:             userId,
+          age_confirmed:       true,
+          tos_confirmed:       true,
+          beta_nda_confirmed:  true,
+          agreed_at:           new Date().toISOString(),
         },
         { onConflict: 'user_id' }
       )
@@ -216,7 +220,7 @@ export default function AgreePage() {
     )
   }
 
-  const canProceed = ageConfirmed && tosConfirmed
+  const canProceed = ageConfirmed && tosConfirmed && ndaConfirmed
 
   return (
     <div style={css.page}>
@@ -299,6 +303,33 @@ export default function AgreePage() {
             </div>
           </div>
 
+          {/* Checkbox 3 — Beta NDA */}
+          <div
+            onClick={() => setNdaConfirmed(v => !v)}
+            style={{ ...css.checkRow, borderColor: ndaConfirmed ? colors.purple : colors.gray200, background: ndaConfirmed ? colors.purpleFaint : colors.gray50 }}
+          >
+            <div style={{ ...css.checkbox, background: ndaConfirmed ? colors.purple : colors.white, borderColor: ndaConfirmed ? colors.purple : colors.gray200 }}>
+              {ndaConfirmed && <span style={css.checkmark}>✓</span>}
+            </div>
+            <div style={{ flex: 1 }}>
+              <p style={css.checkLabel}>
+                I agree to the HomeschoolReady{' '}
+                <a
+                  href="/legal/beta-nda"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={css.link}
+                  onClick={e => e.stopPropagation()}
+                >
+                  Beta Tester Non-Disclosure Agreement
+                </a>.
+              </p>
+              <p style={css.checkSub}>
+                As a beta tester, you agree to keep product features and feedback confidential. This NDA expires when the beta period ends.
+              </p>
+            </div>
+          </div>
+
           {/* Inline error */}
           {error && (
             <div style={css.errorBanner}>
@@ -327,6 +358,14 @@ export default function AgreePage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function AgreePage() {
+  return (
+    <Suspense fallback={<div style={{ minHeight: '100vh', background: '#3d3a52' }} />}>
+      <AgreeContent />
+    </Suspense>
   )
 }
 

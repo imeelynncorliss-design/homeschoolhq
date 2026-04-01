@@ -305,10 +305,10 @@ export default function CommonCoreImporter({ organizationId, onImported }: Commo
         fontSize: 11, color: '#9ca3af', fontWeight: 600,
         lineHeight: 1.6, marginTop: 16, textAlign: 'center' as const,
       }}>
-        HomeschoolHQ provides Common Core State Standards (CCSS) as a convenience reference.
+        HomeschoolReady provides Common Core State Standards (CCSS) as a convenience reference.
         Standards may be updated or revised over time — it is the parent's responsibility to
         verify that the standards used are current and appropriate for their jurisdiction.
-        HomeschoolHQ makes no guarantee of accuracy or completeness.
+        HomeschoolReady makes no guarantee of accuracy or completeness.
       </p>
     </div>
   )

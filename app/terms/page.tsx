@@ -67,7 +67,7 @@ export default function TermsPage() {
 
       <section style={{ marginBottom: 32 }}>
         <h2 style={{ fontSize: 18, fontWeight: 800, marginBottom: 12 }}>10. Contact</h2>
-        <p>Questions about these terms? Email us at <a href="mailto:support@homeschoolready.com" style={{ color: '#7c3aed', fontWeight: 700 }}>support@homeschoolready.com</a>.</p>
+        <p>Questions about these terms? Email us at <a href="mailto:support@homeschoolready.app" style={{ color: '#7c3aed', fontWeight: 700 }}>support@homeschoolready.app</a>.</p>
       </section>
     </div>
     </div>

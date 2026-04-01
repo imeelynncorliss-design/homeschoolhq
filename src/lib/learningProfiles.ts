@@ -11,7 +11,7 @@ export const MI_CLUSTERS: Record<MiCluster, { label: string; tagline: string; co
   analytical: {
     label: 'Analytical',
     tagline: 'Heuristic thinkers — analyze, hypothesize, and incorporate data into existing ideas.',
-    color: '#7c3aed',
+    color: '#c4b5fd',
   },
   introspective: {
     label: 'Introspective',

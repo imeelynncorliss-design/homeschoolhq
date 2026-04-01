@@ -30,6 +30,7 @@ type Lesson = {
   lesson_date: string | null
   duration_minutes: number | null
   status: 'not_started' | 'in_progress' | 'completed'
+  materials_needed?: string[]
 }
 
 const DURATION_UNITS = ['minutes', 'days', 'weeks'] as const
@@ -97,6 +98,8 @@ function LessonsContent() {
   const [editLessonDurationValue, setEditLessonDurationValue] = useState<number>(30)
   const [editLessonDurationUnit, setEditLessonDurationUnit] = useState<DurationUnit>('minutes')
   const [editLessonAssignedTo, setEditLessonAssignedTo] = useState('')
+  const [editLessonMaterials, setEditLessonMaterials] = useState<string[]>([])
+  const [editLessonMaterialInput, setEditLessonMaterialInput] = useState('')
   const [selectedLessonChild, setSelectedLessonChild] = useState<any | null>(null)
 
   // Cascade modal state
@@ -281,6 +284,8 @@ function LessonsContent() {
     setEditLessonDurationValue(duration.value)
     setEditLessonDurationUnit(duration.unit)
     setEditLessonAssignedTo(lesson.assigned_to_user_id || '')
+    setEditLessonMaterials(Array.isArray(lesson.materials_needed) ? lesson.materials_needed : [])
+    setEditLessonMaterialInput('')
   }
 
   const cancelEditLesson = () => {
@@ -298,6 +303,7 @@ function LessonsContent() {
       lesson_date: editLessonDate || null,
       duration_minutes: durationInMinutes,
       assigned_to_user_id: editLessonAssignedTo || null,
+      materials_needed: editLessonMaterials.length > 0 ? editLessonMaterials : null,
     }
 
     // Vacation period check
@@ -375,6 +381,7 @@ function LessonsContent() {
       lesson_date: editLessonDate || null,
       duration_minutes: durationInMinutes,
       assigned_to_user_id: editLessonAssignedTo || null,
+      materials_needed: editLessonMaterials.length > 0 ? editLessonMaterials : null,
     }
 
     await performLessonUpdate(lessonId, updates)
@@ -1035,6 +1042,54 @@ function LessonsContent() {
                     style={{ marginTop: 6, width: '100%', padding: '6px 10px', border: '1.5px solid #d1d5db', borderRadius: 8, fontSize: 13, fontWeight: 600, color: '#1a1a2e', fontFamily: "'Nunito', sans-serif", boxSizing: 'border-box' }}
                   />
                 )}
+              </div>
+
+              {/* Materials needed */}
+              <div style={{ background: '#faf5ff', border: '1.5px solid #ddd6fe', borderRadius: 12, padding: '10px 12px' }}>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 800, color: '#4c1d95', letterSpacing: 0.5, marginBottom: 6 }}>
+                  MATERIALS NEEDED <span style={{ fontWeight: 600, color: '#9ca3af' }}>(optional)</span>
+                </label>
+                {editLessonMaterials.length > 0 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+                    {editLessonMaterials.map((mat, i) => (
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 4, background: '#ede9fe', borderRadius: 20, padding: '3px 10px', fontSize: 12, fontWeight: 700, color: '#5b21b6' }}>
+                        <span>{mat}</span>
+                        <button
+                          type="button"
+                          onClick={() => setEditLessonMaterials(prev => prev.filter((_, idx) => idx !== i))}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#7c3aed', fontSize: 14, lineHeight: 1, padding: 0, marginLeft: 2 }}
+                        >×</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <input
+                    type="text"
+                    value={editLessonMaterialInput}
+                    onChange={e => setEditLessonMaterialInput(e.target.value)}
+                    onKeyDown={e => {
+                      if ((e.key === 'Enter' || e.key === ',') && editLessonMaterialInput.trim()) {
+                        e.preventDefault()
+                        setEditLessonMaterials(prev => [...prev, editLessonMaterialInput.trim()])
+                        setEditLessonMaterialInput('')
+                      }
+                    }}
+                    placeholder="e.g. graph paper, ruler…"
+                    style={{ flex: 1, padding: '6px 10px', border: '1.5px solid #d1d5db', borderRadius: 8, fontSize: 12, fontWeight: 600, color: '#1a1a2e', fontFamily: "'Nunito', sans-serif" }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (editLessonMaterialInput.trim()) {
+                        setEditLessonMaterials(prev => [...prev, editLessonMaterialInput.trim()])
+                        setEditLessonMaterialInput('')
+                      }
+                    }}
+                    style={{ padding: '6px 12px', borderRadius: 8, border: 'none', background: '#7c3aed', color: '#fff', fontSize: 12, fontWeight: 800, cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}
+                  >+ Add</button>
+                </div>
+                <p style={{ fontSize: 11, color: '#9ca3af', fontWeight: 600, margin: '5px 0 0' }}>Press Enter or comma to add each item</p>
               </div>
 
               {/* Buttons */}

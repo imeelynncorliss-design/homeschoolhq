@@ -49,8 +49,15 @@ export default function PrivacyPage() {
       </section>
 
       <section style={{ marginBottom: 32 }}>
-        <h2 style={{ fontSize: 18, fontWeight: 800, marginBottom: 12 }}>5. Children's Privacy</h2>
-        <p>HomeschoolReady is used by parents and guardians to manage their children's education. We do not knowingly collect personal information directly from children. All data about students is entered by the parent or guardian account holder.</p>
+        <h2 style={{ fontSize: 18, fontWeight: 800, marginBottom: 12 }}>5. Children's Privacy (COPPA)</h2>
+        <p>HomeschoolReady is designed for use by parents and guardians who are at least 18 years of age. We do not knowingly collect personal information directly from children under the age of 13.</p>
+        <ul style={{ paddingLeft: 20, marginTop: 8 }}>
+          <li>All student profiles, lesson data, and educational records are created and managed exclusively by the verified adult account holder.</li>
+          <li>Children do not create accounts, log in, or interact with HomeschoolReady directly.</li>
+          <li>Student information (name, grade, learning style) is entered by the parent and used solely to personalize the homeschool experience within the platform.</li>
+          <li>We do not share student data with third parties for advertising or marketing purposes.</li>
+          <li>If you believe we have inadvertently collected information from or about a child without proper parental consent, please contact us immediately at <a href="mailto:legal@homeschoolready.app" style={{ color: '#7c3aed', fontWeight: 700 }}>legal@homeschoolready.app</a> and we will delete it promptly.</li>
+        </ul>
       </section>
 
       <section style={{ marginBottom: 32 }}>
@@ -75,7 +82,7 @@ export default function PrivacyPage() {
 
       <section style={{ marginBottom: 32 }}>
         <h2 style={{ fontSize: 18, fontWeight: 800, marginBottom: 12 }}>10. Contact</h2>
-        <p>Privacy questions? Email us at <a href="mailto:privacy@homeschoolready.com" style={{ color: '#7c3aed', fontWeight: 700 }}>privacy@homeschoolready.com</a>.</p>
+        <p>Privacy questions? Email us at <a href="mailto:team@homeschoolready.app" style={{ color: '#7c3aed', fontWeight: 700 }}>team@homeschoolready.app</a>.</p>
       </section>
     </div>
     </div>
