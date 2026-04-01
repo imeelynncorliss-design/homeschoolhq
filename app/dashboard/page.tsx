@@ -1979,7 +1979,7 @@ function DashboardContent() {
 
               // Pinned features (skip pulse_check — that's a section toggle, not a button)
               const pinnedBtns = pinnedFeatures
-                .filter(fid => fid !== 'pulse_check' && QUICK_ACTION_CONFIG[fid])
+                .filter(fid => fid !== 'pulse_check' && fid !== 'supply_scout' && QUICK_ACTION_CONFIG[fid])
                 .map(fid => {
                   const c = QUICK_ACTION_CONFIG[fid]
                   const onClick =
