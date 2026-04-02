@@ -82,6 +82,7 @@ function interpretCode(code: number, tempF: number): { condition: string; emoji:
 
 const CACHE_KEY = 'hr_weather_v1'
 const CACHE_TTL = 60 * 60 * 1000 // 1 hour
+export const WEATHER_PREF_KEY = 'hr_weather_enabled' // exported so profile page can write it
 
 function loadCache(): WeatherData | null {
   try {
@@ -97,18 +98,23 @@ function saveCache(data: WeatherData) {
   try { localStorage.setItem(CACHE_KEY, JSON.stringify({ data, ts: Date.now() })) } catch {}
 }
 
-const DISMISSED_KEY = 'hr_weather_nudge_dismissed'
-
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function WeatherWidget() {
   const [weather, setWeather] = useState<WeatherData | null>(null)
-  const [status, setStatus] = useState<'idle' | 'loading' | 'pre-prompt' | 'denied' | 'error'>('idle')
-  const [nudgeDismissed, setNudgeDismissed] = useState(false)
-  const [showHowTo, setShowHowTo] = useState(false)
+  const [status, setStatus] = useState<'idle' | 'loading' | 'unavailable'>('idle')
 
-  const requestLocation = () => {
-    if (!navigator.geolocation) { setStatus('error'); return }
+  useEffect(() => {
+    // Respect the user's explicit opt-out from Profile settings
+    try {
+      if (localStorage.getItem(WEATHER_PREF_KEY) === 'off') return
+    } catch {}
+
+    const cached = loadCache()
+    if (cached) { setWeather(cached); return }
+
+    if (!navigator.geolocation) return
+
     setStatus('loading')
     navigator.geolocation.getCurrentPosition(
       async ({ coords }) => {
@@ -140,137 +146,14 @@ export default function WeatherWidget() {
           setWeather(data)
           setStatus('idle')
         } catch {
-          setStatus('error')
+          setStatus('unavailable')
         }
       },
-      () => setStatus('denied')
+      () => setStatus('unavailable') // denied or error — silently hide
     )
-  }
-
-  useEffect(() => {
-    const cached = loadCache()
-    if (cached) { setWeather(cached); return }
-
-    try { if (localStorage.getItem(DISMISSED_KEY)) { setNudgeDismissed(true); return } } catch {}
-
-    if (!navigator.geolocation) { setStatus('error'); return }
-
-    // Check if the user has already answered the permission prompt
-    if (typeof navigator.permissions !== 'undefined') {
-      navigator.permissions.query({ name: 'geolocation' as PermissionName }).then(perm => {
-        if (perm.state === 'granted') {
-          requestLocation()
-        } else if (perm.state === 'denied') {
-          setStatus('denied')
-        } else {
-          // 'prompt' — show our explanation before triggering the browser dialog
-          setStatus('pre-prompt')
-        }
-      }).catch(() => {
-        // Permissions API unavailable — go straight to request
-        requestLocation()
-      })
-    } else {
-      requestLocation()
-    }
   }, [])
 
-  // ── Pre-prompt: explain what location is used for before the browser asks ──
-  if (status === 'pre-prompt') {
-    return (
-      <div style={{ ...card, padding: '10px 14px', gap: 10, alignItems: 'center', flexWrap: 'nowrap' as const }}>
-        <img src="/Cardinal_Mascot.png" alt="Scout" style={{ width: 24, height: 24, objectFit: 'contain', flexShrink: 0 }} />
-        <span style={{ fontSize: 12, fontWeight: 600, color: '#374151', flex: 1, minWidth: 0 }}>
-          ☀️ Turn on location for weather + Scout's daily tip
-          <span style={{ color: '#6b7280', fontWeight: 400 }}> — only used for local weather, never stored.</span>
-        </span>
-        <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
-          <button
-            onClick={requestLocation}
-            style={{ fontSize: 12, fontWeight: 700, color: '#fff', background: '#7c3aed', border: 'none', borderRadius: 8, padding: '5px 12px', cursor: 'pointer', whiteSpace: 'nowrap' as const }}
-          >
-            Turn on
-          </button>
-          <button
-            onClick={() => {
-              try { localStorage.setItem(DISMISSED_KEY, '1') } catch {}
-              setNudgeDismissed(true)
-            }}
-            style={{ fontSize: 12, color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer', padding: '5px 2px', whiteSpace: 'nowrap' as const }}
-          >
-            Not now
-          </button>
-        </div>
-      </div>
-    )
-  }
-
-  // ── Denied: show a soft "enable weather" nudge ────────────────────────────
-  if (status === 'denied') {
-    if (nudgeDismissed) return null
-    return (
-      <div style={{ ...card, padding: '10px 14px', gap: 10, alignItems: 'center', flexWrap: 'nowrap' as const }}>
-        <img src="/Cardinal_Mascot.png" alt="Scout" style={{ width: 24, height: 24, objectFit: 'contain', flexShrink: 0 }} />
-        <span style={{ fontSize: 12, fontWeight: 600, color: '#374151', flex: 1, minWidth: 0 }}>
-          ☀️ See weather + Scout's daily tip
-          <span style={{ color: '#6b7280', fontWeight: 400 }}> — enable location to unlock this.</span>
-        </span>
-        <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
-          <button
-            onClick={() => setShowHowTo(true)}
-            style={{ fontSize: 12, fontWeight: 700, color: '#7c3aed', background: '#ede9fe', border: 'none', borderRadius: 8, padding: '5px 10px', cursor: 'pointer', whiteSpace: 'nowrap' as const }}
-          >
-            How to enable
-          </button>
-          <button
-            onClick={() => {
-              try { localStorage.setItem(DISMISSED_KEY, '1') } catch {}
-              setNudgeDismissed(true)
-            }}
-            style={{ fontSize: 12, color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer', padding: '5px 2px', whiteSpace: 'nowrap' as const }}
-          >
-            Not now
-          </button>
-        </div>
-
-        {showHowTo && (
-          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-            <div style={{ background: '#fff', borderRadius: 16, padding: 24, maxWidth: 380, width: '100%', boxShadow: '0 24px 64px rgba(0,0,0,0.25)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-                <img src="/Cardinal_Mascot.png" alt="Scout" style={{ width: 32, height: 32, objectFit: 'contain' }} />
-                <div>
-                  <div style={{ fontSize: 15, fontWeight: 800, color: '#111827' }}>Enable Location for Scout</div>
-                  <div style={{ fontSize: 12, color: '#6b7280' }}>Your browser blocked location access</div>
-                </div>
-              </div>
-              <div style={{ fontSize: 13, color: '#374151', lineHeight: 1.6, marginBottom: 16 }}>
-                To re-enable it, look for the <strong>lock icon 🔒</strong> in your browser's address bar and set <strong>Location → Allow</strong>.<br /><br />
-                On iPhone/iPad, go to <strong>Settings → Safari → Location</strong> and set it to <em>Allow</em>.
-              </div>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button
-                  onClick={() => { setShowHowTo(false); requestLocation() }}
-                  style={{ flex: 1, padding: '10px 0', background: '#7c3aed', color: '#fff', border: 'none', borderRadius: 10, fontWeight: 700, fontSize: 13, cursor: 'pointer' }}
-                >
-                  Try again
-                </button>
-                <button
-                  onClick={() => setShowHowTo(false)}
-                  style={{ padding: '10px 16px', background: '#f3f4f6', color: '#374151', border: 'none', borderRadius: 10, fontWeight: 700, fontSize: 13, cursor: 'pointer' }}
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    )
-  }
-
-  if (status === 'error') return null
-
-  if (status === 'loading' || (status === 'idle' && !weather)) {
+  if (status === 'loading') {
     return (
       <div style={card}>
         <style>{`@keyframes hr-spin { to { transform: rotate(360deg) } }`}</style>

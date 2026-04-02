@@ -7,6 +7,7 @@ import AuthGuard from '@/components/AuthGuard'
 import { getOrganizationId } from '@/src/lib/getOrganizationId'
 import { TIER_INFO, type UserTier } from '@/lib/tierTesting'
 import KidProfileForm from '@/components/KidProfileForm'
+import { WEATHER_PREF_KEY } from '@/components/WeatherWidget'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -96,6 +97,9 @@ function ProfileContent() {
   const [kids,           setKids]           = useState<Kid[]>([])
   const [tier,           setTier]           = useState<UserTier>('FREE')
   const [renewDate,      setRenewDate]      = useState<string | null>(null)
+  const [weatherEnabled, setWeatherEnabled] = useState(() => {
+    try { return localStorage.getItem(WEATHER_PREF_KEY) !== 'off' } catch { return true }
+  })
   const [editingKid,     setEditingKid]     = useState<any | null>(null)
   const [addingKid,      setAddingKid]      = useState(false)
   const [orgId,          setOrgId]          = useState<string | null>(null)
@@ -648,6 +652,47 @@ function ProfileContent() {
               ))}
             </div>
           )}
+        </div>
+
+        {/* ── Preferences ── */}
+        <div className="hr-section-label" style={{ marginBottom: 8, paddingLeft: 4 }}>
+          PREFERENCES
+        </div>
+        <div className="hr-card" style={{ marginBottom: 24, padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: '#111827' }}>Weather &amp; Scout's Daily Tip</div>
+            <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>
+              Shows local weather and Scout's greeting on your dashboard.{' '}
+              {!weatherEnabled && <span style={{ color: '#7c3aed', fontWeight: 600 }}>Requires location permission in your browser.</span>}
+            </div>
+          </div>
+          {/* Toggle switch */}
+          <button
+            onClick={() => {
+              const next = !weatherEnabled
+              setWeatherEnabled(next)
+              try {
+                if (next) {
+                  localStorage.removeItem(WEATHER_PREF_KEY)
+                  localStorage.removeItem('hr_weather_v1') // clear cache so it re-fetches
+                } else {
+                  localStorage.setItem(WEATHER_PREF_KEY, 'off')
+                }
+              } catch {}
+            }}
+            style={{
+              width: 48, height: 28, borderRadius: 999, border: 'none', cursor: 'pointer',
+              background: weatherEnabled ? '#7c3aed' : '#d1d5db',
+              position: 'relative', flexShrink: 0, transition: 'background 0.2s',
+            }}
+            aria-label={weatherEnabled ? 'Disable weather' : 'Enable weather'}
+          >
+            <span style={{
+              position: 'absolute', top: 3, left: weatherEnabled ? 23 : 3,
+              width: 22, height: 22, borderRadius: '50%', background: '#fff',
+              boxShadow: '0 1px 4px rgba(0,0,0,0.2)', transition: 'left 0.2s',
+            }} />
+          </button>
         </div>
 
         {/* ── Account ── */}
