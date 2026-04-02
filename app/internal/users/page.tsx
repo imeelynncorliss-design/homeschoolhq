@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/src/lib/supabase'
 
 type UserTier = 'FREE' | 'ESSENTIAL' | 'PRO' | 'PREMIUM'
-type ConfirmAction = { type: 'deactivate' | 'reactivate' | 'delete'; user: any }
+type ConfirmAction = { type: 'deactivate' | 'reactivate' | 'delete' | 'grant_admin' | 'revoke_admin'; user: any }
 
 const ADMIN_EMAILS = [
   'imeelynn.corliss@gmail.com',
@@ -126,16 +126,18 @@ export default function UserManagementPage() {
         if (!res.ok) { const j = await res.json(); alert(j.error ?? 'Delete failed'); return }
         setUsers(prev => prev.filter(u => u.user_id !== confirm.user.user_id))
       } else {
-        const action = confirm.type // 'deactivate' | 'reactivate'
+        const action = confirm.type
         const res = await fetch('/api/admin/users', {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ user_id: confirm.user.user_id, action }),
         })
         if (!res.ok) { const j = await res.json(); alert(j.error ?? 'Action failed'); return }
-        setUsers(prev => prev.map(u =>
-          u.user_id === confirm.user.user_id ? { ...u, is_banned: action === 'deactivate' } : u
-        ))
+        setUsers(prev => prev.map(u => {
+          if (u.user_id !== confirm.user.user_id) return u
+          if (action === 'grant_admin' || action === 'revoke_admin') return { ...u, is_admin: action === 'grant_admin' }
+          return { ...u, is_banned: action === 'deactivate' }
+        }))
       }
       setConfirm(null)
     } finally {
@@ -179,6 +181,26 @@ export default function UserManagementPage() {
                     This permanently removes their account and all data. It cannot be undone.
                   </p>
                 </>
+              ) : confirm.type === 'grant_admin' ? (
+                <>
+                  <div className="text-lg font-black text-gray-900 mb-1">Make this user an Admin?</div>
+                  <p className="text-sm text-gray-500 mb-1">
+                    <span className="font-semibold text-gray-800">{confirm.user.email}</span>
+                  </p>
+                  <p className="text-sm text-gray-500 mb-5">
+                    They'll gain full access to this admin dashboard and can manage all users.
+                  </p>
+                </>
+              ) : confirm.type === 'revoke_admin' ? (
+                <>
+                  <div className="text-lg font-black text-gray-900 mb-1">Remove admin access?</div>
+                  <p className="text-sm text-gray-500 mb-1">
+                    <span className="font-semibold text-gray-800">{confirm.user.email}</span>
+                  </p>
+                  <p className="text-sm text-gray-500 mb-5">
+                    They'll lose access to this dashboard immediately.
+                  </p>
+                </>
               ) : confirm.type === 'deactivate' ? (
                 <>
                   <div className="text-lg font-black text-gray-900 mb-1">Deactivate this user?</div>
@@ -211,14 +233,19 @@ export default function UserManagementPage() {
                   onClick={executeConfirm}
                   disabled={actionSaving}
                   className={`flex-1 px-4 py-2 rounded-lg text-sm font-bold text-white disabled:opacity-50 ${
-                    confirm.type === 'delete'
-                      ? 'bg-red-600 hover:bg-red-700'
-                      : confirm.type === 'deactivate'
-                      ? 'bg-amber-500 hover:bg-amber-600'
-                      : 'bg-green-600 hover:bg-green-700'
+                    confirm.type === 'delete'       ? 'bg-red-600 hover:bg-red-700'
+                    : confirm.type === 'deactivate' ? 'bg-amber-500 hover:bg-amber-600'
+                    : confirm.type === 'grant_admin'? 'bg-indigo-600 hover:bg-indigo-700'
+                    : confirm.type === 'revoke_admin'? 'bg-gray-600 hover:bg-gray-700'
+                    : 'bg-green-600 hover:bg-green-700'
                   }`}
                 >
-                  {actionSaving ? 'Working…' : confirm.type === 'delete' ? 'Yes, Delete' : confirm.type === 'deactivate' ? 'Deactivate' : 'Reactivate'}
+                  {actionSaving ? 'Working…'
+                    : confirm.type === 'delete'        ? 'Yes, Delete'
+                    : confirm.type === 'deactivate'    ? 'Deactivate'
+                    : confirm.type === 'grant_admin'   ? 'Make Admin'
+                    : confirm.type === 'revoke_admin'  ? 'Remove Admin'
+                    : 'Reactivate'}
                 </button>
               </div>
             </div>
@@ -357,34 +384,54 @@ export default function UserManagementPage() {
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        {!isAdminUser && (
-                          <div className="flex gap-2">
-                            {user.is_banned ? (
+                        <div className="flex gap-2 flex-wrap">
+                          {/* Admin toggle — hide for hardcoded admins */}
+                          {!ADMIN_EMAILS.includes(user.email) && (
+                            user.is_admin ? (
                               <button
-                                onClick={() => setConfirm({ type: 'reactivate', user })}
-                                title="Reactivate"
-                                className="px-2.5 py-1 text-xs font-bold bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors"
+                                onClick={() => setConfirm({ type: 'revoke_admin', user })}
+                                title="Remove admin"
+                                className="px-2.5 py-1 text-xs font-bold bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors"
                               >
-                                Reactivate
+                                👑 Admin
                               </button>
                             ) : (
                               <button
-                                onClick={() => setConfirm({ type: 'deactivate', user })}
-                                title="Deactivate"
-                                className="px-2.5 py-1 text-xs font-bold bg-amber-100 text-amber-700 rounded-lg hover:bg-amber-200 transition-colors"
+                                onClick={() => setConfirm({ type: 'grant_admin', user })}
+                                title="Make admin"
+                                className="px-2.5 py-1 text-xs font-bold bg-gray-100 text-gray-500 rounded-lg hover:bg-indigo-100 hover:text-indigo-700 transition-colors"
                               >
-                                Deactivate
+                                Make Admin
                               </button>
-                            )}
-                            <button
-                              onClick={() => setConfirm({ type: 'delete', user })}
-                              title="Permanently delete"
-                              className="px-2.5 py-1 text-xs font-bold bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors"
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        )}
+                            )
+                          )}
+                          {/* Deactivate / Reactivate / Delete — hide for all admins */}
+                          {!user.is_admin && (
+                            <>
+                              {user.is_banned ? (
+                                <button
+                                  onClick={() => setConfirm({ type: 'reactivate', user })}
+                                  className="px-2.5 py-1 text-xs font-bold bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors"
+                                >
+                                  Reactivate
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => setConfirm({ type: 'deactivate', user })}
+                                  className="px-2.5 py-1 text-xs font-bold bg-amber-100 text-amber-700 rounded-lg hover:bg-amber-200 transition-colors"
+                                >
+                                  Deactivate
+                                </button>
+                              )}
+                              <button
+                                onClick={() => setConfirm({ type: 'delete', user })}
+                                className="px-2.5 py-1 text-xs font-bold bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors"
+                              >
+                                Delete
+                              </button>
+                            </>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   )

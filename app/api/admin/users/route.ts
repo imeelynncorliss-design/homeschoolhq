@@ -19,8 +19,17 @@ function adminClient() {
 async function verifyAdmin() {
   const supabase = await createServerClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user || !ADMIN_EMAILS.includes(user.email ?? '')) return null
-  return user
+  if (!user) return null
+  // Hardcoded bootstrap list OR database flag
+  if (ADMIN_EMAILS.includes(user.email ?? '')) return user
+  const admin = adminClient()
+  const { data } = await admin
+    .from('user_profiles')
+    .select('is_admin')
+    .eq('user_id', user.id)
+    .single()
+  if (data?.is_admin) return user
+  return null
 }
 
 export async function GET() {
@@ -35,7 +44,7 @@ export async function GET() {
   const userIds = authUsers.map(u => u.id)
 
   const [profilesRes, subsRes, agreementsRes] = await Promise.all([
-    admin.from('user_profiles').select('user_id, first_name, created_at').in('user_id', userIds),
+    admin.from('user_profiles').select('user_id, first_name, created_at, is_admin').in('user_id', userIds),
     admin.from('user_subscriptions').select('user_id, tier').in('user_id', userIds),
     admin.from('user_agreements').select('user_id, age_confirmed, tos_confirmed, beta_nda_confirmed, agreed_at').in('user_id', userIds),
   ])
@@ -61,6 +70,7 @@ export async function GET() {
     beta_nda_confirmed: agreementMap[u.id]?.beta_nda_confirmed ?? false,
     agreed_at:          agreementMap[u.id]?.agreed_at ?? null,
     is_banned:          !!(u.banned_until && new Date(u.banned_until) > new Date()),
+    is_admin:           !!(profileMap[u.id]?.is_admin) || ADMIN_EMAILS.includes(u.email ?? ''),
   })).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
 
   return NextResponse.json({ users: merged })
@@ -71,17 +81,25 @@ export async function PATCH(req: Request) {
   const caller = await verifyAdmin()
   if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
 
-  const { user_id, action } = await req.json() // action: 'deactivate' | 'reactivate'
+  const { user_id, action } = await req.json() // action: 'deactivate' | 'reactivate' | 'grant_admin' | 'revoke_admin'
   if (!user_id || !action) return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
 
-  // Prevent admins from deactivating themselves
-  if (user_id === caller.id) {
-    return NextResponse.json({ error: 'You cannot deactivate your own account.' }, { status: 400 })
+  if (user_id === caller.id && action !== 'grant_admin') {
+    return NextResponse.json({ error: 'You cannot perform this action on your own account.' }, { status: 400 })
   }
 
   const admin = adminClient()
-  const ban_duration = action === 'deactivate' ? '876000h' : 'none' // ~100 years vs lift ban
 
+  if (action === 'grant_admin' || action === 'revoke_admin') {
+    const { error } = await admin
+      .from('user_profiles')
+      .update({ is_admin: action === 'grant_admin' })
+      .eq('user_id', user_id)
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ success: true, is_admin: action === 'grant_admin' })
+  }
+
+  const ban_duration = action === 'deactivate' ? '876000h' : 'none'
   const { error } = await admin.auth.admin.updateUserById(user_id, { ban_duration })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
