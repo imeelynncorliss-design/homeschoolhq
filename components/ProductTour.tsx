@@ -109,14 +109,6 @@ function buildTourSteps(
     position: 'top',
   })
 
-  // For Parents — always
-  steps.push({
-    targetId: 'tour-bottom-nav',
-    title: "For Parents 🪴",
-    content: "Find your personalized Teaching Blueprint, MI Tips, and Learning Style Tips under the For Parents tab in the bottom nav. It's your go-to guide for translating your child's strengths into everyday lessons.",
-    position: 'top',
-  })
-
   // Ask Scout — always last
   steps.push({
     targetId: 'tour-quick-actions',

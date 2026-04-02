@@ -86,10 +86,17 @@ export default function BottomNav() {
           © 2026 HomeschoolReady, LLC. All rights reserved.
         </div>
         <div style={{ display: 'flex', padding: '6px 0 12px' }}>
-          {NAV_ITEMS.map(item => {
+          {NAV_ITEMS.map((item, idx) => {
             const isActive = activeId === item.id
             const isHovered = hoveredId === item.id
             const tips = TOOLTIPS[item.id] ?? []
+            const isFirst = idx === 0
+            const isLast = idx === NAV_ITEMS.length - 1
+            const tooltipAlign = isFirst
+              ? { left: 0, transform: 'none' }
+              : isLast
+              ? { right: 0, left: 'auto', transform: 'none' }
+              : { left: '50%', transform: 'translateX(-50%)' }
 
             return (
               <div
@@ -104,7 +111,7 @@ export default function BottomNav() {
                     className="nav-tooltip"
                     style={{
                       position: 'absolute', bottom: 'calc(100% + 10px)',
-                      left: '50%', transform: 'translateX(-50%)',
+                      ...tooltipAlign,
                       background: 'rgba(30,20,70,0.97)',
                       border: '1px solid rgba(196,181,253,0.25)',
                       borderRadius: 12, padding: '10px 14px',
@@ -116,7 +123,10 @@ export default function BottomNav() {
                   >
                     {/* Arrow */}
                     <div style={{
-                      position: 'absolute', bottom: -6, left: '50%', transform: 'translateX(-50%)',
+                      position: 'absolute', bottom: -6,
+                      left: isFirst ? 20 : isLast ? 'auto' : '50%',
+                      right: isLast ? 20 : 'auto',
+                      transform: isFirst || isLast ? 'none' : 'translateX(-50%)',
                       width: 0, height: 0, borderStyle: 'solid',
                       borderWidth: '6px 6px 0',
                       borderColor: 'rgba(30,20,70,0.97) transparent transparent',
