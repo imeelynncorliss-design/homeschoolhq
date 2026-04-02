@@ -1189,7 +1189,9 @@ function DashboardContent() {
   const [todayLessons, setTodayLessons]     = useState<Record<string, any[]>>({})
   const [organizationId, setOrganizationId] = useState<string | null>(null)
   const [parentName, setParentName]         = useState('')
-  const [, setIsCollaborator] = useState(false)
+  const [isCollaborator, setIsCollaborator]   = useState(false)
+  const [myCollaboratorId, setMyCollaboratorId] = useState<string | null>(null)
+  const [myTasks, setMyTasks]                 = useState<{ id: string; title: string; notes: string | null; status: string; assigned_to_collaborator_id: string | null }[]>([])
   const [showStuck, setShowStuck]           = useState(false)
   const [showToday, setShowToday]           = useState(false)
   const [schoolState, setSchoolState]       = useState<string | null>(null)
@@ -1242,7 +1244,7 @@ function DashboardContent() {
 
       const { data: collab } = await supabase
         .from('family_collaborators')
-        .select('organization_id, role, name')
+        .select('id, organization_id, role, name')
         .eq('user_id', user.id)
         .maybeSingle()
 
@@ -1251,9 +1253,19 @@ function DashboardContent() {
 
       if (collab) {
         setIsCollaborator(true)
+        setMyCollaboratorId(collab.id)
         orgId = collab.organization_id
         localParentName = collab.name || user.email?.split('@')[0] || ''
         setParentName(localParentName)
+        // Load tasks assigned to this co-teacher or open to anyone
+        const { data: taskData } = await supabase
+          .from('co_teacher_tasks')
+          .select('id, title, notes, status, assigned_to_collaborator_id')
+          .eq('organization_id', orgId)
+          .eq('status', 'pending')
+          .or(`assigned_to_collaborator_id.eq.${collab.id},assigned_to_collaborator_id.is.null`)
+          .order('created_at', { ascending: true })
+        if (taskData) setMyTasks(taskData)
       } else {
         const { orgId: resolved } = await getOrganizationId(user.id)
         if (!resolved) { router.push('/onboarding'); return }
@@ -1749,6 +1761,35 @@ function DashboardContent() {
 
           {/* Weather */}
           <WeatherWidget />
+
+          {/* My Tasks — visible to co-teachers only */}
+          {isCollaborator && myTasks.length > 0 && (
+            <div style={{ background: 'rgba(255,255,255,0.92)', borderRadius: 16, border: '1.5px solid rgba(124,58,237,0.10)', boxShadow: '0 4px 24px rgba(124,58,237,0.08)', padding: '14px 16px', marginBottom: 12 }}>
+              <div style={{ fontSize: 11, fontWeight: 800, color: '#7c3aed', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 10 }}>
+                📋 My Tasks ({myTasks.length})
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {myTasks.map(task => (
+                  <div key={task.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                    <button
+                      onClick={async () => {
+                        await supabase.from('co_teacher_tasks').update({ status: 'completed', completed_at: new Date().toISOString() }).eq('id', task.id)
+                        setMyTasks(prev => prev.filter(t => t.id !== task.id))
+                      }}
+                      style={{ width: 20, height: 20, borderRadius: 5, border: '2px solid #d1d5db', background: '#fff', cursor: 'pointer', flexShrink: 0, marginTop: 1 }}
+                    />
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: '#1a1a2e' }}>{task.title}</div>
+                      {task.notes && <div style={{ fontSize: 11, color: '#6b7280', marginTop: 1 }}>{task.notes}</div>}
+                      {task.assigned_to_collaborator_id === null && (
+                        <div style={{ fontSize: 10, color: '#9ca3af', marginTop: 1 }}>Open to anyone</div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Week Strip */}
           <WeekStrip
