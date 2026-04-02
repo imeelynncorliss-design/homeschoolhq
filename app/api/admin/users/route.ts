@@ -50,19 +50,61 @@ export async function GET() {
   for (const a of agreementsRes.data ?? []) agreementMap[a.user_id] = a
 
   const merged = authUsers.map(u => ({
-    user_id:           u.id,
-    email:             u.email ?? '',
-    first_name:        profileMap[u.id]?.first_name ?? '',
-    tier:              tierMap[u.id] ?? 'FREE',
-    created_at:        profileMap[u.id]?.created_at ?? u.created_at,
-    last_sign_in_at:   u.last_sign_in_at ?? null,
-    age_confirmed:     agreementMap[u.id]?.age_confirmed ?? false,
-    tos_confirmed:     agreementMap[u.id]?.tos_confirmed ?? false,
+    user_id:            u.id,
+    email:              u.email ?? '',
+    first_name:         profileMap[u.id]?.first_name ?? '',
+    tier:               tierMap[u.id] ?? 'FREE',
+    created_at:         profileMap[u.id]?.created_at ?? u.created_at,
+    last_sign_in_at:    u.last_sign_in_at ?? null,
+    age_confirmed:      agreementMap[u.id]?.age_confirmed ?? false,
+    tos_confirmed:      agreementMap[u.id]?.tos_confirmed ?? false,
     beta_nda_confirmed: agreementMap[u.id]?.beta_nda_confirmed ?? false,
-    agreed_at:         agreementMap[u.id]?.agreed_at ?? null,
+    agreed_at:          agreementMap[u.id]?.agreed_at ?? null,
+    is_banned:          !!(u.banned_until && new Date(u.banned_until) > new Date()),
   })).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
 
   return NextResponse.json({ users: merged })
+}
+
+// PATCH: deactivate (ban) or reactivate a user
+export async function PATCH(req: Request) {
+  const caller = await verifyAdmin()
+  if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+
+  const { user_id, action } = await req.json() // action: 'deactivate' | 'reactivate'
+  if (!user_id || !action) return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
+
+  // Prevent admins from deactivating themselves
+  if (user_id === caller.id) {
+    return NextResponse.json({ error: 'You cannot deactivate your own account.' }, { status: 400 })
+  }
+
+  const admin = adminClient()
+  const ban_duration = action === 'deactivate' ? '876000h' : 'none' // ~100 years vs lift ban
+
+  const { error } = await admin.auth.admin.updateUserById(user_id, { ban_duration })
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  return NextResponse.json({ success: true, is_banned: action === 'deactivate' })
+}
+
+// DELETE: permanently delete a user and all their data
+export async function DELETE(req: Request) {
+  const caller = await verifyAdmin()
+  if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+
+  const { user_id } = await req.json()
+  if (!user_id) return NextResponse.json({ error: 'Missing user_id' }, { status: 400 })
+
+  if (user_id === caller.id) {
+    return NextResponse.json({ error: 'You cannot delete your own account.' }, { status: 400 })
+  }
+
+  const admin = adminClient()
+  const { error } = await admin.auth.admin.deleteUser(user_id)
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  return NextResponse.json({ success: true })
 }
 
 // PUT: find user by email and set their tier
