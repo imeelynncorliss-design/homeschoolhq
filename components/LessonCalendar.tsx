@@ -334,7 +334,7 @@ export default function LessonCalendar({
 
   return (
     <>
-    <div className="printable-calendar bg-white rounded-lg shadow p-4" style={{ height: 'calc(100vh - 230px)', minHeight: 420, maxHeight: 720 }}>
+    <div className="printable-calendar bg-white rounded-xl p-4" style={{ height: 'calc(100vh - 230px)', minHeight: 420, maxHeight: 720, boxShadow: '0 4px 24px rgba(124,58,237,0.13), 0 1px 4px rgba(0,0,0,0.06)' }}>
         <div className="print-header hr-print-header" style={{ display: 'none' }}>
           <img src="/Cardinal_Mascot.png" alt="HomeschoolReady" className="hr-print-logo-img" />
           <div className="hr-print-logo-text">
@@ -370,19 +370,8 @@ export default function LessonCalendar({
         </div>
 
         <style jsx global>{`
-          .rbc-date-cell { padding: 8px; }
-          .rbc-date-cell button { color: #374151 !important; font-weight: 600 !important; font-size: 14px; }
-          .rbc-now { background-color: #dbeafe !important; }
-          .rbc-today { background-color: #dbeafe !important; }
-          .rbc-header { padding: 12px 4px; font-weight: 600; color: #6b7280 !important; border-bottom: 1px solid #e5e7eb; background-color: #ffffff; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px; }
-          .rbc-month-view { border: none; border-radius: 0; overflow: hidden; background-color: #ffffff; }
-          .rbc-day-bg { background-color: #ffffff !important; border-color: #e5e7eb !important; }
-          .rbc-day-bg:hover { background-color: #f9fafb !important; }
-          .rbc-off-range-bg { background-color: #f9fafb !important; }
-          .rbc-off-range .rbc-date-cell button { color: #9ca3af !important; }
           .rbc-event { padding: 2px 5px; font-size: 12px; }
           .rbc-event:hover { opacity: 1 !important; cursor: pointer; }
-          .rbc-show-more { color: #3b82f6 !important; font-weight: 600; }
           @media print { .print-header { display: flex !important; } }
           ${printHeaderCSS()}
         `}</style>

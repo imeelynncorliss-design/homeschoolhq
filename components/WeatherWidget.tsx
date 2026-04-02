@@ -97,20 +97,19 @@ function saveCache(data: WeatherData) {
   try { localStorage.setItem(CACHE_KEY, JSON.stringify({ data, ts: Date.now() })) } catch {}
 }
 
+const DISMISSED_KEY = 'hr_weather_nudge_dismissed'
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function WeatherWidget() {
   const [weather, setWeather] = useState<WeatherData | null>(null)
-  const [status, setStatus] = useState<'idle' | 'loading' | 'denied' | 'error'>('idle')
+  const [status, setStatus] = useState<'idle' | 'loading' | 'pre-prompt' | 'denied' | 'error'>('idle')
+  const [nudgeDismissed, setNudgeDismissed] = useState(false)
+  const [showHowTo, setShowHowTo] = useState(false)
 
-  useEffect(() => {
-    const cached = loadCache()
-    if (cached) { setWeather(cached); return }
-
+  const requestLocation = () => {
     if (!navigator.geolocation) { setStatus('error'); return }
-
     setStatus('loading')
-
     navigator.geolocation.getCurrentPosition(
       async ({ coords }) => {
         const { latitude: lat, longitude: lon } = coords
@@ -124,22 +123,18 @@ export default function WeatherWidget() {
               { headers: { 'Accept-Language': 'en' } }
             ),
           ])
-
           if (!weatherRes.ok) throw new Error('weather fetch failed')
           const wJson = await weatherRes.json()
           const gJson = geoRes.ok ? await geoRes.json() : null
-
           const tempF = Math.round(wJson.current_weather.temperature)
           const code = wJson.current_weather.weathercode
           const { condition, emoji, scoutTip, tipColor } = interpretCode(code, tempF)
-
           const city =
             gJson?.address?.city ||
             gJson?.address?.town ||
             gJson?.address?.village ||
             gJson?.address?.county ||
             'Your Area'
-
           const data: WeatherData = { tempF, condition, emoji, city, scoutTip, tipColor }
           saveCache(data)
           setWeather(data)
@@ -150,10 +145,142 @@ export default function WeatherWidget() {
       },
       () => setStatus('denied')
     )
+  }
+
+  useEffect(() => {
+    const cached = loadCache()
+    if (cached) { setWeather(cached); return }
+
+    try { if (localStorage.getItem(DISMISSED_KEY)) { setNudgeDismissed(true); return } } catch {}
+
+    if (!navigator.geolocation) { setStatus('error'); return }
+
+    // Check if the user has already answered the permission prompt
+    if (typeof navigator.permissions !== 'undefined') {
+      navigator.permissions.query({ name: 'geolocation' as PermissionName }).then(perm => {
+        if (perm.state === 'granted') {
+          requestLocation()
+        } else if (perm.state === 'denied') {
+          setStatus('denied')
+        } else {
+          // 'prompt' — show our explanation before triggering the browser dialog
+          setStatus('pre-prompt')
+        }
+      }).catch(() => {
+        // Permissions API unavailable — go straight to request
+        requestLocation()
+      })
+    } else {
+      requestLocation()
+    }
   }, [])
 
-  // Don't render anything if denied or errored — don't clutter the dashboard
-  if (status === 'denied' || status === 'error') return null
+  // ── Pre-prompt: explain what location is used for before the browser asks ──
+  if (status === 'pre-prompt') {
+    return (
+      <div style={{ ...card, gap: 10, flexWrap: 'wrap' as const }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
+          <img src="/Cardinal_Mascot.png" alt="Scout" style={{ width: 32, height: 32, objectFit: 'contain', flexShrink: 0 }} />
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#374151', lineHeight: 1.3 }}>
+              Enable weather & Scout's daily tip ☀️
+            </div>
+            <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>
+              HomeschoolReady uses your location <strong>only</strong> to show today's local weather and Scout's personalized daily greeting. It's never stored or shared.
+            </div>
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
+          <button
+            onClick={requestLocation}
+            style={{ fontSize: 12, fontWeight: 700, color: '#fff', background: '#7c3aed', border: 'none', borderRadius: 8, padding: '6px 14px', cursor: 'pointer' }}
+          >
+            Turn on ✓
+          </button>
+          <button
+            onClick={() => {
+              try { localStorage.setItem(DISMISSED_KEY, '1') } catch {}
+              setNudgeDismissed(true)
+            }}
+            style={{ fontSize: 12, color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer', padding: '6px 4px' }}
+          >
+            Not now
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Denied: show a soft "enable weather" nudge ────────────────────────────
+  if (status === 'denied') {
+    if (nudgeDismissed) return null
+    return (
+      <div style={{ ...card, gap: 10, flexWrap: 'wrap' as const }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
+          <img src="/Cardinal_Mascot.png" alt="Scout" style={{ width: 28, height: 28, objectFit: 'contain', flexShrink: 0 }} />
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#374151', lineHeight: 1.3 }}>
+              Get weather + Scout's daily tip ☀️
+            </div>
+            <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>
+              Turn on location to see live weather and a personalized Scout greeting each day.
+            </div>
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
+          <button
+            onClick={() => setShowHowTo(true)}
+            style={{ fontSize: 12, fontWeight: 700, color: '#7c3aed', background: '#ede9fe', border: 'none', borderRadius: 8, padding: '6px 12px', cursor: 'pointer' }}
+          >
+            How to enable
+          </button>
+          <button
+            onClick={() => {
+              try { localStorage.setItem(DISMISSED_KEY, '1') } catch {}
+              setNudgeDismissed(true)
+            }}
+            style={{ fontSize: 12, color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer', padding: '6px 4px' }}
+          >
+            Not now
+          </button>
+        </div>
+
+        {showHowTo && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+            <div style={{ background: '#fff', borderRadius: 16, padding: 24, maxWidth: 380, width: '100%', boxShadow: '0 24px 64px rgba(0,0,0,0.25)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                <img src="/Cardinal_Mascot.png" alt="Scout" style={{ width: 32, height: 32, objectFit: 'contain' }} />
+                <div>
+                  <div style={{ fontSize: 15, fontWeight: 800, color: '#111827' }}>Enable Location for Scout</div>
+                  <div style={{ fontSize: 12, color: '#6b7280' }}>Your browser blocked location access</div>
+                </div>
+              </div>
+              <div style={{ fontSize: 13, color: '#374151', lineHeight: 1.6, marginBottom: 16 }}>
+                To re-enable it, look for the <strong>lock icon 🔒</strong> in your browser's address bar and set <strong>Location → Allow</strong>.<br /><br />
+                On iPhone/iPad, go to <strong>Settings → Safari → Location</strong> and set it to <em>Allow</em>.
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  onClick={() => { setShowHowTo(false); requestLocation() }}
+                  style={{ flex: 1, padding: '10px 0', background: '#7c3aed', color: '#fff', border: 'none', borderRadius: 10, fontWeight: 700, fontSize: 13, cursor: 'pointer' }}
+                >
+                  Try again
+                </button>
+                <button
+                  onClick={() => setShowHowTo(false)}
+                  style={{ padding: '10px 16px', background: '#f3f4f6', color: '#374151', border: 'none', borderRadius: 10, fontWeight: 700, fontSize: 13, cursor: 'pointer' }}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  if (status === 'error') return null
 
   if (status === 'loading' || (status === 'idle' && !weather)) {
     return (
