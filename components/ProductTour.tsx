@@ -67,7 +67,9 @@ function buildTourSteps(
       ? "Shortcuts for logging what you do each day. Tap any card to jump right in — and tap 'Ask Scout' anytime I can help."
       : "Jump to Today's Learning, log attendance, check compliance, or plan a lesson. Tap 'Ask Scout' anytime you have a question.",
     bullets: [
-      '🛒 Supply Scout — shows how many materials you need this week, right on your dashboard. Tap it to review and check off as you gather.',
+      '🛒 Supply Scout — shows how many materials you need this week. Tap it to review and check off as you gather.',
+      "🃏 Use the 'Customize Cards' pill to choose which action cards appear on your dashboard.",
+      '📌 Supply Scout, Ask Scout, and Today\'s Learning are always here — they\'re pinned and won\'t change no matter what cards you pick.',
     ],
     position: 'bottom',
   })
