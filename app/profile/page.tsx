@@ -93,7 +93,7 @@ function ProfileContent() {
   const [syEndInput,         setSyEndInput]         = useState('')
   const [syStartSaving,      setSyStartSaving]      = useState(false)
   const [requiredDays,   setRequiredDays]   = useState('—')
-  const [coTeacherCount, setCoTeacherCount] = useState(0)
+  const [coTeachers, setCoTeachers] = useState<{ id: string; name: string; email: string; role: string }[]>([])
   const [kids,           setKids]           = useState<Kid[]>([])
   const [tier,           setTier]           = useState<UserTier>('FREE')
   const [renewDate,      setRenewDate]      = useState<string | null>(null)
@@ -142,9 +142,10 @@ function ProfileContent() {
           .select('id, displayname, grade, learning_style, mi_profile, archived')
           .eq('organization_id', orgId)
           .order('displayname'),
-        supabase.from('user_organizations')
-          .select('user_id', { count: 'exact', head: true })
-          .eq('organization_id', orgId),
+        supabase.from('family_collaborators')
+          .select('id, name, email, role')
+          .eq('organization_id', orgId)
+          .order('added_at', { ascending: true }),
         supabase.from('user_subscriptions')
           .select('tier, subscription_end')
           .eq('user_id', user.id)
@@ -205,7 +206,7 @@ function ProfileContent() {
       }
 
       // Co-teachers
-      setCoTeacherCount(coRes.count ?? 0)
+      if (coRes.data) setCoTeachers(coRes.data as { id: string; name: string; email: string; role: string }[])
 
       // Subscription
       if (subRes.data) {
@@ -444,7 +445,37 @@ function ProfileContent() {
           )}
           <InfoRow label="State"         value={orgState || '—'} />
           <InfoRow label="Required days" value={requiredDays} />
-          <InfoRow label="Co-teachers"   value={coTeacherCount > 0 ? `${coTeacherCount} active` : '—'} last />
+          {/* Co-teachers — show names + manage link */}
+          <div style={{ padding: '14px 20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: coTeachers.length > 0 ? 8 : 0 }}>
+              <span style={{ fontSize: 14, color: '#4b5563', fontWeight: 600 }}>Co-teachers</span>
+              <button
+                onClick={() => router.push('/co-teachers')}
+                style={{ background: 'none', border: 'none', color: '#7c3aed', fontSize: 13, fontWeight: 700, cursor: 'pointer', padding: 0, fontFamily: "'Nunito', sans-serif" }}
+              >
+                {coTeachers.length === 0 ? 'Add →' : 'Manage →'}
+              </button>
+            </div>
+            {coTeachers.length === 0 ? (
+              <span style={{ fontSize: 14, fontWeight: 700, color: '#9ca3af' }}>None added yet</span>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {coTeachers.map(ct => (
+                  <div key={ct.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'rgba(124,58,237,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800, color: '#7c3aed', flexShrink: 0 }}>
+                      {(ct.name || ct.email).slice(0, 2).toUpperCase()}
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: '#1a1a2e' }}>{ct.name || ct.email}</div>
+                      {ct.name && ct.name !== ct.email && (
+                        <div style={{ fontSize: 11, color: '#6b7280' }}>{ct.email}</div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* ── Teaching Style ── */}
