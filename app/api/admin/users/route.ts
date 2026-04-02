@@ -9,28 +9,35 @@ const ADMIN_EMAILS = [
   'bcunningham1117@gmail.com',
 ]
 
-export async function GET() {
-  // Verify caller is an admin
-  const supabase = await createServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user || !ADMIN_EMAILS.includes(user.email ?? '')) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
-  }
-
-  // Use service role to access auth.users
-  const admin = createClient(
+function adminClient() {
+  return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
   )
+}
+
+async function verifyAdmin() {
+  const supabase = await createServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user || !ADMIN_EMAILS.includes(user.email ?? '')) return null
+  return user
+}
+
+export async function GET() {
+  const caller = await verifyAdmin()
+  if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+
+  const admin = adminClient()
 
   const { data: { users: authUsers }, error } = await admin.auth.admin.listUsers({ perPage: 1000 })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   const userIds = authUsers.map(u => u.id)
 
-  const [profilesRes, subsRes] = await Promise.all([
+  const [profilesRes, subsRes, agreementsRes] = await Promise.all([
     admin.from('user_profiles').select('user_id, first_name, created_at').in('user_id', userIds),
     admin.from('user_subscriptions').select('user_id, tier').in('user_id', userIds),
+    admin.from('user_agreements').select('user_id, age_confirmed, tos_confirmed, beta_nda_confirmed, agreed_at').in('user_id', userIds),
   ])
 
   const profileMap: Record<string, any> = {}
@@ -39,12 +46,20 @@ export async function GET() {
   const tierMap: Record<string, string> = {}
   for (const s of subsRes.data ?? []) tierMap[s.user_id] = s.tier
 
+  const agreementMap: Record<string, any> = {}
+  for (const a of agreementsRes.data ?? []) agreementMap[a.user_id] = a
+
   const merged = authUsers.map(u => ({
-    user_id:    u.id,
-    email:      u.email ?? '',
-    first_name: profileMap[u.id]?.first_name ?? '',
-    tier:       tierMap[u.id] ?? 'FREE',
-    created_at: profileMap[u.id]?.created_at ?? u.created_at,
+    user_id:           u.id,
+    email:             u.email ?? '',
+    first_name:        profileMap[u.id]?.first_name ?? '',
+    tier:              tierMap[u.id] ?? 'FREE',
+    created_at:        profileMap[u.id]?.created_at ?? u.created_at,
+    last_sign_in_at:   u.last_sign_in_at ?? null,
+    age_confirmed:     agreementMap[u.id]?.age_confirmed ?? false,
+    tos_confirmed:     agreementMap[u.id]?.tos_confirmed ?? false,
+    beta_nda_confirmed: agreementMap[u.id]?.beta_nda_confirmed ?? false,
+    agreed_at:         agreementMap[u.id]?.agreed_at ?? null,
   })).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
 
   return NextResponse.json({ users: merged })
@@ -52,19 +67,13 @@ export async function GET() {
 
 // PUT: find user by email and set their tier
 export async function PUT(req: Request) {
-  const supabase = await createServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user || !ADMIN_EMAILS.includes(user.email ?? '')) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
-  }
+  const caller = await verifyAdmin()
+  if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
 
   const { email, tier } = await req.json()
   if (!email || !tier) return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
 
-  const admin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  )
+  const admin = adminClient()
 
   const { data: authUser, error: lookupError } = await admin.auth.admin.getUserByEmail(email.trim().toLowerCase())
   if (lookupError || !authUser?.user) {
@@ -86,21 +95,15 @@ export async function PUT(req: Request) {
   })
 }
 
+// POST: update tier for a known user_id
 export async function POST(req: Request) {
-  // Verify caller is an admin
-  const supabase = await createServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user || !ADMIN_EMAILS.includes(user.email ?? '')) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
-  }
+  const caller = await verifyAdmin()
+  if (!caller) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
 
   const { user_id, tier } = await req.json()
   if (!user_id || !tier) return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
 
-  const admin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  )
+  const admin = adminClient()
 
   const { error: subError } = await admin
     .from('user_subscriptions')
