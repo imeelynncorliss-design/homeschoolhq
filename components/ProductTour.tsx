@@ -20,6 +20,7 @@ interface ProductTourProps {
   homeschoolStyle?: 'flexible' | 'structured' | null
   pinnedFeatures?: string[]
   hasBlueprint?: boolean
+  isCollaborator?: boolean
   onDone: () => void
 }
 
@@ -122,7 +123,58 @@ function buildTourSteps(
   return steps
 }
 
-const STORAGE_KEY = 'hq_tour_done'
+const STORAGE_KEY    = 'hq_tour_done'
+const CO_STORAGE_KEY = 'hq_cotour_done'
+
+// ─── Co-teacher tour steps ────────────────────────────────────────────────────
+
+function buildCoTeacherTourSteps(): TourStep[] {
+  return [
+    {
+      targetId: 'tour-week-strip',
+      title: 'Your Week at a Glance',
+      content: "A dot (●) below a date means lessons are scheduled that day. Tap any day to see what's planned — you can view, check in, or add notes right from there.",
+      position: 'bottom',
+    },
+    {
+      targetId: 'tour-pulse',
+      title: 'Your Learners 🐦',
+      content: "Each card shows a child's avatar and today's lesson progress. Tap any card to see their schedule for today. Use the button on each card to mark them present.",
+      bullets: [
+        '✅ Tap "Mark present" to log attendance for that child',
+        '📖 Tap the card to see their subjects and today\'s lessons',
+        '🎨 You\'ll see their learning style and strengths too',
+      ],
+      position: 'bottom',
+    },
+    {
+      targetId: 'tour-quick-actions',
+      title: 'Your Quick Actions',
+      content: "Everything you need to log and teach is right here:",
+      bullets: [
+        "📝 Today's Learning — see the full agenda for today and this week",
+        '✅ Log Attendance — mark the school day for all children at once',
+        '📚 Log a Book — add titles to the reading log',
+        '🚌 Log an Activity — record field trips, projects, or co-ops',
+        '🐦 Ask Scout — your 24/7 co-pilot for any question',
+      ],
+      position: 'bottom',
+    },
+    {
+      targetId: 'tour-bottom-nav',
+      title: 'Navigate Your School',
+      content: 'Everything you need is one tap away:',
+      bullets: [
+        '🧭 Dashboard — your home base',
+        '📚 Subjects — all lessons by child and subject',
+        '📋 Records — attendance, reading logs, field trips, and more',
+        '💡 Resources — state homeschool laws and teaching tips',
+        '👤 Profile — your personal settings',
+      ],
+      position: 'top',
+    },
+  ]
+}
 
 // ─── Tooltip position helper ──────────────────────────────────────────────────
 // Positions the card adjacent to the target element (below or above),
@@ -225,8 +277,9 @@ function HighlightRing({ targetId }: { targetId: string }) {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export default function ProductTour({ parentName, autoStart = false, homeschoolStyle, pinnedFeatures = [], hasBlueprint = false, onDone }: ProductTourProps) {
-  const tourSteps = buildTourSteps(homeschoolStyle, pinnedFeatures, hasBlueprint)
+export default function ProductTour({ parentName, autoStart = false, homeschoolStyle, pinnedFeatures = [], hasBlueprint = false, isCollaborator = false, onDone }: ProductTourProps) {
+  const tourSteps  = isCollaborator ? buildCoTeacherTourSteps() : buildTourSteps(homeschoolStyle, pinnedFeatures, hasBlueprint)
+  const storageKey = isCollaborator ? CO_STORAGE_KEY : STORAGE_KEY
   const { isDark } = useTheme()
 
   // Dark-mode-aware color tokens
@@ -246,7 +299,7 @@ export default function ProductTour({ parentName, autoStart = false, homeschoolS
   // Show welcome bubble after delay
   useEffect(() => {
     setMounted(true)
-    const alreadyDone = localStorage.getItem(STORAGE_KEY)
+    const alreadyDone = localStorage.getItem(storageKey)
     if (alreadyDone && !autoStart) return
 
     if (autoStart) {
@@ -301,7 +354,7 @@ export default function ProductTour({ parentName, autoStart = false, homeschoolS
   }
 
   function finish() {
-    localStorage.setItem(STORAGE_KEY, '1')
+    localStorage.setItem(storageKey, '1')
     setPhase('idle')
     onDone()
   }
@@ -346,13 +399,15 @@ export default function ProductTour({ parentName, autoStart = false, homeschoolS
               <img src="/Cardinal_Mascot.png" alt="Scout" style={{ width: 36, height: 36, objectFit: 'contain', flexShrink: 0 }} />
               <div>
                 <div style={{ fontWeight: 900, fontSize: 14, color: '#fff', lineHeight: 1.2 }}>Hi{parentName ? `, ${parentName}` : ''}! I'm Scout 👋</div>
-                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.75)', fontWeight: 600 }}>Your Homeschool Co-Pilot</div>
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.75)', fontWeight: 600 }}>{isCollaborator ? 'Your Homeschool Guide' : 'Your Homeschool Co-Pilot'}</div>
               </div>
             </div>
             {/* Body */}
             <div style={{ padding: '16px 18px 18px' }}>
               <p style={{ fontSize: 13, color: textPrimary, lineHeight: 1.6, margin: '0 0 14px', fontWeight: 600 }}>
-                Your home screen is all set! Want a quick 30-second tour so you know where everything lives?
+                {isCollaborator
+                  ? "Welcome to HomeschoolReady! Want a quick tour so you know where everything is and what you can do?"
+                  : "Your home screen is all set! Want a quick 30-second tour so you know where everything lives?"}
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <button

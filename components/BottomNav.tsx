@@ -1,7 +1,8 @@
 'use client'
 
 import { useRouter, usePathname } from 'next/navigation'
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
+import { supabase } from '@/src/lib/supabase'
 
 const NAV_ITEMS = [
   { id: 'home',      label: 'Dashboard', icon: '🧭', href: '/dashboard'       },
@@ -33,11 +34,25 @@ const TOOLTIPS: Record<string, string[]> = {
   profile:   ['Manage children', 'School year dates', 'Teaching style', 'School name & state'],
 }
 
+// Nav items hidden for co-teachers (admin-only sections)
+const COLLABORATOR_HIDDEN = new Set(['corner', 'tools'])
+
 export default function BottomNav() {
   const router = useRouter()
   const pathname = usePathname()
   const [hoveredId, setHoveredId] = useState<string | null>(null)
+  const [isCollaborator, setIsCollaborator] = useState(false)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    const check = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const { data } = await supabase.from('family_collaborators').select('id').eq('user_id', user.id).maybeSingle()
+      if (data) setIsCollaborator(true)
+    }
+    check()
+  }, [])
 
   const activeId = (() => {
     for (const [id, paths] of Object.entries(ACTIVE_MAP)) {
@@ -86,12 +101,12 @@ export default function BottomNav() {
           © 2026 HomeschoolReady, LLC. All rights reserved.
         </div>
         <div style={{ display: 'flex', padding: '6px 0 12px' }}>
-          {NAV_ITEMS.map((item, idx) => {
+          {(isCollaborator ? NAV_ITEMS.filter(item => !COLLABORATOR_HIDDEN.has(item.id)) : NAV_ITEMS).map((item, idx, arr) => {
             const isActive = activeId === item.id
             const isHovered = hoveredId === item.id
             const tips = TOOLTIPS[item.id] ?? []
             const isFirst = idx === 0
-            const isLast = idx === NAV_ITEMS.length - 1
+            const isLast = idx === arr.length - 1
             const tooltipAlign = isFirst
               ? { left: 0, transform: 'none' }
               : isLast

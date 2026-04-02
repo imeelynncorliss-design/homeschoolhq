@@ -1279,6 +1279,10 @@ function DashboardContent() {
           .or(`assigned_to_collaborator_id.eq.${collab.id},assigned_to_collaborator_id.is.null`)
           .order('created_at', { ascending: true })
         if (taskData) setMyTasks(taskData)
+        // Auto-start co-teacher tour on first visit
+        if (!localStorage.getItem('hq_cotour_done')) {
+          setShowTour(true)
+        }
       } else {
         const { orgId: resolved } = await getOrganizationId(user.id)
         if (!resolved) { router.push('/onboarding'); return }
@@ -2440,13 +2444,14 @@ function DashboardContent() {
             homeschoolStyle={homeschoolStyle ?? null}
             pinnedFeatures={pinnedFeatures}
             hasBlueprint={!!kidPulses.find(p => p.kid.learning_style) && !!orgTeachingStyle}
+            isCollaborator={isCollaborator}
             onDone={() => {
               setShowTour(false)
               setTourAutoStart(false)
-              // Always show curriculum nudge to all users after the tour (once)
-              const alreadySeen = tourFromWelcome ? false : !!localStorage.getItem('hq_curriculum_nudge_done')
-              if (!alreadySeen) {
-                setShowCurriculumNudge(true)
+              // Co-teachers don't get the curriculum nudge
+              if (!isCollaborator) {
+                const alreadySeen = tourFromWelcome ? false : !!localStorage.getItem('hq_curriculum_nudge_done')
+                if (!alreadySeen) setShowCurriculumNudge(true)
               }
               setTourFromWelcome(false)
             }}
