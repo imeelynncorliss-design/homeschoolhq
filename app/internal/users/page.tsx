@@ -41,12 +41,28 @@ export default function UserManagementPage() {
 
   async function loadUsers() {
     try {
-      const { data, error } = await supabase
+      const { data: profiles, error } = await supabase
         .from('user_profiles')
         .select('*')
         .order('created_at', { ascending: false })
       if (error) throw error
-      setUsers(data || [])
+
+      // Fetch real tiers from user_subscriptions (authoritative source)
+      const userIds = (profiles || []).map((p: any) => p.user_id).filter(Boolean)
+      const { data: subs } = userIds.length
+        ? await supabase.from('user_subscriptions').select('user_id, tier').in('user_id', userIds)
+        : { data: [] }
+
+      const tierMap: Record<string, string> = {}
+      for (const s of subs || []) tierMap[s.user_id] = s.tier
+
+      // Merge real tier into profile rows for display
+      const merged = (profiles || []).map((p: any) => ({
+        ...p,
+        real_tier: tierMap[p.user_id] || 'FREE',
+      }))
+
+      setUsers(merged)
     } catch (error) {
       console.error('Error loading users:', error)
     } finally {
@@ -54,13 +70,21 @@ export default function UserManagementPage() {
     }
   }
 
-  async function updateTier(userId: string, newTier: UserTier) {
+  async function updateTier(profile: any, newTier: UserTier) {
     try {
+      // Upsert into user_subscriptions — the authoritative tier source
       const { error } = await supabase
+        .from('user_subscriptions')
+        .upsert({ user_id: profile.user_id, tier: newTier, updated_at: new Date().toISOString() },
+          { onConflict: 'user_id' })
+      if (error) throw error
+
+      // Keep user_profiles in sync for any legacy reads
+      await supabase
         .from('user_profiles')
         .update({ subscription_tier: newTier })
-        .eq('id', userId)
-      if (error) throw error
+        .eq('user_id', profile.user_id)
+
       alert(`✅ Tier updated to ${newTier}`)
       loadUsers()
     } catch (error) {
@@ -112,12 +136,12 @@ export default function UserManagementPage() {
                     </td>
                     <td className="px-6 py-4">
                       <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                        user.subscription_tier === 'PREMIUM' ? 'bg-purple-100' :
-                        user.subscription_tier === 'PRO'     ? 'bg-blue-100'   :
-                        user.subscription_tier === 'ESSENTIAL' ? 'bg-green-100' :
+                        user.real_tier === 'PREMIUM'  ? 'bg-purple-100' :
+                        user.real_tier === 'PRO'      ? 'bg-blue-100'   :
+                        user.real_tier === 'ESSENTIAL'? 'bg-green-100'  :
                         'bg-gray-200'
                       }`} style={{ color: '#111827' }}>
-                        {user.subscription_tier || 'FREE'}
+                        {user.real_tier}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-sm" style={{ color: '#111827', fontWeight: '600' }}>
@@ -125,8 +149,8 @@ export default function UserManagementPage() {
                     </td>
                     <td className="px-6 py-4">
                       <select
-                        value={user.subscription_tier || 'FREE'}
-                        onChange={(e) => updateTier(user.id, e.target.value as UserTier)}
+                        value={user.real_tier}
+                        onChange={(e) => updateTier(user, e.target.value as UserTier)}
                         style={{ color: '#111827', fontWeight: '700', backgroundColor: '#ffffff' }}
                         className="px-3 py-2 border-2 border-gray-300 rounded-lg text-sm focus:border-indigo-600 focus:outline-none cursor-pointer"
                       >
