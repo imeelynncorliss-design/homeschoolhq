@@ -71,9 +71,10 @@ export default function KidProfileForm({ kid, onSave, onCancel }: KidProfileForm
     )
   }
 
+  // No cap — select as many MI as apply
   const toggleMi = (id: string) => {
     setMiProfile(prev =>
-      prev.includes(id) ? prev.filter(x => x !== id) : prev.length < 3 ? [...prev, id] : prev
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
     )
   }
 
@@ -126,43 +127,65 @@ export default function KidProfileForm({ kid, onSave, onCancel }: KidProfileForm
     { id: 'learning' as const, label: 'How They Learn',  done: tabStatus.learning },
   ]
 
+  const headerGradient = 'linear-gradient(135deg, #7c3aed, #4f46e5)'
+  const saveBtnStyle: React.CSSProperties = {
+    flex: 1, padding: '10px 14px', borderRadius: 12, border: 'none',
+    background: (!canSave || saving) ? '#c4b5fd' : headerGradient,
+    color: '#fff', fontWeight: 800, fontSize: 13, cursor: (!canSave || saving) ? 'not-allowed' : 'pointer',
+    fontFamily: "'Nunito', sans-serif", opacity: (!canSave || saving) ? 0.7 : 1,
+  }
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[200] px-4 pt-4 pb-24">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full flex flex-col overflow-hidden" style={{ maxHeight: 'calc(100vh - 104px)' }}>
+    <div style={{
+      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      zIndex: 200, padding: '16px 16px 96px',
+    }}>
+      <div style={{
+        background: '#fff', borderRadius: 20, boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
+        maxWidth: 520, width: '100%', display: 'flex', flexDirection: 'column',
+        overflow: 'hidden', maxHeight: 'calc(100vh - 104px)',
+      }}>
 
         {/* Header */}
-        <div className="bg-gradient-to-r from-purple-700 to-pink-500 px-6 py-5 flex-shrink-0">
-          <div className="flex justify-between items-start">
+        <div style={{ background: headerGradient, padding: '20px 24px 0', flexShrink: 0 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
-              <h2 className="text-xl font-black text-white">
+              <h2 style={{ fontSize: 20, fontWeight: 900, color: '#fff', margin: 0, fontFamily: "'Nunito', sans-serif" }}>
                 {isEditing ? 'Edit Student Profile' : 'Add Your Child'}
               </h2>
               {isEditing && kid?.displayname && (
-                <p className="text-purple-200 text-sm mt-0.5">{kid.displayname}</p>
+                <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 13, margin: '2px 0 0', fontFamily: "'Nunito', sans-serif" }}>
+                  {kid.displayname}
+                </p>
               )}
             </div>
             <button
               onClick={onCancel}
-              className="text-white hover:text-purple-200 text-2xl font-light leading-none mt-0.5"
+              style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.8)', fontSize: 24, cursor: 'pointer', lineHeight: 1, padding: '0 0 4px' }}
             >
               ×
             </button>
           </div>
 
           {/* Tab bar */}
-          <div className="flex gap-1 mt-4">
+          <div style={{ display: 'flex', gap: 4, marginTop: 16 }}>
             {TABS.map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
-                  activeTab === tab.id
-                    ? 'bg-white text-purple-700'
-                    : 'text-white text-opacity-80 hover:bg-white hover:bg-opacity-20'
-                }`}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  padding: '8px 16px', borderRadius: '10px 10px 0 0', border: 'none',
+                  fontSize: 13, fontWeight: 800, cursor: 'pointer',
+                  fontFamily: "'Nunito', sans-serif",
+                  background: activeTab === tab.id ? '#fff' : 'rgba(255,255,255,0.15)',
+                  color: activeTab === tab.id ? '#7c3aed' : 'rgba(255,255,255,0.85)',
+                  transition: 'all 0.15s',
+                }}
               >
                 {tab.done && activeTab !== tab.id && (
-                  <span className="text-yellow-300 text-xs">✓</span>
+                  <span style={{ color: '#fde68a', fontSize: 11 }}>✓</span>
                 )}
                 {tab.label}
               </button>
@@ -171,122 +194,101 @@ export default function KidProfileForm({ kid, onSave, onCancel }: KidProfileForm
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-5">
+        <div style={{ flex: 1, overflowY: 'auto', padding: 24, display: 'flex', flexDirection: 'column', gap: 20 }}>
 
           {/* ── Core Info Tab ────────────────────────────────────────────── */}
           {activeTab === 'core' && (
             <>
               {/* Photo */}
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 800, color: '#374151', marginBottom: 8 }}>
                   Student Photo
                 </label>
-                <div className="flex items-center gap-4">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                   {photoPreview ? (
-                    <div className="relative">
-                      <img
-                        src={photoPreview}
-                        alt="Preview"
-                        className="w-20 h-20 rounded-full object-cover border-4 border-purple-100"
-                      />
+                    <div style={{ position: 'relative' }}>
+                      <img src={photoPreview} alt="Preview" style={{ width: 80, height: 80, borderRadius: '50%', objectFit: 'cover', border: '4px solid #ede9fe' }} />
                       <button
                         onClick={() => { setPhotoPreview(''); setPhotoFile(null) }}
-                        className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 text-white rounded-full text-xs font-bold flex items-center justify-center"
-                      >
-                        ×
-                      </button>
+                        style={{ position: 'absolute', top: -4, right: -4, width: 22, height: 22, background: '#ef4444', color: '#fff', borderRadius: '50%', border: 'none', fontSize: 12, fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                      >×</button>
                     </div>
                   ) : (
                     <button
                       onClick={() => fileInputRef.current?.click()}
-                      className="w-20 h-20 rounded-full border-2 border-dashed border-blue-300 flex flex-col items-center justify-center text-blue-500 hover:bg-blue-50 transition-colors"
+                      style={{ width: 80, height: 80, borderRadius: '50%', border: '2px dashed #c4b5fd', background: '#faf5ff', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', gap: 2 }}
                     >
-                      <span className="text-2xl">🖼</span>
-                      <span className="text-xs font-semibold mt-1">Upload</span>
+                      <span style={{ fontSize: 22 }}>🖼</span>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: '#7c3aed' }}>Upload</span>
                     </button>
                   )}
                   {!photoPreview && (
-                    <p className="text-xs text-gray-400 leading-relaxed">
+                    <p style={{ fontSize: 12, color: '#9ca3af', lineHeight: 1.5 }}>
                       Upload a photo to personalize<br />the app for your child.
                     </p>
                   )}
                 </div>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handlePhotoChange}
-                  className="hidden"
-                />
+                <input ref={fileInputRef} type="file" accept="image/*" onChange={handlePhotoChange} style={{ display: 'none' }} />
               </div>
 
               {/* First + Last Name */}
-              <div className="grid grid-cols-2 gap-3">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-1">
-                    First Name <span className="text-red-500">*</span>
+                  <label style={{ display: 'block', fontSize: 13, fontWeight: 800, color: '#374151', marginBottom: 4 }}>
+                    First Name <span style={{ color: '#ef4444' }}>*</span>
                   </label>
                   <input
-                    type="text"
-                    value={firstname}
-                    onChange={e => setFirstname(e.target.value)}
-                    placeholder="e.g. Emma"
-                    className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-xl text-gray-900 focus:border-purple-500 focus:outline-none text-sm"
-                    autoFocus
+                    type="text" value={firstname} onChange={e => setFirstname(e.target.value)}
+                    placeholder="e.g. Emma" autoFocus
+                    style={{ width: '100%', padding: '10px 12px', border: '2px solid #e5e7eb', borderRadius: 12, fontSize: 13, color: '#111827', outline: 'none', fontFamily: "'Nunito', sans-serif", boxSizing: 'border-box' }}
+                    onFocus={e => (e.target.style.borderColor = '#7c3aed')}
+                    onBlur={e => (e.target.style.borderColor = '#e5e7eb')}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-1">Last Name</label>
+                  <label style={{ display: 'block', fontSize: 13, fontWeight: 800, color: '#374151', marginBottom: 4 }}>Last Name</label>
                   <input
-                    type="text"
-                    value={lastname}
-                    onChange={e => setLastname(e.target.value)}
-                    placeholder="Last name"
-                    className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-xl text-gray-900 focus:border-purple-500 focus:outline-none text-sm"
+                    type="text" value={lastname} onChange={e => setLastname(e.target.value)} placeholder="Last name"
+                    style={{ width: '100%', padding: '10px 12px', border: '2px solid #e5e7eb', borderRadius: 12, fontSize: 13, color: '#111827', outline: 'none', fontFamily: "'Nunito', sans-serif", boxSizing: 'border-box' }}
+                    onFocus={e => (e.target.style.borderColor = '#7c3aed')}
+                    onBlur={e => (e.target.style.borderColor = '#e5e7eb')}
                   />
                 </div>
               </div>
 
               {/* Display Name */}
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-1">
-                  Display Name{' '}
-                  <span className="font-normal text-gray-400">(optional)</span>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 800, color: '#374151', marginBottom: 4 }}>
+                  Display Name <span style={{ fontWeight: 600, color: '#9ca3af' }}>(optional)</span>
                 </label>
                 <input
-                  type="text"
-                  value={displayname}
-                  onChange={e => setDisplayname(e.target.value)}
+                  type="text" value={displayname} onChange={e => setDisplayname(e.target.value)}
                   placeholder={`e.g. ${firstname || 'Em'}, Bug, Buddy...`}
-                  className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-xl text-gray-900 focus:border-purple-500 focus:outline-none text-sm"
+                  style={{ width: '100%', padding: '10px 12px', border: '2px solid #e5e7eb', borderRadius: 12, fontSize: 13, color: '#111827', outline: 'none', fontFamily: "'Nunito', sans-serif", boxSizing: 'border-box' }}
+                  onFocus={e => (e.target.style.borderColor = '#7c3aed')}
+                  onBlur={e => (e.target.style.borderColor = '#e5e7eb')}
                 />
                 {firstname && (
-                  <p className="text-xs text-gray-400 mt-1">
-                    Leave blank to use first name: {firstname}
-                  </p>
+                  <p style={{ fontSize: 11, color: '#9ca3af', marginTop: 4 }}>Leave blank to use first name: {firstname}</p>
                 )}
               </div>
 
               {/* Age + Grade */}
-              <div className="grid grid-cols-2 gap-3">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-1">Age</label>
+                  <label style={{ display: 'block', fontSize: 13, fontWeight: 800, color: '#374151', marginBottom: 4 }}>Age</label>
                   <input
-                    type="number"
-                    value={age}
-                    onChange={e => setAge(e.target.value)}
-                    placeholder="e.g. 9"
-                    min="3"
-                    max="18"
-                    className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-xl text-gray-900 focus:border-purple-500 focus:outline-none text-sm"
+                    type="number" value={age} onChange={e => setAge(e.target.value)} placeholder="e.g. 9" min="3" max="18"
+                    style={{ width: '100%', padding: '10px 12px', border: '2px solid #e5e7eb', borderRadius: 12, fontSize: 13, color: '#111827', outline: 'none', fontFamily: "'Nunito', sans-serif", boxSizing: 'border-box' }}
+                    onFocus={e => (e.target.style.borderColor = '#7c3aed')}
+                    onBlur={e => (e.target.style.borderColor = '#e5e7eb')}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-1">Grade</label>
+                  <label style={{ display: 'block', fontSize: 13, fontWeight: 800, color: '#374151', marginBottom: 4 }}>Grade</label>
                   <select
-                    value={grade}
-                    onChange={e => setGrade(e.target.value)}
-                    className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-xl text-gray-900 focus:border-purple-500 focus:outline-none text-sm"
+                    value={grade} onChange={e => setGrade(e.target.value)}
+                    style={{ width: '100%', padding: '10px 12px', border: '2px solid #e5e7eb', borderRadius: 12, fontSize: 13, color: '#111827', outline: 'none', fontFamily: "'Nunito', sans-serif", background: '#fff', boxSizing: 'border-box' }}
                   >
                     <option value="">Select grade...</option>
                     {GRADES.map(g => <option key={g} value={g}>{g}</option>)}
@@ -298,7 +300,7 @@ export default function KidProfileForm({ kid, onSave, onCancel }: KidProfileForm
               {coreComplete && (
                 <button
                   onClick={() => setActiveTab('learning')}
-                  className="w-full py-3 bg-gradient-to-r from-purple-600 to-pink-500 text-white rounded-xl font-bold text-sm hover:opacity-90 transition-all"
+                  style={{ width: '100%', padding: '12px', background: headerGradient, color: '#fff', border: 'none', borderRadius: 12, fontWeight: 800, fontSize: 13, cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}
                 >
                   Next: How They Learn →
                 </button>
@@ -310,24 +312,22 @@ export default function KidProfileForm({ kid, onSave, onCancel }: KidProfileForm
           {activeTab === 'learning' && (
             <>
               {/* Premium callout */}
-              <div className="bg-purple-50 border border-purple-200 rounded-xl p-3 flex gap-2 items-start">
-                <span className="text-base flex-shrink-0">💡</span>
-                <p className="text-xs text-purple-700 leading-relaxed">
-                  <strong>This powers Copilot lesson generation.</strong> The more accurate this is,
-                  the more personalized every generated lesson will be.
+              <div style={{ background: '#f5f3ff', border: '1px solid #ddd6fe', borderRadius: 12, padding: '10px 14px', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                <span style={{ fontSize: 16, flexShrink: 0 }}>💡</span>
+                <p style={{ fontSize: 12, color: '#6d28d9', lineHeight: 1.5, margin: 0, fontWeight: 600 }}>
+                  <strong>This powers Scout's lesson generation.</strong> The more accurate this is, the more personalized every generated lesson will be.
                 </p>
               </div>
 
               {/* Learning Style — multi-select */}
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-1">
-                  How does {displayname || firstname || 'your child'} learn best?{' '}
-                  <span className="text-red-500">*</span>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 800, color: '#374151', marginBottom: 4 }}>
+                  How does {displayname || firstname || 'your child'} learn best? <span style={{ color: '#ef4444' }}>*</span>
                 </label>
-                <p className="text-xs text-gray-400 mb-3">
-                  Select all that apply — Copilot uses this to structure every lesson it generates
+                <p style={{ fontSize: 11, color: '#9ca3af', marginBottom: 12 }}>
+                  Select all that apply — Scout uses this to structure every lesson it generates
                 </p>
-                <div className="grid grid-cols-1 gap-2">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {LEARNING_STYLES.map(style => {
                     const selected = learningStyles.includes(style.value)
                     return (
@@ -335,116 +335,148 @@ export default function KidProfileForm({ kid, onSave, onCancel }: KidProfileForm
                         key={style.value}
                         type="button"
                         onClick={() => toggleStyle(style.value)}
-                        className={`flex items-center gap-3 px-4 py-3 rounded-xl border-2 text-left transition-all ${
-                          selected
-                            ? 'border-purple-500 bg-purple-50'
-                            : 'border-gray-200 bg-white hover:border-purple-300'
-                        }`}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 12,
+                          padding: '12px 14px', borderRadius: 12,
+                          border: `2px solid ${selected ? '#7c3aed' : '#e5e7eb'}`,
+                          background: selected ? '#f5f3ff' : '#fff',
+                          cursor: 'pointer', textAlign: 'left', width: '100%',
+                          fontFamily: "'Nunito', sans-serif", transition: 'all 0.15s',
+                        }}
                       >
-                        <div className={`w-5 h-5 rounded flex items-center justify-center border-2 flex-shrink-0 transition-all ${
-                          selected ? 'bg-purple-600 border-purple-600' : 'bg-white border-gray-300'
-                        }`}>
-                          {selected && <span className="text-white text-xs font-black">✓</span>}
+                        <div style={{
+                          width: 20, height: 20, borderRadius: 6, flexShrink: 0,
+                          background: selected ? '#7c3aed' : '#fff',
+                          border: `2px solid ${selected ? '#7c3aed' : '#d1d5db'}`,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}>
+                          {selected && <span style={{ color: '#fff', fontSize: 11, fontWeight: 900 }}>✓</span>}
                         </div>
-                        <div className="flex-1">
-                          <p className={`text-sm font-bold ${selected ? 'text-purple-700' : 'text-gray-800'}`}>
-                            {style.label}
-                          </p>
-                          <p className="text-xs text-gray-400 mt-0.5">{style.desc}</p>
+                        <div style={{ flex: 1 }}>
+                          <p style={{ fontSize: 13, fontWeight: 800, color: selected ? '#6d28d9' : '#1f2937', margin: 0 }}>{style.label}</p>
+                          <p style={{ fontSize: 11, color: '#6b7280', margin: '2px 0 0' }}>{style.desc}</p>
                         </div>
                       </button>
                     )
                   })}
                 </div>
                 {learningStyles.length > 1 && (
-                  <p className="text-xs text-purple-600 font-semibold mt-2">
-                    ✓ Multimodal learner — Copilot will blend these styles
+                  <p style={{ fontSize: 11, color: '#7c3aed', fontWeight: 700, marginTop: 8 }}>
+                    ✓ Multimodal learner — Scout will blend these styles
                   </p>
                 )}
               </div>
 
               {/* Multiple Intelligences */}
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-1">
-                  Multiple Intelligences{' '}
-                  <span className="font-normal text-gray-400">(optional)</span>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 800, color: '#374151', marginBottom: 4 }}>
+                  Multiple Intelligences <span style={{ fontWeight: 600, color: '#9ca3af' }}>(optional)</span>
                 </label>
-                <p className="text-xs text-gray-400 mb-3">
-                  Where do they naturally shine? This powers the Teaching Blueprint.
+                <p style={{ fontSize: 11, color: '#9ca3af', marginBottom: 16 }}>
+                  Where do they naturally shine? Select all that apply — this powers the Teaching Blueprint.
                 </p>
-                <div className="space-y-3">
-                  {(Object.keys(MI_CLUSTERS) as Array<keyof typeof MI_CLUSTERS>).map(cluster => (
-                    <div key={cluster}>
-                      <p className="text-xs font-bold uppercase tracking-wider mb-1.5" style={{ color: MI_CLUSTERS[cluster].color }}>
-                        {MI_CLUSTERS[cluster].label}
-                      </p>
-                      <div className="flex flex-wrap gap-2">
-                        {MI_INTELLIGENCES.filter(m => m.cluster === cluster).map(m => {
-                          const selected = miProfile.includes(m.id)
-                          const maxed    = miProfile.length >= 3 && !selected
-                          return (
-                            <button
-                              key={m.id}
-                              type="button"
-                              onClick={() => toggleMi(m.id)}
-                              disabled={maxed}
-                              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border-2 text-xs font-bold transition-all ${
-                                selected
-                                  ? 'border-purple-500 bg-purple-50 text-purple-700'
-                                  : maxed
-                                  ? 'border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed'
-                                  : 'border-gray-200 bg-white text-gray-600 hover:border-purple-300'
-                              }`}
-                            >
-                              <span>{m.emoji}</span>
-                              <span>{m.name}</span>
-                            </button>
-                          )
-                        })}
-                      </div>
+                {miProfile.length > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 4 }}>
+                    <div style={{ background: '#f5f3ff', border: '1.5px solid #c4b5fd', borderRadius: 20, padding: '4px 14px', fontSize: 13, fontWeight: 700, color: '#7c3aed' }}>
+                      {miProfile.length} selected
                     </div>
-                  ))}
+                  </div>
+                )}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                  {(['analytical', 'introspective', 'interactive'] as const).map(cluster => {
+                    const clusterInfo = MI_CLUSTERS[cluster]
+                    return (
+                      <div key={cluster}>
+                        {/* Cluster header — matches onboarding: label — tagline on one line */}
+                        <div style={{ fontSize: 13, fontWeight: 800, color: clusterInfo.color, letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 8 }}>
+                          {clusterInfo.label} — <span style={{ fontWeight: 600, textTransform: 'none', letterSpacing: 0, fontSize: 13 }}>{clusterInfo.tagline}</span>
+                        </div>
+                        {/* MI cards — always show detail, circle check on right */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                          {MI_INTELLIGENCES.filter(m => m.cluster === cluster).map(m => {
+                            const selected = miProfile.includes(m.id)
+                            const subtitle = m.fullName !== m.name
+                              ? m.fullName.replace(m.name, '').replace(/[()]/g, '').trim()
+                              : ''
+                            return (
+                              <button
+                                key={m.id}
+                                type="button"
+                                onClick={() => toggleMi(m.id)}
+                                style={{
+                                  display: 'flex', alignItems: 'flex-start', gap: 14,
+                                  padding: '14px 16px', borderRadius: 14, width: '100%',
+                                  border: `2px solid ${selected ? '#a855f7' : '#e5e7eb'}`,
+                                  background: selected ? 'rgba(168,85,247,0.08)' : '#fafafa',
+                                  cursor: 'pointer', textAlign: 'left',
+                                  fontFamily: "'Nunito', sans-serif", transition: 'all 0.15s',
+                                }}
+                              >
+                                {/* Emoji */}
+                                <span style={{ fontSize: 28, lineHeight: 1, flexShrink: 0 }}>{m.emoji}</span>
+                                {/* Text */}
+                                <div style={{ flex: 1 }}>
+                                  <div style={{ fontSize: 15, fontWeight: 800, color: selected ? '#6d28d9' : '#1f2937', marginBottom: 4, lineHeight: 1.2 }}>
+                                    {m.name}
+                                    {subtitle && (
+                                      <span style={{ fontSize: 12, fontWeight: 600, color: '#9ca3af', marginLeft: 6 }}>({subtitle})</span>
+                                    )}
+                                  </div>
+                                  <div style={{ fontSize: 13, color: selected ? '#4b5563' : '#6b7280', lineHeight: 1.6 }}>{m.detail}</div>
+                                </div>
+                                {/* Circle check — right side, matches onboarding */}
+                                <div style={{
+                                  width: 22, height: 22, borderRadius: '50%', flexShrink: 0, marginTop: 2,
+                                  border: `2px solid ${selected ? '#a855f7' : '#d1d5db'}`,
+                                  background: selected ? '#a855f7' : 'transparent',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  transition: 'all 0.15s',
+                                }}>
+                                  {selected && <span style={{ fontSize: 11, color: '#fff', fontWeight: 900 }}>✓</span>}
+                                </div>
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
                 {miProfile.length > 0 && (
-                  <p className="text-xs text-purple-600 font-semibold mt-2">
-                    {miProfile.length}/3 selected
-                    {miProfile.length === 3 && ' — max reached'}
+                  <p style={{ fontSize: 11, color: '#7c3aed', fontWeight: 700, marginTop: 10 }}>
+                    ✓ {miProfile.length} intelligence{miProfile.length !== 1 ? 's' : ''} selected
                   </p>
                 )}
               </div>
 
               {/* Current Hook */}
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-1">
-                  What are they into right now?{' '}
-                  <span className="font-normal text-gray-400">(optional)</span>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 800, color: '#374151', marginBottom: 4 }}>
+                  What are they into right now? <span style={{ fontWeight: 600, color: '#9ca3af' }}>(optional)</span>
                 </label>
-                <p className="text-xs text-gray-400 mb-2">
-                  Scout weaves their current interests into lessons to make them more engaging —
-                  update this as their obsessions change
+                <p style={{ fontSize: 11, color: '#9ca3af', marginBottom: 8 }}>
+                  Scout weaves their current interests into lessons — update this as their obsessions change
                 </p>
                 <input
-                  type="text"
-                  value={currentHook}
-                  onChange={e => setCurrentHook(e.target.value)}
+                  type="text" value={currentHook} onChange={e => setCurrentHook(e.target.value)}
                   placeholder="e.g. Minecraft, Dinosaurs, Drawing animals, Space..."
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-gray-900 focus:border-purple-500 focus:outline-none text-sm"
+                  style={{ width: '100%', padding: '10px 12px', border: '2px solid #e5e7eb', borderRadius: 12, fontSize: 13, color: '#111827', outline: 'none', fontFamily: "'Nunito', sans-serif", boxSizing: 'border-box' }}
+                  onFocus={e => (e.target.style.borderColor = '#7c3aed')}
+                  onBlur={e => (e.target.style.borderColor = '#e5e7eb')}
                 />
               </div>
 
               {/* Curriculum */}
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-1">
-                  Curriculum{' '}
-                  <span className="font-normal text-gray-400">(optional)</span>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 800, color: '#374151', marginBottom: 4 }}>
+                  Curriculum <span style={{ fontWeight: 600, color: '#9ca3af' }}>(optional)</span>
                 </label>
-                <p className="text-xs text-gray-400 mb-2">
+                <p style={{ fontSize: 11, color: '#9ca3af', marginBottom: 8 }}>
                   Scout aligns lesson structure and terminology with your chosen curriculum
                 </p>
                 <select
-                  value={curriculum}
-                  onChange={e => setCurriculum(e.target.value)}
-                  className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-xl text-gray-900 focus:border-purple-500 focus:outline-none text-sm"
+                  value={curriculum} onChange={e => setCurriculum(e.target.value)}
+                  style={{ width: '100%', padding: '10px 12px', border: '2px solid #e5e7eb', borderRadius: 12, fontSize: 13, color: '#111827', outline: 'none', fontFamily: "'Nunito', sans-serif", background: '#fff', boxSizing: 'border-box' }}
                 >
                   <option value="">Select curriculum...</option>
                   <optgroup label="All-in-One">
@@ -483,22 +515,22 @@ export default function KidProfileForm({ kid, onSave, onCancel }: KidProfileForm
         </div>
 
         {/* Footer */}
-        <div className="flex-shrink-0 border-t border-gray-100 px-6 py-4 flex gap-3 bg-gray-50">
+        <div style={{ flexShrink: 0, borderTop: '1px solid #f3f4f6', padding: '14px 24px', display: 'flex', gap: 10, background: '#fafafa' }}>
           <button
             onClick={onCancel}
-            className="px-5 py-2.5 border-2 border-gray-200 text-gray-600 rounded-xl font-bold text-sm hover:bg-gray-100 transition-all"
+            style={{ padding: '10px 18px', border: '2px solid #e5e7eb', background: '#fff', color: '#6b7280', borderRadius: 12, fontWeight: 800, fontSize: 13, cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}
           >
             Cancel
           </button>
 
           {!canSave && (
-            <div className="flex-1 flex items-center">
-              <p className="text-xs text-gray-400">
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center' }}>
+              <p style={{ fontSize: 12, color: '#9ca3af', margin: 0 }}>
                 {!coreComplete && 'Add a first name to continue.'}
                 {coreComplete && !learningComplete && (
                   <button
                     onClick={() => setActiveTab('learning')}
-                    className="text-purple-600 font-semibold hover:underline"
+                    style={{ background: 'none', border: 'none', color: '#7c3aed', fontWeight: 700, fontSize: 12, cursor: 'pointer', padding: 0, fontFamily: "'Nunito', sans-serif" }}
                   >
                     Select a learning style to save →
                   </button>
@@ -507,11 +539,7 @@ export default function KidProfileForm({ kid, onSave, onCancel }: KidProfileForm
             </div>
           )}
 
-          <button
-            onClick={handleSave}
-            disabled={!canSave || saving}
-            className="flex-1 py-2.5 bg-gradient-to-r from-purple-600 to-pink-500 text-white rounded-xl font-bold text-sm hover:opacity-90 disabled:opacity-40 transition-all"
-          >
+          <button onClick={handleSave} disabled={!canSave || saving} style={saveBtnStyle}>
             {saving ? 'Saving...' : isEditing ? 'Save Changes' : 'Add Child'}
           </button>
         </div>
