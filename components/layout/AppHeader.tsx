@@ -856,7 +856,7 @@ export default function AppHeader() {
 
         {/* Left */}
         <div style={s.left}>
-          <button style={s.logoBtn} onClick={() => router.push('/dashboard')} aria-label="Go to Dashboard">
+          <button style={s.logoBtn} onClick={() => router.push('/dashboard')} aria-label="HomeschoolReady - Go to Dashboard">
             <div style={s.logoMark}>
               <svg viewBox="0 0 18 20" width="16" height="18" xmlns="http://www.w3.org/2000/svg">
                 <polygon points="9,0 18,8 0,8" fill="#7c3aed" />
