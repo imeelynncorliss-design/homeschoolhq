@@ -26,6 +26,10 @@ export default function UserManagementPage() {
   const [isAdmin, setIsAdmin]   = useState(false)
   const [saving, setSaving]     = useState<string | null>(null)
   const [search, setSearch]     = useState('')
+  const [addEmail, setAddEmail] = useState('')
+  const [addTier, setAddTier]   = useState<UserTier>('PRO')
+  const [addError, setAddError] = useState<string | null>(null)
+  const [addSaving, setAddSaving] = useState(false)
   const router                  = useRouter()
   const supabase                = createClient()
 
@@ -49,6 +53,30 @@ export default function UserManagementPage() {
       console.error('Error loading users:', e)
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function addTester() {
+    if (!addEmail.trim()) return
+    setAddSaving(true)
+    setAddError(null)
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: addEmail.trim(), tier: addTier }),
+      })
+      const json = await res.json()
+      if (!res.ok) { setAddError(json.error ?? 'Failed'); return }
+      // Add or update the user in local state
+      setUsers(prev => {
+        const exists = prev.find(u => u.user_id === json.user.user_id)
+        if (exists) return prev.map(u => u.user_id === json.user.user_id ? { ...u, tier: addTier } : u)
+        return [{ ...json.user, first_name: '', created_at: new Date().toISOString() }, ...prev]
+      })
+      setAddEmail('')
+    } finally {
+      setAddSaving(false)
     }
   }
 
@@ -94,6 +122,42 @@ export default function UserManagementPage() {
           <p className="text-gray-500 text-sm">
             {users.length} total users &nbsp;·&nbsp; {proCount} on Pro/Premium &nbsp;·&nbsp; {freeCount} on Free
           </p>
+        </div>
+
+        {/* Add Tester */}
+        <div className="mb-6 bg-white rounded-xl border border-indigo-200 shadow-sm p-5">
+          <h2 className="text-sm font-bold text-indigo-700 uppercase tracking-wide mb-3">Add / Grant Access</h2>
+          <div className="flex gap-3 items-start flex-wrap">
+            <input
+              type="email"
+              placeholder="tester@email.com"
+              value={addEmail}
+              onChange={e => { setAddEmail(e.target.value); setAddError(null) }}
+              onKeyDown={e => e.key === 'Enter' && addTester()}
+              className="flex-1 min-w-[220px] px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-indigo-500"
+            />
+            <select
+              value={addTier}
+              onChange={e => setAddTier(e.target.value as UserTier)}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 bg-white focus:outline-none focus:border-indigo-500"
+            >
+              <option value="FREE">Free</option>
+              <option value="ESSENTIAL">Essential</option>
+              <option value="PRO">Pro</option>
+              <option value="PREMIUM">Premium</option>
+            </select>
+            <button
+              onClick={addTester}
+              disabled={addSaving || !addEmail.trim()}
+              className="px-5 py-2 bg-indigo-600 text-white text-sm font-bold rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {addSaving ? 'Adding…' : 'Grant Access'}
+            </button>
+          </div>
+          {addError && (
+            <p className="mt-2 text-sm text-red-600 font-medium">{addError}</p>
+          )}
+          <p className="mt-2 text-xs text-gray-400">The tester must have already created an account. If they haven't signed up yet, add them once they do.</p>
         </div>
 
         {/* Search */}

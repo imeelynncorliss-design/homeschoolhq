@@ -50,6 +50,42 @@ export async function GET() {
   return NextResponse.json({ users: merged })
 }
 
+// PUT: find user by email and set their tier
+export async function PUT(req: Request) {
+  const supabase = await createServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user || !ADMIN_EMAILS.includes(user.email ?? '')) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+  }
+
+  const { email, tier } = await req.json()
+  if (!email || !tier) return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
+
+  const admin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  )
+
+  const { data: authUser, error: lookupError } = await admin.auth.admin.getUserByEmail(email.trim().toLowerCase())
+  if (lookupError || !authUser?.user) {
+    return NextResponse.json({ error: 'No account found for that email. They may not have signed up yet.' }, { status: 404 })
+  }
+
+  const user_id = authUser.user.id
+
+  const { error: subError } = await admin
+    .from('user_subscriptions')
+    .upsert({ user_id, tier, updated_at: new Date().toISOString() }, { onConflict: 'user_id' })
+  if (subError) return NextResponse.json({ error: subError.message }, { status: 500 })
+
+  await admin.from('user_profiles').update({ subscription_tier: tier }).eq('user_id', user_id)
+
+  return NextResponse.json({
+    success: true,
+    user: { user_id, email: authUser.user.email, tier },
+  })
+}
+
 export async function POST(req: Request) {
   // Verify caller is an admin
   const supabase = await createServerClient()
