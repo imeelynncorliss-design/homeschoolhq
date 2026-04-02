@@ -1,27 +1,37 @@
 /* Print styles for LessonCalendar component */
 
 @media print {
+    /* White page — prevent dark app background bleeding through */
+    html, body, .hr-page {
+      background: white !important;
+      background-color: white !important;
+    }
+
     /* Hide everything except the calendar */
     body * {
       visibility: hidden;
     }
-    
+
     /* Show only the calendar container and its children */
     .printable-calendar,
     .printable-calendar * {
       visibility: visible;
     }
-    
+
     .printable-calendar {
       position: absolute;
       left: 0;
       top: 0;
       width: 100%;
-      height: auto !important;
+      /* Fixed height that fits on one landscape page (9.5" × 7.5" at 96dpi ≈ 912×720px)
+         Header ~70px + legend ~36px + toolbar ~32px + calendar = ~582px */
+      height: 680px !important;
       max-height: none !important;
       min-height: 0 !important;
       box-shadow: none !important;
       border-radius: 0 !important;
+      background: white !important;
+      padding: 0 !important;
     }
     
     /* Hide interactive elements */
@@ -42,12 +52,16 @@
     .rbc-month-view {
       border: 2px solid #000 !important;
       border-radius: 0 !important;
-      height: auto !important;
+      height: 530px !important;
       page-break-inside: avoid;
     }
 
     .rbc-calendar {
-      height: auto !important;
+      height: 530px !important;
+    }
+
+    .rbc-month-rows {
+      flex: 1;
     }
     
     /* Header styling */
