@@ -1255,7 +1255,20 @@ function DashboardContent() {
         setIsCollaborator(true)
         setMyCollaboratorId(collab.id)
         orgId = collab.organization_id
-        localParentName = collab.name || user.email?.split('@')[0] || ''
+        // collab.name is stored as email placeholder on invite — resolve to a friendly name
+        const rawName = collab.name || ''
+        const isEmailPlaceholder = rawName.includes('@')
+        if (!isEmailPlaceholder && rawName) {
+          localParentName = rawName
+        } else {
+          // Try user_profiles for a real first name
+          const { data: collabProfile } = await supabase
+            .from('user_profiles')
+            .select('first_name')
+            .eq('user_id', user.id)
+            .maybeSingle()
+          localParentName = collabProfile?.first_name || user.email?.split('@')[0] || ''
+        }
         setParentName(localParentName)
         // Load tasks assigned to this co-teacher or open to anyone
         const { data: taskData } = await supabase
@@ -1919,8 +1932,41 @@ function DashboardContent() {
             )}
           </section>
 
+          {/* ── Co-teacher simplified actions ── */}
+          {isCollaborator && (
+            <section>
+              <div style={css.sectionRow}>
+                <span style={css.secTitle}>QUICK ACTIONS</span>
+              </div>
+              <div className="quick-grid" style={css.quickGrid}>
+                {[
+                  { key: 'today',      emoji: '📝', label: "Today's Learning",  sub: "View today's agenda",          bg: 'linear-gradient(135deg,#ede9fe,#ddd6fe)', iconBg: '#7c3aed', color: '#4c1d95', subColor: '#7c3aed', onClick: () => setShowToday(true) },
+                  { key: 'attendance', emoji: '✅', label: 'Log Attendance',     sub: "Mark today's school day",       bg: 'linear-gradient(135deg,#d1fae5,#a7f3d0)', iconBg: '#059669', color: '#064e3b', subColor: '#059669', onClick: () => router.push('/attendance') },
+                  { key: 'reading',    emoji: '📚', label: 'Log a Book',         sub: 'Add to reading log',            bg: 'linear-gradient(135deg,#ede9fe,#ddd6fe)', iconBg: '#7c3aed', color: '#4c1d95', subColor: '#7c3aed', onClick: () => router.push('/reading-log') },
+                  { key: 'activity',   emoji: '🚌', label: 'Log an Activity',    sub: 'Field trip, project, co-op',    bg: 'linear-gradient(135deg,#ccfbf1,#99f6e4)', iconBg: '#0d9488', color: '#134e4a', subColor: '#0d9488', onClick: () => router.push('/field-trips') },
+                  { key: 'scout',      emoji: null as null, imgSrc: '/Cardinal_Mascot.png', label: 'Ask Scout', sub: 'Ask me anything, anytime', bg: 'linear-gradient(135deg,#fef3c7,#fde68a)', iconBg: '#f59e0b', color: '#78350f', subColor: '#d97706', onClick: () => window.dispatchEvent(new CustomEvent('open-scout-copilot')) },
+                ].map(btn => (
+                  <button key={btn.key} className="quick-btn"
+                    style={{ ...css.quickCard, background: btn.bg }}
+                    onClick={btn.onClick}>
+                    <div style={{ ...css.qIcon, background: btn.iconBg }}>
+                      {(btn as any).imgSrc
+                        ? <img src={(btn as any).imgSrc} alt={btn.label} style={{ width: 36, height: 36, objectFit: 'contain' }} />
+                        : <span style={{ fontSize: 28 }}>{btn.emoji}</span>
+                      }
+                    </div>
+                    <div>
+                      <div style={{ ...css.qLabel, color: btn.color }}>{btn.label}</div>
+                      <div style={{ ...css.qSub, color: btn.subColor }}>{btn.sub}</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
+
           {/* Supply Scout + Quick Actions — wrapped together for tour highlight */}
-          <div id="tour-quick-actions">
+          {!isCollaborator && <div id="tour-quick-actions">
 
           {/* Supply Scout card */}
           <section>
@@ -2092,7 +2138,7 @@ function DashboardContent() {
             </div>
           </section>
 
-          </div>{/* end tour-quick-actions wrapper */}
+          </div>}{/* end tour-quick-actions wrapper (admin only) */}
 
         </main>
 
