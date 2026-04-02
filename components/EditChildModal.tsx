@@ -96,10 +96,16 @@ export default function EditChildModal({ kidId, defaultTab = 'info', onClose, on
       updated_at: new Date().toISOString(),
     }
     let { error } = await supabase.from('kids').update(fields).eq('id', kidId)
-    // If current_hook column doesn't exist yet, retry without it
-    if (error?.message?.includes('current_hook')) {
-      const { current_hook: _omit, ...fieldsWithout } = fields as any
-      const retry = await supabase.from('kids').update(fieldsWithout).eq('id', kidId)
+    // If a column doesn't exist yet (migration not run), strip new columns and retry with core fields only
+    if (error?.code === '42703' || error?.message?.includes('column') || error?.message?.includes('does not exist')) {
+      const coreFields = {
+        displayname: (fields as any).displayname,
+        grade:       (fields as any).grade,
+        learning_style: (fields as any).learning_style,
+        mi_profile:  (fields as any).mi_profile,
+        updated_at:  (fields as any).updated_at,
+      }
+      const retry = await supabase.from('kids').update(coreFields).eq('id', kidId)
       error = retry.error
     }
     setSaving(false)

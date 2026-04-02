@@ -158,26 +158,26 @@ export default function LessonCalendar({
     const goToNext = () => setCurrentDate(moment(currentDate).add(1, 'month').toDate())
 
     return (
-      <div className="flex justify-between items-center mb-6">
-        <div className="flex items-center gap-4">
-          <button type="button" onClick={goToBack} className="no-print p-2 hover:bg-gray-200 rounded transition-colors cursor-pointer">
-            <span className="text-2xl text-gray-700">←</span>
+      <div className="flex justify-between items-center mb-3">
+        <div className="flex items-center gap-3">
+          <button type="button" onClick={goToBack} className="no-print p-1.5 hover:bg-gray-200 rounded transition-colors cursor-pointer">
+            <span className="text-lg text-gray-700">←</span>
           </button>
-          <span className="text-xl font-bold text-gray-900">{moment(currentDate).format('MMMM YYYY')}</span>
-          <button type="button" onClick={goToNext} className="no-print p-2 hover:bg-gray-200 rounded transition-colors cursor-pointer">
-            <span className="text-2xl text-gray-700">→</span>
+          <span className="text-base font-bold text-gray-900">{moment(currentDate).format('MMMM YYYY')}</span>
+          <button type="button" onClick={goToNext} className="no-print p-1.5 hover:bg-gray-200 rounded transition-colors cursor-pointer">
+            <span className="text-lg text-gray-700">→</span>
           </button>
         </div>
-        <div className="no-print hidden sm:flex gap-2">
-          <button type="button" onClick={handlePrint} className="px-4 py-2 text-white rounded transition-colors flex items-center gap-2" style={{ background: '#7c3aed' }} onMouseEnter={e => (e.currentTarget.style.background='#6d28d9')} onMouseLeave={e => (e.currentTarget.style.background='#7c3aed')}>
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="no-print hidden sm:flex gap-1.5">
+          <button type="button" onClick={handlePrint} className="px-2.5 py-1 text-white rounded transition-colors flex items-center gap-1 text-xs font-semibold" style={{ background: '#7c3aed' }} onMouseEnter={e => (e.currentTarget.style.background='#6d28d9')} onMouseLeave={e => (e.currentTarget.style.background='#7c3aed')}>
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
             </svg>
-            <span>Print Calendar</span>
+            <span>Print</span>
           </button>
-          <button type="button" onClick={() => setShowFamilyNotes(true)} className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors flex items-center gap-2">
+          <button type="button" onClick={() => setShowFamilyNotes(true)} className="px-2.5 py-1 bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors flex items-center gap-1 text-xs font-semibold">
             <span>📝</span>
-            <span>Family Notes</span>
+            <span>Notes</span>
           </button>
         </div>
       </div>
@@ -333,8 +333,8 @@ export default function LessonCalendar({
   }
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <div className="printable-calendar rounded-lg p-6" style={{ height: 'calc(100vh - 260px)', minHeight: 420, maxHeight: 700, backgroundColor: '#f9fafb' }}>
+    <div className="bg-white rounded-lg shadow p-3">
+      <div className="printable-calendar rounded-lg p-3" style={{ height: 'calc(100vh - 230px)', minHeight: 420, maxHeight: 720, backgroundColor: '#f9fafb' }}>
         <div className="print-header hr-print-header" style={{ display: 'none' }}>
           <img src="/Cardinal_Mascot.png" alt="HomeschoolReady" className="hr-print-logo-img" />
           <div className="hr-print-logo-text">
