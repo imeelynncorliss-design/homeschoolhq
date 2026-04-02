@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { MI_INTELLIGENCES, MI_CLUSTERS } from '@/src/lib/learningProfiles'
+import { MI_INTELLIGENCES, MI_CLUSTERS, MI_REMEMBER } from '@/src/lib/learningProfiles'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -16,6 +16,13 @@ const LEARNING_STYLES = [
   { value: 'read_write',  label: '📝 Read / Write', desc: 'Learns through reading, note-taking, and text' },
   { value: 'kinesthetic', label: '🤲 Kinesthetic',  desc: 'Learns through doing, building, and moving' },
 ]
+
+// Readable cluster header colors for white/light backgrounds
+const CLUSTER_TEXT: Record<string, string> = {
+  analytical:    '#5b21b6',
+  introspective: '#1e40af',
+  interactive:   '#065f46',
+}
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -44,7 +51,7 @@ interface KidProfileFormProps {
 
 export default function KidProfileForm({ kid, onSave, onCancel }: KidProfileFormProps) {
   const isEditing = !!kid?.id
-  const [activeTab, setActiveTab] = useState<'core' | 'learning'>('core')
+  const [activeTab, setActiveTab] = useState<'core' | 'learning' | 'interests'>('core')
   const [saving, setSaving] = useState(false)
 
   // Core Info
@@ -62,8 +69,10 @@ export default function KidProfileForm({ kid, onSave, onCancel }: KidProfileForm
     kid?.learning_style ? kid.learning_style.split(',').map((s: string) => s.trim()) : []
   )
   const [miProfile, setMiProfile] = useState<string[]>(kid?.mi_profile ?? [])
+
+  // Interests
   const [currentHook, setCurrentHook] = useState(kid?.current_hook || '')
-  const [curriculum, setCurriculum] = useState(kid?.curriculum || '')
+  const [curriculum, setCurriculum]   = useState(kid?.curriculum || '')
 
   const toggleStyle = (value: string) => {
     setLearningStyles(prev =>
@@ -71,7 +80,6 @@ export default function KidProfileForm({ kid, onSave, onCancel }: KidProfileForm
     )
   }
 
-  // No cap — select as many MI as apply
   const toggleMi = (id: string) => {
     setMiProfile(prev =>
       prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
@@ -92,11 +100,6 @@ export default function KidProfileForm({ kid, onSave, onCancel }: KidProfileForm
   const coreComplete     = firstname.trim().length > 0
   const learningComplete = learningStyles.length > 0
   const canSave          = coreComplete && learningComplete
-
-  const tabStatus = {
-    core:     coreComplete,
-    learning: learningComplete,
-  }
 
   // ── Save ──────────────────────────────────────────────────────────────────
   const handleSave = async () => {
@@ -121,19 +124,20 @@ export default function KidProfileForm({ kid, onSave, onCancel }: KidProfileForm
     }
   }
 
-  // ── Tabs ──────────────────────────────────────────────────────────────────
-  const TABS = [
-    { id: 'core' as const,     label: 'Core Info',       done: tabStatus.core },
-    { id: 'learning' as const, label: 'How They Learn',  done: tabStatus.learning },
-  ]
-
+  // ── Shared styles ─────────────────────────────────────────────────────────
   const headerGradient = 'linear-gradient(135deg, #7c3aed, #4f46e5)'
-  const saveBtnStyle: React.CSSProperties = {
-    flex: 1, padding: '10px 14px', borderRadius: 12, border: 'none',
-    background: (!canSave || saving) ? '#c4b5fd' : headerGradient,
-    color: '#fff', fontWeight: 800, fontSize: 13, cursor: (!canSave || saving) ? 'not-allowed' : 'pointer',
-    fontFamily: "'Nunito', sans-serif", opacity: (!canSave || saving) ? 0.7 : 1,
+
+  const inputStyle: React.CSSProperties = {
+    width: '100%', padding: '10px 12px', border: '2px solid #e5e7eb',
+    borderRadius: 12, fontSize: 13, color: '#111827', outline: 'none',
+    fontFamily: "'Nunito', sans-serif", boxSizing: 'border-box',
   }
+
+  const TABS = [
+    { id: 'core' as const,      label: 'Core Info',      done: coreComplete },
+    { id: 'learning' as const,  label: 'How They Learn', done: learningComplete },
+    { id: 'interests' as const, label: 'Interests',      done: !!(currentHook || curriculum) },
+  ]
 
   return (
     <div style={{
@@ -147,7 +151,7 @@ export default function KidProfileForm({ kid, onSave, onCancel }: KidProfileForm
         overflow: 'hidden', maxHeight: 'calc(100vh - 104px)',
       }}>
 
-        {/* Header */}
+        {/* ── Header ── */}
         <div style={{ background: headerGradient, padding: '20px 24px 0', flexShrink: 0 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
@@ -163,9 +167,7 @@ export default function KidProfileForm({ kid, onSave, onCancel }: KidProfileForm
             <button
               onClick={onCancel}
               style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.8)', fontSize: 24, cursor: 'pointer', lineHeight: 1, padding: '0 0 4px' }}
-            >
-              ×
-            </button>
+            >×</button>
           </div>
 
           {/* Tab bar */}
@@ -176,8 +178,8 @@ export default function KidProfileForm({ kid, onSave, onCancel }: KidProfileForm
                 onClick={() => setActiveTab(tab.id)}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 6,
-                  padding: '8px 16px', borderRadius: '10px 10px 0 0', border: 'none',
-                  fontSize: 13, fontWeight: 800, cursor: 'pointer',
+                  padding: '8px 14px', borderRadius: '10px 10px 0 0', border: 'none',
+                  fontSize: 12, fontWeight: 800, cursor: 'pointer',
                   fontFamily: "'Nunito', sans-serif",
                   background: activeTab === tab.id ? '#fff' : 'rgba(255,255,255,0.15)',
                   color: activeTab === tab.id ? '#7c3aed' : 'rgba(255,255,255,0.85)',
@@ -193,10 +195,10 @@ export default function KidProfileForm({ kid, onSave, onCancel }: KidProfileForm
           </div>
         </div>
 
-        {/* Body */}
+        {/* ── Body ── */}
         <div style={{ flex: 1, overflowY: 'auto', padding: 24, display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-          {/* ── Core Info Tab ────────────────────────────────────────────── */}
+          {/* ── CORE INFO TAB ─────────────────────────────────────────────── */}
           {activeTab === 'core' && (
             <>
               {/* Photo */}
@@ -239,8 +241,7 @@ export default function KidProfileForm({ kid, onSave, onCancel }: KidProfileForm
                   </label>
                   <input
                     type="text" value={firstname} onChange={e => setFirstname(e.target.value)}
-                    placeholder="e.g. Emma" autoFocus
-                    style={{ width: '100%', padding: '10px 12px', border: '2px solid #e5e7eb', borderRadius: 12, fontSize: 13, color: '#111827', outline: 'none', fontFamily: "'Nunito', sans-serif", boxSizing: 'border-box' }}
+                    placeholder="e.g. Emma" autoFocus style={inputStyle}
                     onFocus={e => (e.target.style.borderColor = '#7c3aed')}
                     onBlur={e => (e.target.style.borderColor = '#e5e7eb')}
                   />
@@ -248,8 +249,7 @@ export default function KidProfileForm({ kid, onSave, onCancel }: KidProfileForm
                 <div>
                   <label style={{ display: 'block', fontSize: 13, fontWeight: 800, color: '#374151', marginBottom: 4 }}>Last Name</label>
                   <input
-                    type="text" value={lastname} onChange={e => setLastname(e.target.value)} placeholder="Last name"
-                    style={{ width: '100%', padding: '10px 12px', border: '2px solid #e5e7eb', borderRadius: 12, fontSize: 13, color: '#111827', outline: 'none', fontFamily: "'Nunito', sans-serif", boxSizing: 'border-box' }}
+                    type="text" value={lastname} onChange={e => setLastname(e.target.value)} placeholder="Last name" style={inputStyle}
                     onFocus={e => (e.target.style.borderColor = '#7c3aed')}
                     onBlur={e => (e.target.style.borderColor = '#e5e7eb')}
                   />
@@ -263,8 +263,7 @@ export default function KidProfileForm({ kid, onSave, onCancel }: KidProfileForm
                 </label>
                 <input
                   type="text" value={displayname} onChange={e => setDisplayname(e.target.value)}
-                  placeholder={`e.g. ${firstname || 'Em'}, Bug, Buddy...`}
-                  style={{ width: '100%', padding: '10px 12px', border: '2px solid #e5e7eb', borderRadius: 12, fontSize: 13, color: '#111827', outline: 'none', fontFamily: "'Nunito', sans-serif", boxSizing: 'border-box' }}
+                  placeholder={`e.g. ${firstname || 'Em'}, Bug, Buddy...`} style={inputStyle}
                   onFocus={e => (e.target.style.borderColor = '#7c3aed')}
                   onBlur={e => (e.target.style.borderColor = '#e5e7eb')}
                 />
@@ -278,25 +277,20 @@ export default function KidProfileForm({ kid, onSave, onCancel }: KidProfileForm
                 <div>
                   <label style={{ display: 'block', fontSize: 13, fontWeight: 800, color: '#374151', marginBottom: 4 }}>Age</label>
                   <input
-                    type="number" value={age} onChange={e => setAge(e.target.value)} placeholder="e.g. 9" min="3" max="18"
-                    style={{ width: '100%', padding: '10px 12px', border: '2px solid #e5e7eb', borderRadius: 12, fontSize: 13, color: '#111827', outline: 'none', fontFamily: "'Nunito', sans-serif", boxSizing: 'border-box' }}
+                    type="number" value={age} onChange={e => setAge(e.target.value)} placeholder="e.g. 9" min="3" max="18" style={inputStyle}
                     onFocus={e => (e.target.style.borderColor = '#7c3aed')}
                     onBlur={e => (e.target.style.borderColor = '#e5e7eb')}
                   />
                 </div>
                 <div>
                   <label style={{ display: 'block', fontSize: 13, fontWeight: 800, color: '#374151', marginBottom: 4 }}>Grade</label>
-                  <select
-                    value={grade} onChange={e => setGrade(e.target.value)}
-                    style={{ width: '100%', padding: '10px 12px', border: '2px solid #e5e7eb', borderRadius: 12, fontSize: 13, color: '#111827', outline: 'none', fontFamily: "'Nunito', sans-serif", background: '#fff', boxSizing: 'border-box' }}
-                  >
+                  <select value={grade} onChange={e => setGrade(e.target.value)} style={{ ...inputStyle, background: '#fff' }}>
                     <option value="">Select grade...</option>
                     {GRADES.map(g => <option key={g} value={g}>{g}</option>)}
                   </select>
                 </div>
               </div>
 
-              {/* Next tab nudge */}
               {coreComplete && (
                 <button
                   onClick={() => setActiveTab('learning')}
@@ -308,23 +302,23 @@ export default function KidProfileForm({ kid, onSave, onCancel }: KidProfileForm
             </>
           )}
 
-          {/* ── How They Learn Tab ───────────────────────────────────────── */}
+          {/* ── HOW THEY LEARN TAB ────────────────────────────────────────── */}
           {activeTab === 'learning' && (
             <>
-              {/* Premium callout */}
+              {/* Callout */}
               <div style={{ background: '#f5f3ff', border: '1px solid #ddd6fe', borderRadius: 12, padding: '10px 14px', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
                 <span style={{ fontSize: 16, flexShrink: 0 }}>💡</span>
-                <p style={{ fontSize: 12, color: '#6d28d9', lineHeight: 1.5, margin: 0, fontWeight: 600 }}>
+                <p style={{ fontSize: 12, color: '#5b21b6', lineHeight: 1.5, margin: 0, fontWeight: 600 }}>
                   <strong>This powers Scout's lesson generation.</strong> The more accurate this is, the more personalized every generated lesson will be.
                 </p>
               </div>
 
-              {/* Learning Style — multi-select */}
+              {/* Learning Style */}
               <div>
                 <label style={{ display: 'block', fontSize: 13, fontWeight: 800, color: '#374151', marginBottom: 4 }}>
                   How does {displayname || firstname || 'your child'} learn best? <span style={{ color: '#ef4444' }}>*</span>
                 </label>
-                <p style={{ fontSize: 11, color: '#9ca3af', marginBottom: 12 }}>
+                <p style={{ fontSize: 11, color: '#6b7280', marginBottom: 12 }}>
                   Select all that apply — Scout uses this to structure every lesson it generates
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -332,16 +326,12 @@ export default function KidProfileForm({ kid, onSave, onCancel }: KidProfileForm
                     const selected = learningStyles.includes(style.value)
                     return (
                       <button
-                        key={style.value}
-                        type="button"
-                        onClick={() => toggleStyle(style.value)}
+                        key={style.value} type="button" onClick={() => toggleStyle(style.value)}
                         style={{
-                          display: 'flex', alignItems: 'center', gap: 12,
-                          padding: '12px 14px', borderRadius: 12,
-                          border: `2px solid ${selected ? '#7c3aed' : '#e5e7eb'}`,
-                          background: selected ? '#f5f3ff' : '#fff',
-                          cursor: 'pointer', textAlign: 'left', width: '100%',
-                          fontFamily: "'Nunito', sans-serif", transition: 'all 0.15s',
+                          display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px',
+                          borderRadius: 12, border: `2px solid ${selected ? '#7c3aed' : '#e5e7eb'}`,
+                          background: selected ? '#f5f3ff' : '#fff', cursor: 'pointer',
+                          textAlign: 'left', width: '100%', fontFamily: "'Nunito', sans-serif", transition: 'all 0.15s',
                         }}
                       >
                         <div style={{
@@ -353,7 +343,7 @@ export default function KidProfileForm({ kid, onSave, onCancel }: KidProfileForm
                           {selected && <span style={{ color: '#fff', fontSize: 11, fontWeight: 900 }}>✓</span>}
                         </div>
                         <div style={{ flex: 1 }}>
-                          <p style={{ fontSize: 13, fontWeight: 800, color: selected ? '#6d28d9' : '#1f2937', margin: 0 }}>{style.label}</p>
+                          <p style={{ fontSize: 13, fontWeight: 800, color: selected ? '#5b21b6' : '#1f2937', margin: 0 }}>{style.label}</p>
                           <p style={{ fontSize: 11, color: '#6b7280', margin: '2px 0 0' }}>{style.desc}</p>
                         </div>
                       </button>
@@ -372,26 +362,33 @@ export default function KidProfileForm({ kid, onSave, onCancel }: KidProfileForm
                 <label style={{ display: 'block', fontSize: 13, fontWeight: 800, color: '#374151', marginBottom: 4 }}>
                   Multiple Intelligences <span style={{ fontWeight: 600, color: '#9ca3af' }}>(optional)</span>
                 </label>
-                <p style={{ fontSize: 11, color: '#9ca3af', marginBottom: 16 }}>
-                  Where do they naturally shine? Select all that apply — this powers the Teaching Blueprint.
+                <p style={{ fontSize: 11, color: '#6b7280', marginBottom: 4 }}>
+                  Where do they naturally shine? Select all that apply — this powers the{' '}
+                  <strong style={{ color: '#7c3aed' }}>Teaching Blueprint</strong>{' '}
+                  <span style={{ color: '#9ca3af' }}>(🪴 For Parents → Teaching Blueprint)</span>
                 </p>
+
                 {miProfile.length > 0 && (
-                  <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 4 }}>
+                  <div style={{ display: 'flex', justifyContent: 'center', margin: '8px 0' }}>
                     <div style={{ background: '#f5f3ff', border: '1.5px solid #c4b5fd', borderRadius: 20, padding: '4px 14px', fontSize: 13, fontWeight: 700, color: '#7c3aed' }}>
                       {miProfile.length} selected
                     </div>
                   </div>
                 )}
+
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                   {(['analytical', 'introspective', 'interactive'] as const).map(cluster => {
                     const clusterInfo = MI_CLUSTERS[cluster]
+                    const headerColor = CLUSTER_TEXT[cluster]
                     return (
                       <div key={cluster}>
-                        {/* Cluster header — matches onboarding: label — tagline on one line */}
-                        <div style={{ fontSize: 13, fontWeight: 800, color: clusterInfo.color, letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 8 }}>
-                          {clusterInfo.label} — <span style={{ fontWeight: 600, textTransform: 'none', letterSpacing: 0, fontSize: 13 }}>{clusterInfo.tagline}</span>
+                        {/* Cluster header — dark readable color */}
+                        <div style={{ fontSize: 13, fontWeight: 800, color: headerColor, letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 8 }}>
+                          {clusterInfo.label}{' '}
+                          <span style={{ fontWeight: 600, textTransform: 'none', letterSpacing: 0, fontSize: 12, color: '#4b5563' }}>
+                            — {clusterInfo.tagline}
+                          </span>
                         </div>
-                        {/* MI cards — always show detail, circle check on right */}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                           {MI_INTELLIGENCES.filter(m => m.cluster === cluster).map(m => {
                             const selected = miProfile.includes(m.id)
@@ -400,9 +397,7 @@ export default function KidProfileForm({ kid, onSave, onCancel }: KidProfileForm
                               : ''
                             return (
                               <button
-                                key={m.id}
-                                type="button"
-                                onClick={() => toggleMi(m.id)}
+                                key={m.id} type="button" onClick={() => toggleMi(m.id)}
                                 style={{
                                   display: 'flex', alignItems: 'flex-start', gap: 14,
                                   padding: '14px 16px', borderRadius: 14, width: '100%',
@@ -412,19 +407,16 @@ export default function KidProfileForm({ kid, onSave, onCancel }: KidProfileForm
                                   fontFamily: "'Nunito', sans-serif", transition: 'all 0.15s',
                                 }}
                               >
-                                {/* Emoji */}
                                 <span style={{ fontSize: 28, lineHeight: 1, flexShrink: 0 }}>{m.emoji}</span>
-                                {/* Text */}
                                 <div style={{ flex: 1 }}>
-                                  <div style={{ fontSize: 15, fontWeight: 800, color: selected ? '#6d28d9' : '#1f2937', marginBottom: 4, lineHeight: 1.2 }}>
+                                  <div style={{ fontSize: 15, fontWeight: 800, color: selected ? '#5b21b6' : '#1f2937', marginBottom: 4, lineHeight: 1.2 }}>
                                     {m.name}
                                     {subtitle && (
                                       <span style={{ fontSize: 12, fontWeight: 600, color: '#9ca3af', marginLeft: 6 }}>({subtitle})</span>
                                     )}
                                   </div>
-                                  <div style={{ fontSize: 13, color: selected ? '#4b5563' : '#6b7280', lineHeight: 1.6 }}>{m.detail}</div>
+                                  <div style={{ fontSize: 13, color: '#4b5563', lineHeight: 1.6 }}>{m.detail}</div>
                                 </div>
-                                {/* Circle check — right side, matches onboarding */}
                                 <div style={{
                                   width: 22, height: 22, borderRadius: '50%', flexShrink: 0, marginTop: 2,
                                   border: `2px solid ${selected ? '#a855f7' : '#d1d5db'}`,
@@ -442,11 +434,41 @@ export default function KidProfileForm({ kid, onSave, onCancel }: KidProfileForm
                     )
                   })}
                 </div>
-                {miProfile.length > 0 && (
-                  <p style={{ fontSize: 11, color: '#7c3aed', fontWeight: 700, marginTop: 10 }}>
-                    ✓ {miProfile.length} intelligence{miProfile.length !== 1 ? 's' : ''} selected
-                  </p>
+
+                {/* Remember section — always shown after the MI list */}
+                <div style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 12, padding: '12px 16px', marginTop: 16 }}>
+                  <div style={{ fontSize: 11, fontWeight: 900, color: '#6b7280', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 8 }}>
+                    Remember
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <div style={{ fontSize: 13, color: '#374151', fontWeight: 700 }}>· This is your child's superpower! 🌟</div>
+                    {MI_REMEMBER.map(r => (
+                      <div key={r} style={{ fontSize: 13, color: '#6b7280', fontWeight: 600 }}>· {r}</div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* "Next" nudge after completing learning tab */}
+                {learningComplete && (
+                  <button
+                    onClick={() => setActiveTab('interests')}
+                    style={{ width: '100%', marginTop: 8, padding: '12px', background: headerGradient, color: '#fff', border: 'none', borderRadius: 12, fontWeight: 800, fontSize: 13, cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}
+                  >
+                    Next: Interests →
+                  </button>
                 )}
+              </div>
+            </>
+          )}
+
+          {/* ── INTERESTS TAB ─────────────────────────────────────────────── */}
+          {activeTab === 'interests' && (
+            <>
+              <div style={{ background: '#f5f3ff', border: '1px solid #ddd6fe', borderRadius: 12, padding: '10px 14px', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                <span style={{ fontSize: 16, flexShrink: 0 }}>🎯</span>
+                <p style={{ fontSize: 12, color: '#5b21b6', lineHeight: 1.5, margin: 0, fontWeight: 600 }}>
+                  Scout weaves their interests and curriculum into every lesson and activity it generates — the more you add, the better the fit.
+                </p>
               </div>
 
               {/* Current Hook */}
@@ -454,13 +476,13 @@ export default function KidProfileForm({ kid, onSave, onCancel }: KidProfileForm
                 <label style={{ display: 'block', fontSize: 13, fontWeight: 800, color: '#374151', marginBottom: 4 }}>
                   What are they into right now? <span style={{ fontWeight: 600, color: '#9ca3af' }}>(optional)</span>
                 </label>
-                <p style={{ fontSize: 11, color: '#9ca3af', marginBottom: 8 }}>
-                  Scout weaves their current interests into lessons — update this as their obsessions change
+                <p style={{ fontSize: 11, color: '#6b7280', marginBottom: 8 }}>
+                  Update this as their obsessions change — Scout will weave it into lessons automatically
                 </p>
                 <input
                   type="text" value={currentHook} onChange={e => setCurrentHook(e.target.value)}
                   placeholder="e.g. Minecraft, Dinosaurs, Drawing animals, Space..."
-                  style={{ width: '100%', padding: '10px 12px', border: '2px solid #e5e7eb', borderRadius: 12, fontSize: 13, color: '#111827', outline: 'none', fontFamily: "'Nunito', sans-serif", boxSizing: 'border-box' }}
+                  style={inputStyle}
                   onFocus={e => (e.target.style.borderColor = '#7c3aed')}
                   onBlur={e => (e.target.style.borderColor = '#e5e7eb')}
                 />
@@ -471,13 +493,10 @@ export default function KidProfileForm({ kid, onSave, onCancel }: KidProfileForm
                 <label style={{ display: 'block', fontSize: 13, fontWeight: 800, color: '#374151', marginBottom: 4 }}>
                   Curriculum <span style={{ fontWeight: 600, color: '#9ca3af' }}>(optional)</span>
                 </label>
-                <p style={{ fontSize: 11, color: '#9ca3af', marginBottom: 8 }}>
+                <p style={{ fontSize: 11, color: '#6b7280', marginBottom: 8 }}>
                   Scout aligns lesson structure and terminology with your chosen curriculum
                 </p>
-                <select
-                  value={curriculum} onChange={e => setCurriculum(e.target.value)}
-                  style={{ width: '100%', padding: '10px 12px', border: '2px solid #e5e7eb', borderRadius: 12, fontSize: 13, color: '#111827', outline: 'none', fontFamily: "'Nunito', sans-serif", background: '#fff', boxSizing: 'border-box' }}
-                >
+                <select value={curriculum} onChange={e => setCurriculum(e.target.value)} style={{ ...inputStyle, background: '#fff' }}>
                   <option value="">Select curriculum...</option>
                   <optgroup label="All-in-One">
                     {['Sonlight', 'Abeka', 'BJU Press', "My Father's World", 'Classical Conversations', 'Memoria Press', 'Veritas Press', 'Bookshark', 'The Good and the Beautiful'].map(c => (
@@ -512,9 +531,10 @@ export default function KidProfileForm({ kid, onSave, onCancel }: KidProfileForm
               </div>
             </>
           )}
+
         </div>
 
-        {/* Footer */}
+        {/* ── Footer ── */}
         <div style={{ flexShrink: 0, borderTop: '1px solid #f3f4f6', padding: '14px 24px', display: 'flex', gap: 10, background: '#fafafa' }}>
           <button
             onClick={onCancel}
@@ -539,7 +559,17 @@ export default function KidProfileForm({ kid, onSave, onCancel }: KidProfileForm
             </div>
           )}
 
-          <button onClick={handleSave} disabled={!canSave || saving} style={saveBtnStyle}>
+          <button
+            onClick={handleSave}
+            disabled={!canSave || saving}
+            style={{
+              flex: 1, padding: '10px 14px', borderRadius: 12, border: 'none',
+              background: (!canSave || saving) ? '#c4b5fd' : headerGradient,
+              color: '#fff', fontWeight: 800, fontSize: 13,
+              cursor: (!canSave || saving) ? 'not-allowed' : 'pointer',
+              fontFamily: "'Nunito', sans-serif", opacity: (!canSave || saving) ? 0.7 : 1,
+            }}
+          >
             {saving ? 'Saving...' : isEditing ? 'Save Changes' : 'Add Child'}
           </button>
         </div>
