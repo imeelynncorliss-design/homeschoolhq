@@ -45,6 +45,8 @@ export default function UserManagementPage() {
   const [addSuccess, setAddSuccess]   = useState<string | null>(null)
   const [confirm, setConfirm]         = useState<ConfirmAction | null>(null)
   const [actionSaving, setActionSaving] = useState(false)
+  const [page, setPage]               = useState(1)
+  const PAGE_SIZE = 25
   const router   = useRouter()
   const supabase = createClient()
 
@@ -149,6 +151,8 @@ export default function UserManagementPage() {
     u.email.toLowerCase().includes(search.toLowerCase()) ||
     (u.first_name ?? '').toLowerCase().includes(search.toLowerCase())
   )
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  const paginated  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   if (!isAdmin || loading) return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -164,7 +168,7 @@ export default function UserManagementPage() {
   const banned    = users.filter(u => u.is_banned).length
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gray-50 p-6 pb-36">
       <div className="max-w-[1280px] mx-auto">
 
         {/* Confirm modal */}
@@ -314,7 +318,7 @@ export default function UserManagementPage() {
           type="text"
           placeholder="Search by name or email…"
           value={search}
-          onChange={e => setSearch(e.target.value)}
+          onChange={e => { setSearch(e.target.value); setPage(1) }}
           className="w-full mb-4 px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-900 focus:outline-none focus:border-indigo-500"
         />
 
@@ -336,14 +340,14 @@ export default function UserManagementPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filtered.length === 0 ? (
+              {paginated.length === 0 ? (
                 <tr>
                   <td colSpan={10} className="px-5 py-8 text-center text-gray-400 text-sm">
                     {search ? 'No users match that search.' : 'No users found.'}
                   </td>
                 </tr>
               ) : (
-                filtered.map(user => {
+                paginated.map(user => {
                   const isAdminUser = ADMIN_EMAILS.includes(user.email)
                   return (
                     <tr key={user.user_id} className={`hover:bg-gray-50 ${user.is_banned ? 'opacity-60 bg-amber-50' : ''}`}>
@@ -441,9 +445,53 @@ export default function UserManagementPage() {
           </table>
         </div>
 
-        <p className="mt-4 text-xs text-gray-400 text-center">
-          {filtered.length} of {users.length} users shown
-        </p>
+        {/* Pagination */}
+        <div className="mt-4 flex items-center justify-between">
+          <p className="text-xs text-gray-400">
+            Showing {filtered.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} of {filtered.length} users
+          </p>
+          {totalPages > 1 && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="px-3 py-1.5 text-sm font-semibold border border-gray-300 rounded-lg bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                ← Prev
+              </button>
+              <div className="flex gap-1">
+                {(totalPages <= 7
+                  ? Array.from({ length: totalPages }, (_, i) => i + 1)
+                  : [1, 2, page > 3 ? '…' : null, ...(page > 2 && page < totalPages - 1 ? [page - 1, page, page + 1] : []), page < totalPages - 2 ? '…' : null, totalPages - 1, totalPages]
+                      .filter((v, i, a) => v !== null && a.indexOf(v) === i) as (number | string)[]
+                ).map((n, i) =>
+                  n === '…' ? (
+                    <span key={`ellipsis-${i}`} className="w-8 h-8 flex items-center justify-center text-gray-400 text-sm">…</span>
+                  ) : (
+                    <button
+                      key={n}
+                      onClick={() => setPage(n as number)}
+                      className={`w-8 h-8 text-sm font-bold rounded-lg ${
+                        n === page
+                          ? 'bg-indigo-600 text-white'
+                          : 'bg-white border border-gray-300 text-gray-600 hover:bg-gray-50'
+                      }`}
+                    >
+                      {n}
+                    </button>
+                  )
+                )}
+              </div>
+              <button
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                className="px-3 py-1.5 text-sm font-semibold border border-gray-300 rounded-lg bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Next →
+              </button>
+            </div>
+          )}
+        </div>
 
       </div>
     </div>
