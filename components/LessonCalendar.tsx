@@ -375,7 +375,7 @@ export default function LessonCalendar({
           .rbc-now { background-color: #dbeafe !important; }
           .rbc-today { background-color: #dbeafe !important; }
           .rbc-header { padding: 12px 4px; font-weight: 600; color: #6b7280 !important; border-bottom: 1px solid #e5e7eb; background-color: #ffffff; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px; }
-          .rbc-month-view { border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; background-color: #ffffff; }
+          .rbc-month-view { border: none; border-radius: 0; overflow: hidden; background-color: #ffffff; }
           .rbc-day-bg { background-color: #ffffff !important; border-color: #e5e7eb !important; }
           .rbc-day-bg:hover { background-color: #f9fafb !important; }
           .rbc-off-range-bg { background-color: #f9fafb !important; }
