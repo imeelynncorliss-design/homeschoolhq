@@ -1,36 +1,54 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# HomeschoolReady
 
-## Getting Started
+**HomeschoolReady** is a web-based homeschool management platform developed and operated by **HomeschoolReady, LLC**.
 
-First, run the development server:
+Live at: [https://www.homeschoolready.app](https://www.homeschoolready.app)
+
+---
+
+## About
+
+HomeschoolReady helps homeschooling families plan, track, and manage their child's education in one place. The platform combines AI-powered lesson planning with compliance tracking, attendance logging, curriculum management, and personalized learning profiles — all designed specifically for home educators.
+
+### Core Features
+
+- **Scout AI Co-Pilot** — AI-powered lesson planning, activity generation, and curriculum import via PDF or photo
+- **Lesson & Subject Management** — schedule lessons, track completion, and manage subjects by child
+- **Attendance Tracking** — daily attendance logging with compliance monitoring against state requirements
+- **Learning Profiles** — learning style assessments (VARK) and Multiple Intelligences (MI) profiles per child
+- **Progress & Records** — compliance reports, transcripts, progress reports, reading logs, field trip logs, and portfolio
+- **Supply Scout** — automatic materials list compiled from upcoming lessons
+- **Standards Tracking** — import and tag Common Core State Standards to lessons
+- **Vacation & Schedule Planning** — bulk scheduling, vacation/holiday blocking, and Google Calendar sync
+- **Co-Teacher Access** — invite spouses, grandparents, or tutors with their own login
+
+---
+
+## Technology
+
+- **Framework:** Next.js (App Router)
+- **Language:** TypeScript
+- **Database & Auth:** Supabase (PostgreSQL + Row Level Security)
+- **Deployment:** Vercel
+- **AI:** OpenAI API (GPT-4o)
+
+---
+
+## Development
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) to view the app locally.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Legal
 
-## Learn More
+Copyright &copy; 2024–2025 HomeschoolReady, LLC. All rights reserved.
 
-To learn more about Next.js, take a look at the following resources:
+HomeschoolReady is a trademark of HomeschoolReady, LLC.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+For inquiries: [team@homeschoolready.app](mailto:team@homeschoolready.app)
