@@ -297,7 +297,7 @@ function ProfileContent() {
     {kidMenuOpen && (
       <div style={{ position: 'fixed', inset: 0, zIndex: 40 }} onClick={() => setKidMenuOpen(null)} />
     )}
-    <div className="hr-page" style={{ fontFamily: "'Nunito', sans-serif", paddingBottom: 88 }}>
+    <div className="hr-page" style={{ fontFamily: "'Nunito', sans-serif", paddingBottom: 140 }}>
       <style>{`.profile-kid-row:hover { background: rgba(124,58,237,0.04) !important; }`}</style>
 
       <div style={{ maxWidth: 600, margin: '0 auto', padding: '16px 20px 0' }}>
