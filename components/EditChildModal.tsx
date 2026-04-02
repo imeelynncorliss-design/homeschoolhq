@@ -95,7 +95,13 @@ export default function EditChildModal({ kidId, defaultTab = 'info', onClose, on
       current_hook: currentHook.trim() || null,
       updated_at: new Date().toISOString(),
     }
-    const { error } = await supabase.from('kids').update(fields).eq('id', kidId)
+    let { error } = await supabase.from('kids').update(fields).eq('id', kidId)
+    // If current_hook column doesn't exist yet, retry without it
+    if (error?.message?.includes('current_hook')) {
+      const { current_hook: _omit, ...fieldsWithout } = fields as any
+      const retry = await supabase.from('kids').update(fieldsWithout).eq('id', kidId)
+      error = retry.error
+    }
     setSaving(false)
     if (error) {
       setSaveError('Save failed — please try again.')
