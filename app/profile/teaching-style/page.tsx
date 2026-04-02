@@ -5,8 +5,8 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/src/lib/supabase/client'
 import AuthGuard from '@/components/AuthGuard'
 import { getOrganizationId } from '@/src/lib/getOrganizationId'
-
-const GRADIENT = 'linear-gradient(135deg, #c4b5fd 0%, #e879f9 18%, #f0abfc 36%, #fbcfe8 54%, #bae6fd 76%, #6ee7b7 100%)'
+import { useAppHeader } from '@/components/layout/AppHeader'
+import { colors } from '@/src/lib/designTokens'
 
 // ─── Data ──────────────────────────────────────────────────────────────────────
 
@@ -107,6 +107,7 @@ function scoreQuiz(answers: string[]): string {
 function TeachingStyleContent() {
   const router   = useRouter()
   const supabase = createClient()
+  useAppHeader({ title: 'Teaching Style', backHref: '/profile' })
 
   const [loading,      setLoading]      = useState(true)
   const [saving,       setSaving]       = useState(false)
@@ -153,8 +154,9 @@ function TeachingStyleContent() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: GRADIENT }}>
-        <div style={{ color: '#7c3aed', fontWeight: 800, fontSize: 18, fontFamily: "'Nunito', sans-serif" }}>Loading...</div>
+      <div style={{ minHeight: '100vh', background: colors.pageBackground, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ width: 40, height: 40, borderRadius: '50%', border: '3px solid #e9d5ff', borderTopColor: '#7c3aed', animation: 'spin 0.8s linear infinite' }} />
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     )
   }
@@ -162,20 +164,12 @@ function TeachingStyleContent() {
   const currentStyle = current ? STYLES[current] : null
 
   return (
-    <div style={{ fontFamily: "'Nunito', sans-serif", minHeight: '100vh', background: GRADIENT }}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
-        *, *::before, *::after { box-sizing: border-box; }
-        body { margin: 0; }
-        .style-opt:hover { background: rgba(124,58,237,0.04) !important; }
-      `}</style>
+    <div className="hr-page" style={{ fontFamily: "'Nunito', sans-serif" }}>
+      <style>{`.style-opt:hover { background: rgba(124,58,237,0.06) !important; }`}</style>
 
-      <div style={{ maxWidth: 600, margin: '0 auto', padding: '16px 20px' }}>
+      <div style={{ maxWidth: 600, margin: '0 auto', padding: '24px 20px 0' }}>
 
-        {/* Header */}
-        <div style={{ marginBottom: 24 }}>
-          <h1 style={{ margin: 0, fontSize: 20, fontWeight: 900, color: '#1a1a2e' }}>Teaching Style</h1>
-        </div>
+        <h1 className="hr-h1" style={{ fontSize: 24, margin: '0 0 20px' }}>Teaching Style</h1>
 
         {/* ── IDLE: show current or entry point ── */}
         {mode === 'idle' && (
@@ -312,8 +306,8 @@ function TeachingStyleContent() {
                   style={{
                     display: 'flex', alignItems: 'center', gap: 14,
                     padding: '16px 18px', borderRadius: 16, cursor: 'pointer',
-                    border: selected ? '2px solid #7c3aed' : '1.5px solid rgba(124,58,237,0.2)',
-                    background: selected ? '#f5f3ff' : 'rgba(255,255,255,0.88)',
+                    border: selected ? '2px solid #7c3aed' : '1.5px solid rgba(255,255,255,0.15)',
+                    background: selected ? '#f5f3ff' : 'rgba(255,255,255,0.92)',
                     fontFamily: "'Nunito', sans-serif", textAlign: 'left',
                     boxShadow: '0 2px 10px rgba(0,0,0,0.06)',
                     transition: 'all 0.12s',
@@ -356,14 +350,15 @@ function TeachingStyleContent() {
 // ─── Shared styles ─────────────────────────────────────────────────────────────
 
 const card: React.CSSProperties = {
-  background: 'rgba(255,255,255,0.88)', borderRadius: 22,
-  border: '1.5px solid rgba(124,58,237,0.15)',
-  padding: '24px 22px',
-  boxShadow: '0 2px 14px rgba(0,0,0,0.08)',
+  background: 'rgba(255,255,255,0.92)', borderRadius: 16,
+  border: '1.5px solid rgba(124,58,237,0.10)',
+  padding: '22px 20px',
+  boxShadow: '0 4px 24px rgba(124,58,237,0.08)',
+  marginBottom: 16,
 }
 
 const primaryBtn: React.CSSProperties = {
-  background: 'linear-gradient(135deg, #7c3aed, #ec4899)',
+  background: '#7c3aed',
   border: 'none', borderRadius: 12, color: '#fff',
   fontSize: 14, fontWeight: 800, padding: '12px 20px',
   cursor: 'pointer', fontFamily: "'Nunito', sans-serif",
@@ -371,23 +366,22 @@ const primaryBtn: React.CSSProperties = {
 }
 
 const outlineBtn: React.CSSProperties = {
-  background: '#fff', border: '1.5px solid rgba(124,58,237,0.3)',
+  background: 'rgba(255,255,255,0.8)', border: '1.5px solid rgba(124,58,237,0.3)',
   borderRadius: 12, color: '#7c3aed',
   fontSize: 14, fontWeight: 800, padding: '12px 20px',
   cursor: 'pointer', fontFamily: "'Nunito', sans-serif",
 }
 
 const linkBtn: React.CSSProperties = {
-  background: 'none', border: 'none', color: '#7c3aed',
+  background: 'none', border: 'none', color: 'rgba(255,255,255,0.7)',
   fontSize: 13, fontWeight: 700, cursor: 'pointer',
   fontFamily: "'Nunito', sans-serif", padding: 0,
-  textDecoration: 'underline', textDecorationColor: 'rgba(124,58,237,0.3)',
 }
 
 export default function TeachingStylePage() {
   return (
     <AuthGuard>
-      <Suspense fallback={<div style={{ minHeight: '100vh', background: GRADIENT }} />}>
+      <Suspense fallback={<div style={{ minHeight: '100vh', background: '#3d3a52' }} />}>
         <TeachingStyleContent />
       </Suspense>
     </AuthGuard>
