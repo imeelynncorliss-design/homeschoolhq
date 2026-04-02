@@ -178,31 +178,25 @@ export default function WeatherWidget() {
   // ── Pre-prompt: explain what location is used for before the browser asks ──
   if (status === 'pre-prompt') {
     return (
-      <div style={{ ...card, gap: 10, flexWrap: 'wrap' as const }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
-          <img src="/Cardinal_Mascot.png" alt="Scout" style={{ width: 32, height: 32, objectFit: 'contain', flexShrink: 0 }} />
-          <div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: '#374151', lineHeight: 1.3 }}>
-              Enable weather & Scout's daily tip ☀️
-            </div>
-            <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>
-              HomeschoolReady uses your location <strong>only</strong> to show today's local weather and Scout's personalized daily greeting. It's never stored or shared.
-            </div>
-          </div>
-        </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
+      <div style={{ ...card, padding: '10px 14px', gap: 10, alignItems: 'center', flexWrap: 'nowrap' as const }}>
+        <img src="/Cardinal_Mascot.png" alt="Scout" style={{ width: 24, height: 24, objectFit: 'contain', flexShrink: 0 }} />
+        <span style={{ fontSize: 12, fontWeight: 600, color: '#374151', flex: 1, minWidth: 0 }}>
+          ☀️ Turn on location for weather + Scout's daily tip
+          <span style={{ color: '#6b7280', fontWeight: 400 }}> — only used for local weather, never stored.</span>
+        </span>
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
           <button
             onClick={requestLocation}
-            style={{ fontSize: 12, fontWeight: 700, color: '#fff', background: '#7c3aed', border: 'none', borderRadius: 8, padding: '6px 14px', cursor: 'pointer' }}
+            style={{ fontSize: 12, fontWeight: 700, color: '#fff', background: '#7c3aed', border: 'none', borderRadius: 8, padding: '5px 12px', cursor: 'pointer', whiteSpace: 'nowrap' as const }}
           >
-            Turn on ✓
+            Turn on
           </button>
           <button
             onClick={() => {
               try { localStorage.setItem(DISMISSED_KEY, '1') } catch {}
               setNudgeDismissed(true)
             }}
-            style={{ fontSize: 12, color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer', padding: '6px 4px' }}
+            style={{ fontSize: 12, color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer', padding: '5px 2px', whiteSpace: 'nowrap' as const }}
           >
             Not now
           </button>
@@ -215,22 +209,16 @@ export default function WeatherWidget() {
   if (status === 'denied') {
     if (nudgeDismissed) return null
     return (
-      <div style={{ ...card, gap: 10, flexWrap: 'wrap' as const }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
-          <img src="/Cardinal_Mascot.png" alt="Scout" style={{ width: 28, height: 28, objectFit: 'contain', flexShrink: 0 }} />
-          <div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: '#374151', lineHeight: 1.3 }}>
-              Get weather + Scout's daily tip ☀️
-            </div>
-            <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>
-              Turn on location to see live weather and a personalized Scout greeting each day.
-            </div>
-          </div>
-        </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
+      <div style={{ ...card, padding: '10px 14px', gap: 10, alignItems: 'center', flexWrap: 'nowrap' as const }}>
+        <img src="/Cardinal_Mascot.png" alt="Scout" style={{ width: 24, height: 24, objectFit: 'contain', flexShrink: 0 }} />
+        <span style={{ fontSize: 12, fontWeight: 600, color: '#374151', flex: 1, minWidth: 0 }}>
+          ☀️ See weather + Scout's daily tip
+          <span style={{ color: '#6b7280', fontWeight: 400 }}> — enable location to unlock this.</span>
+        </span>
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
           <button
             onClick={() => setShowHowTo(true)}
-            style={{ fontSize: 12, fontWeight: 700, color: '#7c3aed', background: '#ede9fe', border: 'none', borderRadius: 8, padding: '6px 12px', cursor: 'pointer' }}
+            style={{ fontSize: 12, fontWeight: 700, color: '#7c3aed', background: '#ede9fe', border: 'none', borderRadius: 8, padding: '5px 10px', cursor: 'pointer', whiteSpace: 'nowrap' as const }}
           >
             How to enable
           </button>
@@ -239,7 +227,7 @@ export default function WeatherWidget() {
               try { localStorage.setItem(DISMISSED_KEY, '1') } catch {}
               setNudgeDismissed(true)
             }}
-            style={{ fontSize: 12, color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer', padding: '6px 4px' }}
+            style={{ fontSize: 12, color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer', padding: '5px 2px', whiteSpace: 'nowrap' as const }}
           >
             Not now
           </button>
