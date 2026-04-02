@@ -17,6 +17,11 @@
       left: 0;
       top: 0;
       width: 100%;
+      height: auto !important;
+      max-height: none !important;
+      min-height: 0 !important;
+      box-shadow: none !important;
+      border-radius: 0 !important;
     }
     
     /* Hide interactive elements */
@@ -36,7 +41,13 @@
     
     .rbc-month-view {
       border: 2px solid #000 !important;
+      border-radius: 0 !important;
+      height: auto !important;
       page-break-inside: avoid;
+    }
+
+    .rbc-calendar {
+      height: auto !important;
     }
     
     /* Header styling */
@@ -146,20 +157,31 @@
     
     /* Print header */
     .print-header {
-      text-align: center;
-      margin-bottom: 16px;
+      display: flex !important;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #7c3aed;
       page-break-inside: avoid;
     }
-    
+
+    .hr-print-logo-img {
+      width: 46px !important;
+      height: 46px !important;
+      object-fit: contain !important;
+      flex-shrink: 0;
+    }
+
     .print-header h1 {
-      font-size: 20px;
+      font-size: 16px;
       font-weight: 700;
       color: #000;
-      margin: 0 0 4px 0;
+      margin: 0 0 2px 0;
     }
-    
+
     .print-header p {
-      font-size: 12px;
+      font-size: 11px;
       color: #666;
       margin: 0;
     }
