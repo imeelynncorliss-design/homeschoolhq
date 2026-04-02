@@ -119,6 +119,33 @@ export async function DELETE(req: Request) {
   }
 
   const admin = adminClient()
+
+  // Manually clean up tables that may not have CASCADE yet.
+  // Once the cascade migration is applied these become no-ops, but they
+  // ensure delete works even before the migration runs.
+  await Promise.all([
+    admin.from('user_subscriptions').delete().eq('user_id', user_id),
+    admin.from('user_agreements').delete().eq('user_id', user_id),
+    admin.from('user_standards').delete().eq('user_id', user_id),
+    admin.from('ai_usage').delete().eq('user_id', user_id),
+    admin.from('community_profiles').delete().eq('user_id', user_id),
+    admin.from('family_collaborators').delete().eq('user_id', user_id),
+    admin.from('collaborator_invites').delete().eq('from_user_id', user_id),
+    admin.from('collaborator_invites').delete().eq('to_user_id', user_id),
+    admin.from('connection_requests').delete().eq('from_user_id', user_id),
+    admin.from('connection_requests').delete().eq('to_user_id', user_id),
+  ])
+
+  // Delete the organization and everything hanging off it
+  await admin.from('organizations').delete().eq('user_id', user_id)
+
+  // Remove from any orgs they're a member of (co-teacher etc.)
+  await admin.from('user_organizations').delete().eq('user_id', user_id)
+
+  // user_profiles last (other tables may reference it)
+  await admin.from('user_profiles').delete().eq('user_id', user_id)
+
+  // Finally delete the auth user
   const { error } = await admin.auth.admin.deleteUser(user_id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
