@@ -126,7 +126,11 @@ function ToolsContent() {
             <div style={{ width: 52, height: 52, borderRadius: 16, background: 'linear-gradient(135deg, #ede9fe, #dbeafe)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, marginBottom: 4 }}>👩‍🏫</div>
             <div style={{ fontSize: 16, fontWeight: 800, color: '#1a1a2e', marginBottom: 3 }}>Co-Teachers</div>
             <div style={{ fontSize: 13, color: '#4b5563', fontWeight: 600, lineHeight: 1.4, flex: 1 }}>
-              Invite a spouse, grandparent, or tutor to view and log lessons alongside you. They get their own login with access to your school.
+              Invite a spouse, grandparent, or tutor to teach alongside you. They get their own login and can view lessons, log attendance, and add notes — without seeing your account settings.
+              <div style={{ marginTop: 8, padding: '8px 10px', background: '#f5f3ff', borderRadius: 8, fontSize: 12, color: '#6b7280', lineHeight: 1.5 }}>
+                <strong style={{ color: '#7c3aed' }}>What co-teachers can do:</strong> view the calendar, log lessons &amp; attendance, add daily notes.<br />
+                <strong style={{ color: '#7c3aed' }}>What they can't do:</strong> change school settings, manage billing, or invite others.
+              </div>
             </div>
             <button style={btnStyle} onClick={() => router.push('/co-teachers')}>👩‍🏫 Manage Co-Teachers</button>
           </div>
