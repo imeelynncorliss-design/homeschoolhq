@@ -38,10 +38,17 @@ export default function BottomNav() {
       position: 'fixed', bottom: 0, left: 0, right: 0,
       background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #a855f7 100%)',
       borderTop: '1px solid rgba(255,255,255,0.1)',
-      display: 'flex', zIndex: 100,
-      padding: '8px 0 12px',
+      display: 'flex', flexDirection: 'column', zIndex: 100,
       boxShadow: '0 -4px 20px rgba(79,70,229,0.35)',
     }}>
+      <div style={{
+        textAlign: 'center', fontSize: 9, fontWeight: 600,
+        color: 'rgba(255,255,255,0.35)', fontFamily: 'system-ui, sans-serif',
+        padding: '5px 0 0', letterSpacing: '0.03em',
+      }}>
+        © 2026 HomeschoolReady, LLC. All rights reserved.
+      </div>
+      <div style={{ display: 'flex', padding: '6px 0 12px' }}>
       {NAV_ITEMS.map(item => {
         const isActive = activeId === item.id
         return (
@@ -71,6 +78,7 @@ export default function BottomNav() {
           </button>
         )
       })}
+      </div>
     </nav>
   )
 }
