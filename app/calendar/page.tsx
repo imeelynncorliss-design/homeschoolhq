@@ -86,7 +86,7 @@ function CalendarContent() {
   }
 
   return (
-    <div className="hr-page" style={{ fontFamily: "'Nunito', sans-serif", paddingBottom: 80 }}>
+    <div className="hr-page" style={{ fontFamily: "'Nunito', sans-serif" }}>
       {/* Page content */}
       <div style={{ maxWidth: 960, margin: '0 auto', padding: '24px 20px 0' }}>
         <h1 className="hr-h1" style={{ fontSize: 26, margin: '0 0 20px', fontFamily: "'Nunito', sans-serif" }}>

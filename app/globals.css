@@ -180,6 +180,7 @@ body {
 .hr-page {
   background: #3d3a52;
   min-height: 100vh;
+  padding-bottom: 100px; /* always clear the fixed BottomNav */
 }
 
 /* Frosted-glass card — matches the weather strip on the dashboard */

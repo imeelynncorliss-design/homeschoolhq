@@ -333,8 +333,8 @@ export default function LessonCalendar({
   }
 
   return (
-    <div className="bg-white rounded-lg shadow p-3">
-      <div className="printable-calendar rounded-lg p-3" style={{ height: 'calc(100vh - 230px)', minHeight: 420, maxHeight: 720, backgroundColor: '#f9fafb' }}>
+    <>
+    <div className="printable-calendar bg-white rounded-lg shadow p-4" style={{ height: 'calc(100vh - 230px)', minHeight: 420, maxHeight: 720 }}>
         <div className="print-header hr-print-header" style={{ display: 'none' }}>
           <img src="/Cardinal_Mascot.png" alt="HomeschoolReady" className="hr-print-logo-img" />
           <div className="hr-print-logo-text">
@@ -438,6 +438,6 @@ export default function LessonCalendar({
           onClose={() => { setShowDailyNotes(false); setSelectedDate(null); loadDatesWithNotes() }}
         />
       )}
-    </div>
+    </>
   )
 }
