@@ -5,12 +5,13 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/src/lib/supabase/client'
 import AuthGuard from '@/components/AuthGuard'
 import { getOrganizationId } from '@/src/lib/getOrganizationId'
-
-const GRADIENT = 'linear-gradient(135deg, #c4b5fd 0%, #e879f9 18%, #f0abfc 36%, #fbcfe8 54%, #bae6fd 76%, #6ee7b7 100%)'
+import { useAppHeader } from '@/components/layout/AppHeader'
+import { colors } from '@/src/lib/designTokens'
 
 function EditProfileContent() {
   const router   = useRouter()
   const supabase = createClient()
+  useAppHeader({ title: 'Edit Profile', backHref: '/profile' })
 
   const [loading,  setLoading]  = useState(true)
   const [saving,   setSaving]   = useState(false)
@@ -64,7 +65,6 @@ function EditProfileContent() {
           .eq('id', orgId)
         if (orgErr) throw new Error(orgErr.message)
 
-        // Keep organization_settings.school_name in sync so attendance/compliance PDFs use the same name
         await supabase
           .from('organization_settings')
           .upsert({ organization_id: orgId, school_name: orgName.trim() }, { onConflict: 'organization_id' })
@@ -85,8 +85,9 @@ function EditProfileContent() {
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: GRADIENT }}>
-        <div style={{ color: '#7c3aed', fontWeight: 800, fontSize: 18, fontFamily: "'Nunito', sans-serif" }}>Loading...</div>
+      <div style={{ minHeight: '100vh', background: colors.pageBackground, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ width: 40, height: 40, borderRadius: '50%', border: '3px solid #e9d5ff', borderTopColor: '#7c3aed', animation: 'spin 0.8s linear infinite' }} />
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     )
   }
@@ -95,43 +96,31 @@ function EditProfileContent() {
     width: '100%', padding: '13px 16px',
     border: '1.5px solid rgba(124,58,237,0.25)',
     borderRadius: 12, fontSize: 15, fontWeight: 600,
-    color: '#1a1a2e', background: '#fff',
+    color: '#1a1a2e', background: '#fafafa',
     fontFamily: "'Nunito', sans-serif",
     outline: 'none', boxSizing: 'border-box',
   }
 
   const labelStyle: React.CSSProperties = {
-    fontSize: 12, fontWeight: 800, color: '#4c1d95',
-    letterSpacing: 0.6, marginBottom: 6, display: 'block',
+    fontSize: 11, fontWeight: 800, color: '#6b7280',
+    letterSpacing: 0.8, marginBottom: 6, display: 'block',
+    textTransform: 'uppercase',
   }
 
   return (
-    <div style={{ fontFamily: "'Nunito', sans-serif", minHeight: '100vh', background: GRADIENT }}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
-        *, *::before, *::after { box-sizing: border-box; }
-        body { margin: 0; }
-        input:focus { border-color: #7c3aed !important; box-shadow: 0 0 0 3px rgba(124,58,237,0.12); }
-      `}</style>
+    <div className="hr-page" style={{ fontFamily: "'Nunito', sans-serif" }}>
+      <style>{`input:focus { border-color: #7c3aed !important; box-shadow: 0 0 0 3px rgba(124,58,237,0.12); }`}</style>
 
-      <div style={{ maxWidth: 600, margin: '0 auto', padding: '16px 20px' }}>
+      <div style={{ maxWidth: 560, margin: '0 auto', padding: '24px 20px 0' }}>
 
-        {/* Header */}
-        <div style={{ marginBottom: 24 }}>
-          <h1 style={{ margin: 0, fontSize: 20, fontWeight: 900, color: '#1a1a2e' }}>Edit Profile</h1>
-        </div>
+        <h1 className="hr-h1" style={{ fontSize: 24, margin: '0 0 20px' }}>Edit Profile</h1>
 
         {/* Form card */}
-        <div style={{
-          background: 'rgba(255,255,255,0.88)', borderRadius: 22,
-          border: '1.5px solid rgba(124,58,237,0.15)',
-          padding: '24px 22px',
-          boxShadow: '0 2px 14px rgba(0,0,0,0.08)',
-        }}>
+        <div className="hr-card" style={{ padding: '24px 22px', marginBottom: 20 }}>
 
           {/* School name */}
           <div style={{ marginBottom: 20 }}>
-            <label style={labelStyle}>SCHOOL NAME</label>
+            <label style={labelStyle}>School Name</label>
             <input
               style={inputStyle}
               value={orgName}
@@ -142,7 +131,7 @@ function EditProfileContent() {
 
           {/* Email */}
           <div style={{ marginBottom: 8 }}>
-            <label style={labelStyle}>EMAIL</label>
+            <label style={labelStyle}>Email</label>
             <input
               style={inputStyle}
               type="email"
@@ -177,22 +166,34 @@ function EditProfileContent() {
             </div>
           )}
 
-          {/* Save button */}
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            style={{
-              width: '100%', marginTop: 24,
-              background: saving ? '#c4b5fd' : 'linear-gradient(135deg, #7c3aed, #ec4899)',
-              border: 'none', borderRadius: 14, color: '#fff',
-              fontSize: 15, fontWeight: 800, padding: '14px 0',
-              cursor: saving ? 'not-allowed' : 'pointer',
-              fontFamily: "'Nunito', sans-serif",
-              boxShadow: '0 4px 14px rgba(124,58,237,0.3)',
-            }}>
-            {saving ? 'Saving…' : 'Save Changes'}
-          </button>
+          {/* Buttons */}
+          <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
+            <button
+              onClick={() => router.push('/profile')}
+              style={{
+                flex: 1, background: 'rgba(0,0,0,0.06)', border: 'none',
+                borderRadius: 12, color: '#374151', fontSize: 15, fontWeight: 700,
+                padding: '14px 0', cursor: 'pointer', fontFamily: "'Nunito', sans-serif",
+              }}>
+              Cancel
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              style={{
+                flex: 2,
+                background: saving ? '#c4b5fd' : '#7c3aed',
+                border: 'none', borderRadius: 12, color: '#fff',
+                fontSize: 15, fontWeight: 800, padding: '14px 0',
+                cursor: saving ? 'not-allowed' : 'pointer',
+                fontFamily: "'Nunito', sans-serif",
+                boxShadow: '0 4px 14px rgba(124,58,237,0.3)',
+              }}>
+              {saving ? 'Saving…' : 'Save Changes'}
+            </button>
+          </div>
         </div>
+
       </div>
     </div>
   )
@@ -201,7 +202,7 @@ function EditProfileContent() {
 export default function EditProfilePage() {
   return (
     <AuthGuard>
-      <Suspense fallback={<div style={{ minHeight: '100vh', background: GRADIENT }} />}>
+      <Suspense fallback={<div style={{ minHeight: '100vh', background: '#3d3a52' }} />}>
         <EditProfileContent />
       </Suspense>
     </AuthGuard>
