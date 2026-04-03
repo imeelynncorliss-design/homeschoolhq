@@ -85,7 +85,7 @@ function buildTourSteps(
       '📋 Records — attendance, compliance, transcripts, reading logs, and more',
       "🪴 For Parents — Teaching Blueprint, MI Tips, Learning Style Tips, and Guides",
       "💡 Resources — Teaching Styles, State Laws, and My Materials",
-      '🔧 Tools — import curriculum, bulk schedule, plan vacations, add co-teachers',
+      '🔧 Tools — import curriculum, bulk schedule, plan vacations, manage co-teachers',
     ],
     position: 'top',
   })

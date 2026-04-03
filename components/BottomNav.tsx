@@ -30,7 +30,7 @@ const TOOLTIPS: Record<string, string[]> = {
   records:   ['Attendance log', 'Compliance & hours', 'Transcripts & GPA', 'Reading log', 'Field trips', 'Portfolio', 'Progress reports'],
   corner:    ['Teaching Blueprint', 'Learning style tips', 'Multiple Intelligences tips', 'Homeschool guides'],
   resources: ['State homeschool laws', 'Teaching style library', 'My materials list'],
-  tools:     ['Curriculum import', 'Bulk scheduling', 'Vacation planner', 'Co-teachers', 'Standards setup', 'Calendar sync'],
+  tools:     ['Curriculum import', 'Bulk scheduling', 'Vacation planner', 'Co-teachers', 'Standards setup'],
   profile:   ['Manage children', 'School year dates', 'Teaching style', 'School name & state'],
 }
 

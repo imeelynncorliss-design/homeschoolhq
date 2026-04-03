@@ -145,7 +145,7 @@ function ToolsContent() {
             <button style={btnStyle} onClick={() => router.push('/standards-setup')}>📥 Import Standards</button>
           </div>
 
-          {/* Google Calendar Sync */}
+          {/* Google Calendar Sync — hidden until feature is complete
           <div className="hr-card tool-card" style={{ padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 8 }}>
             <div style={{ width: 52, height: 52, borderRadius: 16, background: 'linear-gradient(135deg, #ede9fe, #dbeafe)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, marginBottom: 4 }}>📅</div>
             <div style={{ fontSize: 16, fontWeight: 800, color: '#1a1a2e', marginBottom: 3 }}>Google Calendar Sync</div>
@@ -154,6 +154,7 @@ function ToolsContent() {
             </div>
             <button style={btnStyle} onClick={() => router.push('/calendar/connect')}>📅 Connect Calendar</button>
           </div>
+          */}
         </div>
       </main>
 
