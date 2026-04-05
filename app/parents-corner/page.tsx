@@ -71,7 +71,7 @@ function ParentsCornerContent() {
   const [blueprintKids, setBlueprintKids] = useState<BlueprintKid[]>([])
   const [blueprintOrgStyle, setBlueprintOrgStyle] = useState<string | null>(null)
 
-  const [activeSection, setActiveSection] = useState<'blueprint' | 'vak' | 'mi' | 'mi_tips' | 'guides'>('blueprint')
+  const [activeSection, setActiveSection] = useState<'blueprint' | 'vak' | 'mi' | 'mi_tips' | 'guides' | 'videos'>('blueprint')
   const [selectedKidId, setSelectedKidId] = useState<string | null>(null)
   const [miProfile, setMiProfile] = useState<string[]>([])
   const [expandedVak, setExpandedVak] = useState<string | null>(null)
@@ -120,13 +120,14 @@ function ParentsCornerContent() {
     { id: 'mi' as const,        label: '🧠 Parent Self-Assessment' },
     { id: 'mi_tips' as const,   label: '💡 MI Tips' },
     { id: 'guides' as const,    label: '🌱 Guides' },
+    { id: 'videos' as const,    label: '🎬 How-To Videos' },
   ]
 
   return (
     <div style={{ ...pageShell.root, paddingBottom: 80 }}>
       <div style={{ maxWidth: 860, margin: '0 auto', padding: '24px 24px 48px' }}>
 
-        <div className="hr-section-label" style={{ marginBottom: 14 }}>TEACHING BLUEPRINT · LEARNING STYLE TIPS · PARENT SELF-ASSESSMENT · MI TIPS · GUIDES</div>
+        <div className="hr-section-label" style={{ marginBottom: 14 }}>TEACHING BLUEPRINT · LEARNING STYLE TIPS · PARENT SELF-ASSESSMENT · MI TIPS · GUIDES · HOW-TO VIDEOS</div>
 
         {/* Section pills */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 24, flexWrap: 'wrap' as const }}>
@@ -465,6 +466,98 @@ function ParentsCornerContent() {
 
         {/* ── Guides ── */}
         {activeSection === 'guides' && <GuidesTab />}
+
+        {/* ── How-To Videos ── */}
+        {activeSection === 'videos' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+
+            {/* Coming soon banner */}
+            <div style={{ background: 'linear-gradient(135deg, #f5f3ff, #ede9fe)', border: '1.5px solid #c4b5fd', borderRadius: 14, padding: '14px 18px', display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+              <span style={{ fontSize: 22, flexShrink: 0 }}>🎬</span>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 800, color: '#5b21b6', marginBottom: 3 }}>How-To Videos — Coming Soon</div>
+                <p style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.6, margin: 0 }}>
+                  Short, focused walkthroughs for every feature. Each video is 2–3 minutes — enough to get you moving without sitting through a course.
+                </p>
+              </div>
+            </div>
+
+            {/* Video categories */}
+            {[
+              {
+                category: '🚀 Getting Started',
+                videos: [
+                  { title: 'Setting up your school profile',          desc: 'Add your kids, set grades, learning styles, and school year dates.' },
+                  { title: 'Taking the teaching style quiz',          desc: 'Find your homeschool style and let Scout personalize your experience.' },
+                  { title: 'Navigating the dashboard',                desc: 'A quick tour of every section and what each card does.' },
+                ],
+              },
+              {
+                category: '📋 Scheduling & Planning',
+                videos: [
+                  { title: 'Importing a curriculum',                  desc: 'Upload a PDF table of contents and let Scout extract your lessons automatically.' },
+                  { title: 'Bulk scheduling lessons',                 desc: 'Assign dates to a full semester of lessons in minutes.' },
+                  { title: 'Setting up vacation & school-off days',   desc: 'Block out holidays and breaks so Scout never schedules on those days.' },
+                ],
+              },
+              {
+                category: '📊 Records & Compliance',
+                videos: [
+                  { title: 'Logging attendance',                      desc: 'Mark school days, track hours, and stay compliant with your state requirements.' },
+                  { title: 'Using the reading log',                   desc: 'Add books, track pages, and build a year-end reading record.' },
+                  { title: 'Logging field trips & activities',        desc: 'Record co-ops, field trips, and projects that count toward your school day.' },
+                  { title: 'Generating a progress report',            desc: 'See completion rates, lesson trends, and subject coverage at a glance.' },
+                ],
+              },
+              {
+                category: '🤖 Using Scout AI',
+                videos: [
+                  { title: 'Generating a lesson with Scout',          desc: 'Ask Scout to plan a personalized lesson in seconds — tailored to your child\'s style.' },
+                  { title: 'Generating an activity',                  desc: 'Get hands-on activity ideas that match your child\'s interests and intelligences.' },
+                  { title: 'Aligning a lesson to standards',          desc: 'Tag lessons to Common Core or state standards for automatic coverage tracking.' },
+                ],
+              },
+              {
+                category: '👩‍🏫 Co-Teachers',
+                videos: [
+                  { title: 'Inviting a co-teacher or aide',           desc: 'Send an invite link and get someone helping in under 2 minutes.' },
+                  { title: 'Assigning tasks to your co-teacher',      desc: 'Create tasks, assign them, and check them off as they\'re completed.' },
+                ],
+              },
+            ].map(group => (
+              <div key={group.category}>
+                <div style={{ fontSize: 12, fontWeight: 900, color: '#7c3aed', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 10 }}>
+                  {group.category}
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 12 }}>
+                  {group.videos.map(v => (
+                    <div key={v.title} style={{ background: '#fff', borderRadius: 14, border: '1.5px solid #e5e7eb', overflow: 'hidden' }}>
+                      {/* Thumbnail placeholder */}
+                      <div style={{
+                        height: 130, background: 'linear-gradient(135deg, #3d3a52, #4f46e5)',
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6,
+                      }}>
+                        <div style={{
+                          width: 44, height: 44, borderRadius: '50%',
+                          background: 'rgba(255,255,255,0.15)', border: '2px solid rgba(255,255,255,0.3)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}>
+                          <span style={{ fontSize: 18, marginLeft: 3 }}>▶</span>
+                        </div>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.5)', letterSpacing: 0.5 }}>COMING SOON</div>
+                      </div>
+                      {/* Info */}
+                      <div style={{ padding: '12px 14px' }}>
+                        <div style={{ fontSize: 13, fontWeight: 800, color: '#1f2937', marginBottom: 4, lineHeight: 1.3 }}>{v.title}</div>
+                        <div style={{ fontSize: 11, color: '#6b7280', lineHeight: 1.5 }}>{v.desc}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
       </div>
     </div>

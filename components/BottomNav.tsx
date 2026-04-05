@@ -28,7 +28,7 @@ const TOOLTIPS: Record<string, string[]> = {
   home:      ['Today\'s lessons & agenda', 'Supply Scout', 'Quick log shortcuts', 'Week at a glance'],
   subjects:  ['All lessons by subject', 'Schedule & track lessons', 'Subject progress'],
   records:   ['Attendance log', 'Compliance & hours', 'Transcripts & GPA', 'Reading log', 'Field trips', 'Portfolio', 'Progress reports'],
-  corner:    ['Teaching Blueprint', 'Learning style tips', 'Multiple Intelligences tips', 'Homeschool guides'],
+  corner:    ['Teaching Blueprint', 'Learning style tips', 'Multiple Intelligences tips', 'Homeschool guides', 'How-to videos'],
   resources: ['State homeschool laws', 'Teaching style library', 'My materials list'],
   tools:     ['Curriculum import', 'Bulk scheduling', 'Vacation planner', 'Co-teachers', 'Standards setup'],
   profile:   ['Manage children', 'School year dates', 'Teaching style', 'School name & state'],

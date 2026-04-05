@@ -83,7 +83,7 @@ function buildTourSteps(
     bullets: [
       '📚 Subjects — see what each child is learning and all their scheduled lessons',
       '📋 Records — attendance, compliance, transcripts, reading logs, and more',
-      "🪴 For Parents — Teaching Blueprint, MI Tips, Learning Style Tips, and Guides",
+      "🪴 For Parents — Teaching Blueprint, MI Tips, Learning Style Tips, Guides, and How-To Videos",
       "💡 Resources — Teaching Styles, State Laws, and My Materials",
       '🔧 Tools — import curriculum, bulk schedule, plan vacations, manage co-teachers',
     ],
