@@ -14,7 +14,6 @@ import {
 import { createClient } from '@/src/lib/supabase'
 import { useStateComplianceTemplates } from '@/src/hooks/useStateComplianceTemplates'
 import { useComplianceSettings } from '@/src/hooks/useComplianceSettings'      
-import { generateComplianceReport } from '@/src/utils/generateComplianceReport'
 import { useAppHeader } from '@/components/layout/AppHeader'
 import { getOrganizationId } from '@/src/lib/getOrganizationId'
 import { colors } from '@/src/lib/designTokens'
@@ -55,60 +54,11 @@ export default function CompliancePage() {
   const [organizationId, setOrganizationId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [complianceData, setComplianceData] = useState<KidComplianceData[]>([])
-  const [isExporting, setIsExporting] = useState(false)
-  
   const [selectedState, setSelectedState] = useState<string>('')
   const [showStateSelector, setShowStateSelector] = useState(false)
   const [schoolYearStart, setSchoolYearStart] = useState<string>('')
   const [schoolYearEnd, setSchoolYearEnd] = useState<string>('')
   const [saving, setSaving] = useState(false)
-
-  const handleExportReport = async () => {
-    setIsExporting(true)
-    try {
-      const currentSettings = settings
-      
-      if (!currentSettings) {
-        alert('❌ Compliance settings not found')
-        setIsExporting(false)
-        return
-      }
-  
-      if (!currentSettings.school_year_start_date || !currentSettings.school_year_end_date) {
-        alert('❌ School year dates are required for generating reports')
-        setIsExporting(false)
-        return
-      }
-  
-      const [{ data: { user } }, { data: orgSettings }] = await Promise.all([
-        supabase.auth.getUser(),
-        supabase.from('organization_settings').select('school_name').eq('organization_id', organizationId!).maybeSingle(),
-      ])
-      const parentName = user?.user_metadata?.full_name
-        || (user?.email ? user.email.split('@')[0].replace(/[._+]/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()) : 'Parent')
-      const organizationName = orgSettings?.school_name || 'My Homeschool'
-
-      await generateComplianceReport({
-        complianceData,
-        settings: {
-          ...currentSettings,
-          state_code: currentSettings.state_code ?? undefined,
-          school_year_start_date: currentSettings.school_year_start_date,
-          school_year_end_date: currentSettings.school_year_end_date,
-        },
-        familyHealthScore,
-        organizationName,
-        parentName
-      })
-      
-      alert('✅ Report downloaded successfully!')
-    } catch (error) {
-      console.error('Failed to generate report:', error)
-      alert('❌ Failed to generate report. Please try again.')
-    } finally {
-      setIsExporting(false)
-    }
-  }
 
   // Get organization ID and kids
   useEffect(() => {
@@ -449,14 +399,16 @@ export default function CompliancePage() {
                 {template.required_days > 0 && <span>📅 {template.required_days} days &nbsp;</span>}
                 {template.required_hours > 0 && <span>⏱ {template.required_hours} hours &nbsp;</span>}
               </div>
-              <a
-                href={template.official_source_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 4, fontSize: 11, color: '#7c3aed', fontWeight: 700 }}
-              >
-                Verify at {template.official_source_name} <ExternalLink size={11} />
-              </a>
+              {template.official_source_url && (
+                <a
+                  href={template.official_source_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 6, fontSize: 11, color: '#7c3aed', fontWeight: 700 }}
+                >
+                  Verify at {template.official_source_name || 'official source'} <ExternalLink size={11} />
+                </a>
+              )}
             </div>
           )}
 
@@ -534,6 +486,19 @@ export default function CompliancePage() {
     <>
     <div className="hr-page" style={{ paddingBottom: 100 }}>
       <div style={{ maxWidth: 1120, margin: '0 auto', padding: '24px 20px 0' }}>
+
+        {/* Disclaimer banner */}
+        <div style={{
+          marginBottom: 16, padding: '10px 16px',
+          background: '#fffbeb', border: '1.5px solid #fcd34d', borderRadius: 12,
+          display: 'flex', alignItems: 'flex-start', gap: 10,
+          fontFamily: "'Nunito', sans-serif",
+        }}>
+          <span style={{ fontSize: 16, flexShrink: 0 }}>⚠️</span>
+          <div style={{ fontSize: 12, color: '#92400e', fontWeight: 600, lineHeight: 1.5 }}>
+            <strong>Always verify with your state:</strong> Homeschool laws change. The requirements shown here are for reference only — please confirm current rules with your state's official homeschool or education department before filing any reports.
+          </div>
+        </div>
 
         {/* Settings row */}
         <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'flex-end' }}>
