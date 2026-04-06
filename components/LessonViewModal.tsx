@@ -304,7 +304,7 @@ export default function LessonViewModal({
     setExistingUploads(withSignedUrls)
   }
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? [])
     const oversized = files.filter(f => f.size > 10 * 1024 * 1024)
     if (oversized.length > 0) {
@@ -312,7 +312,25 @@ export default function LessonViewModal({
       return
     }
     setUploadError(null)
-    setPendingFiles(prev => [...prev, ...files])
+
+    const converted: File[] = []
+    for (const f of files) {
+      const isHeic = f.type === 'image/heic' || f.type === 'image/heif' || /\.heic$/i.test(f.name) || /\.heif$/i.test(f.name)
+      if (isHeic) {
+        try {
+          const heic2any = (await import('heic2any')).default
+          const blob = await heic2any({ blob: f, toType: 'image/jpeg', quality: 0.9 }) as Blob
+          converted.push(new File([blob], f.name.replace(/\.heic$/i, '.jpg').replace(/\.heif$/i, '.jpg'), { type: 'image/jpeg' }))
+        } catch {
+          setUploadError('Could not convert HEIC image. Please try exporting as JPEG.')
+          return
+        }
+      } else {
+        converted.push(f)
+      }
+    }
+
+    setPendingFiles(prev => [...prev, ...converted])
     e.target.value = ''
   }
 
