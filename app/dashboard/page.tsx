@@ -60,6 +60,7 @@ const QUICK_ACTION_CONFIG: Record<string, {
   action: 'route' | 'lesson' | 'activity' | 'today' | 'scout'
   href?: string
 }> = {
+  daily_log:   { emoji: '📝', label: 'Daily Subject Log',  sub: 'Log subjects — no lesson needed',    bg: 'linear-gradient(135deg,#f5f3ff,#ede9fe)', iconBg: '#7c3aed', color: '#4c1d95', subColor: '#7c3aed', action: 'route',    href: '/daily-log' },
   attendance:  { emoji: '✅', label: 'Log Attendance',      sub: 'Mark today\'s school day',          bg: 'linear-gradient(135deg,#d1fae5,#a7f3d0)', iconBg: '#059669', color: '#064e3b', subColor: '#059669', action: 'route',    href: '/attendance' },
   reading_log: { emoji: '📚', label: 'Log a Book',          sub: 'Add to reading log',                bg: 'linear-gradient(135deg,#ede9fe,#ddd6fe)', iconBg: '#7c3aed', color: '#4c1d95', subColor: '#7c3aed', action: 'route',    href: '/reading-log' },
   field_trips: { emoji: '🚌', label: 'Log an Activity',     sub: 'Field trip, project, co-op',        bg: 'linear-gradient(135deg,#ccfbf1,#99f6e4)', iconBg: '#0d9488', color: '#134e4a', subColor: '#0d9488', action: 'route',    href: '/field-trips' },
@@ -1847,7 +1848,7 @@ function DashboardContent() {
                         setChildProfileKidId(pulse.kid.id)
                         setProfileTab('today')
                         setKidSubjects([])
-                        supabase.from('subjects').select('id,name,emoji,color,weekly_frequency').eq('kid_id', pulse.kid.id).order('name').then(({ data }) => {
+                        supabase.from('subjects').select('id,name,emoji,color,weekly_frequency').eq('kid_id', pulse.kid.id).order('name').then(({ data }: { data: any[] | null }) => {
                           if (data) setKidSubjects(data)
                         })
                       }}

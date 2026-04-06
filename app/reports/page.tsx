@@ -11,6 +11,13 @@ function ReportsContent() {
 
   const hubCards = [
     {
+      icon: '📝',
+      label: 'Daily Subject Log',
+      desc: 'Quickly log subjects covered each day — no lesson required',
+      href: '/daily-log',
+      comingSoon: false,
+    },
+    {
       icon: '📅',
       label: 'Attendance',
       desc: 'Daily check-ins & school day tracking',
