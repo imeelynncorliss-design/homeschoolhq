@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, Suspense } from 'react'
+import { useEffect, useState, Suspense, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/src/lib/supabase'
 import AuthGuard from '@/components/AuthGuard'
@@ -271,14 +271,30 @@ function CurriculumImportContent() {
 
   // ── File handling ────────────────────────────────────────────────────────────
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0]
     if (!f) return
-    if (!['application/pdf', 'image/jpeg', 'image/png'].includes(f.type)) {
-      setError('Please select a PDF or image file (JPEG/PNG)')
+
+    const isHeic = f.type === 'image/heic' || f.type === 'image/heif' || f.name.toLowerCase().endsWith('.heic') || f.name.toLowerCase().endsWith('.heif')
+
+    if (!['application/pdf', 'image/jpeg', 'image/png'].includes(f.type) && !isHeic) {
+      setError('Please select a PDF, JPEG, PNG, or HEIC image file')
       return
     }
-    setFile(f)
+
+    if (isHeic) {
+      try {
+        const heic2any = (await import('heic2any')).default
+        const converted = await heic2any({ blob: f, toType: 'image/jpeg', quality: 0.9 }) as Blob
+        const convertedFile = new File([converted], f.name.replace(/\.heic$/i, '.jpg'), { type: 'image/jpeg' })
+        setFile(convertedFile)
+      } catch {
+        setError('Could not convert HEIC image. Please try exporting as JPEG from your Photos app.')
+        return
+      }
+    } else {
+      setFile(f)
+    }
     setError('')
   }
 
@@ -554,14 +570,14 @@ function CurriculumImportContent() {
                   <div style={s.uploadZone}>
                     <input
                       type="file"
-                      accept="application/pdf,image/jpeg,image/png"
+                      accept="application/pdf,image/jpeg,image/png,image/heic,image/heif,.heic,.heif"
                       onChange={handleFileChange}
                       className="hidden"
                       id="file-upload"
                       style={{ display: 'none' }}
                     />
                     <label htmlFor="file-upload" style={s.fileLabel}>
-                      Choose File (PDF or Image)
+                      Choose File (PDF, JPEG, PNG, or HEIC)
                     </label>
                     {file ? (
                       <p style={{ marginTop: 12, fontSize: 13, color: '#374151', fontWeight: 600 }}>
@@ -569,7 +585,7 @@ function CurriculumImportContent() {
                       </p>
                     ) : (
                       <p style={{ marginTop: 10, fontSize: 12, color: '#9ca3af' }}>
-                        PDF or image · max 15 MB
+                        PDF, JPEG, PNG, or HEIC · max 15 MB
                       </p>
                     )}
                   </div>
