@@ -9,6 +9,7 @@ import { getRegLevel, REG_LABEL, REG_DESC } from '@/lib/stateRegulation'
 
 export const STYLE_FEATURES = [
   { id: 'pulse_check', emoji: '🎯', label: 'Progress Dials',           desc: 'Daily % completion rings per child' },
+  { id: 'daily_log',   emoji: '📝', label: 'Daily Subject Log',         desc: 'Log subjects covered — no lesson needed' },
   { id: 'attendance',  emoji: '✅', label: 'Attendance Tracking',      desc: 'Log school days and hours' },
   { id: 'reading_log', emoji: '📚', label: 'Reading Log',              desc: 'Track books read this year' },
   { id: 'field_trips', emoji: '🚌', label: 'Field Trips & Activities', desc: 'Log outings, co-ops, projects' },
@@ -23,7 +24,7 @@ export const STYLE_FEATURES = [
 
 // ─── Defaults per style ───────────────────────────────────────────────────────
 
-export const DEFAULT_FLEXIBLE   = ['attendance', 'reading_log', 'field_trips']
+export const DEFAULT_FLEXIBLE   = ['daily_log', 'attendance', 'reading_log', 'field_trips']
 export const DEFAULT_STRUCTURED = ['pulse_check', 'attendance', 'compliance', 'ai_lessons', 'progress']
 export const DEFAULT_UNSTYLED   = ['ai_lessons', 'ai_activity', 'attendance', 'reading_log']
 
