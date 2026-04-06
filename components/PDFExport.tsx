@@ -70,7 +70,7 @@ export default function PDFExport({
       doc.setTextColor(156, 163, 175)
       doc.setFontSize(8)
       doc.setFont('helvetica', 'normal')
-      doc.text('homeschoolready.app', 34, yPos + 8)
+      doc.text('app.homeschoolready.app', 34, yPos + 8)
 
       // Purple divider
       doc.setDrawColor(124, 58, 237)
@@ -275,7 +275,7 @@ export default function PDFExport({
         doc.setFontSize(8)
         doc.setTextColor(156, 163, 175)
         doc.text(
-          `HomeschoolReady · homeschoolready.app · Page ${i} of ${pageCount}`,
+          `HomeschoolReady · app.homeschoolready.app · Page ${i} of ${pageCount}`,
           105,
           doc.internal.pageSize.height - 10,
           { align: 'center' }

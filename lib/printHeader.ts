@@ -7,15 +7,15 @@
  */
 export function printHeader(origin: string, aiGenerated = false): string {
   const footer = aiGenerated
-    ? `<div class="hr-print-footer">✨ Created with AI assistance · HomeschoolReady · homeschoolready.app</div>`
-    : `<div class="hr-print-footer">HomeschoolReady · homeschoolready.app</div>`
+    ? `<div class="hr-print-footer">✨ Created with AI assistance · HomeschoolReady · app.homeschoolready.app</div>`
+    : `<div class="hr-print-footer">HomeschoolReady · app.homeschoolready.app</div>`
 
   return `
 <div class="hr-print-header">
   <img src="${origin}/Cardinal_Mascot.png" alt="HomeschoolReady" class="hr-print-logo-img" />
   <div class="hr-print-logo-text">
     <span class="hr-print-logo-name">Homeschool<strong>Ready</strong></span>
-    <span class="hr-print-logo-domain">homeschoolready.app</span>
+    <span class="hr-print-logo-domain">app.homeschoolready.app</span>
   </div>
 </div>
 ${footer}

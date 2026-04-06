@@ -339,7 +339,7 @@ export default function LessonCalendar({
           <img src="/Cardinal_Mascot.png" alt="HomeschoolReady" className="hr-print-logo-img" />
           <div className="hr-print-logo-text">
             <span className="hr-print-logo-name">Homeschool<strong>Ready</strong></span>
-            <span className="hr-print-logo-domain">homeschoolready.app · {moment(currentDate).format('MMMM YYYY')} · Lesson Calendar</span>
+            <span className="hr-print-logo-domain">app.homeschoolready.app · {moment(currentDate).format('MMMM YYYY')} · Lesson Calendar</span>
           </div>
         </div>
 
