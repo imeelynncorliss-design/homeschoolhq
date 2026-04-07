@@ -718,6 +718,7 @@ function MaterialsTab({ organizationId }: { organizationId: string }) {
   const [loadingMats, setLoadingMats]         = useState(true)
   const [kids, setKids]                       = useState<{ id: string; displayname: string }[]>([])
   const [filterType, setFilterType]           = useState<MaterialType | 'all'>('all')
+  const [filterKidId, setFilterKidId]         = useState<string>('all')
   const [searchQuery, setSearchQuery]         = useState('')
   const [showAddForm, setShowAddForm]         = useState(false)
   const [editingMaterial, setEditingMaterial] = useState<any>(null)
@@ -767,12 +768,13 @@ function MaterialsTab({ organizationId }: { organizationId: string }) {
   const materials = useMemo(() => {
     let result = allMaterials
     if (filterType !== 'all') result = result.filter(m => m.material_type === filterType)
+    if (filterKidId !== 'all') result = result.filter(m => !m.kid_ids || m.kid_ids.includes(filterKidId))
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase()
       result = result.filter(m => m.name.toLowerCase().includes(q) || (m.subject && m.subject.toLowerCase().includes(q)))
     }
     return result
-  }, [allMaterials, filterType, searchQuery])
+  }, [allMaterials, filterType, filterKidId, searchQuery])
 
   const loadMaterials = async () => {
     if (!organizationId) return
@@ -858,6 +860,12 @@ function MaterialsTab({ organizationId }: { organizationId: string }) {
           <option value="physical">Physical</option>
           <option value="digital">Digital</option>
         </select>
+        {kids.length > 1 && (
+          <select value={filterKidId} onChange={e => setFilterKidId(e.target.value)} style={{ padding: '10px 14px', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer', color: '#111827', fontFamily: "'Nunito', sans-serif" }}>
+            <option value="all">All Children</option>
+            {kids.map(k => <option key={k.id} value={k.id}>{k.displayname}</option>)}
+          </select>
+        )}
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14, paddingBottom: 20 }}>
         {(['textbook', 'subscription', 'physical', 'digital'] as MaterialType[]).map(type => {
@@ -874,9 +882,15 @@ function MaterialsTab({ organizationId }: { organizationId: string }) {
                 <div key={m.id} style={{ padding: '14px 18px', borderBottom: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' as const }}>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 15, fontWeight: 800, color: '#111827' }}>{m.name}</div>
-                    <div style={{ fontSize: 12, color: '#6b7280', marginTop: 3 }}>
-                      {m.subject || 'General'} · {m.grade_level || 'All Grades'}
-                      {m.url && <ExternalLink href={m.url} style={{ color: '#7c3aed', marginLeft: 10, fontWeight: 700 }}>🔗 Open</ExternalLink>}
+                    <div style={{ fontSize: 12, color: '#6b7280', marginTop: 3, display: 'flex', flexWrap: 'wrap' as const, alignItems: 'center', gap: 6 }}>
+                      <span>{m.subject || 'General'} · {m.grade_level || 'All Grades'}</span>
+                      {m.kid_ids && m.kid_ids.length > 0 && m.kid_ids.map((kidId: string) => {
+                        const kid = kids.find(k => k.id === kidId)
+                        return kid ? (
+                          <span key={kidId} style={{ background: '#f5f3ff', color: '#7c3aed', border: '1px solid #ddd6fe', borderRadius: 20, padding: '1px 9px', fontSize: 11, fontWeight: 700 }}>{kid.displayname}</span>
+                        ) : null
+                      })}
+                      {m.url && <ExternalLink href={m.url} style={{ color: '#7c3aed', fontWeight: 700 }}>🔗 Open</ExternalLink>}
                     </div>
                     {m.login_info && <div style={{ fontSize: 12, color: '#92400e', background: '#fef3c7', padding: '4px 10px', borderRadius: 6, marginTop: 6, display: 'inline-block', fontWeight: 700 }}>🗝️ {m.login_info}</div>}
                   </div>
