@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/src/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { useAppHeader } from '@/components/layout/AppHeader'
@@ -37,6 +37,8 @@ export default function MaterialsPage() {
   const [filterType, setFilterType] = useState<MaterialType | 'all'>('all');
   const [filterKidId, setFilterKidId] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Form state
   const [formType, setFormType] = useState<MaterialType>('textbook');
@@ -58,11 +60,18 @@ export default function MaterialsPage() {
     loadData();
   }, []);
 
+  // Debounce search input — only trigger load 300ms after user stops typing
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => setDebouncedSearch(searchQuery), 300);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [searchQuery]);
+
   useEffect(() => {
     if (organizationId) {
       loadMaterials();
     }
-  }, [organizationId, filterType, filterKidId, searchQuery]);
+  }, [organizationId, filterType, filterKidId, debouncedSearch]);
 
   const loadData = async () => {
     try {
@@ -134,8 +143,8 @@ export default function MaterialsPage() {
       let filtered = [...savedMaterials];
       if (filterType !== 'all') filtered = filtered.filter((m: any) => m.material_type === filterType);
       if (filterKidId !== 'all') filtered = filtered.filter((m: any) => !m.kid_ids || m.kid_ids.includes(filterKidId));
-      if (searchQuery) {
-        const q = searchQuery.toLowerCase();
+      if (debouncedSearch) {
+        const q = debouncedSearch.toLowerCase();
         filtered = filtered.filter((m: any) =>
           m.name.toLowerCase().includes(q) || (m.subject && m.subject.toLowerCase().includes(q))
         );
@@ -157,7 +166,7 @@ export default function MaterialsPage() {
 
       if (filterType !== 'all') query = query.eq('material_type', filterType);
       if (filterKidId !== 'all') query = query.or(`kid_ids.is.null,kid_ids.cs.{${filterKidId}}`);
-      if (searchQuery) query = query.ilike('name', `%${searchQuery}%`);
+      if (debouncedSearch) query = query.ilike('name', `%${debouncedSearch}%`);
 
       const { data, error } = await query;
       if (error) throw error;
