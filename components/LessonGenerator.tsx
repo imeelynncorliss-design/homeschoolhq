@@ -328,7 +328,7 @@ ${objectivesHtml}${activitiesHtml}${materialsHtml}${assessmentHtml}
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="fixed inset-0 flex items-center justify-center z-50" style={{ background: 'rgba(0,0,0,0.55)', padding: '16px 16px 88px' }}>
+    <div className="fixed inset-0 flex items-center justify-center z-[500]" style={{ background: 'rgba(0,0,0,0.55)', padding: '16px 16px 88px' }}>
       <div className="bg-white w-full overflow-hidden flex flex-col" style={{
         maxWidth: step === 3 ? 900 : 560,
         maxHeight: 'calc(100vh - 104px)',

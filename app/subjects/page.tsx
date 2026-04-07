@@ -1001,7 +1001,7 @@ function SubjectsContent() {
               <button
                 onClick={() => {
                   setShowLessonChoiceSheet(false)
-                  setTimeout(() => setShowLessonGenerator(true), 50)
+                  setShowLessonGenerator(true)
                 }}
                 style={{
                   width: '100%', padding: '16px', borderRadius: 14, border: '1.5px solid rgba(124,58,237,0.4)',
