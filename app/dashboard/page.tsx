@@ -2491,7 +2491,7 @@ function DashboardContent() {
             <>
               <div onClick={() => setChildProfileKidId(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 200, backdropFilter: 'blur(2px)' }} />
               <div style={{ position: 'fixed', inset: 0, zIndex: 201, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, pointerEvents: 'none' }}>
-                <div style={{ background: '#fff', borderRadius: 20, width: '100%', maxWidth: 360, maxHeight: '80vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 64px rgba(0,0,0,0.28)', pointerEvents: 'all', fontFamily: "'Nunito', sans-serif" }}>
+                <div style={{ background: '#fff', borderRadius: 20, width: '100%', maxWidth: 420, maxHeight: '85vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 64px rgba(0,0,0,0.28)', pointerEvents: 'all', fontFamily: "'Nunito', sans-serif" }}>
 
                   {/* Compact gradient header */}
                   <div style={{ background: gradient, borderRadius: '20px 20px 0 0', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
@@ -2504,30 +2504,51 @@ function DashboardContent() {
                     <button onClick={() => setChildProfileKidId(null)} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '50%', width: 30, height: 30, fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', flexShrink: 0 }}>×</button>
                   </div>
 
-                  {/* Tab pills */}
-                  <div style={{ display: 'flex', gap: 4, padding: '12px 14px 8px', flexShrink: 0, overflowX: 'auto', scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' as any }}>
+                  {/* Tab pills — row 1 */}
+                  <div style={{ display: 'flex', gap: 4, padding: '12px 14px 6px', flexShrink: 0 }}>
                     {([
-                      { id: 'today',     label: '📚 Today' },
-                      { id: 'subjects',  label: '📖 Subjects' },
-                      { id: 'style',     label: '🎨 Style' },
-                      { id: 'mi',        label: '✨ MI' },
-                      { id: 'look',      label: '🐦 Look' },
-                      { id: 'materials', label: '📦 Materials' },
-                      { id: 'teachers',  label: '👩‍🏫 Teachers' },
+                      { id: 'today',    label: '📚 Today' },
+                      { id: 'subjects', label: '📖 Subjects' },
+                      { id: 'style',    label: '🎨 Style' },
+                      { id: 'mi',       label: '✨ MI' },
+                      { id: 'look',     label: '🐦 Look' },
                     ] as const).map(tab => (
                       <button
                         key={tab.id}
                         onClick={() => setProfileTab(tab.id)}
                         style={{
-                          flexShrink: 0, padding: '6px 8px', borderRadius: 10,
+                          flex: 1, padding: '6px 2px', borderRadius: 10,
                           border: profileTab === tab.id ? 'none' : '1.5px solid #e5e7eb',
                           background: profileTab === tab.id ? 'linear-gradient(135deg,#7c3aed,#a855f7)' : '#f9fafb',
                           color: profileTab === tab.id ? '#fff' : '#6b7280',
                           fontSize: 10, fontWeight: 800, cursor: 'pointer',
-                          fontFamily: "'Nunito', sans-serif", whiteSpace: 'nowrap' as const,
+                          fontFamily: "'Nunito', sans-serif",
                         }}
                       >{tab.label}</button>
                     ))}
+                  </div>
+                  {/* Quick links — row 2 */}
+                  <div style={{ display: 'flex', gap: 6, padding: '0 14px 10px', flexShrink: 0 }}>
+                    <button
+                      onClick={() => setProfileTab('materials')}
+                      style={{
+                        flex: 1, padding: '6px 8px', borderRadius: 10,
+                        border: profileTab === 'materials' ? 'none' : '1.5px solid #e5e7eb',
+                        background: profileTab === 'materials' ? 'linear-gradient(135deg,#7c3aed,#a855f7)' : '#f9fafb',
+                        color: profileTab === 'materials' ? '#fff' : '#6b7280',
+                        fontSize: 10, fontWeight: 800, cursor: 'pointer', fontFamily: "'Nunito', sans-serif",
+                      }}
+                    >📦 Materials</button>
+                    <button
+                      onClick={() => setProfileTab('teachers')}
+                      style={{
+                        flex: 1, padding: '6px 8px', borderRadius: 10,
+                        border: profileTab === 'teachers' ? 'none' : '1.5px solid #e5e7eb',
+                        background: profileTab === 'teachers' ? 'linear-gradient(135deg,#7c3aed,#a855f7)' : '#f9fafb',
+                        color: profileTab === 'teachers' ? '#fff' : '#6b7280',
+                        fontSize: 10, fontWeight: 800, cursor: 'pointer', fontFamily: "'Nunito', sans-serif",
+                      }}
+                    >👩‍🏫 Co-Teachers</button>
                   </div>
 
                   {/* Tab content */}
