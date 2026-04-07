@@ -357,6 +357,14 @@ ${objectivesHtml}${activitiesHtml}${materialsHtml}${assessmentHtml}
         {step === 1 && (
           <div className="space-y-3">
 
+            {/* HS note */}
+            <div style={{ background: '#f5f3ff', border: '1.5px solid #ede9fe', borderRadius: 12, padding: '10px 14px', display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+              <span style={{ fontSize: 16, flexShrink: 0 }}>🏠</span>
+              <p style={{ margin: 0, fontSize: 12, color: '#5b21b6', lineHeight: 1.5, fontWeight: 600 }}>
+                Scout&apos;s lesson plans are designed for homeschool families. Lessons are tailored to your child&apos;s learning style and can be linked to a course for transcript tracking.
+              </p>
+            </div>
+
             {/* Child */}
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-1">Select Student</label>
@@ -424,12 +432,13 @@ ${objectivesHtml}${activitiesHtml}${materialsHtml}${assessmentHtml}
                 {loadingCourses ? (
                   <div className="border rounded-lg px-3 py-2 text-sm text-gray-500">Loading courses…</div>
                 ) : availableCourses.length === 0 ? (
-                  <div className="border border-dashed border-gray-200 rounded-lg px-3 py-3 bg-gray-50">
-                    <p className="text-sm text-gray-500">
-                      No active {resolveSubject()} courses for {formData.childName}.{' '}
-                      <a href="/transcript" className="text-blue-600 hover:underline">Create a course</a>{' '}
-                      to link lessons to transcripts.
+                  <div style={{ border: '1.5px dashed #e5e7eb', borderRadius: 10, padding: '10px 12px', background: '#fafafa', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                    <p style={{ margin: 0, fontSize: 12, color: '#6b7280', lineHeight: 1.5 }}>
+                      No active <strong>{resolveSubject()}</strong> courses for {formData.childName}.
                     </p>
+                    <a href="/courses" style={{ fontSize: 12, fontWeight: 700, color: '#7c3aed', whiteSpace: 'nowrap' as const, textDecoration: 'none', background: '#f5f3ff', border: '1px solid #ede9fe', borderRadius: 8, padding: '4px 10px' }}>
+                      + Create course
+                    </a>
                   </div>
                 ) : (
                   <>
