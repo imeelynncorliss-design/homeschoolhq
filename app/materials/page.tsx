@@ -132,7 +132,7 @@ function MaterialsPageInner() {
           .from('kids')
           .select('id, displayname')
           .eq('organization_id', orgId)
-          .eq('archived', false)
+          .neq('archived', true)
           .order('displayname');
         if (kidsData && kidsData.length > 0) {
           setKids(kidsData);
@@ -142,7 +142,7 @@ function MaterialsPageInner() {
             .from('kids')
             .select('id, displayname')
             .eq('user_id', user.id)
-            .eq('archived', false)
+            .neq('archived', true)
             .order('displayname');
           setKids(ownKids || []);
         }

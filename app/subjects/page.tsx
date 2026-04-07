@@ -160,10 +160,11 @@ function SubjectsContent() {
   const [matSubject, setMatSubject]               = useState('')
   const [matName, setMatName]                     = useState('')
   const [matType, setMatType]                     = useState<'textbook' | 'subscription' | 'physical' | 'digital'>('textbook')
+  const [matUrl, setMatUrl]                       = useState('')
   const [matSaving, setMatSaving]                 = useState(false)
 
   const openMaterialSheet = (kidId: string, subject: string) => {
-    setMatKidId(kidId); setMatSubject(subject); setMatName(''); setMatType('textbook')
+    setMatKidId(kidId); setMatSubject(subject); setMatName(''); setMatType('textbook'); setMatUrl('')
     setShowMaterialSheet(true)
   }
 
@@ -177,6 +178,7 @@ function SubjectsContent() {
         name: matName.trim(),
         subject: matSubject || null,
         kid_ids: matKidId ? [matKidId] : null,
+        url: matUrl.trim() || null,
       })
       setShowMaterialSheet(false)
     } catch (e) { console.error('Error saving material:', e) }
@@ -1215,7 +1217,7 @@ function SubjectsContent() {
             </div>
 
             {/* Type */}
-            <div style={{ marginBottom: 20 }}>
+            <div style={{ marginBottom: 14 }}>
               <div style={{ fontSize: 11, fontWeight: 800, color: '#9ca3af', letterSpacing: 0.5, marginBottom: 6 }}>TYPE</div>
               <div style={{ display: 'flex', gap: 8 }}>
                 {(['textbook', 'subscription', 'physical', 'digital'] as const).map(t => {
@@ -1236,6 +1238,27 @@ function SubjectsContent() {
                   )
                 })}
               </div>
+            </div>
+
+            {/* URL — shown for subscription/digital, optional for others */}
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 11, fontWeight: 800, color: '#9ca3af', letterSpacing: 0.5, marginBottom: 6 }}>
+                URL {matType === 'subscription' || matType === 'digital' ? <span style={{ color: '#7c3aed' }}>— great for subscriptions & apps!</span> : <span style={{ fontWeight: 600 }}>(optional)</span>}
+              </div>
+              <input
+                value={matUrl}
+                onChange={e => setMatUrl(e.target.value)}
+                placeholder="https://…"
+                type="url"
+                inputMode="url"
+                style={{
+                  width: '100%', padding: '12px 14px', borderRadius: 12,
+                  border: matUrl.trim() ? '1.5px solid #7c3aed' : '1.5px solid #e5e7eb',
+                  fontSize: 14, fontWeight: 600,
+                  fontFamily: "'Nunito', sans-serif", color: '#1e1b4b', outline: 'none',
+                  boxSizing: 'border-box' as const,
+                }}
+              />
             </div>
 
             <button
