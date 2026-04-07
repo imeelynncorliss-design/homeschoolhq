@@ -79,6 +79,10 @@ Each lesson plan must include:
 - Align with their current focus: ${kid.current_focus || 'broad learning goals'}
 ${kid.curriculum === 'Eclectic / Mix' ? '- Family uses an eclectic mix of curricula — use flexible, subject-appropriate structure rather than any single curriculum\'s approach' : kid.curriculum && kid.curriculum !== 'Custom' ? `- Align lesson structure and terminology with ${kid.curriculum} (e.g. match its sequence, vocabulary, and teaching approach)` : ''}
 
+**IMPORTANT CONSTRAINTS:**
+- Do NOT recommend or name specific textbooks, curricula, or published resources (e.g. do not say "use The Good and the Beautiful" or "Saxon Math page 42"). Instead describe the type of resource generically (e.g. "a Bible or scripture reference", "a math workbook", "a read-aloud book on this topic").
+- If the family's curriculum is listed, align your teaching approach and structure to match it — but do not cite specific page numbers or lesson titles from it.
+
 **TEACHING STYLE:**
 ${homeschoolStyle === 'flexible'
   ? '- This family takes a flexible, relaxed approach to homeschooling. Keep lesson plans open-ended and adaptable — no rigid timing or rigid structure. Prioritize discovery and interest-led learning. Steps should feel like loose guides the parent can adjust on the fly, not a strict script.'

@@ -36,13 +36,14 @@ type LessonGeneratorProps = {
   kids: Child[];
   userId: string;
   onClose: () => void;
+  onLessonSaved?: () => void;
   initialDate?: string;
   initialKidId?: string;
   initialSubject?: string;
   homeschoolStyle?: 'flexible' | 'structured' | null;
 };
 
-export default function LessonGenerator({ kids, userId, onClose, initialDate, initialKidId, initialSubject, homeschoolStyle }: LessonGeneratorProps) {
+export default function LessonGenerator({ kids, userId, onClose, onLessonSaved, initialDate, initialKidId, initialSubject, homeschoolStyle }: LessonGeneratorProps) {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [variations, setVariations] = useState<LessonVariation[]>([]);
@@ -287,6 +288,7 @@ ${objectivesHtml}${activitiesHtml}${materialsHtml}${assessmentHtml}
           ? `\n📚 Added to: ${availableCourses.find(c => c.id === formData.courseId)?.course_name || 'course'}`
           : '';
         setSelectedVariation(variation);
+        onLessonSaved?.();
         alert(`✅ Lesson scheduled!\n\n"${variation.title}" scheduled for ${kid.displayname} on ${formattedDate}.${courseNote}`);
       }
     } catch (error: any) {

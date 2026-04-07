@@ -233,7 +233,22 @@ export default function LessonViewModal({
   const [editTitle, setEditTitle] = useState(lesson.title)
   const [editDate, setEditDate] = useState(lesson.lesson_date ?? '')
   const [editDuration, setEditDuration] = useState(String(lesson.duration_minutes ?? ''))
-  const [editDescription, setEditDescription] = useState(lesson.description ?? '')
+  const [editDescription, setEditDescription] = useState(() => {
+    const raw = lesson.description ?? ''
+    // Scout lessons store JSON — extract the human-readable description field
+    try {
+      const parsed = JSON.parse(raw)
+      if (parsed && typeof parsed === 'object') {
+        // Full variation object: { description, overview, ... }
+        const parts: string[] = []
+        if (parsed.description) parts.push(parsed.description)
+        if (parsed.overview) parts.push(parsed.overview)
+        return parts.join('\n\n') || raw
+      }
+    } catch { /* not JSON — use as-is */ }
+    // Strip any residual HTML tags
+    return raw.replace(/<[^>]+>/g, '').trim()
+  })
 
   useEffect(() => {
     loadCheckIn()

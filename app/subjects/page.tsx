@@ -147,6 +147,7 @@ function SubjectsContent() {
   const [addLessonKidId, setAddLessonKidId]               = useState('')
   const [addLessonSubject, setAddLessonSubject]           = useState('')
   const [showLessonGenerator, setShowLessonGenerator]     = useState(false)
+  const [lessonRefreshKey, setLessonRefreshKey]           = useState(0)
   const [showQuickLesson, setShowQuickLesson]             = useState(false)
   const [quickTitle, setQuickTitle]                       = useState('')
   const [quickDate, setQuickDate]                         = useState('')
@@ -242,7 +243,7 @@ function SubjectsContent() {
       setLoading(false)
     }
     load()
-  }, [])
+  }, [lessonRefreshKey])
 
   // ── Derived: merge subjects table + lesson subjects ──────────────────────────
   const kidSubjects: { kid: Kid; subjects: SubjectGroup[]; color: string }[] = kids.map((kid, idx) => {
@@ -1120,6 +1121,7 @@ function SubjectsContent() {
           initialKidId={addLessonKidId}
           initialSubject={addLessonSubject}
           onClose={() => setShowLessonGenerator(false)}
+          onLessonSaved={() => setLessonRefreshKey(k => k + 1)}
         />
       )}
 

@@ -789,7 +789,13 @@ export default function AllChildrenList({
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-gray-900"
               >
                 <option value="">Choose a child...</option>
-                {kids.map(kid => (
+                {kids.filter(kid => {
+                  // Exclude kids whose lessons are the source of the copy
+                  const kidLessonIds = (localLessonsByKid[kid.id] || []).map(l => l.id)
+                  const selectedFromThisKid = kidLessonIds.filter(id => selectedLessons.has(id))
+                  // Only exclude if ALL selected lessons belong to this kid (pure single-kid copy)
+                  return selectedFromThisKid.length === 0 || selectedFromThisKid.length < selectedLessons.size
+                }).map(kid => (
                   <option key={kid.id} value={kid.id}>
                     {kid.displayname}{kid.grade ? ` (${kid.grade})` : ''}
                   </option>
