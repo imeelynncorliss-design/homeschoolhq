@@ -151,6 +151,9 @@ export default function AllChildrenList({
   
   const [showCopyModal, setShowCopyModal] = useState(false)
   const [copyTargetChildId, setCopyTargetChildId] = useState('')
+  const [showAdaptPrompt, setShowAdaptPrompt] = useState(false)
+  const [adaptTargetKid, setAdaptTargetKid] = useState<Child | null>(null)
+  const [copiedCount, setCopiedCount] = useState(0)
   
   const [collapsedSubjects, setCollapsedSubjects] = useState<Set<string>>(new Set())
   const [collapsedStatuses, setCollapsedStatuses] = useState<Set<string>>(new Set())
@@ -318,18 +321,20 @@ export default function AllChildrenList({
       }))
       
       const { error } = await supabase.from('lessons').insert(lessonsToInsert)
-      
+
       if (error) {
         console.error('Bulk copy error:', error)
         alert(`Failed to copy lessons: ${error.message}`)
       } else {
-        alert(`✅ ${lessonsToCopy.length} lesson(s) copied to ${targetChild.displayname}!`)
         const updatedLessonsByKid = { ...localLessonsByKid }
         if (!updatedLessonsByKid[copyTargetChildId]) updatedLessonsByKid[copyTargetChildId] = []
         setLocalLessonsByKid(updatedLessonsByKid)
         setSelectedLessons(new Set())
         setShowCopyModal(false)
         setCopyTargetChildId('')
+        setCopiedCount(lessonsToCopy.length)
+        setAdaptTargetKid(targetChild)
+        setShowAdaptPrompt(true)
       }
     }
   }
@@ -815,6 +820,39 @@ export default function AllChildrenList({
                 className="flex-1 border border-gray-300 py-3 rounded-lg hover:bg-gray-50 text-gray-900 font-medium"
               >
                 Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Copy & Adapt with Scout Prompt ──────────────────────────── */}
+      {showAdaptPrompt && adaptTargetKid && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4 pt-4 pb-24">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl">
+            <div className="flex items-center gap-3 mb-3">
+              <img src="/Cardinal_Mascot.png" alt="Scout" style={{ width: 44, height: 44, objectFit: 'contain', flexShrink: 0 }} />
+              <div>
+                <h3 className="text-lg font-black text-gray-900 leading-tight">Lessons copied!</h3>
+                <p className="text-xs text-gray-500 font-semibold">{copiedCount} lesson{copiedCount !== 1 ? 's' : ''} → {adaptTargetKid.displayname}</p>
+              </div>
+            </div>
+            <p className="text-sm text-gray-700 leading-relaxed mb-5">
+              Scout can <strong>adapt these lessons</strong> to match {adaptTargetKid.displayname}&apos;s learning style and age — so they feel designed just for them, not just copied.
+            </p>
+            <div className="space-y-2">
+              <a
+                href={`/subjects?kid=${adaptTargetKid.id}&scout=adapt`}
+                className="block w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-bold text-sm text-center hover:opacity-90 transition-all"
+                onClick={() => setShowAdaptPrompt(false)}
+              >
+                ✨ Adapt with Scout →
+              </a>
+              <button
+                onClick={() => setShowAdaptPrompt(false)}
+                className="w-full py-3 border border-gray-200 text-gray-600 rounded-xl font-semibold text-sm hover:bg-gray-50 transition-all"
+              >
+                Keep as-is — no changes needed
               </button>
             </div>
           </div>

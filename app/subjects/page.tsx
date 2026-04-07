@@ -245,6 +245,19 @@ function SubjectsContent() {
     load()
   }, [lessonRefreshKey])
 
+  // Auto-open Scout generator when arriving from "Copy & Adapt" flow
+  useEffect(() => {
+    if (!activeKidId || loading) return
+    const scoutParam = searchParams?.get('scout')
+    if (scoutParam === 'adapt') {
+      setTimeout(() => setShowLessonGenerator(true), 300)
+      // Remove the param from the URL without re-navigating
+      const url = new URL(window.location.href)
+      url.searchParams.delete('scout')
+      window.history.replaceState({}, '', url.toString())
+    }
+  }, [activeKidId, loading])
+
   // ── Derived: merge subjects table + lesson subjects ──────────────────────────
   const kidSubjects: { kid: Kid; subjects: SubjectGroup[]; color: string }[] = kids.map((kid, idx) => {
     const tableSubjects = allSubjects.filter(s => s.kid_id === kid.id)

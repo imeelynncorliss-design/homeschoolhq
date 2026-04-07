@@ -1204,7 +1204,9 @@ function DashboardContent() {
   const [showGenerator, setShowGenerator]     = useState(false)
   const [activePulseKidId, setActivePulseKidId] = useState<string | null>(null)
   const [childProfileKidId, setChildProfileKidId] = useState<string | null>(null)
-  const [profileTab, setProfileTab] = useState<'today' | 'style' | 'mi' | 'look' | 'subjects'>('today')
+  const [profileTab, setProfileTab] = useState<'today' | 'style' | 'mi' | 'look' | 'subjects' | 'materials' | 'teachers'>('today')
+  const [kidCardMaterials, setKidCardMaterials] = useState<any[]>([])
+  const [kidCardTeachers, setKidCardTeachers] = useState<any[]>([])
   const [kidSubjects, setKidSubjects] = useState<any[]>([])
   const [editChildId, setEditChildId] = useState<string | null>(null)
   const [editChildDefaultTab, setEditChildDefaultTab] = useState<'info' | 'style' | 'mi' | 'look'>('info')
@@ -1848,8 +1850,16 @@ function DashboardContent() {
                         setChildProfileKidId(pulse.kid.id)
                         setProfileTab('today')
                         setKidSubjects([])
+                        setKidCardMaterials([])
+                        setKidCardTeachers([])
                         supabase.from('subjects').select('id,name,emoji,color,weekly_frequency').eq('kid_id', pulse.kid.id).order('name').then(({ data }: { data: any[] | null }) => {
                           if (data) setKidSubjects(data)
+                        })
+                        supabase.from('materials').select('id,name,material_type,subject,kid_ids').eq('organization_id', organizationId!).or(`kid_ids.is.null,kid_ids.cs.{${pulse.kid.id}}`).order('name').then(({ data }: { data: any[] | null }) => {
+                          if (data) setKidCardMaterials(data)
+                        })
+                        supabase.from('family_collaborators').select('id,name,email,role').eq('organization_id', organizationId!).then(({ data }: { data: any[] | null }) => {
+                          if (data) setKidCardTeachers(data)
                         })
                       }}
                       style={{ background: gradient, borderRadius: 20, padding: '18px 12px 16px', cursor: 'pointer', display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 8, boxShadow: '0 4px 20px rgba(0,0,0,0.18)' }}
@@ -2495,24 +2505,26 @@ function DashboardContent() {
                   </div>
 
                   {/* Tab pills */}
-                  <div style={{ display: 'flex', gap: 4, padding: '12px 14px 0', flexShrink: 0 }}>
+                  <div style={{ display: 'flex', gap: 4, padding: '12px 14px 0', flexShrink: 0, overflowX: 'auto', scrollbarWidth: 'none' }}>
                     {([
-                      { id: 'today',    label: '📚 Today' },
-                      { id: 'subjects', label: '📖 Subjects' },
-                      { id: 'style',    label: '🎨 Style' },
-                      { id: 'mi',       label: '✨ MI' },
-                      { id: 'look',     label: '🐦 Look' },
+                      { id: 'today',     label: '📚 Today' },
+                      { id: 'subjects',  label: '📖 Subjects' },
+                      { id: 'style',     label: '🎨 Style' },
+                      { id: 'mi',        label: '✨ MI' },
+                      { id: 'look',      label: '🐦 Look' },
+                      { id: 'materials', label: '📦 Materials' },
+                      { id: 'teachers',  label: '👩‍🏫 Teachers' },
                     ] as const).map(tab => (
                       <button
                         key={tab.id}
                         onClick={() => setProfileTab(tab.id)}
                         style={{
-                          flex: 1, padding: '6px 1px', borderRadius: 10,
+                          flexShrink: 0, padding: '6px 8px', borderRadius: 10,
                           border: profileTab === tab.id ? 'none' : '1.5px solid #e5e7eb',
                           background: profileTab === tab.id ? 'linear-gradient(135deg,#7c3aed,#a855f7)' : '#f9fafb',
                           color: profileTab === tab.id ? '#fff' : '#6b7280',
                           fontSize: 10, fontWeight: 800, cursor: 'pointer',
-                          fontFamily: "'Nunito', sans-serif",
+                          fontFamily: "'Nunito', sans-serif", whiteSpace: 'nowrap' as const,
                         }}
                       >{tab.label}</button>
                     ))}
@@ -2663,6 +2675,76 @@ function DashboardContent() {
                           onClick={() => { setChildProfileKidId(null); setEditChildDefaultTab('look'); setEditChildId(childProfileKidId) }}
                           style={{ width: '100%', padding: '11px 0', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: '#fff', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}
                         >🐦 Change Bird &amp; Color</button>
+                      </div>
+                    )}
+
+                    {/* ── Materials tab ── */}
+                    {profileTab === 'materials' && (
+                      <div>
+                        {kidCardMaterials.length === 0 ? (
+                          <div style={{ textAlign: 'center' as const, padding: '20px 0 12px', color: '#9ca3af' }}>
+                            <div style={{ fontSize: 28, marginBottom: 8 }}>📦</div>
+                            <div style={{ fontSize: 13, fontWeight: 700 }}>No materials yet</div>
+                          </div>
+                        ) : (
+                          <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 7, marginBottom: 14 }}>
+                            {kidCardMaterials.slice(0, 8).map((m: any) => {
+                              const icons: Record<string, string> = { textbook: '📚', subscription: '🔑', physical: '🧰', digital: '💻' }
+                              return (
+                                <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#f9fafb', borderRadius: 11, padding: '9px 12px', border: '1.5px solid #f3f4f6' }}>
+                                  <span style={{ fontSize: 18, flexShrink: 0 }}>{icons[m.material_type] || '📦'}</span>
+                                  <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ fontSize: 13, fontWeight: 800, color: '#1a1a2e', whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.name}</div>
+                                    {m.subject && <div style={{ fontSize: 11, color: '#6b7280', fontWeight: 600 }}>{m.subject}</div>}
+                                  </div>
+                                  {m.kid_ids && (
+                                    <div style={{ fontSize: 10, fontWeight: 700, color: '#7c3aed', background: '#f5f3ff', borderRadius: 99, padding: '3px 6px', flexShrink: 0 }}>Only</div>
+                                  )}
+                                </div>
+                              )
+                            })}
+                            {kidCardMaterials.length > 8 && (
+                              <div style={{ fontSize: 12, color: '#6b7280', fontWeight: 600, textAlign: 'center' as const }}>{kidCardMaterials.length - 8} more…</div>
+                            )}
+                          </div>
+                        )}
+                        <a
+                          href={`/materials`}
+                          onClick={() => setChildProfileKidId(null)}
+                          style={{ display: 'block', width: '100%', padding: '11px 0', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: '#fff', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: "'Nunito', sans-serif", textAlign: 'center' as const, textDecoration: 'none', boxSizing: 'border-box' as const }}
+                        >📦 Manage Materials →</a>
+                      </div>
+                    )}
+
+                    {/* ── Teachers tab ── */}
+                    {profileTab === 'teachers' && (
+                      <div>
+                        {kidCardTeachers.length === 0 ? (
+                          <div style={{ textAlign: 'center' as const, padding: '20px 0 12px', color: '#9ca3af' }}>
+                            <div style={{ fontSize: 28, marginBottom: 8 }}>👩‍🏫</div>
+                            <div style={{ fontSize: 13, fontWeight: 700 }}>No co-teachers yet</div>
+                            <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 4 }}>Add a co-teacher to share teaching with a partner or tutor</div>
+                          </div>
+                        ) : (
+                          <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 7, marginBottom: 14 }}>
+                            {kidCardTeachers.map((t: any) => (
+                              <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#f9fafb', borderRadius: 11, padding: '9px 12px', border: '1.5px solid #f3f4f6' }}>
+                                <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#7c3aed,#a855f7)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 14, fontWeight: 800, flexShrink: 0 }}>
+                                  {(t.name || t.email || '?').charAt(0).toUpperCase()}
+                                </div>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <div style={{ fontSize: 13, fontWeight: 800, color: '#1a1a2e', whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.name || t.email}</div>
+                                  {t.role && <div style={{ fontSize: 11, color: '#6b7280', fontWeight: 600, textTransform: 'capitalize' as const }}>{t.role}</div>}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        <a
+                          href="/co-teachers"
+                          onClick={() => setChildProfileKidId(null)}
+                          style={{ display: 'block', width: '100%', padding: '11px 0', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: '#fff', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: "'Nunito', sans-serif", textAlign: 'center' as const, textDecoration: 'none', boxSizing: 'border-box' as const }}
+                        >👩‍🏫 Manage Co-Teachers →</a>
                       </div>
                     )}
 

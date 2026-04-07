@@ -938,7 +938,16 @@ function OnboardingInner() {
     }))
     await supabase.from('subjects').insert(rows)
     setSubjectsSaving(false)
-    setStep(6)
+    setStep(6) // goes to "Add another child?" prompt
+  }
+
+  const startAnotherChild = () => {
+    // Reset all child-specific fields so the form is fresh for the next child
+    setFirstName(''); setLastName(''); setNickname(''); setAge(''); setGrade('')
+    setLearningStyles([]); setMiProfile([])
+    setSelectedSubjects(DEFAULT_SUBJECTS); setSchoolDaysPerWeek(5)
+    setStep4Sub('info'); setKidId(null)
+    setStep(4)
   }
 
   useEffect(() => {
@@ -2619,9 +2628,41 @@ function OnboardingInner() {
         )}
 
         {/* ══════════════════════════════════════════════════════
-            STEP 6 — Completion / Summary
+            STEP 6 — Add Another Child?
         ══════════════════════════════════════════════════════ */}
         {step === 6 && (
+          <div className="text-center">
+            <div className="text-7xl mb-6">👨‍👩‍👧‍👦</div>
+            <h1 className="text-4xl font-black mb-4 leading-tight" style={{ color: '#c4b5fd' }}>
+              Do you have another child to add?
+            </h1>
+            <p className="text-base leading-relaxed mb-8" style={{ color: 'rgba(255,255,255,0.8)' }}>
+              Each child gets their own lessons, progress tracking, and records — all in one account.
+            </p>
+            <div className="space-y-3">
+              <button
+                onClick={startAnotherChild}
+                className="w-full py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-2xl font-bold text-base hover:opacity-90 transition-all"
+              >
+                ➕ Yes, add another child
+              </button>
+              <button
+                onClick={() => setStep(7)}
+                className="w-full py-4 bg-white/10 text-white rounded-2xl font-bold text-base hover:bg-white/20 transition-all border border-white/20"
+              >
+                I'll add them later → Go to Dashboard
+              </button>
+            </div>
+            <p className="text-xs mt-5" style={{ color: 'rgba(255,255,255,0.45)' }}>
+              You can always add more children from your Profile after setup.
+            </p>
+          </div>
+        )}
+
+        {/* ══════════════════════════════════════════════════════
+            STEP 7 — Completion / Summary
+        ══════════════════════════════════════════════════════ */}
+        {step === 7 && (
           <div>
             <div className="text-center mb-8">
               <div className="text-6xl mb-4">🎉</div>

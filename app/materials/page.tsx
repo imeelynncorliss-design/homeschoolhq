@@ -21,6 +21,7 @@ interface Material {
   login_info?: string;
   license_expires?: string;
   notes?: string;
+  kid_ids?: string[] | null;
   created_at: string;
 }
 
@@ -29,11 +30,12 @@ export default function MaterialsPage() {
   useAppHeader({ title: '📚 Materials', backHref: '/resources' })
   const [loading, setLoading] = useState(true);
   const [materials, setMaterials] = useState<Material[]>([]);
+  const [kids, setKids] = useState<{ id: string; displayname: string }[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
   const [organizationId, setOrganizationId] = useState<string | null>(null);
   const [filterType, setFilterType] = useState<MaterialType | 'all'>('all');
-  const [filterSubject, setFilterSubject] = useState<string>('all');
+  const [filterKidId, setFilterKidId] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
   // Form state
@@ -48,6 +50,7 @@ export default function MaterialsPage() {
   const [formLoginInfo, setFormLoginInfo] = useState('');
   const [formLicenseExpires, setFormLicenseExpires] = useState('');
   const [formNotes, setFormNotes] = useState('');
+  const [formKidIds, setFormKidIds] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false)
 
@@ -59,14 +62,14 @@ export default function MaterialsPage() {
     if (organizationId) {
       loadMaterials();
     }
-  }, [organizationId, filterType, filterSubject, searchQuery]);
+  }, [organizationId, filterType, filterKidId, searchQuery]);
 
   const loadData = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { 
-        router.push('/'); 
-        return; 
+      if (!user) {
+        router.push('/');
+        return;
       }
 
       // 1. PRIMARY: Try user_profiles first
@@ -76,47 +79,50 @@ export default function MaterialsPage() {
         .eq('user_id', user.id)
         .maybeSingle();
 
-      if (profile?.organization_id) {
-        setOrganizationId(profile.organization_id);
-        setLoading(false);
-        return;
-      }
+      let orgId: string | null = profile?.organization_id ?? null;
 
-      // 2. FALLBACK: Try kids table
-      const { data: kid } = await supabase
-        .from('kids')
-        .select('organization_id')
-        .eq('user_id', user.id)
-        .limit(1)
-        .maybeSingle();
-
-      if (kid?.organization_id) {
-        setOrganizationId(kid.organization_id);
-        
-        // Backfill user_profiles so next time it's faster
-        await supabase
-          .from('user_profiles')
-          .update({ organization_id: kid.organization_id })
-          .eq('user_id', user.id);
-      } else {
-        // 3. FALLBACK: co-teacher path
-        const { data: collab } = await supabase
-          .from('family_collaborators')
+      if (!orgId) {
+        // 2. FALLBACK: Try kids table
+        const { data: kid } = await supabase
+          .from('kids')
           .select('organization_id')
           .eq('user_id', user.id)
           .limit(1)
-          .maybeSingle()
+          .maybeSingle();
 
-        if (collab?.organization_id) {
-          setOrganizationId(collab.organization_id)
+        if (kid?.organization_id) {
+          orgId = kid.organization_id;
+          await supabase
+            .from('user_profiles')
+            .update({ organization_id: orgId })
+            .eq('user_id', user.id);
         } else {
-          setOrganizationId(null)
+          // 3. FALLBACK: co-teacher path
+          const { data: collab } = await supabase
+            .from('family_collaborators')
+            .select('organization_id')
+            .eq('user_id', user.id)
+            .limit(1)
+            .maybeSingle();
+          orgId = collab?.organization_id ?? null;
         }
       }
-  
+
+      setOrganizationId(orgId);
+
+      // Load kids for the org
+      if (orgId) {
+        const { data: kidsData } = await supabase
+          .from('kids')
+          .select('id, displayname')
+          .eq('organization_id', orgId)
+          .order('displayname');
+        setKids(kidsData || []);
+      }
+
       setLoading(false);
-    } catch (error) { 
-      console.error('Error loading materials data:', error); 
+    } catch (error) {
+      console.error('Error loading materials data:', error);
       setLoading(false);
     }
   };
@@ -127,10 +133,10 @@ export default function MaterialsPage() {
       let savedMaterials = JSON.parse(sessionStorage.getItem('dev_materials') || '[]');
       let filtered = [...savedMaterials];
       if (filterType !== 'all') filtered = filtered.filter((m: any) => m.material_type === filterType);
-      if (filterSubject !== 'all') filtered = filtered.filter((m: any) => m.subject === filterSubject);
+      if (filterKidId !== 'all') filtered = filtered.filter((m: any) => !m.kid_ids || m.kid_ids.includes(filterKidId));
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
-        filtered = filtered.filter((m: any) => 
+        filtered = filtered.filter((m: any) =>
           m.name.toLowerCase().includes(q) || (m.subject && m.subject.toLowerCase().includes(q))
         );
       }
@@ -150,31 +156,32 @@ export default function MaterialsPage() {
         .order('created_at', { ascending: false });
 
       if (filterType !== 'all') query = query.eq('material_type', filterType);
-      if (filterSubject !== 'all') query = query.eq('subject', filterSubject);
+      if (filterKidId !== 'all') query = query.or(`kid_ids.is.null,kid_ids.cs.{${filterKidId}}`);
       if (searchQuery) query = query.ilike('name', `%${searchQuery}%`);
 
       const { data, error } = await query;
       if (error) throw error;
       setMaterials(data || []);
-    } catch (error) { 
-      console.error('Error loading materials:', error); 
-    } finally { 
-      setLoading(false); 
+    } catch (error) {
+      console.error('Error loading materials:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
   const resetForm = () => {
-    setFormType('textbook'); 
-    setFormName(''); 
-    setFormSubject(''); 
+    setFormType('textbook');
+    setFormName('');
+    setFormSubject('');
     setFormGrade('');
-    setFormPublisher(''); 
-    setFormQuantity(1); 
-    setFormCondition(''); 
+    setFormPublisher('');
+    setFormQuantity(1);
+    setFormCondition('');
     setFormUrl('');
-    setFormLoginInfo(''); 
-    setFormLicenseExpires(''); 
+    setFormLoginInfo('');
+    setFormLicenseExpires('');
     setFormNotes('');
+    setFormKidIds([]);
     setEditingMaterial(null);
   };
 
@@ -196,6 +203,7 @@ export default function MaterialsPage() {
     setFormLoginInfo(material.login_info || '');
     setFormLicenseExpires(material.license_expires || '');
     setFormNotes(material.notes || '');
+    setFormKidIds(material.kid_ids || []);
     setShowAddForm(true);
   };
 
@@ -222,6 +230,7 @@ export default function MaterialsPage() {
       login_info: formLoginInfo || null,
       license_expires: formLicenseExpires || null,
       notes: formNotes || null,
+      kid_ids: formKidIds.length > 0 ? formKidIds : null,
     };
 
     try {
@@ -293,7 +302,6 @@ export default function MaterialsPage() {
     }
   };
 
-  const subjects = Array.from(new Set(materials.map(m => m.subject).filter(Boolean))).sort() as string[];
 
   if (loading) return <div className="p-8 text-center font-bold text-slate-800">Loading resources...</div>;
 
@@ -380,6 +388,12 @@ export default function MaterialsPage() {
               <option value="physical">Physical</option>
               <option value="digital">Digital</option>
             </select>
+            {kids.length > 1 && (
+              <select value={filterKidId} onChange={(e) => setFilterKidId(e.target.value)} className="px-4 py-3.5 bg-slate-50 border border-slate-300 rounded-xl outline-none text-slate-900 font-bold cursor-pointer">
+                <option value="all">All Children</option>
+                {kids.map(k => <option key={k.id} value={k.id}>{k.displayname}</option>)}
+              </select>
+            )}
           </div>
         </div>
 
@@ -423,6 +437,14 @@ export default function MaterialsPage() {
                           <span>{m.subject || 'General'}</span>
                           <span className="text-slate-300">•</span>
                           <span>{m.grade_level || 'All Grades'}</span>
+                          {m.kid_ids && m.kid_ids.length > 0 && (
+                            <>
+                              <span className="text-slate-300">•</span>
+                              <span className="text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-lg border border-indigo-100 text-xs">
+                                {m.kid_ids.map(id => kids.find(k => k.id === id)?.displayname).filter(Boolean).join(', ')}
+                              </span>
+                            </>
+                          )}
                           {m.quantity && m.quantity > 1 && (
                             <>
                               <span className="text-slate-300">•</span>
@@ -521,6 +543,32 @@ export default function MaterialsPage() {
                   )}
                 </div>
               </div>
+
+              {kids.length > 0 && (
+                <div>
+                  <label className="block text-sm font-black text-slate-900 mb-2 uppercase tracking-wide">
+                    Assign to Child(ren) <span className="font-normal text-slate-500 normal-case">(leave blank = all children)</span>
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {kids.map(k => {
+                      const selected = formKidIds.includes(k.id);
+                      return (
+                        <button
+                          key={k.id}
+                          type="button"
+                          onClick={() => setFormKidIds(prev => selected ? prev.filter(id => id !== k.id) : [...prev, k.id])}
+                          className={`px-4 py-2 rounded-xl font-bold text-sm border-2 transition-all ${selected ? 'bg-indigo-700 text-white border-indigo-700' : 'bg-slate-50 text-slate-700 border-slate-200 hover:border-indigo-300'}`}
+                        >
+                          {k.displayname}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {formKidIds.length === 0 && (
+                    <p className="text-xs text-slate-500 mt-1">This resource will be visible for all children.</p>
+                  )}
+                </div>
+              )}
 
               {formType === 'physical' && (
                 <div className="bg-green-50 p-4 rounded-xl border-2 border-green-200">
