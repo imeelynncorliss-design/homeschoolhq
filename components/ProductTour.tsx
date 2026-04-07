@@ -70,7 +70,7 @@ function buildTourSteps(
     bullets: [
       '🛒 Supply Scout — shows how many materials you need this week. Tap it to review and check off as you gather.',
       "🃏 Use the 'Customize Cards' pill to choose which action cards appear on your dashboard.",
-      '📌 Supply Scout, Ask Scout, and Today\'s Learning are always here — they\'re pinned and won\'t change no matter what cards you pick.',
+      '📌 Ask Scout and Today\'s Learning are always pinned — they\'re always here no matter what cards you pick.',
     ],
     position: 'bottom',
   })
