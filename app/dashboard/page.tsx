@@ -2505,7 +2505,7 @@ function DashboardContent() {
                   </div>
 
                   {/* Tab pills */}
-                  <div style={{ display: 'flex', gap: 4, padding: '12px 14px 0', flexShrink: 0, overflowX: 'auto', scrollbarWidth: 'none' }}>
+                  <div style={{ display: 'flex', gap: 4, padding: '12px 14px 8px', flexShrink: 0, overflowX: 'auto', scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' as any }}>
                     {([
                       { id: 'today',     label: '📚 Today' },
                       { id: 'subjects',  label: '📖 Subjects' },
