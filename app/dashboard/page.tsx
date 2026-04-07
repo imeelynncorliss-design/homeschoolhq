@@ -2730,7 +2730,7 @@ function DashboardContent() {
                           </div>
                         )}
                         <a
-                          href={`/materials`}
+                          href={`/materials?kid=${pulse.kid.id}`}
                           onClick={() => setChildProfileKidId(null)}
                           style={{ display: 'block', width: '100%', padding: '11px 0', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: '#fff', fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: "'Nunito', sans-serif", textAlign: 'center' as const, textDecoration: 'none', boxSizing: 'border-box' as const }}
                         >📦 Manage Materials →</a>

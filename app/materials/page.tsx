@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/src/lib/supabase';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAppHeader } from '@/components/layout/AppHeader'
 import MaterialsHelpModal from '@/components/MaterialsHelpModal'
+import { Suspense } from 'react'
 
 type MaterialType = 'textbook' | 'subscription' | 'physical' | 'digital';
 
@@ -25,8 +26,11 @@ interface Material {
   created_at: string;
 }
 
-export default function MaterialsPage() {
+function MaterialsPageInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const kidParam = searchParams?.get('kid') || null;
+
   useAppHeader({ title: '📚 Materials', backHref: '/resources' })
   const [loading, setLoading] = useState(true);
   const [allMaterials, setAllMaterials] = useState<Material[]>([]);
@@ -35,7 +39,7 @@ export default function MaterialsPage() {
   const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
   const [organizationId, setOrganizationId] = useState<string | null>(null);
   const [filterType, setFilterType] = useState<MaterialType | 'all'>('all');
-  const [filterKidId, setFilterKidId] = useState<string>('all');
+  const [filterKidId, setFilterKidId] = useState<string>(kidParam || 'all');
   const [searchQuery, setSearchQuery] = useState('');
 
   // Form state
@@ -50,7 +54,7 @@ export default function MaterialsPage() {
   const [formLoginInfo, setFormLoginInfo] = useState('');
   const [formLicenseExpires, setFormLicenseExpires] = useState('');
   const [formNotes, setFormNotes] = useState('');
-  const [formKidIds, setFormKidIds] = useState<string[]>([]);
+  const [formKidIds, setFormKidIds] = useState<string[]>(kidParam ? [kidParam] : []);
   const [isSaving, setIsSaving] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false)
 
@@ -122,14 +126,26 @@ export default function MaterialsPage() {
 
       setOrganizationId(orgId);
 
-      // Load kids for the org
+      // Load kids — try org-wide first, fall back to user_id-owned
       if (orgId) {
         const { data: kidsData } = await supabase
           .from('kids')
           .select('id, displayname')
           .eq('organization_id', orgId)
+          .eq('archived', false)
           .order('displayname');
-        setKids(kidsData || []);
+        if (kidsData && kidsData.length > 0) {
+          setKids(kidsData);
+        } else {
+          // Fallback: load by user_id in case org_id isn't set on kids rows
+          const { data: ownKids } = await supabase
+            .from('kids')
+            .select('id, displayname')
+            .eq('user_id', user.id)
+            .eq('archived', false)
+            .order('displayname');
+          setKids(ownKids || []);
+        }
       }
 
       setLoading(false);
@@ -638,5 +654,13 @@ export default function MaterialsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function MaterialsPage() {
+  return (
+    <Suspense>
+      <MaterialsPageInner />
+    </Suspense>
   );
 }
