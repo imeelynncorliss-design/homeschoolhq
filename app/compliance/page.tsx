@@ -236,10 +236,20 @@ export default function CompliancePage() {
           .lte('lesson_date', endDate)
 
 
+        // Load daily subject logs for this kid
+        const { data: dailyLogs } = await supabase
+          .from('daily_subject_logs')
+          .select('log_date, hours, kid_id')
+          .eq('organization_id', organizationId!)
+          .eq('kid_id', kid.id)
+          .gte('log_date', startDate)
+          .lte('log_date', endDate)
+
         // Build set of all relevant dates
         const allDates = new Set<string>()
         lessons?.forEach((l: any) => allDates.add(l.lesson_date.substring(0, 10)))
         attendance?.forEach((a: any) => allDates.add(a.attendance_date))
+        dailyLogs?.forEach((log: any) => allDates.add(log.log_date))
 
         let totalDays = 0
         let totalHours = 0
@@ -257,12 +267,17 @@ export default function CompliancePage() {
           let isSchoolDay = false
           let dayHours = 0
 
+          const dayLog = dailyLogs?.find((log: any) => log.log_date === date)
+
           if (dayAtt) {
             isSchoolDay = dayAtt.status !== 'no_school'
             dayHours = dayAtt.hours
           } else if (lessonHours > 0) {
             isSchoolDay = true
             dayHours = lessonHours
+          } else if (dayLog) {
+            isSchoolDay = true
+            dayHours = dayLog.hours || 0
           }
 
           if (isSchoolDay) {

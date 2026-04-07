@@ -119,6 +119,17 @@ export function useSubjectCoverage(filters: CoverageFilters) {
       const { data, error: fetchError } = await query
       if (fetchError) throw fetchError
 
+      // Also load daily subject logs
+      let logsQuery = supabase
+        .from('daily_subject_logs')
+        .select('subjects, log_date')
+        .eq('kid_id', filters.kidId)
+
+      if (filters.startDate) logsQuery = logsQuery.gte('log_date', filters.startDate)
+      if (filters.endDate) logsQuery = logsQuery.lte('log_date', filters.endDate)
+
+      const { data: logsData } = await logsQuery
+
       const lessonMap: Record<string, { total: number; completed: number; notStarted: number; inProgress: number }> = {}
 
       for (const lesson of data || []) {
@@ -129,6 +140,17 @@ export function useSubjectCoverage(filters: CoverageFilters) {
         if (lesson.status === 'completed') lessonMap[lesson.subject].completed++
         else if (lesson.status === 'not_started') lessonMap[lesson.subject].notStarted++
         else lessonMap[lesson.subject].inProgress++
+      }
+
+      // Merge daily log subjects — each log day counts as 1 "completed" occurrence per subject
+      for (const log of logsData || []) {
+        for (const subject of log.subjects || []) {
+          if (!lessonMap[subject]) {
+            lessonMap[subject] = { total: 0, completed: 0, notStarted: 0, inProgress: 0 }
+          }
+          lessonMap[subject].total++
+          lessonMap[subject].completed++
+        }
       }
 
       const allSubjects: SubjectCoverageData[] = CANONICAL_SUBJECTS.map((subject) => {

@@ -83,6 +83,7 @@ export default function AttendanceTracker({ kids, organizationId, userId }: Atte
   const [manualAttendance, setManualAttendance] = useState<ManualAttendance[]>([])
   const [socialEvents, setSocialEvents] = useState<any[]>([])  // NEW
   const [coopEnrollments, setCoopEnrollments] = useState<any[]>([])  // NEW
+  const [dailySubjectLogs, setDailySubjectLogs] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedKid, setSelectedKid] = useState<string>('all')
   const [startDateFilter, setStartDateFilter] = useState('')
@@ -261,10 +262,18 @@ useEffect(() => {
       }
 
 
+      // Load daily subject logs
+      const { data: dailyLogsData } = await supabase
+        .from('daily_subject_logs')
+        .select('*')
+        .eq('organization_id', organizationId)
+        .order('log_date', { ascending: false })
+
       setLessons(lessonsData || [])
       setManualAttendance(attendanceData || [])
       setSocialEvents(eventsData || [])
       setCoopEnrollments(enrollmentsData || [])
+      setDailySubjectLogs(dailyLogsData || [])
 
       // Calculate filter counts
       calculateFilterCounts(lessonsData || [], eventsData || [], enrollmentsData || [], attendanceData || [])
@@ -312,6 +321,7 @@ useEffect(() => {
     lessons.forEach(l => allDates.add(l.lesson_date))
     manualAttendance.forEach(a => allDates.add(a.attendance_date))
     socialEvents.forEach(e => allDates.add(e.event_date))
+    dailySubjectLogs.forEach(log => allDates.add(log.log_date))
 
     // Add co-op class dates
     coopEnrollments.forEach(enrollment => {
@@ -364,12 +374,21 @@ useEffect(() => {
       let isSchoolDay = false
       let totalHours = 0
 
+      // Daily subject log for this date (kid-specific or any kid if 'all')
+      const dayLog = dailySubjectLogs.find(log =>
+        log.log_date === date &&
+        (selectedKid === 'all' || log.kid_id === selectedKid)
+      )
+
       if (dateAttendance) {
         isSchoolDay = dateAttendance.status !== 'no_school'
         totalHours = dateAttendance.hours
       } else if (lessonHours > 0) {
         isSchoolDay = true
         totalHours = lessonHours
+      } else if (dayLog) {
+        isSchoolDay = true
+        totalHours = dayLog.hours || 0
       }
 
       return {
@@ -380,7 +399,8 @@ useEffect(() => {
         coopClassCount,
         manualAttendance: dateAttendance,
         isSchoolDay,
-        totalHours
+        totalHours,
+        dailyLog: dayLog || null,
       }
     })
 
