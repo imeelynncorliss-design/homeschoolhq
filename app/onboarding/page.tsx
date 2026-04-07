@@ -870,6 +870,7 @@ function OnboardingInner() {
     )
   }
   const [kidId, setKidId]         = useState<string | null>(null)
+  const [addedChildren, setAddedChildren] = useState<{ name: string; grade?: string; age?: string }[]>([])
 
   // Step 5 — Subjects
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>(DEFAULT_SUBJECTS)
@@ -938,7 +939,13 @@ function OnboardingInner() {
     }))
     await supabase.from('subjects').insert(rows)
     setSubjectsSaving(false)
+    captureCurrentChild()
     setStep(6) // goes to "Add another child?" prompt
+  }
+
+  const captureCurrentChild = () => {
+    const name = nickname.trim() || firstName.trim()
+    if (name) setAddedChildren(prev => [...prev, { name, grade: grade || undefined, age: age || undefined }])
   }
 
   const startAnotherChild = () => {
@@ -2619,7 +2626,7 @@ function OnboardingInner() {
               {subjectsSaving ? 'Saving…' : `Save ${selectedSubjects.length} subject${selectedSubjects.length !== 1 ? 's' : ''} & continue →`}
             </button>
             <button
-              onClick={() => setStep(6)}
+              onClick={() => { captureCurrentChild(); setStep(6) }}
               className="w-full py-3 text-sm text-gray-400 hover:text-gray-600 font-semibold transition-colors"
             >
               Skip for now — I'll set this up in the Subjects tab
@@ -2682,7 +2689,7 @@ function OnboardingInner() {
                 {[
                   { icon: '🏡', label: 'School', value: schoolName || '—' },
                   { icon: '🎨', label: 'Teaching style', value: STYLE_RESULTS[teachingStyle]?.name || 'Not set' },
-                  { icon: '🧒', label: 'First student', value: `${nickname || firstName}${grade ? ` · ${grade}` : ''}${age ? ` · Age ${age}` : ''}` },
+                  { icon: '🧒', label: addedChildren.length > 1 ? 'Students' : 'First student', value: addedChildren.length > 1 ? addedChildren.map(c => `${c.name}${c.grade ? ` · ${c.grade}` : ''}`).join(', ') : `${nickname || firstName}${grade ? ` · ${grade}` : ''}${age ? ` · Age ${age}` : ''}` },
                   { icon: '🧠', label: 'Learning style', value: learningStyles.length > 0 ? learningStyles.map(v => LEARNING_STYLES.find(s => s.value === v)?.label).join(', ') : '—' },
                   { icon: '🧬', label: 'Intelligences', value: miProfile.length > 0 ? miProfile.map(id => MI_INTELLIGENCES.find(m => m.id === id)?.name).filter(Boolean).join(', ') : '—' },
                   { icon: '📚', label: 'Curriculum', value: curriculumLabel },
@@ -2764,14 +2771,6 @@ function OnboardingInner() {
               Go to my Dashboard →
             </button>
 
-            {/* Add more children reminder */}
-            <div className="mt-4 flex items-start gap-3 bg-purple-50 border border-purple-200 rounded-xl px-4 py-3 text-left">
-              <span className="text-xl flex-shrink-0">👨‍👩‍👧‍👦</span>
-              <p className="text-sm text-purple-800 leading-relaxed">
-                <strong>Have more than one child?</strong> Head to{' '}
-                <strong>Profile → Children</strong> after setup to add them — each gets their own progress rings, lessons, and records.
-              </p>
-            </div>
           </div>
         )}
 
