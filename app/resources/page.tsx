@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, Suspense } from 'react'
+import { useEffect, useState, useMemo, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import AuthGuard from '@/components/AuthGuard'
 import { ExternalLink } from '@/components/ExternalLink'
@@ -714,8 +714,9 @@ function StateLawsTab() {
 type MaterialType = 'textbook' | 'subscription' | 'physical' | 'digital'
 
 function MaterialsTab({ organizationId }: { organizationId: string }) {
-  const [materials, setMaterials]             = useState<any[]>([])
+  const [allMaterials, setAllMaterials]       = useState<any[]>([])
   const [loadingMats, setLoadingMats]         = useState(true)
+  const [kids, setKids]                       = useState<{ id: string; displayname: string }[]>([])
   const [filterType, setFilterType]           = useState<MaterialType | 'all'>('all')
   const [searchQuery, setSearchQuery]         = useState('')
   const [showAddForm, setShowAddForm]         = useState(false)
@@ -731,40 +732,82 @@ function MaterialsTab({ organizationId }: { organizationId: string }) {
   const [formUrl, setFormUrl]                 = useState('')
   const [formLoginInfo, setFormLoginInfo]     = useState('')
   const [formNotes, setFormNotes]             = useState('')
+  const [formKidIds, setFormKidIds]           = useState<string[]>([])
 
   const toggleCollapse = (type: string) =>
     setCollapsed(prev => { const next = new Set(prev); next.has(type) ? next.delete(type) : next.add(type); return next })
 
-  useEffect(() => { loadMaterials() }, [organizationId, filterType, searchQuery])
+  // Load materials once on mount / when orgId changes
+  useEffect(() => { loadMaterials() }, [organizationId])
+
+  // Load kids once
+  useEffect(() => {
+    const loadKids = async () => {
+      if (!organizationId) return
+      const { data: kidsData } = await supabase
+        .from('kids').select('id, displayname')
+        .eq('organization_id', organizationId)
+        .neq('archived', true)
+        .order('displayname')
+      if (kidsData && kidsData.length > 0) { setKids(kidsData); return }
+      // Fallback: user_id-based
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const { data: ownKids } = await supabase
+        .from('kids').select('id, displayname')
+        .eq('user_id', user.id)
+        .neq('archived', true)
+        .order('displayname')
+      setKids(ownKids || [])
+    }
+    loadKids()
+  }, [organizationId])
+
+  // Client-side filter — no re-fetch, no flash
+  const materials = useMemo(() => {
+    let result = allMaterials
+    if (filterType !== 'all') result = result.filter(m => m.material_type === filterType)
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase()
+      result = result.filter(m => m.name.toLowerCase().includes(q) || (m.subject && m.subject.toLowerCase().includes(q)))
+    }
+    return result
+  }, [allMaterials, filterType, searchQuery])
 
   const loadMaterials = async () => {
     if (!organizationId) return
-    setLoadingMats(true)
     try {
-      let query = supabase.from('materials').select('*').eq('organization_id', organizationId).order('created_at', { ascending: false })
-      if (filterType !== 'all') query = query.eq('material_type', filterType)
-      if (searchQuery) query = query.ilike('name', `%${searchQuery}%`)
-      const { data } = await query
-      setMaterials(data || [])
+      const { data } = await supabase
+        .from('materials').select('*')
+        .eq('organization_id', organizationId)
+        .order('created_at', { ascending: false })
+      setAllMaterials(data || [])
     } catch (e) { console.error(e) }
     finally { setLoadingMats(false) }
   }
 
   const resetForm = () => {
     setFormType('textbook'); setFormName(''); setFormSubject(''); setFormGrade('')
-    setFormQuantity(1); setFormUrl(''); setFormLoginInfo(''); setFormNotes(''); setEditingMaterial(null)
+    setFormQuantity(1); setFormUrl(''); setFormLoginInfo(''); setFormNotes('')
+    setFormKidIds([]); setEditingMaterial(null)
   }
 
   const openEdit = (m: any) => {
     setEditingMaterial(m); setFormType(m.material_type); setFormName(m.name); setFormSubject(m.subject || '')
     setFormGrade(m.grade_level || ''); setFormQuantity(m.quantity || 1)
     setFormUrl(m.url || ''); setFormLoginInfo(m.login_info || ''); setFormNotes(m.notes || '')
+    setFormKidIds(m.kid_ids || [])
     setShowAddForm(true)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault(); setIsSaving(true)
-    const payload = { organization_id: organizationId, material_type: formType, name: formName, subject: formSubject || null, grade_level: formGrade || null, quantity: formQuantity, url: formUrl || null, login_info: formLoginInfo || null, notes: formNotes || null }
+    const payload = {
+      organization_id: organizationId, material_type: formType, name: formName,
+      subject: formSubject || null, grade_level: formGrade || null, quantity: formQuantity,
+      url: formUrl || null, login_info: formLoginInfo || null, notes: formNotes || null,
+      kid_ids: formKidIds.length > 0 ? formKidIds : null,
+    }
     try {
       if (editingMaterial) { await supabase.from('materials').update(payload).eq('id', editingMaterial.id) }
       else { await supabase.from('materials').insert([payload]) }
@@ -899,6 +942,29 @@ function MaterialsTab({ organizationId }: { organizationId: string }) {
                   <div>
                     <label style={{ fontSize: 11, fontWeight: 800, color: '#374151', textTransform: 'uppercase' as const, letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>Quantity</label>
                     <input type="number" min="1" value={formQuantity} onChange={e => setFormQuantity(parseInt(e.target.value) || 1)} style={{ width: '100%', padding: '10px 14px', background: '#f9fafb', border: '2px solid #e5e7eb', borderRadius: 10, fontSize: 13, fontWeight: 600, outline: 'none', boxSizing: 'border-box' as const, color: '#111827', fontFamily: "'Nunito', sans-serif" }} />
+                  </div>
+                )}
+                {kids.length > 0 && (
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 800, color: '#374151', textTransform: 'uppercase' as const, letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>Assign to Child(ren)</label>
+                    <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 8 }}>
+                      {kids.map(kid => {
+                        const selected = formKidIds.includes(kid.id)
+                        return (
+                          <button
+                            key={kid.id} type="button"
+                            onClick={() => setFormKidIds(prev => selected ? prev.filter(id => id !== kid.id) : [...prev, kid.id])}
+                            style={{
+                              padding: '7px 14px', borderRadius: 20, fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                              border: selected ? '2px solid #7c3aed' : '2px solid #e5e7eb',
+                              background: selected ? '#f5f3ff' : '#f9fafb',
+                              color: selected ? '#7c3aed' : '#6b7280',
+                              fontFamily: "'Nunito', sans-serif",
+                            }}
+                          >{selected ? '✓ ' : ''}{kid.displayname}</button>
+                        )
+                      })}
+                    </div>
                   </div>
                 )}
                 <div>
