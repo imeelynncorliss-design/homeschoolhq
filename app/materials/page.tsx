@@ -138,7 +138,6 @@ export default function MaterialsPage() {
 
   const loadMaterials = async () => {
     if (organizationId === '00000000-0000-0000-0000-000000000000') {
-      setLoading(true);
       let savedMaterials = JSON.parse(sessionStorage.getItem('dev_materials') || '[]');
       let filtered = [...savedMaterials];
       if (filterType !== 'all') filtered = filtered.filter((m: any) => m.material_type === filterType);
@@ -150,13 +149,11 @@ export default function MaterialsPage() {
         );
       }
       setMaterials(filtered);
-      setLoading(false);
       return;
     }
 
     if (!organizationId) return;
 
-    setLoading(true);
     try {
       let query = supabase
         .from('materials')
@@ -173,8 +170,6 @@ export default function MaterialsPage() {
       setMaterials(data || []);
     } catch (error) {
       console.error('Error loading materials:', error);
-    } finally {
-      setLoading(false);
     }
   };
 
