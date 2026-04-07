@@ -154,6 +154,35 @@ function SubjectsContent() {
   const [quickDuration, setQuickDuration]                 = useState(30)
   const [quickSaving, setQuickSaving]                     = useState(false)
 
+  // Quick-add material from subject card
+  const [showMaterialSheet, setShowMaterialSheet] = useState(false)
+  const [matKidId, setMatKidId]                   = useState('')
+  const [matSubject, setMatSubject]               = useState('')
+  const [matName, setMatName]                     = useState('')
+  const [matType, setMatType]                     = useState<'textbook' | 'subscription' | 'physical' | 'digital'>('textbook')
+  const [matSaving, setMatSaving]                 = useState(false)
+
+  const openMaterialSheet = (kidId: string, subject: string) => {
+    setMatKidId(kidId); setMatSubject(subject); setMatName(''); setMatType('textbook')
+    setShowMaterialSheet(true)
+  }
+
+  const saveMaterial = async () => {
+    if (!matName.trim() || !orgId) return
+    setMatSaving(true)
+    try {
+      await supabase.from('materials').insert({
+        organization_id: orgId,
+        material_type: matType,
+        name: matName.trim(),
+        subject: matSubject || null,
+        kid_ids: matKidId ? [matKidId] : null,
+      })
+      setShowMaterialSheet(false)
+    } catch (e) { console.error('Error saving material:', e) }
+    finally { setMatSaving(false) }
+  }
+
   // Edit frequency sheet
   const [showEditFreq, setShowEditFreq]           = useState(false)
   const [editFreqSubjectId, setEditFreqSubjectId] = useState<string | null>(null)
@@ -553,9 +582,19 @@ function SubjectsContent() {
                             </div>
                           )
                         })()}
-                        <div style={{ fontSize: 11, fontWeight: 700, color: subj.lessons.length === 0 ? '#9ca3af' : '#7c3aed', display: 'block' }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: subj.lessons.length === 0 ? '#9ca3af' : '#7c3aed', display: 'block', marginBottom: 10 }}>
                           {subj.lessons.length === 0 ? 'No lessons yet' : `${subj.lessons.length} lesson${subj.lessons.length !== 1 ? 's' : ''}`}
                         </div>
+                        <button
+                          onClick={e => { e.stopPropagation(); openMaterialSheet(kid.id, subj.subject) }}
+                          style={{
+                            width: '100%', padding: '6px 0', borderRadius: 8,
+                            border: '1.5px solid rgba(124,58,237,0.2)',
+                            background: 'rgba(124,58,237,0.06)',
+                            color: '#7c3aed', fontSize: 11, fontWeight: 800,
+                            cursor: 'pointer', fontFamily: "'Nunito', sans-serif",
+                          }}
+                        >📦 + Material</button>
                       </div>
                     ))}
                   </div>
@@ -1136,6 +1175,82 @@ function SubjectsContent() {
           onClose={() => setShowLessonGenerator(false)}
           onLessonSaved={() => setLessonRefreshKey(k => k + 1)}
         />
+      )}
+
+      {/* ── Quick-add Material from Subject card ── */}
+      {showMaterialSheet && (
+        <>
+          <div onClick={() => setShowMaterialSheet(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 450 }} />
+          <div style={{
+            position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 451,
+            background: '#fff', borderRadius: '24px 24px 0 0',
+            boxShadow: '0 -8px 40px rgba(0,0,0,0.18)',
+            padding: '20px 20px 40px',
+            fontFamily: "'Nunito', sans-serif",
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
+              <div style={{ width: 40, height: 4, borderRadius: 2, background: '#e5e7eb' }} />
+            </div>
+            <div style={{ fontSize: 18, fontWeight: 900, color: '#1e1b4b', marginBottom: 2 }}>📦 Add Material</div>
+            <div style={{ fontSize: 13, color: '#6b7280', fontWeight: 600, marginBottom: 20 }}>
+              For <strong style={{ color: '#7c3aed' }}>{matSubject}</strong> · saved to{' '}
+              <a href="/materials" style={{ color: '#7c3aed' }}>My Materials</a> and linked to this child
+            </div>
+
+            {/* Name */}
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 11, fontWeight: 800, color: '#9ca3af', letterSpacing: 0.5, marginBottom: 6 }}>RESOURCE NAME *</div>
+              <input
+                value={matName}
+                onChange={e => setMatName(e.target.value)}
+                placeholder="e.g. Saxon Math 5/4, Khan Academy, Rulers & Protractors…"
+                autoFocus
+                style={{
+                  width: '100%', padding: '12px 14px', borderRadius: 12,
+                  border: '1.5px solid #e5e7eb', fontSize: 14, fontWeight: 600,
+                  fontFamily: "'Nunito', sans-serif", color: '#1e1b4b', outline: 'none',
+                  boxSizing: 'border-box' as const,
+                }}
+              />
+            </div>
+
+            {/* Type */}
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 11, fontWeight: 800, color: '#9ca3af', letterSpacing: 0.5, marginBottom: 6 }}>TYPE</div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {(['textbook', 'subscription', 'physical', 'digital'] as const).map(t => {
+                  const icons = { textbook: '📚', subscription: '🔑', physical: '🧰', digital: '💻' }
+                  return (
+                    <button
+                      key={t}
+                      onClick={() => setMatType(t)}
+                      style={{
+                        flex: 1, padding: '8px 4px', borderRadius: 10,
+                        border: matType === t ? '2px solid #7c3aed' : '1.5px solid #e5e7eb',
+                        background: matType === t ? '#f5f3ff' : '#f9fafb',
+                        color: matType === t ? '#7c3aed' : '#6b7280',
+                        fontSize: 10, fontWeight: 800, cursor: 'pointer',
+                        fontFamily: "'Nunito', sans-serif",
+                      }}
+                    >{icons[t]}<br />{t}</button>
+                  )
+                })}
+              </div>
+            </div>
+
+            <button
+              onClick={saveMaterial}
+              disabled={!matName.trim() || matSaving}
+              style={{
+                width: '100%', padding: '14px', borderRadius: 14, border: 'none',
+                background: matName.trim() ? 'linear-gradient(135deg,#7c3aed,#a855f7)' : '#e5e7eb',
+                color: matName.trim() ? '#fff' : '#9ca3af',
+                fontSize: 15, fontWeight: 900, cursor: matName.trim() ? 'pointer' : 'not-allowed',
+                fontFamily: "'Nunito', sans-serif",
+              }}
+            >{matSaving ? 'Saving…' : 'Save Material'}</button>
+          </div>
+        </>
       )}
 
     </div>
