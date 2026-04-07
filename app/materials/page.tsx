@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/src/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { useAppHeader } from '@/components/layout/AppHeader'
@@ -29,7 +29,7 @@ export default function MaterialsPage() {
   const router = useRouter();
   useAppHeader({ title: '📚 Materials', backHref: '/resources' })
   const [loading, setLoading] = useState(true);
-  const [materials, setMaterials] = useState<Material[]>([]);
+  const [allMaterials, setAllMaterials] = useState<Material[]>([]);
   const [kids, setKids] = useState<{ id: string; displayname: string }[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
@@ -37,8 +37,6 @@ export default function MaterialsPage() {
   const [filterType, setFilterType] = useState<MaterialType | 'all'>('all');
   const [filterKidId, setFilterKidId] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Form state
   const [formType, setFormType] = useState<MaterialType>('textbook');
@@ -60,18 +58,23 @@ export default function MaterialsPage() {
     loadData();
   }, []);
 
-  // Debounce search input — only trigger load 300ms after user stops typing
   useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => setDebouncedSearch(searchQuery), 300);
-    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-  }, [searchQuery]);
+    if (organizationId) loadMaterials();
+  }, [organizationId]);
 
-  useEffect(() => {
-    if (organizationId) {
-      loadMaterials();
+  // Client-side filtering — no server round-trip, no re-mount, instant
+  const materials = useMemo(() => {
+    let result = allMaterials;
+    if (filterType !== 'all') result = result.filter(m => m.material_type === filterType);
+    if (filterKidId !== 'all') result = result.filter(m => !m.kid_ids || m.kid_ids.includes(filterKidId));
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(m =>
+        m.name.toLowerCase().includes(q) || (m.subject && m.subject.toLowerCase().includes(q))
+      );
     }
-  }, [organizationId, filterType, filterKidId, debouncedSearch]);
+    return result;
+  }, [allMaterials, filterType, filterKidId, searchQuery]);
 
   const loadData = async () => {
     try {
@@ -138,36 +141,19 @@ export default function MaterialsPage() {
 
   const loadMaterials = async () => {
     if (organizationId === '00000000-0000-0000-0000-000000000000') {
-      let savedMaterials = JSON.parse(sessionStorage.getItem('dev_materials') || '[]');
-      let filtered = [...savedMaterials];
-      if (filterType !== 'all') filtered = filtered.filter((m: any) => m.material_type === filterType);
-      if (filterKidId !== 'all') filtered = filtered.filter((m: any) => !m.kid_ids || m.kid_ids.includes(filterKidId));
-      if (debouncedSearch) {
-        const q = debouncedSearch.toLowerCase();
-        filtered = filtered.filter((m: any) =>
-          m.name.toLowerCase().includes(q) || (m.subject && m.subject.toLowerCase().includes(q))
-        );
-      }
-      setMaterials(filtered);
+      const savedMaterials = JSON.parse(sessionStorage.getItem('dev_materials') || '[]');
+      setAllMaterials(savedMaterials);
       return;
     }
-
     if (!organizationId) return;
-
     try {
-      let query = supabase
+      const { data, error } = await supabase
         .from('materials')
         .select('*')
         .eq('organization_id', organizationId)
         .order('created_at', { ascending: false });
-
-      if (filterType !== 'all') query = query.eq('material_type', filterType);
-      if (filterKidId !== 'all') query = query.or(`kid_ids.is.null,kid_ids.cs.{${filterKidId}}`);
-      if (debouncedSearch) query = query.ilike('name', `%${debouncedSearch}%`);
-
-      const { data, error } = await query;
       if (error) throw error;
-      setMaterials(data || []);
+      setAllMaterials(data || []);
     } catch (error) {
       console.error('Error loading materials:', error);
     }
