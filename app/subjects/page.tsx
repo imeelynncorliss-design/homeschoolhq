@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, Suspense } from 'react'
+import { useEffect, useState, useMemo, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/src/lib/supabase/client'
 import AuthGuard from '@/components/AuthGuard'
@@ -236,6 +236,21 @@ function SubjectsContent() {
   const [addColor, setAddColor]           = useState(SUBJECT_PALETTE[0])
   const [addEmoji, setAddEmoji]           = useState('📚')
   const [addSaving, setAddSaving]         = useState(false)
+  const [showSuggestions, setShowSuggestions] = useState(false)
+
+  // Subject autocomplete: org library first, then COMMON_SUBJECTS as fallback
+  const subjectSuggestions = useMemo(() => {
+    const existingNames = [...new Set(allSubjects.map(s => s.name))]
+    const existingLower = new Set(existingNames.map(n => n.toLowerCase()))
+    const additional = COMMON_SUBJECTS.filter(s => !existingLower.has(s.toLowerCase()))
+    return [...existingNames, ...additional]
+  }, [allSubjects])
+
+  const filteredSubjectSuggestions = useMemo(() => {
+    if (!addName.trim()) return subjectSuggestions.slice(0, 20)
+    const q = addName.toLowerCase()
+    return subjectSuggestions.filter(s => s.toLowerCase().includes(q)).slice(0, 15)
+  }, [addName, subjectSuggestions])
 
   useEffect(() => {
     const load = async () => {
@@ -782,46 +797,46 @@ function SubjectsContent() {
                 Add subjects you plan to teach — even if you haven&rsquo;t scheduled lessons yet. Lessons will appear here once added.
               </div>
 
-              {/* Subject picker */}
-              <div style={{ marginBottom: 20 }}>
-                <div style={{ fontSize: 12, fontWeight: 800, color: 'rgba(255,255,255,0.6)', marginBottom: 8, letterSpacing: 0.5 }}>CHOOSE A SUBJECT</div>
-                <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 7, marginBottom: 10 }}>
-                  {COMMON_SUBJECTS.map(s => {
-                    const isSelected = addName === s
-                    return (
-                      <button key={s} onClick={() => handleNameChange(s)}
+              {/* Subject autocomplete */}
+              <div style={{ marginBottom: 20, position: 'relative' as const }}>
+                <div style={{ fontSize: 12, fontWeight: 800, color: 'rgba(255,255,255,0.6)', marginBottom: 8, letterSpacing: 0.5 }}>SUBJECT NAME</div>
+                <input
+                  value={addName}
+                  onChange={e => { handleNameChange(e.target.value); setShowSuggestions(true) }}
+                  onFocus={() => setShowSuggestions(true)}
+                  onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                  placeholder="Type or choose a subject…"
+                  autoComplete="off"
+                  style={{
+                    width: '100%', padding: '10px 14px', borderRadius: 12,
+                    border: addName ? '1.5px solid #a78bfa' : '1.5px solid rgba(255,255,255,0.15)',
+                    fontSize: 14, fontWeight: 600,
+                    fontFamily: "'Nunito', sans-serif", color: '#1e1b4b', outline: 'none',
+                    background: '#fff', boxSizing: 'border-box' as const,
+                  }}
+                />
+                {showSuggestions && filteredSubjectSuggestions.length > 0 && (
+                  <div style={{
+                    position: 'absolute' as const, top: '100%', left: 0, right: 0, zIndex: 50,
+                    background: '#fff', borderRadius: 12, border: '1.5px solid #e9d5ff',
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.15)', maxHeight: 200, overflowY: 'auto' as const,
+                    marginTop: 4,
+                  }}>
+                    {filteredSubjectSuggestions.map((s, i) => (
+                      <button key={s} onMouseDown={() => { handleNameChange(s); setShowSuggestions(false) }}
                         style={{
-                          padding: '7px 13px', borderRadius: 20,
-                          border: isSelected ? '2px solid #a78bfa' : '1.5px solid rgba(255,255,255,0.2)',
-                          background: isSelected ? 'rgba(124,58,237,0.45)' : 'rgba(255,255,255,0.1)',
-                          fontSize: 13, fontWeight: isSelected ? 800 : 700,
-                          color: isSelected ? '#e9d5ff' : 'rgba(255,255,255,0.85)',
-                          cursor: 'pointer', fontFamily: "'Nunito', sans-serif",
-                          transition: 'all 0.12s',
+                          display: 'flex', alignItems: 'center', gap: 8,
+                          width: '100%', padding: '10px 14px', border: 'none',
+                          borderBottom: i < filteredSubjectSuggestions.length - 1 ? '1px solid #f3e8ff' : 'none',
+                          background: 'transparent', cursor: 'pointer', textAlign: 'left' as const,
+                          fontSize: 14, fontWeight: 700, color: '#1e1b4b',
+                          fontFamily: "'Nunito', sans-serif",
                         }}>
                         {subjectEmoji(s)} {s}
                       </button>
-                    )
-                  })}
-                </div>
-                {/* Custom subject input */}
-                <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 12 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.45)', marginBottom: 6 }}>
-                    Not in the list? Type a custom subject:
+                    ))}
                   </div>
-                  <input
-                    value={COMMON_SUBJECTS.includes(addName) ? '' : addName}
-                    onChange={e => handleNameChange(e.target.value)}
-                    placeholder="e.g. Art History, Classical Studies…"
-                    style={{
-                      width: '100%', padding: '10px 14px', borderRadius: 12,
-                      border: addName && !COMMON_SUBJECTS.includes(addName) ? '1.5px solid #a78bfa' : '1.5px solid rgba(255,255,255,0.15)',
-                      fontSize: 14, fontWeight: 600,
-                      fontFamily: "'Nunito', sans-serif", color: '#1e1b4b', outline: 'none',
-                      background: '#fff', boxSizing: 'border-box' as const,
-                    }}
-                  />
-                </div>
+                )}
               </div>
 
               {/* Weekly frequency */}
