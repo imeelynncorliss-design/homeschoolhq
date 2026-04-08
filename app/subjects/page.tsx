@@ -150,8 +150,11 @@ function SubjectsContent() {
   const [lessonRefreshKey, setLessonRefreshKey]           = useState(0)
   const [showQuickLesson, setShowQuickLesson]             = useState(false)
   const [quickTitle, setQuickTitle]                       = useState('')
+  const [quickDescription, setQuickDescription]           = useState('')
+  const [quickScheduled, setQuickScheduled]               = useState(false)
   const [quickDate, setQuickDate]                         = useState('')
   const [quickDuration, setQuickDuration]                 = useState(30)
+  const [quickDurationCustom, setQuickDurationCustom]     = useState('')
   const [quickSaving, setQuickSaving]                     = useState(false)
 
 
@@ -1210,8 +1213,11 @@ function SubjectsContent() {
               <button
                 onClick={() => {
                   setQuickTitle('')
+                  setQuickDescription('')
+                  setQuickScheduled(false)
                   setQuickDate(new Date().toISOString().split('T')[0])
                   setQuickDuration(30)
+                  setQuickDurationCustom('')
                   setShowLessonChoiceSheet(false)
                   setShowQuickLesson(true)
                 }}
@@ -1258,68 +1264,149 @@ function SubjectsContent() {
 
       {/* Quick lesson form */}
       {showQuickLesson && (
-        <>
-          <div onClick={() => setShowQuickLesson(false)} style={{
-            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 400,
-          }} />
-          <div style={{
-            position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 401,
-            background: '#2d2b3d', borderRadius: '24px 24px 0 0',
-            boxShadow: '0 -8px 40px rgba(0,0,0,0.4)',
-            fontFamily: "'Nunito', sans-serif",
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 0' }}>
-              <div style={{ width: 40, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.2)' }} />
-            </div>
-            <div style={{ padding: '16px 20px 40px' }}>
-              <div style={{ fontSize: 18, fontWeight: 900, color: '#c4b5fd', marginBottom: 20 }}>
-                New {addLessonSubject} Lesson
+        <div
+          onClick={() => setShowQuickLesson(false)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 400, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: '#fff', borderRadius: 20, width: '100%', maxWidth: 480,
+              maxHeight: '90vh', display: 'flex', flexDirection: 'column',
+              boxShadow: '0 24px 64px rgba(0,0,0,0.22)', fontFamily: "'Nunito', sans-serif",
+            }}
+          >
+            {/* Header */}
+            <div style={{
+              background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #a855f7 100%)',
+              padding: '14px 20px', borderRadius: '20px 20px 0 0',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0,
+            }}>
+              <div>
+                <div style={{ fontSize: 17, fontWeight: 900, color: '#fff' }}>New Lesson</div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.75)', marginTop: 2 }}>
+                  {addLessonSubject}
+                </div>
               </div>
+              <button
+                onClick={() => setShowQuickLesson(false)}
+                style={{
+                  background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 8,
+                  color: '#fff', width: 28, height: 28, cursor: 'pointer', fontSize: 16,
+                  fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>✕</button>
+            </div>
+
+            {/* Scrollable form body */}
+            <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 14, overflowY: 'auto', flex: 1 }}>
+
               {/* Title */}
-              <div style={{ marginBottom: 16 }}>
-                <div style={{ fontSize: 12, fontWeight: 800, color: 'rgba(255,255,255,0.6)', marginBottom: 6, letterSpacing: 0.5 }}>LESSON TITLE</div>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 800, color: '#4c1d95', letterSpacing: 0.5, marginBottom: 5 }}>LESSON TITLE *</label>
                 <input
                   value={quickTitle}
                   onChange={e => setQuickTitle(e.target.value)}
                   placeholder={`e.g. ${addLessonSubject} — Chapter 1`}
+                  autoFocus
                   style={{
-                    width: '100%', padding: '11px 14px', borderRadius: 12,
-                    border: '1.5px solid rgba(255,255,255,0.15)', fontSize: 15, fontWeight: 600,
-                    fontFamily: "'Nunito', sans-serif", color: '#1e1b4b', outline: 'none', background: '#fff',
+                    width: '100%', padding: '9px 12px', border: '1.5px solid #d1d5db', borderRadius: 10,
+                    fontSize: 14, fontWeight: 600, color: '#1a1a2e', outline: 'none',
+                    fontFamily: "'Nunito', sans-serif", boxSizing: 'border-box' as const,
                   }}
                 />
               </div>
-              {/* Date */}
-              <div style={{ marginBottom: 16 }}>
-                <div style={{ fontSize: 12, fontWeight: 800, color: 'rgba(255,255,255,0.6)', marginBottom: 6, letterSpacing: 0.5 }}>DATE</div>
-                <input
-                  type="date"
-                  value={quickDate}
-                  onChange={e => setQuickDate(e.target.value)}
+
+              {/* Description */}
+              <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 800, color: '#4c1d95', letterSpacing: 0.5, marginBottom: 5 }}>
+                  DESCRIPTION <span style={{ fontWeight: 600, color: '#9ca3af' }}>(optional)</span>
+                </label>
+                <textarea
+                  value={quickDescription}
+                  onChange={e => setQuickDescription(e.target.value)}
+                  placeholder="What will you cover in this lesson?"
+                  rows={2}
                   style={{
-                    width: '100%', padding: '11px 14px', borderRadius: 12,
-                    border: '1.5px solid rgba(255,255,255,0.15)', fontSize: 15, fontWeight: 600,
-                    fontFamily: "'Nunito', sans-serif", color: '#1e1b4b', outline: 'none', background: '#fff',
+                    width: '100%', padding: '9px 12px', border: '1.5px solid #d1d5db', borderRadius: 10,
+                    fontSize: 14, fontWeight: 600, color: '#1a1a2e', outline: 'none', resize: 'none',
+                    fontFamily: "'Nunito', sans-serif", boxSizing: 'border-box' as const,
                   }}
                 />
               </div>
+
               {/* Duration */}
-              <div style={{ marginBottom: 24 }}>
-                <div style={{ fontSize: 12, fontWeight: 800, color: 'rgba(255,255,255,0.6)', marginBottom: 6, letterSpacing: 0.5 }}>DURATION (MINUTES)</div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  {[15, 30, 45, 60, 90].map(d => (
-                    <button key={d} onClick={() => setQuickDuration(d)}
+              <div style={{ background: '#faf5ff', border: '1.5px solid #ddd6fe', borderRadius: 12, padding: '12px 14px' }}>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 800, color: '#4c1d95', letterSpacing: 0.5, marginBottom: 8 }}>DURATION</label>
+                <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+                  {[15, 30, 45, 60].map(d => (
+                    <button
+                      key={d}
+                      type="button"
+                      onClick={() => { setQuickDuration(d); setQuickDurationCustom('') }}
                       style={{
-                        flex: 1, padding: '10px 0', borderRadius: 10,
-                        border: quickDuration === d ? '2px solid #a78bfa' : '1.5px solid rgba(255,255,255,0.15)',
-                        background: quickDuration === d ? 'rgba(124,58,237,0.3)' : 'rgba(255,255,255,0.08)',
-                        color: quickDuration === d ? '#c4b5fd' : 'rgba(255,255,255,0.8)',
-                        fontWeight: 800, fontSize: 13, cursor: 'pointer',
-                        fontFamily: "'Nunito', sans-serif",
-                      }}>{d}</button>
+                        flex: 1, padding: '7px 0', borderRadius: 8, border: 'none',
+                        fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 13, cursor: 'pointer',
+                        background: quickDuration === d && !quickDurationCustom ? 'linear-gradient(135deg,#7c3aed,#a855f7)' : '#fff',
+                        color: quickDuration === d && !quickDurationCustom ? '#fff' : '#374151',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+                      }}
+                    >{d} min</button>
                   ))}
                 </div>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <input
+                    type="number"
+                    min="1"
+                    placeholder="Other"
+                    value={quickDurationCustom}
+                    onChange={e => {
+                      setQuickDurationCustom(e.target.value)
+                      const n = parseInt(e.target.value)
+                      if (n > 0) setQuickDuration(n)
+                    }}
+                    style={{
+                      width: 80, padding: '7px 10px', border: '1.5px solid #d1d5db', borderRadius: 8,
+                      fontSize: 14, fontWeight: 600, color: '#1a1a2e', fontFamily: "'Nunito', sans-serif",
+                      boxSizing: 'border-box' as const,
+                    }}
+                  />
+                  <span style={{ fontSize: 13, fontWeight: 600, color: '#6b7280' }}>minutes</span>
+                </div>
               </div>
+
+              {/* Schedule */}
+              <div style={{ background: '#faf5ff', border: '1.5px solid #ddd6fe', borderRadius: 12, padding: '12px 14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <input
+                    type="checkbox"
+                    id="ql-schedule"
+                    checked={quickScheduled}
+                    onChange={e => {
+                      setQuickScheduled(e.target.checked)
+                      if (e.target.checked && !quickDate) setQuickDate(new Date().toISOString().split('T')[0])
+                    }}
+                    style={{ accentColor: '#7c3aed', width: 16, height: 16, cursor: 'pointer' }}
+                  />
+                  <label htmlFor="ql-schedule" style={{ fontSize: 13, fontWeight: 700, color: '#4c1d95', cursor: 'pointer' }}>
+                    Schedule for a specific date
+                  </label>
+                </div>
+                {quickScheduled && (
+                  <input
+                    type="date"
+                    value={quickDate}
+                    onChange={e => setQuickDate(e.target.value)}
+                    style={{
+                      marginTop: 8, width: '100%', padding: '7px 10px',
+                      border: '1.5px solid #d1d5db', borderRadius: 8,
+                      fontSize: 14, fontWeight: 600, color: '#1a1a2e',
+                      fontFamily: "'Nunito', sans-serif", boxSizing: 'border-box' as const,
+                    }}
+                  />
+                )}
+              </div>
+
+              {/* Save button */}
               <button
                 onClick={async () => {
                   if (!quickTitle.trim() || !orgId || !addLessonKidId) return
@@ -1329,7 +1416,8 @@ function SubjectsContent() {
                     kid_id: addLessonKidId,
                     subject: addLessonSubject,
                     title: quickTitle.trim(),
-                    lesson_date: quickDate || null,
+                    description: quickDescription.trim() || null,
+                    lesson_date: quickScheduled ? (quickDate || null) : null,
                     duration_minutes: quickDuration,
                     status: 'not_started',
                   }).select('id, title, subject, status, lesson_date, start_time, description, notes, kid_id, duration_minutes, lesson_source').single()
@@ -1339,17 +1427,18 @@ function SubjectsContent() {
                 }}
                 disabled={!quickTitle.trim() || quickSaving}
                 style={{
-                  width: '100%', padding: '14px', borderRadius: 14, border: 'none',
-                  background: quickTitle.trim() ? '#7c3aed' : '#e5e7eb',
+                  width: '100%', padding: '13px 0', borderRadius: 12, border: 'none',
+                  background: quickTitle.trim() ? 'linear-gradient(135deg, #7c3aed, #a855f7)' : '#e5e7eb',
                   color: quickTitle.trim() ? '#fff' : '#9ca3af',
-                  fontSize: 16, fontWeight: 900, cursor: quickTitle.trim() ? 'pointer' : 'default',
-                  fontFamily: "'Nunito', sans-serif",
+                  fontSize: 15, fontWeight: 800, cursor: quickTitle.trim() ? 'pointer' : 'default',
+                  fontFamily: "'Nunito', sans-serif", flexShrink: 0,
                 }}>
-                {quickSaving ? 'Saving…' : 'Add Lesson'}
+                {quickSaving ? 'Adding Lesson…' : 'Add Lesson'}
               </button>
+
             </div>
           </div>
-        </>
+        </div>
       )}
 
       {/* LessonGenerator modal */}
