@@ -155,6 +155,38 @@ function SubjectsContent() {
   const [quickSaving, setQuickSaving]                     = useState(false)
 
 
+  // Add material to existing subject sheet
+  const [showSubjectMat, setShowSubjectMat]         = useState(false)
+  const [subjectMatKidId, setSubjectMatKidId]       = useState('')
+  const [subjectMatSubject, setSubjectMatSubject]   = useState('')
+  const [subjectMatName, setSubjectMatName]         = useState('')
+  const [subjectMatType, setSubjectMatType]         = useState<'textbook' | 'subscription' | 'physical' | 'digital'>('textbook')
+  const [subjectMatUrl, setSubjectMatUrl]           = useState('')
+  const [subjectMatSaving, setSubjectMatSaving]     = useState(false)
+
+  const openSubjectMat = (kidId: string, subject: string) => {
+    setSubjectMatKidId(kidId); setSubjectMatSubject(subject)
+    setSubjectMatName(''); setSubjectMatType('textbook'); setSubjectMatUrl('')
+    setShowSubjectMat(true)
+  }
+
+  const saveSubjectMat = async () => {
+    if (!subjectMatName.trim() || !orgId) return
+    setSubjectMatSaving(true)
+    try {
+      const { error } = await supabase.from('materials').insert({
+        organization_id: orgId,
+        material_type: subjectMatType,
+        name: subjectMatName.trim(),
+        subject: subjectMatSubject || null,
+        url: subjectMatUrl.trim() || null,
+        kid_ids: subjectMatKidId ? [subjectMatKidId] : null,
+      })
+      if (error) { console.error('Material save failed:', error); return }
+      setShowSubjectMat(false)
+    } finally { setSubjectMatSaving(false) }
+  }
+
   // Edit frequency sheet
   const [showEditFreq, setShowEditFreq]           = useState(false)
   const [editFreqSubjectId, setEditFreqSubjectId] = useState<string | null>(null)
@@ -351,7 +383,7 @@ function SubjectsContent() {
       setAllSubjects(prev => [...prev, data])
       // Optionally save a material alongside the new subject
       if (addMatName.trim()) {
-        await supabase.from('materials').insert({
+        const { error: matErr } = await supabase.from('materials').insert({
           organization_id: orgId,
           material_type: addMatType,
           name: addMatName.trim(),
@@ -359,6 +391,7 @@ function SubjectsContent() {
           url: addMatUrl.trim() || null,
           kid_ids: [addKidId],
         })
+        if (matErr) console.error('Material save failed:', matErr)
       }
     }
     setAddSaving(false)
@@ -667,6 +700,17 @@ function SubjectsContent() {
                     }}>
                     <span style={{ fontSize: 15, lineHeight: 1 }}>+</span> Add Lesson
                   </button>
+                  <button
+                    onClick={() => openSubjectMat(selected.kidId, selected.subjectName)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 5,
+                      padding: '7px 13px', borderRadius: 18, border: '1.5px solid rgba(124,58,237,0.2)',
+                      background: 'rgba(124,58,237,0.06)', color: '#7c3aed',
+                      fontFamily: "'Nunito', sans-serif", fontSize: 13, fontWeight: 800,
+                      cursor: 'pointer',
+                    }}>
+                    📦 Material
+                  </button>
                   <button onClick={() => setSelected(null)} style={{
                     background: 'rgba(0,0,0,0.06)', border: 'none', borderRadius: '50%',
                     width: 32, height: 32, cursor: 'pointer', fontSize: 18, color: '#6b7280',
@@ -959,6 +1003,81 @@ function SubjectsContent() {
                 {addSaving ? 'Saving…' : 'Add Subject'}
               </button>
             </div>
+          </div>
+        </>
+      )}
+
+      {/* ── Add Material to existing subject sheet ── */}
+      {showSubjectMat && (
+        <>
+          <div onClick={() => setShowSubjectMat(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 450 }} />
+          <div style={{
+            position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 451,
+            background: '#fff', borderRadius: '24px 24px 0 0',
+            boxShadow: '0 -8px 40px rgba(0,0,0,0.18)',
+            padding: '20px 20px 40px',
+            paddingBottom: 'calc(40px + env(safe-area-inset-bottom, 0px))',
+            maxHeight: '85vh', overflowY: 'auto' as const,
+            fontFamily: "'Nunito', sans-serif",
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
+              <div style={{ width: 40, height: 4, borderRadius: 2, background: '#e5e7eb' }} />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+              <div style={{ fontSize: 18, fontWeight: 900, color: '#1e1b4b' }}>📦 Add Material</div>
+              <button onClick={() => setShowSubjectMat(false)} style={{ background: 'rgba(0,0,0,0.06)', border: 'none', borderRadius: '50%', width: 30, height: 30, cursor: 'pointer', fontSize: 16, color: '#6b7280', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
+            </div>
+            <div style={{ fontSize: 13, color: '#6b7280', fontWeight: 600, marginBottom: 20 }}>
+              For <strong style={{ color: '#7c3aed' }}>{subjectMatSubject}</strong> · saved to My Materials and linked to this child
+            </div>
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 11, fontWeight: 800, color: '#9ca3af', letterSpacing: 0.5, marginBottom: 6 }}>RESOURCE NAME *</div>
+              <input
+                value={subjectMatName}
+                onChange={e => setSubjectMatName(e.target.value)}
+                placeholder="e.g. Saxon Math 5/4, Khan Academy…"
+                autoFocus
+                style={{ width: '100%', padding: '12px 14px', borderRadius: 12, border: '1.5px solid #e5e7eb', fontSize: 14, fontWeight: 600, fontFamily: "'Nunito', sans-serif", color: '#1e1b4b', outline: 'none', boxSizing: 'border-box' as const }}
+              />
+            </div>
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 11, fontWeight: 800, color: '#9ca3af', letterSpacing: 0.5, marginBottom: 6 }}>TYPE</div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {(['textbook', 'subscription', 'physical', 'digital'] as const).map(t => {
+                  const icons = { textbook: '📚', subscription: '🔑', physical: '🧰', digital: '💻' }
+                  return (
+                    <button key={t} onClick={() => setSubjectMatType(t)} style={{
+                      flex: 1, padding: '8px 4px', borderRadius: 10,
+                      border: subjectMatType === t ? '2px solid #7c3aed' : '1.5px solid #e5e7eb',
+                      background: subjectMatType === t ? '#f5f3ff' : '#f9fafb',
+                      color: subjectMatType === t ? '#7c3aed' : '#6b7280',
+                      fontSize: 10, fontWeight: 800, cursor: 'pointer', fontFamily: "'Nunito', sans-serif",
+                    }}>{icons[t]}<br />{t}</button>
+                  )
+                })}
+              </div>
+            </div>
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 11, fontWeight: 800, color: '#9ca3af', letterSpacing: 0.5, marginBottom: 6 }}>URL <span style={{ fontWeight: 600 }}>(optional)</span></div>
+              <input
+                value={subjectMatUrl}
+                onChange={e => setSubjectMatUrl(e.target.value)}
+                placeholder="https://…"
+                type="url" inputMode="url"
+                style={{ width: '100%', padding: '12px 14px', borderRadius: 12, border: subjectMatUrl.trim() ? '1.5px solid #7c3aed' : '1.5px solid #e5e7eb', fontSize: 14, fontWeight: 600, fontFamily: "'Nunito', sans-serif", color: '#1e1b4b', outline: 'none', boxSizing: 'border-box' as const }}
+              />
+            </div>
+            <button
+              onClick={saveSubjectMat}
+              disabled={!subjectMatName.trim() || subjectMatSaving}
+              style={{
+                width: '100%', padding: '14px', borderRadius: 14, border: 'none',
+                background: subjectMatName.trim() ? 'linear-gradient(135deg,#7c3aed,#a855f7)' : '#e5e7eb',
+                color: subjectMatName.trim() ? '#fff' : '#9ca3af',
+                fontSize: 15, fontWeight: 900, cursor: subjectMatName.trim() ? 'pointer' : 'not-allowed',
+                fontFamily: "'Nunito', sans-serif",
+              }}
+            >{subjectMatSaving ? 'Saving…' : 'Save Material'}</button>
           </div>
         </>
       )}

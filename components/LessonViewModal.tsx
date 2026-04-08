@@ -272,13 +272,17 @@ export default function LessonViewModal({
     finally { setCopying(false) }
   }
 
-  // Add material to lesson
-  const [matName, setMatName] = useState('')
-  const [matType, setMatType] = useState<'textbook' | 'subscription' | 'physical' | 'digital'>('textbook')
-  const [matUrl, setMatUrl]   = useState('')
-  const [matSaving, setMatSaving] = useState(false)
-  const [matSaved, setMatSaved]   = useState(false)
-  const [lessonMaterials, setLessonMaterials] = useState<any[]>([])
+  // Materials tab state
+  const [matName, setMatName]   = useState('')
+  const [matType, setMatType]   = useState<'textbook' | 'subscription' | 'physical' | 'digital'>('textbook')
+  const [matUrl, setMatUrl]     = useState('')
+  const [matSaving, setMatSaving]   = useState(false)
+  const [matSaved, setMatSaved]     = useState(false)
+  // All org materials, sorted: subject-match first
+  const [allOrgMaterials, setAllOrgMaterials] = useState<any[]>([])
+  // IDs of materials already linked to this child (have kid_id in kid_ids)
+  const [linkedMatIds, setLinkedMatIds] = useState<Set<string>>(new Set())
+  const [linkingMatId, setLinkingMatId] = useState<string | null>(null)
 
   // Standards
   type LinkedStandard = { id: string; user_standard_id: string; standard_code: string; description: string; subject: string; grade_level: string }
@@ -320,14 +324,25 @@ export default function LessonViewModal({
 
   const loadLessonMaterials = async () => {
     if (!organizationId) return
+    // Load ALL org materials — we'll sort client-side (subject match first)
     const { data } = await supabase
       .from('materials')
-      .select('id, name, material_type, subject, url')
+      .select('id, name, material_type, subject, url, kid_ids')
       .eq('organization_id', organizationId)
-      .contains('kid_ids', lesson.kid_id ? [lesson.kid_id] : [])
       .order('created_at', { ascending: false })
-    // Filter client-side to those tagged with this lesson's subject
-    setLessonMaterials(data || [])
+    const rows = data || []
+    // Sort: subject-match first, then the rest
+    const subjectLower = (lesson.subject ?? '').toLowerCase()
+    const sorted = [
+      ...rows.filter((m: any) => m.subject?.toLowerCase() === subjectLower),
+      ...rows.filter((m: any) => m.subject?.toLowerCase() !== subjectLower),
+    ]
+    setAllOrgMaterials(sorted)
+    // Build set of IDs already linked to this child
+    const kidId = lesson.kid_id
+    if (kidId) {
+      setLinkedMatIds(new Set(rows.filter((m: any) => Array.isArray(m.kid_ids) && m.kid_ids.includes(kidId)).map((m: any) => m.id)))
+    }
   }
 
   const saveMatToLibrary = async () => {
@@ -343,12 +358,35 @@ export default function LessonViewModal({
         kid_ids: lesson.kid_id ? [lesson.kid_id] : null,
       }
       const { data: inserted } = await supabase.from('materials').insert([payload]).select().single()
-      if (inserted) setLessonMaterials(prev => [inserted, ...prev])
+      if (inserted) {
+        const subjectLower = (lesson.subject ?? '').toLowerCase()
+        setAllOrgMaterials(prev => {
+          const updated = [inserted, ...prev]
+          return [
+            ...updated.filter((m: any) => m.subject?.toLowerCase() === subjectLower),
+            ...updated.filter((m: any) => m.subject?.toLowerCase() !== subjectLower),
+          ]
+        })
+        if (lesson.kid_id) setLinkedMatIds(prev => new Set([...prev, inserted.id]))
+      }
       setMatName(''); setMatUrl(''); setMatType('textbook')
       setMatSaved(true)
       setTimeout(() => setMatSaved(false), 2500)
     } catch (e) { console.error(e) }
     finally { setMatSaving(false) }
+  }
+
+  const linkMaterialToChild = async (mat: any) => {
+    if (!lesson.kid_id || linkingMatId) return
+    setLinkingMatId(mat.id)
+    try {
+      const currentIds: string[] = Array.isArray(mat.kid_ids) ? mat.kid_ids : []
+      if (currentIds.includes(lesson.kid_id)) { setLinkedMatIds(prev => new Set([...prev, mat.id])); return }
+      const newIds = [...currentIds, lesson.kid_id]
+      await supabase.from('materials').update({ kid_ids: newIds }).eq('id', mat.id)
+      setAllOrgMaterials(prev => prev.map(m => m.id === mat.id ? { ...m, kid_ids: newIds } : m))
+      setLinkedMatIds(prev => new Set([...prev, mat.id]))
+    } finally { setLinkingMatId(null) }
   }
 
   const loadStandards = async () => {
@@ -1155,79 +1193,95 @@ ${overviewHtml}${objectivesHtml}${materialsHtml}${activitiesHtml}${assessmentHtm
         {/* ── Materials Tab ── */}
         {activeTab === 'materials' && (
           <div style={vw.body}>
-            <div style={{ padding: '16px 22px 12px' }}>
-              <p style={{ fontSize: 13, color: '#6b7280', margin: 0, lineHeight: 1.5, fontFamily: 'system-ui, sans-serif' }}>
-                Add a material used in this lesson — it'll be saved to{' '}
-                <strong style={{ color: '#7c3aed' }}>My Materials</strong> and linked to this child.
-              </p>
-            </div>
-
-            {/* Add form */}
-            <div style={{ padding: '0 22px 16px', display: 'flex', flexDirection: 'column' as const, gap: 10 }}>
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 800, color: '#9ca3af', letterSpacing: 0.5, marginBottom: 6, fontFamily: 'system-ui, sans-serif', textTransform: 'uppercase' as const }}>Resource Name *</div>
+            {/* Add new material form */}
+            <div style={{ padding: '16px 22px', borderBottom: '1px solid #f3f4f6' }}>
+              <div style={{ fontSize: 11, fontWeight: 800, color: '#7c3aed', letterSpacing: 0.5, marginBottom: 10, fontFamily: 'system-ui, sans-serif', textTransform: 'uppercase' as const }}>+ Add New Material</div>
+              <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 8 }}>
                 <input
                   value={matName}
                   onChange={e => setMatName(e.target.value)}
-                  placeholder="e.g. Saxon Math 5/4, Khan Academy…"
-                  style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1.5px solid #e5e7eb', fontSize: 13, fontWeight: 600, fontFamily: 'system-ui, sans-serif', color: '#111827', outline: 'none', boxSizing: 'border-box' as const }}
+                  placeholder="Resource name (e.g. Saxon Math 5/4)…"
+                  style={{ width: '100%', padding: '9px 12px', borderRadius: 10, border: '1.5px solid #e5e7eb', fontSize: 13, fontWeight: 600, fontFamily: 'system-ui, sans-serif', color: '#111827', outline: 'none', boxSizing: 'border-box' as const }}
                 />
-              </div>
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 800, color: '#9ca3af', letterSpacing: 0.5, marginBottom: 6, fontFamily: 'system-ui, sans-serif', textTransform: 'uppercase' as const }}>Type</div>
-                <div style={{ display: 'flex', gap: 6 }}>
+                <div style={{ display: 'flex', gap: 5 }}>
                   {(['textbook', 'subscription', 'physical', 'digital'] as const).map(t => {
                     const icons = { textbook: '📚', subscription: '🔑', physical: '🧰', digital: '💻' }
                     return (
-                      <button key={t} onClick={() => setMatType(t)} style={{ flex: 1, padding: '7px 4px', borderRadius: 8, fontSize: 10, fontWeight: 800, cursor: 'pointer', fontFamily: 'system-ui, sans-serif', border: matType === t ? '2px solid #7c3aed' : '1.5px solid #e5e7eb', background: matType === t ? '#f5f3ff' : '#f9fafb', color: matType === t ? '#7c3aed' : '#6b7280' }}>
+                      <button key={t} onClick={() => setMatType(t)} style={{ flex: 1, padding: '6px 4px', borderRadius: 8, fontSize: 9, fontWeight: 800, cursor: 'pointer', fontFamily: 'system-ui, sans-serif', border: matType === t ? '2px solid #7c3aed' : '1.5px solid #e5e7eb', background: matType === t ? '#f5f3ff' : '#f9fafb', color: matType === t ? '#7c3aed' : '#6b7280' }}>
                         {icons[t]}<br />{t}
                       </button>
                     )
                   })}
                 </div>
-              </div>
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 800, color: '#9ca3af', letterSpacing: 0.5, marginBottom: 6, fontFamily: 'system-ui, sans-serif', textTransform: 'uppercase' as const }}>URL <span style={{ fontWeight: 500, textTransform: 'none' as const }}>(optional)</span></div>
                 <input
                   value={matUrl}
                   onChange={e => setMatUrl(e.target.value)}
-                  placeholder="https://…"
+                  placeholder="https://… (optional)"
                   type="url"
-                  style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1.5px solid #e5e7eb', fontSize: 13, fontFamily: 'system-ui, sans-serif', color: '#111827', outline: 'none', boxSizing: 'border-box' as const }}
+                  style={{ width: '100%', padding: '9px 12px', borderRadius: 10, border: '1.5px solid #e5e7eb', fontSize: 13, fontFamily: 'system-ui, sans-serif', color: '#111827', outline: 'none', boxSizing: 'border-box' as const }}
                 />
+                <button
+                  onClick={saveMatToLibrary}
+                  disabled={!matName.trim() || matSaving}
+                  style={{ width: '100%', padding: '10px', borderRadius: 10, border: 'none', fontSize: 13, fontWeight: 800, cursor: matName.trim() ? 'pointer' : 'not-allowed', fontFamily: 'system-ui, sans-serif', background: matSaved ? '#10b981' : matName.trim() ? 'linear-gradient(135deg,#7c3aed,#a855f7)' : '#e5e7eb', color: matName.trim() || matSaved ? '#fff' : '#9ca3af', transition: 'background 0.2s' }}
+                >
+                  {matSaved ? '✓ Saved to My Materials!' : matSaving ? 'Saving…' : '+ Save to My Materials'}
+                </button>
               </div>
-              <button
-                onClick={saveMatToLibrary}
-                disabled={!matName.trim() || matSaving}
-                style={{ width: '100%', padding: '11px', borderRadius: 10, border: 'none', fontSize: 13, fontWeight: 800, cursor: matName.trim() ? 'pointer' : 'not-allowed', fontFamily: 'system-ui, sans-serif', background: matSaved ? '#10b981' : matName.trim() ? 'linear-gradient(135deg,#7c3aed,#a855f7)' : '#e5e7eb', color: matName.trim() || matSaved ? '#fff' : '#9ca3af', transition: 'background 0.2s' }}
-              >
-                {matSaved ? '✓ Saved to My Materials!' : matSaving ? 'Saving…' : '+ Save to My Materials'}
-              </button>
             </div>
 
-            {/* Existing materials for this child */}
-            {lessonMaterials.length > 0 && (
-              <div style={{ borderTop: '1px solid #f3f4f6', padding: '14px 22px 20px' }}>
-                <div style={{ fontSize: 11, fontWeight: 800, color: '#9ca3af', letterSpacing: 0.5, marginBottom: 10, fontFamily: 'system-ui, sans-serif', textTransform: 'uppercase' as const }}>
-                  This child's materials
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 7 }}>
-                  {lessonMaterials.slice(0, 10).map((m: any) => {
+            {/* All org materials — subject-match first */}
+            <div style={{ padding: '14px 22px 20px' }}>
+              <div style={{ fontSize: 11, fontWeight: 800, color: '#9ca3af', letterSpacing: 0.5, marginBottom: 10, fontFamily: 'system-ui, sans-serif', textTransform: 'uppercase' as const }}>
+                Materials Library — select to associate with this child
+              </div>
+              {allOrgMaterials.length === 0 ? (
+                <div style={{ fontSize: 13, color: '#9ca3af', fontFamily: 'system-ui, sans-serif', fontStyle: 'italic' }}>No materials yet — add one above.</div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 6 }}>
+                  {allOrgMaterials.map((m: any) => {
                     const icons: Record<string, string> = { textbook: '📚', subscription: '🔑', physical: '🧰', digital: '💻' }
+                    const isLinked = linkedMatIds.has(m.id)
+                    const isThisSubject = m.subject?.toLowerCase() === (lesson.subject ?? '').toLowerCase()
                     return (
-                      <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#f9fafb', borderRadius: 10, padding: '8px 12px', border: '1px solid #f3f4f6' }}>
+                      <div key={m.id} style={{
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        background: isLinked ? '#f0fdf4' : isThisSubject ? '#faf5ff' : '#f9fafb',
+                        borderRadius: 10, padding: '8px 12px',
+                        border: isLinked ? '1.5px solid #86efac' : isThisSubject ? '1.5px solid #e9d5ff' : '1px solid #f3f4f6',
+                      }}>
                         <span style={{ fontSize: 16, flexShrink: 0 }}>{icons[m.material_type] || '📦'}</span>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontSize: 13, fontWeight: 700, color: '#111827', fontFamily: 'system-ui, sans-serif', whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.name}</div>
-                          {m.subject && <div style={{ fontSize: 11, color: '#6b7280', fontFamily: 'system-ui, sans-serif' }}>{m.subject}</div>}
+                          {m.subject && (
+                            <div style={{ fontSize: 11, fontFamily: 'system-ui, sans-serif', color: isThisSubject ? '#7c3aed' : '#6b7280', fontWeight: isThisSubject ? 700 : 500 }}>
+                              {isThisSubject ? '★ ' : ''}{m.subject}
+                            </div>
+                          )}
                         </div>
-                        {m.url && <a href={m.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: '#7c3aed', fontWeight: 700, fontFamily: 'system-ui, sans-serif', flexShrink: 0 }}>🔗</a>}
+                        {m.url && (
+                          <a href={/^https?:\/\//i.test(m.url) ? m.url : `https://${m.url}`} target="_blank" rel="noopener noreferrer"
+                            style={{ fontSize: 11, color: '#7c3aed', fontWeight: 700, fontFamily: 'system-ui, sans-serif', flexShrink: 0, textDecoration: 'none' }}>
+                            🔗
+                          </a>
+                        )}
+                        {isLinked ? (
+                          <span style={{ fontSize: 11, fontWeight: 800, color: '#16a34a', flexShrink: 0, fontFamily: 'system-ui, sans-serif' }}>✓ Linked</span>
+                        ) : (
+                          <button
+                            onClick={() => linkMaterialToChild(m)}
+                            disabled={linkingMatId === m.id}
+                            style={{ flexShrink: 0, padding: '4px 10px', borderRadius: 8, border: '1.5px solid #ddd6fe', background: '#f5f3ff', color: '#7c3aed', fontSize: 11, fontWeight: 800, cursor: 'pointer', fontFamily: 'system-ui, sans-serif' }}
+                          >
+                            {linkingMatId === m.id ? '…' : 'Link'}
+                          </button>
+                        )}
                       </div>
                     )
                   })}
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         )}
 
