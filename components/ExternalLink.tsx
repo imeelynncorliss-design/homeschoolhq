@@ -61,7 +61,12 @@ export function ExternalLink({ href, children, className, style }: ExternalLinkP
                 Cancel
               </button>
               <button
-                onClick={() => { window.open(href, '_blank', 'noopener,noreferrer'); setShowModal(false) }}
+                onClick={() => {
+                  // Ensure the URL has a protocol so it opens externally, not relative to the app
+                  const url = /^https?:\/\//i.test(href) ? href : `https://${href}`
+                  window.open(url, '_blank', 'noopener,noreferrer')
+                  setShowModal(false)
+                }}
                 style={{
                   flex: 1, padding: '11px 0', borderRadius: 12,
                   border: 'none', background: 'linear-gradient(90deg,#4f46e5,#7c3aed)',
