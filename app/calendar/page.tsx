@@ -121,6 +121,7 @@ function CalendarContent() {
           lesson={selectedLesson}
           kidName={selectedKidName}
           organizationId={organizationId ?? undefined}
+          allKids={kids.map((k: any) => ({ id: k.id, displayname: k.displayname }))}
           onClose={() => setSelectedLesson(null)}
           onEdit={() => {
             setSelectedLesson(null)

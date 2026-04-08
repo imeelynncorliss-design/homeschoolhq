@@ -524,16 +524,18 @@ function LessonsContent() {
                     display: 'flex', alignItems: 'center', gap: 8,
                     padding: '8px 16px 8px 10px', borderRadius: 30,
                     border: `2px solid ${isActive ? color : color + '45'}`,
-                    background: isActive ? color + '18' : 'rgba(255,255,255,0.65)',
+                    background: isActive ? '#fff' : 'rgba(255,255,255,0.45)',
                     fontFamily: "'Nunito', sans-serif", fontWeight: isActive ? 800 : 600,
-                    fontSize: 14, color: isActive ? color : '#6b7280',
+                    fontSize: 14, color: isActive ? color : 'rgba(255,255,255,0.65)',
                     cursor: 'pointer', transition: 'all 0.15s',
+                    boxShadow: isActive ? '0 2px 8px rgba(0,0,0,0.15)' : 'none',
                   }}>
                   <div style={{
                     width: 26, height: 26, borderRadius: '50%',
-                    background: color + '30', border: `2px solid ${color}`,
+                    background: isActive ? color : color + '50',
+                    border: `2px solid ${color}`,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 12, fontWeight: 900, color,
+                    fontSize: 12, fontWeight: 900, color: '#fff',
                   }}>
                     {kid.displayname.charAt(0).toUpperCase()}
                   </div>

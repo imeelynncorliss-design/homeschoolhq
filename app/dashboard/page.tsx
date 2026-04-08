@@ -2236,6 +2236,7 @@ function DashboardContent() {
             kidName={selectedKidName}
             organizationId={organizationId ?? undefined}
             stateCode={schoolState}
+            allKids={kidPulses.map(p => ({ id: p.kid.id, displayname: p.kid.displayname }))}
             onClose={() => setSelectedLesson(null)}
             onEdit={() => {
               setSelectedLesson(null)

@@ -702,6 +702,7 @@ export default function AllChildrenList({
             kidGrade={kid?.grade}
             organizationId={organizationId}
             stateCode={stateCode}
+            allKids={kids.map(k => ({ id: k.id, displayname: k.displayname }))}
             onClose={() => setSelectedModalLesson(null)}
             onEdit={() => { onEditLesson(selectedModalLesson); setSelectedModalLesson(null) }}
             onDelete={() => { softDeleteLessons([selectedModalLesson]); setSelectedModalLesson(null) }}

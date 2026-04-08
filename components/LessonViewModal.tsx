@@ -37,6 +37,8 @@ interface LessonViewModalProps {
   organizationId?: string
   /** The org's home state, e.g. "NC" — used to pull compliance standards */
   stateCode?: string | null
+  /** All kids in the org — used to power Copy to Child */
+  allKids?: { id: string; displayname: string }[]
   onClose: () => void
   onEdit: () => void
   onDelete: () => void
@@ -185,6 +187,7 @@ export default function LessonViewModal({
   assignedToName,
   organizationId,
   stateCode,
+  allKids,
   onClose,
   onEdit,
   onDelete,
@@ -218,6 +221,56 @@ export default function LessonViewModal({
 
   // Tabs
   const [activeTab, setActiveTab] = useState<'details' | 'checkin' | 'standards' | 'materials'>('details')
+
+  // Copy to child
+  const [copyTargetId, setCopyTargetId] = useState('')
+  const [copying, setCopying]           = useState(false)
+  const [copyDone, setCopyDone]         = useState(false)
+  const otherKids = (allKids || []).filter(k => k.id !== lesson.kid_id)
+
+  const copyToChild = async () => {
+    if (!copyTargetId || !organizationId) return
+    setCopying(true)
+    try {
+      const { supabase: sb } = await import('@/src/lib/supabase')
+
+      // Ensure the target child has this subject — create it if missing
+      if (lesson.subject) {
+        const { data: existingSubjects } = await sb
+          .from('subjects')
+          .select('id')
+          .eq('organization_id', organizationId)
+          .eq('kid_id', copyTargetId)
+          .ilike('name', lesson.subject)
+          .limit(1)
+        if (!existingSubjects || existingSubjects.length === 0) {
+          await sb.from('subjects').insert({
+            organization_id: organizationId,
+            kid_id: copyTargetId,
+            name: lesson.subject,
+            weekly_frequency: null,
+            color: null,
+            emoji: null,
+          })
+        }
+      }
+
+      await sb.from('lessons').insert([{
+        organization_id: organizationId,
+        kid_id: copyTargetId,
+        title: lesson.title,
+        subject: lesson.subject,
+        description: lesson.description ?? null,
+        lesson_source: lesson.lesson_source ?? null,
+        duration_minutes: lesson.duration_minutes,
+        status: 'not_started',
+        lesson_date: null,
+      }])
+      setCopyDone(true)
+      setTimeout(() => { setCopyDone(false); setCopyTargetId('') }, 2500)
+    } catch (e) { console.error(e) }
+    finally { setCopying(false) }
+  }
 
   // Add material to lesson
   const [matName, setMatName] = useState('')
@@ -867,6 +920,30 @@ ${overviewHtml}${objectivesHtml}${materialsHtml}${activitiesHtml}${assessmentHtm
                 <div style={vw.description}>{lesson.description}</div>
               </div>
             ) : null}
+
+            {/* ── Copy to Child ── */}
+            {otherKids.length > 0 && (
+              <div style={{ ...vw.row, flexDirection: 'column' as const, alignItems: 'flex-start', gap: 8, background: '#f9fafb' }}>
+                <span style={vw.rowLabel}>Copy to Child</span>
+                <div style={{ display: 'flex', gap: 8, width: '100%' }}>
+                  <select
+                    value={copyTargetId}
+                    onChange={e => { setCopyTargetId(e.target.value); setCopyDone(false) }}
+                    style={{ flex: 1, padding: '8px 10px', borderRadius: 8, border: '1.5px solid #e5e7eb', fontSize: 13, fontFamily: 'system-ui, sans-serif', color: copyTargetId ? '#111827' : '#9ca3af', background: '#fff', outline: 'none' }}
+                  >
+                    <option value="">Choose a child…</option>
+                    {otherKids.map(k => <option key={k.id} value={k.id}>{k.displayname}</option>)}
+                  </select>
+                  <button
+                    onClick={copyToChild}
+                    disabled={!copyTargetId || copying || copyDone}
+                    style={{ padding: '8px 14px', borderRadius: 8, border: 'none', fontSize: 13, fontWeight: 800, fontFamily: 'system-ui, sans-serif', cursor: copyTargetId && !copying && !copyDone ? 'pointer' : 'not-allowed', background: copyDone ? '#10b981' : copyTargetId ? '#7c3aed' : '#e5e7eb', color: copyTargetId || copyDone ? '#fff' : '#9ca3af', transition: 'background 0.2s', whiteSpace: 'nowrap' as const }}
+                  >
+                    {copyDone ? '✓ Copied!' : copying ? '…' : 'Copy'}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
