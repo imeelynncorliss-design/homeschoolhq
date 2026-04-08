@@ -426,8 +426,9 @@ function LessonsContent() {
   }
 
   // Optimistic local update — UI responds instantly, DB write happens in background
-  const applyStatusOptimistic = (lessonId: string, newStatus: 'not_started' | 'in_progress' | 'completed') => {
-    const completedAt = newStatus === 'completed' ? new Date().toISOString() : null
+  const applyStatusOptimistic = async (lessonId: string, newStatus: 'not_started' | 'in_progress' | 'completed') => {
+    // Snapshot previous state so we can roll back on failure
+    const prevState = lessonsByKid
     setLessonsByKid(prev => {
       const next = { ...prev }
       for (const kidId of Object.keys(next)) {
@@ -437,8 +438,14 @@ function LessonsContent() {
       }
       return next
     })
-    const updates: any = { status: newStatus, completed_at: completedAt }
-    supabase.from('lessons').update(updates).eq('id', lessonId)
+    const updates: any = { status: newStatus }
+    if (newStatus === 'completed') updates.completed_at = new Date().toISOString()
+    if (newStatus !== 'completed') updates.completed_at = null
+    const { error } = await supabase.from('lessons').update(updates).eq('id', lessonId)
+    if (error) {
+      console.error('Status update failed:', error)
+      setLessonsByKid(prevState) // roll back optimistic update
+    }
   }
 
   const handleCycleStatus = (lessonId: string, currentStatus: string) => {
