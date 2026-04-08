@@ -29,7 +29,7 @@ function ReadingLogContent() {
         .from('kids')
         .select('id, displayname')
         .eq('organization_id', orgId)
-        .eq('archived', false)
+        .neq('archived', true)
         .order('created_at', { ascending: false })
 
       setOrganizationId(orgId)

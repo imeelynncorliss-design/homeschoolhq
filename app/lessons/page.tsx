@@ -142,7 +142,7 @@ function LessonsContent() {
       .from('kids')
       .select('*')
       .eq('organization_id', resolvedOrgId)
-      .eq('archived', false)
+      .neq('archived', true)
       .order('created_at', { ascending: false })
 
     if (kidsData) {

@@ -204,7 +204,7 @@ export function useKids() {
           .from('kids')
           .select('id, displayname')
           .eq('user_id', user.id)
-          .eq('archived', false)
+          .neq('archived', true)
           .order('displayname')
 
         if (data) setKids(data.map((k: any) => ({

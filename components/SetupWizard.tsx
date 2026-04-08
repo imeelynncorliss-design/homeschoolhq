@@ -90,7 +90,7 @@ export default function SetupWizard({ organizationId, onComplete, onClose }: Set
         .from('kids')
         .select('id, displayname, grade, learning_style, subjects')
         .eq('organization_id', organizationId)
-        .eq('archived', false)
+        .neq('archived', true)
         .order('displayname');
 
       const loaded = kidsData ?? [];

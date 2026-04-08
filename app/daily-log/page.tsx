@@ -56,7 +56,7 @@ function DailyLogContent() {
         .from('kids')
         .select('id, displayname, firstname')
         .eq('organization_id', orgId)
-        .eq('archived', false)
+        .neq('archived', true)
         .order('created_at', { ascending: true })
 
       if (kidsData?.length) {

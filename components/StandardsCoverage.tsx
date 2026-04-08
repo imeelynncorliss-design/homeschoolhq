@@ -80,7 +80,7 @@ export default function StandardsCoverage({ organizationId }: StandardsCoverageP
       .from('kids')
       .select('id, displayname, grade')
       .eq('organization_id', organizationId)
-      .eq('archived', false)
+      .neq('archived', true)
       .order('displayname')
 
     const kidList = (kidsData || []) as Kid[]

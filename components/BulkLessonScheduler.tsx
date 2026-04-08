@@ -62,7 +62,7 @@ export default function BulkLessonScheduler({ userId }: BulkLessonSchedulerProps
       .from('kids')
       .select('id, displayname')
       .eq('user_id', userId)
-      .eq('archived', false)
+      .neq('archived', true)
       .order('displayname')
 
     if (kidsData) {

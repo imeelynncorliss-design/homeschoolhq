@@ -39,7 +39,7 @@ function TranscriptsContent() {
         .from('kids')
         .select('*')
         .eq('organization_id', orgId)
-        .eq('archived', false)
+        .neq('archived', true)
         .order('created_at', { ascending: false })
 
       setUser(user)

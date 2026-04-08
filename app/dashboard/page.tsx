@@ -1353,7 +1353,7 @@ function DashboardContent() {
         .from('kids')
         .select('*')
         .eq('organization_id', orgId)
-        .eq('archived', false)
+        .neq('archived', true)
         .order('created_at', { ascending: true })
 
       // Deduplicate by id — guards against rare DB duplicates

@@ -118,7 +118,7 @@ export default function ProgressDashboard({ userId, organizationId }: ProgressDa
         .from('kids')
         .select('id, displayname')
         .eq('organization_id', organizationId)
-        .eq('archived', false)
+        .neq('archived', true)
 
       const kidList = (kidsData || []) as Kid[]
       setKids(kidList)

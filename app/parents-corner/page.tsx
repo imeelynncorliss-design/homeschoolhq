@@ -86,7 +86,7 @@ function ParentsCornerContent() {
       if (orgId) {
         const [orgRes, kidsRes] = await Promise.all([
           supabase.from('organizations').select('teaching_style').eq('id', orgId).maybeSingle(),
-          supabase.from('kids').select('id, displayname, learning_style, mi_profile').eq('organization_id', orgId).eq('archived', false).order('displayname'),
+          supabase.from('kids').select('id, displayname, learning_style, mi_profile').eq('organization_id', orgId).neq('archived', true).order('displayname'),
         ])
         setBlueprintOrgStyle(orgRes.data?.teaching_style ?? null)
         const kids = kidsRes.data ?? []

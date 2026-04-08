@@ -83,7 +83,7 @@ export default function CompliancePage() {
         .from('kids')
         .select('*')
         .eq('organization_id', orgId)
-        .eq('archived', false)
+        .neq('archived', true)
         .order('created_at', { ascending: true })
 
       if (kidsData) setKids(kidsData)

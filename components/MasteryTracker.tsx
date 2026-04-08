@@ -66,7 +66,7 @@ export default function MasteryTracker({ organizationId }: MasteryTrackerProps) 
       .from('kids')
       .select('id, displayname')
       .eq('organization_id', organizationId)
-      .eq('archived', false)
+      .neq('archived', true)
       .order('displayname')
 
     const kidList = (kidsData || []) as Kid[]
