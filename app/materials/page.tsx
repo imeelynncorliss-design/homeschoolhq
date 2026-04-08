@@ -358,16 +358,16 @@ function MaterialsPageInner() {
             </button>
           </div>
         </div>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
           {(['textbook', 'subscription', 'physical', 'digital'] as const).map((type) => {
             const count = materials.filter(m => m.material_type === type).length;
             const icons = { textbook: '📚', subscription: '🔑', physical: '🧰', digital: '💻' };
             return (
-              <div key={type} className="bg-white p-6 rounded-2xl shadow-md border border-slate-200 flex items-center gap-4">
-                <div className="text-3xl">{icons[type]}</div>
+              <div key={type} className="bg-white p-3 rounded-xl border border-slate-200 flex items-center gap-3">
+                <div className="text-xl">{icons[type]}</div>
                 <div>
                   <div className="text-xs font-black text-slate-500 uppercase tracking-widest">{type}s</div>
-                  <div className="text-3xl font-black text-slate-900">{count}</div>
+                  <div className="text-xl font-black text-slate-900">{count}</div>
                 </div>
               </div>
             );
@@ -375,19 +375,19 @@ function MaterialsPageInner() {
         </div>
 
         {/* SEARCH & FILTERS */}
-        <div className="bg-white rounded-2xl shadow-md border border-slate-200 p-6 mb-8">
-          <div className="flex flex-col md:flex-row gap-4">
+        <div className="bg-white rounded-xl border border-slate-200 p-3 mb-5">
+          <div className="flex flex-col md:flex-row gap-3">
             <div className="relative flex-1">
-              <span className="absolute left-4 top-3.5 text-slate-500">🔍</span>
+              <span className="absolute left-3 top-2.5 text-slate-400 text-sm">🔍</span>
               <input
                 type="text"
                 placeholder="Search resources..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-300 rounded-xl outline-none focus:ring-4 focus:ring-purple-500/10 focus:border-purple-600 transition-all text-slate-900 font-bold placeholder:text-slate-400"
+                className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:border-purple-500 transition-all text-slate-900 font-semibold text-sm placeholder:text-slate-400"
               />
             </div>
-            <select value={filterType} onChange={(e) => setFilterType(e.target.value as any)} className="px-4 py-3.5 bg-slate-50 border border-slate-300 rounded-xl outline-none text-slate-900 font-bold cursor-pointer">
+            <select value={filterType} onChange={(e) => setFilterType(e.target.value as any)} className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg outline-none text-slate-900 font-semibold text-sm cursor-pointer">
               <option value="all">All Types</option>
               <option value="textbook">Textbooks</option>
               <option value="subscription">Subscriptions</option>
@@ -395,7 +395,7 @@ function MaterialsPageInner() {
               <option value="digital">Digital</option>
             </select>
             {kids.length > 1 && (
-              <select value={filterKidId} onChange={(e) => setFilterKidId(e.target.value)} className="px-4 py-3.5 bg-slate-50 border border-slate-300 rounded-xl outline-none text-slate-900 font-bold cursor-pointer">
+              <select value={filterKidId} onChange={(e) => setFilterKidId(e.target.value)} className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg outline-none text-slate-900 font-semibold text-sm cursor-pointer">
                 <option value="all">All Children</option>
                 {kids.map(k => <option key={k.id} value={k.id}>{k.displayname}</option>)}
               </select>
@@ -404,78 +404,53 @@ function MaterialsPageInner() {
         </div>
 
         {/* RESOURCE LIST */}
-        <div className="space-y-8 pb-20">
+        <div className="space-y-4 pb-20">
           {(['textbook', 'subscription', 'physical', 'digital'] as MaterialType[]).map(type => {
             const typeMaterials = materials.filter(m => m.material_type === type);
             if (typeMaterials.length === 0) return null;
             const icons = { textbook: '📚', subscription: '🔑', physical: '🧰', digital: '💻' };
-            const descriptions = {
-              textbook: 'Curriculum textbooks and workbooks',
-              subscription: 'Online programs and subscriptions',
-              physical: 'Hands-on materials used for AI-generated lessons',
-              digital: 'Digital resources and downloads'
-            };
             return (
-              <div key={type} className="bg-white rounded-2xl shadow-md border border-slate-200 overflow-hidden">
-                <div className="bg-slate-100 px-8 py-4 border-b border-slate-200">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h2 className="text-sm font-black text-slate-700 uppercase tracking-widest flex items-center gap-2">
-                        {icons[type]} {type}s
-                      </h2>
-                      <p className="text-xs font-semibold text-slate-600 mt-1">
-                        {descriptions[type]}
-                      </p>
-                    </div>
-                    {type === 'physical' && (
-                      <span className="text-xs font-bold text-indigo-700 bg-indigo-50 px-3 py-1.5 rounded-full border border-indigo-200">
-                        Used in Lesson Generator
-                      </span>
-                    )}
-                  </div>
+              <div key={type} className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                <div className="bg-slate-50 px-4 py-2.5 border-b border-slate-200 flex items-center justify-between">
+                  <span className="text-xs font-black text-slate-600 uppercase tracking-widest">
+                    {icons[type]} {type}s <span className="text-purple-400 font-semibold">({typeMaterials.length})</span>
+                  </span>
+                  {type === 'physical' && (
+                    <span className="text-xs font-bold text-indigo-700 bg-indigo-50 px-2 py-1 rounded-full border border-indigo-200">
+                      Used in Lesson Generator
+                    </span>
+                  )}
                 </div>
                 <div className="divide-y divide-slate-100">
                   {typeMaterials.map(m => (
-                    <div key={m.id} className="p-8 flex flex-col md:flex-row justify-between items-start md:items-center hover:bg-slate-50 transition-colors group">
+                    <div key={m.id} className="px-4 py-3 flex flex-col md:flex-row justify-between items-start md:items-center hover:bg-slate-50 transition-colors">
                       <div className="flex-1">
-                        <h3 className="text-xl font-black text-slate-900">{m.name}</h3>
-                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1 text-sm font-bold text-slate-600">
+                        <div className="text-sm font-black text-slate-900">{m.name}</div>
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-0.5 text-xs font-semibold text-slate-500">
                           <span>{m.subject || 'General'}</span>
-                          <span className="text-slate-300">•</span>
+                          <span className="text-slate-300">·</span>
                           <span>{m.grade_level || 'All Grades'}</span>
                           {m.kid_ids && m.kid_ids.length > 0 && (
-                            <>
-                              <span className="text-slate-300">•</span>
-                              <span className="text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-lg border border-indigo-100 text-xs">
-                                {m.kid_ids.map(id => kids.find(k => k.id === id)?.displayname).filter(Boolean).join(', ')}
-                              </span>
-                            </>
+                            <span className="text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100 text-xs">
+                              {m.kid_ids.map((id: string) => kids.find(k => k.id === id)?.displayname).filter(Boolean).join(', ')}
+                            </span>
                           )}
-                          {m.quantity && m.quantity > 1 && (
-                            <>
-                              <span className="text-slate-300">•</span>
-                              <span>Qty: {m.quantity}</span>
-                            </>
-                          )}
+                          {m.quantity && m.quantity > 1 && <span>Qty: {m.quantity}</span>}
                           {m.url && (
-                            <>
-                              <span className="text-slate-300">•</span>
-                              <a href={m.url} target="_blank" rel="noopener noreferrer" className="text-indigo-700 hover:text-indigo-900 flex items-center gap-1 bg-indigo-50 px-3 py-1 rounded-lg border border-indigo-100">
-                                🔗 Open Resource
-                              </a>
-                            </>
+                            <a href={m.url} target="_blank" rel="noopener noreferrer" className="text-indigo-700 hover:text-indigo-900 flex items-center gap-1 bg-indigo-50 px-2 py-0.5 rounded-lg border border-indigo-100">
+                              🔗 Open
+                            </a>
                           )}
                         </div>
                         {m.login_info && (
-                          <p className="text-sm text-slate-900 mt-4 font-mono bg-amber-100/50 inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-amber-200 shadow-sm">
-                            <span className="text-lg">🗝️</span> 
-                            <span className="font-black underline decoration-amber-500/30">{m.login_info}</span>
-                          </p>
+                          <div className="text-xs text-amber-900 mt-1.5 bg-amber-50 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-amber-200">
+                            🗝️ <span className="font-bold">{m.login_info}</span>
+                          </div>
                         )}
                       </div>
-                      <div className="flex gap-3 mt-4 md:mt-0">
-                        <button onClick={() => openEditForm(m)} className="px-6 py-2 rounded-xl font-black text-indigo-700 bg-indigo-50 hover:bg-indigo-100 transition-colors border border-indigo-100">Edit</button>
-                        <button onClick={() => deleteMaterial(m.id)} className="px-6 py-2 rounded-xl font-black text-red-700 hover:bg-red-50 transition-colors border border-transparent hover:border-red-100">Delete</button>
+                      <div className="flex gap-2 mt-2 md:mt-0">
+                        <button onClick={() => openEditForm(m)} className="px-4 py-1.5 rounded-lg text-xs font-black text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-100">Edit</button>
+                        <button onClick={() => deleteMaterial(m.id)} className="px-4 py-1.5 rounded-lg text-xs font-black text-red-600 hover:bg-red-50 border border-transparent hover:border-red-100">Delete</button>
                       </div>
                     </div>
                   ))}
@@ -485,11 +460,11 @@ function MaterialsPageInner() {
           })}
 
           {materials.length === 0 && (
-            <div className="bg-white rounded-2xl shadow-md border border-slate-200 p-16 text-center">
-              <div className="text-6xl mb-4">📦</div>
-              <h3 className="text-2xl font-black text-slate-900 mb-2">No Materials Yet</h3>
-              <p className="text-slate-600 mb-6">Start building your resource library by adding your first material.</p>
-              <button onClick={openAddForm} className="bg-indigo-700 text-white px-8 py-3 rounded-xl font-black hover:bg-indigo-800 transition-all shadow-lg">
+            <div className="bg-white rounded-xl border border-slate-200 p-12 text-center">
+              <div className="text-4xl mb-3">📦</div>
+              <div className="text-base font-black text-slate-900 mb-1">No Materials Yet</div>
+              <p className="text-sm text-slate-500 mb-4">Start building your resource library.</p>
+              <button onClick={openAddForm} className="bg-indigo-700 text-white px-6 py-2 rounded-lg text-sm font-black hover:bg-indigo-800 transition-all">
                 + Add Your First Material
               </button>
             </div>

@@ -1188,6 +1188,8 @@ function SubjectsContent() {
             background: '#fff', borderRadius: '24px 24px 0 0',
             boxShadow: '0 -8px 40px rgba(0,0,0,0.18)',
             padding: '20px 20px 40px',
+            paddingBottom: 'calc(40px + env(safe-area-inset-bottom, 0px))',
+            maxHeight: '85vh', overflowY: 'auto' as const,
             fontFamily: "'Nunito', sans-serif",
           }}>
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
