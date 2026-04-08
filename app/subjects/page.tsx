@@ -334,18 +334,23 @@ function SubjectsContent() {
   }
 
   const handleNameChange = (name: string) => {
-    setAddName(name)
-    setAddEmoji(subjectEmoji(name))
-    setAddColor(subjectColor(name))
+    // If it's a library subject, use exactly as-is. Custom input: collapse multiple spaces.
+    const cleaned = COMMON_SUBJECTS.includes(name)
+      ? name
+      : name.replace(/\s{2,}/g, ' ')
+    setAddName(cleaned)
+    setAddEmoji(subjectEmoji(cleaned))
+    setAddColor(subjectColor(cleaned))
   }
 
   const handleAddSubject = async () => {
-    if (!addName.trim() || !orgId || !addKidId) return
+    const finalName = addName.trim().replace(/\s{2,}/g, ' ')
+    if (!finalName || !orgId || !addKidId) return
     setAddSaving(true)
     const { data, error } = await supabase.from('subjects').insert({
       organization_id: orgId,
       kid_id: addKidId,
-      name: addName.trim(),
+      name: finalName,
       weekly_frequency: addFrequency,
       color: addColor,
       emoji: addEmoji,
@@ -777,34 +782,45 @@ function SubjectsContent() {
                 Add subjects you plan to teach — even if you haven&rsquo;t scheduled lessons yet. Lessons will appear here once added.
               </div>
 
-              {/* Subject name */}
+              {/* Subject picker */}
               <div style={{ marginBottom: 20 }}>
-                <div style={{ fontSize: 12, fontWeight: 800, color: 'rgba(255,255,255,0.6)', marginBottom: 8, letterSpacing: 0.5 }}>SUBJECT NAME</div>
-                <input
-                  value={addName}
-                  onChange={e => handleNameChange(e.target.value)}
-                  placeholder="e.g. Latin, Logic, Art History..."
-                  list="subject-suggestions"
-                  style={{
-                    width: '100%', padding: '11px 14px', borderRadius: 12,
-                    border: '1.5px solid rgba(255,255,255,0.15)', fontSize: 15, fontWeight: 600,
-                    fontFamily: "'Nunito', sans-serif", color: '#1e1b4b', outline: 'none',
-                    background: '#fff',
-                  }}
-                />
-                <datalist id="subject-suggestions">
-                  {COMMON_SUBJECTS.map(s => <option key={s} value={s} />)}
-                </datalist>
-                {/* Quick-pick pills */}
-                <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 6, marginTop: 10 }}>
-                  {COMMON_SUBJECTS.filter(s => !s.toLowerCase().includes(addName.toLowerCase()) || addName === '').slice(0, 10).map(s => (
-                    <button key={s} onClick={() => handleNameChange(s)}
-                      style={{
-                        padding: '4px 10px', borderRadius: 14, border: '1.5px solid rgba(255,255,255,0.2)',
-                        background: 'rgba(255,255,255,0.1)', fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.85)',
-                        cursor: 'pointer', fontFamily: "'Nunito', sans-serif",
-                      }}>{s}</button>
-                  ))}
+                <div style={{ fontSize: 12, fontWeight: 800, color: 'rgba(255,255,255,0.6)', marginBottom: 8, letterSpacing: 0.5 }}>CHOOSE A SUBJECT</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 7, marginBottom: 10 }}>
+                  {COMMON_SUBJECTS.map(s => {
+                    const isSelected = addName === s
+                    return (
+                      <button key={s} onClick={() => handleNameChange(s)}
+                        style={{
+                          padding: '7px 13px', borderRadius: 20,
+                          border: isSelected ? '2px solid #a78bfa' : '1.5px solid rgba(255,255,255,0.2)',
+                          background: isSelected ? 'rgba(124,58,237,0.45)' : 'rgba(255,255,255,0.1)',
+                          fontSize: 13, fontWeight: isSelected ? 800 : 700,
+                          color: isSelected ? '#e9d5ff' : 'rgba(255,255,255,0.85)',
+                          cursor: 'pointer', fontFamily: "'Nunito', sans-serif",
+                          transition: 'all 0.12s',
+                        }}>
+                        {subjectEmoji(s)} {s}
+                      </button>
+                    )
+                  })}
+                </div>
+                {/* Custom subject input */}
+                <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 12 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.45)', marginBottom: 6 }}>
+                    Not in the list? Type a custom subject:
+                  </div>
+                  <input
+                    value={COMMON_SUBJECTS.includes(addName) ? '' : addName}
+                    onChange={e => handleNameChange(e.target.value)}
+                    placeholder="e.g. Art History, Classical Studies…"
+                    style={{
+                      width: '100%', padding: '10px 14px', borderRadius: 12,
+                      border: addName && !COMMON_SUBJECTS.includes(addName) ? '1.5px solid #a78bfa' : '1.5px solid rgba(255,255,255,0.15)',
+                      fontSize: 14, fontWeight: 600,
+                      fontFamily: "'Nunito', sans-serif", color: '#1e1b4b', outline: 'none',
+                      background: '#fff', boxSizing: 'border-box' as const,
+                    }}
+                  />
                 </div>
               </div>
 
