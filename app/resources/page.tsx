@@ -811,17 +811,28 @@ function MaterialsTab({ organizationId }: { organizationId: string }) {
       kid_ids: formKidIds.length > 0 ? formKidIds : null,
     }
     try {
-      if (editingMaterial) { await supabase.from('materials').update(payload).eq('id', editingMaterial.id) }
-      else { await supabase.from('materials').insert([payload]) }
-      setShowAddForm(false); resetForm(); loadMaterials()
+      if (editingMaterial) {
+        await supabase.from('materials').update(payload).eq('id', editingMaterial.id)
+        // Optimistic update — replace in-place, no refetch needed
+        setAllMaterials(prev => prev.map(m => m.id === editingMaterial.id ? { ...m, ...payload } : m))
+      } else {
+        const { data: inserted } = await supabase.from('materials').insert([payload]).select().single()
+        if (inserted) {
+          // Optimistic prepend — appears instantly
+          setAllMaterials(prev => [inserted, ...prev])
+        } else {
+          loadMaterials()
+        }
+      }
+      setShowAddForm(false); resetForm()
     } catch (err: any) { alert(`Failed to save: ${err.message}`) }
     finally { setIsSaving(false) }
   }
 
   const deleteMaterial = async (id: string) => {
     if (!confirm('Delete this material?')) return
+    setAllMaterials(prev => prev.filter(m => m.id !== id))
     await supabase.from('materials').delete().eq('id', id)
-    loadMaterials()
   }
 
   const ICONS: Record<MaterialType, string> = { textbook: '📚', subscription: '🔑', physical: '🧰', digital: '💻' }

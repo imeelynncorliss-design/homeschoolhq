@@ -217,7 +217,15 @@ export default function LessonViewModal({
   const [deletingUploadId, setDeletingUploadId] = useState<string | null>(null)
 
   // Tabs
-  const [activeTab, setActiveTab] = useState<'details' | 'checkin' | 'standards'>('details')
+  const [activeTab, setActiveTab] = useState<'details' | 'checkin' | 'standards' | 'materials'>('details')
+
+  // Add material to lesson
+  const [matName, setMatName] = useState('')
+  const [matType, setMatType] = useState<'textbook' | 'subscription' | 'physical' | 'digital'>('textbook')
+  const [matUrl, setMatUrl]   = useState('')
+  const [matSaving, setMatSaving] = useState(false)
+  const [matSaved, setMatSaved]   = useState(false)
+  const [lessonMaterials, setLessonMaterials] = useState<any[]>([])
 
   // Standards
   type LinkedStandard = { id: string; user_standard_id: string; standard_code: string; description: string; subject: string; grade_level: string }
@@ -254,7 +262,41 @@ export default function LessonViewModal({
     loadCheckIn()
     loadExistingUploads()
     loadStandards()
+    loadLessonMaterials()
   }, [lesson.id])
+
+  const loadLessonMaterials = async () => {
+    if (!organizationId) return
+    const { data } = await supabase
+      .from('materials')
+      .select('id, name, material_type, subject, url')
+      .eq('organization_id', organizationId)
+      .contains('kid_ids', lesson.kid_id ? [lesson.kid_id] : [])
+      .order('created_at', { ascending: false })
+    // Filter client-side to those tagged with this lesson's subject
+    setLessonMaterials(data || [])
+  }
+
+  const saveMatToLibrary = async () => {
+    if (!matName.trim() || !organizationId) return
+    setMatSaving(true)
+    try {
+      const payload = {
+        organization_id: organizationId,
+        material_type: matType,
+        name: matName.trim(),
+        subject: lesson.subject || null,
+        url: matUrl.trim() || null,
+        kid_ids: lesson.kid_id ? [lesson.kid_id] : null,
+      }
+      const { data: inserted } = await supabase.from('materials').insert([payload]).select().single()
+      if (inserted) setLessonMaterials(prev => [inserted, ...prev])
+      setMatName(''); setMatUrl(''); setMatType('textbook')
+      setMatSaved(true)
+      setTimeout(() => setMatSaved(false), 2500)
+    } catch (e) { console.error(e) }
+    finally { setMatSaving(false) }
+  }
 
   const loadStandards = async () => {
     if (!organizationId) return
@@ -553,6 +595,7 @@ ${overviewHtml}${objectivesHtml}${materialsHtml}${activitiesHtml}${assessmentHtm
   const tabs = [
     { key: 'details'   as const, label: 'Details',   emoji: '📋' },
     { key: 'checkin'   as const, label: 'Check-In',  emoji: '🎯' },
+    { key: 'materials' as const, label: 'Materials',  emoji: '📦' },
     { key: 'standards' as const, label: 'Standards',  emoji: '📌' },
   ]
 
@@ -1032,6 +1075,85 @@ ${overviewHtml}${objectivesHtml}${materialsHtml}${activitiesHtml}${assessmentHtm
         )}
 
 
+        {/* ── Materials Tab ── */}
+        {activeTab === 'materials' && (
+          <div style={vw.body}>
+            <div style={{ padding: '16px 22px 12px' }}>
+              <p style={{ fontSize: 13, color: '#6b7280', margin: 0, lineHeight: 1.5, fontFamily: 'system-ui, sans-serif' }}>
+                Add a material used in this lesson — it'll be saved to{' '}
+                <strong style={{ color: '#7c3aed' }}>My Materials</strong> and linked to this child.
+              </p>
+            </div>
+
+            {/* Add form */}
+            <div style={{ padding: '0 22px 16px', display: 'flex', flexDirection: 'column' as const, gap: 10 }}>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 800, color: '#9ca3af', letterSpacing: 0.5, marginBottom: 6, fontFamily: 'system-ui, sans-serif', textTransform: 'uppercase' as const }}>Resource Name *</div>
+                <input
+                  value={matName}
+                  onChange={e => setMatName(e.target.value)}
+                  placeholder="e.g. Saxon Math 5/4, Khan Academy…"
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1.5px solid #e5e7eb', fontSize: 13, fontWeight: 600, fontFamily: 'system-ui, sans-serif', color: '#111827', outline: 'none', boxSizing: 'border-box' as const }}
+                />
+              </div>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 800, color: '#9ca3af', letterSpacing: 0.5, marginBottom: 6, fontFamily: 'system-ui, sans-serif', textTransform: 'uppercase' as const }}>Type</div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {(['textbook', 'subscription', 'physical', 'digital'] as const).map(t => {
+                    const icons = { textbook: '📚', subscription: '🔑', physical: '🧰', digital: '💻' }
+                    return (
+                      <button key={t} onClick={() => setMatType(t)} style={{ flex: 1, padding: '7px 4px', borderRadius: 8, fontSize: 10, fontWeight: 800, cursor: 'pointer', fontFamily: 'system-ui, sans-serif', border: matType === t ? '2px solid #7c3aed' : '1.5px solid #e5e7eb', background: matType === t ? '#f5f3ff' : '#f9fafb', color: matType === t ? '#7c3aed' : '#6b7280' }}>
+                        {icons[t]}<br />{t}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 800, color: '#9ca3af', letterSpacing: 0.5, marginBottom: 6, fontFamily: 'system-ui, sans-serif', textTransform: 'uppercase' as const }}>URL <span style={{ fontWeight: 500, textTransform: 'none' as const }}>(optional)</span></div>
+                <input
+                  value={matUrl}
+                  onChange={e => setMatUrl(e.target.value)}
+                  placeholder="https://…"
+                  type="url"
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1.5px solid #e5e7eb', fontSize: 13, fontFamily: 'system-ui, sans-serif', color: '#111827', outline: 'none', boxSizing: 'border-box' as const }}
+                />
+              </div>
+              <button
+                onClick={saveMatToLibrary}
+                disabled={!matName.trim() || matSaving}
+                style={{ width: '100%', padding: '11px', borderRadius: 10, border: 'none', fontSize: 13, fontWeight: 800, cursor: matName.trim() ? 'pointer' : 'not-allowed', fontFamily: 'system-ui, sans-serif', background: matSaved ? '#10b981' : matName.trim() ? 'linear-gradient(135deg,#7c3aed,#a855f7)' : '#e5e7eb', color: matName.trim() || matSaved ? '#fff' : '#9ca3af', transition: 'background 0.2s' }}
+              >
+                {matSaved ? '✓ Saved to My Materials!' : matSaving ? 'Saving…' : '+ Save to My Materials'}
+              </button>
+            </div>
+
+            {/* Existing materials for this child */}
+            {lessonMaterials.length > 0 && (
+              <div style={{ borderTop: '1px solid #f3f4f6', padding: '14px 22px 20px' }}>
+                <div style={{ fontSize: 11, fontWeight: 800, color: '#9ca3af', letterSpacing: 0.5, marginBottom: 10, fontFamily: 'system-ui, sans-serif', textTransform: 'uppercase' as const }}>
+                  This child's materials
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 7 }}>
+                  {lessonMaterials.slice(0, 10).map((m: any) => {
+                    const icons: Record<string, string> = { textbook: '📚', subscription: '🔑', physical: '🧰', digital: '💻' }
+                    return (
+                      <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#f9fafb', borderRadius: 10, padding: '8px 12px', border: '1px solid #f3f4f6' }}>
+                        <span style={{ fontSize: 16, flexShrink: 0 }}>{icons[m.material_type] || '📦'}</span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: '#111827', fontFamily: 'system-ui, sans-serif', whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.name}</div>
+                          {m.subject && <div style={{ fontSize: 11, color: '#6b7280', fontFamily: 'system-ui, sans-serif' }}>{m.subject}</div>}
+                        </div>
+                        {m.url && <a href={m.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: '#7c3aed', fontWeight: 700, fontFamily: 'system-ui, sans-serif', flexShrink: 0 }}>🔗</a>}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* ── Standards Tab ── */}
         {activeTab === 'standards' && (
           <div style={vw.body}>
@@ -1224,13 +1346,16 @@ const vw: Record<string, CSSProperties> = {
   overlay: {
     position: 'fixed', inset: 0, zIndex: 9999,
     background: 'rgba(15,10,40,0.55)', backdropFilter: 'blur(4px)',
-    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px 20px 88px',
+    display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
+    padding: '24px 16px 100px',
+    overflowY: 'auto',
   },
   modal: {
     background: '#fff', borderRadius: 18,
-    width: '100%', maxWidth: 500, maxHeight: 'calc(100vh - 108px)',
+    width: '100%', maxWidth: 500,
     boxShadow: '0 24px 64px rgba(0,0,0,0.22)',
     overflow: 'hidden', display: 'flex', flexDirection: 'column',
+    maxHeight: 'calc(100dvh - 124px)',
   },
   header: {
     background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 60%, #a855f7 100%)',
