@@ -13,7 +13,7 @@ import { colors } from '@/src/lib/designTokens'
 
 function CalendarContent() {
   const router = useRouter()
-  useAppHeader({ title: '📅 Calendar', backHref: '/tools' })
+  useAppHeader({ title: '📅 Calendar' })
   const [user, setUser] = useState<any>(null)
   const [kids, setKids] = useState<any[]>([])
   const [lessonsByKid, setLessonsByKid] = useState<{ [kidId: string]: any[] }>({})
@@ -86,9 +86,9 @@ function CalendarContent() {
   }
 
   return (
-    <div className="hr-page" style={{ fontFamily: "'Nunito', sans-serif" }}>
+    <div style={{ fontFamily: "'Nunito', sans-serif", minHeight: '100vh', background: '#f5f3ff', paddingBottom: 100 }}>
       {/* Page content */}
-      <div style={{ maxWidth: 960, margin: '0 auto', padding: '16px 20px 0' }}>
+      <div style={{ padding: '16px 20px 0' }}>
 
         {/* Calendar */}
         {organizationId && user ? (

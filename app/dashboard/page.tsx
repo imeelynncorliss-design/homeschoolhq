@@ -1578,7 +1578,7 @@ function DashboardContent() {
     main: {
       maxWidth: 1200,
       margin: '0 auto',
-      padding: '0 40px 20px',
+      padding: '0 40px 120px',
       display: 'flex',
       flexDirection: 'column' as const,
       gap: 36,
