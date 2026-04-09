@@ -334,7 +334,7 @@ export default function LessonCalendar({
 
   return (
     <>
-    <div className="printable-calendar" style={{ height: 'calc(100vh - 160px)', minHeight: 500, background: 'transparent' }}>
+    <div className="printable-calendar" style={{ height: 'calc(100vh - 220px)', minHeight: 480, background: 'transparent' }}>
         <div className="print-header hr-print-header" style={{ display: 'none' }}>
           <img src="/Cardinal_Mascot.png" alt="HomeschoolReady" className="hr-print-logo-img" />
           <div className="hr-print-logo-text">
