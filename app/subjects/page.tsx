@@ -1266,13 +1266,13 @@ function SubjectsContent() {
       {showQuickLesson && (
         <div
           onClick={() => setShowQuickLesson(false)}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 400, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 400, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '72px 16px 80px' }}
         >
           <div
             onClick={e => e.stopPropagation()}
             style={{
               background: '#fff', borderRadius: 20, width: '100%', maxWidth: 480,
-              maxHeight: 'calc(100vh - 120px)', display: 'flex', flexDirection: 'column',
+              maxHeight: '100%', overflow: 'hidden', display: 'flex', flexDirection: 'column',
               boxShadow: '0 24px 64px rgba(0,0,0,0.22)', fontFamily: "'Nunito', sans-serif",
             }}
           >
