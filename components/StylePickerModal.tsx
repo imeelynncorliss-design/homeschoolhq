@@ -20,6 +20,7 @@ export const STYLE_FEATURES = [
   { id: 'transcript',  emoji: '🎓', label: 'Transcript Builder',       desc: 'GPA, courses, college-ready records' },
   { id: 'mastery',     emoji: '🏆', label: 'Mastery Tracker',          desc: 'Standards & skill mastery' },
   { id: 'portfolio',   emoji: '🗂️', label: 'Portfolio',                desc: 'Work samples & highlights' },
+  { id: 'calendar',   emoji: '📅', label: 'Calendar',                 desc: 'Full month lesson calendar' },
 ]
 
 // ─── Defaults per style ───────────────────────────────────────────────────────

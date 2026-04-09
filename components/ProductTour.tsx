@@ -33,11 +33,19 @@ function buildTourSteps(
 ): TourStep[] {
   const steps: TourStep[] = []
 
-  // Week strip — always first
+  // Quick actions first — now above kid cards
+  const isFlexMode = homeschoolStyle === 'flexible'
   steps.push({
-    targetId: 'tour-week-strip',
-    title: 'Your Week at a Glance',
-    content: "A small dot (●) below a date means lessons are scheduled that day. Tap any day to see those lessons — and open, edit, check in, or delete right from there. Tap 'View full calendar' to see the full month view.",
+    targetId: 'tour-quick-actions',
+    title: isFlexMode ? 'Your Quick Log' : 'Your Quick Actions',
+    content: isFlexMode
+      ? "Shortcuts for logging what you do each day. Tap any card to jump right in — and tap 'Ask Scout' anytime I can help."
+      : "Jump to Today's Learning, log attendance, check compliance, or plan a lesson. Tap 'Ask Scout' anytime you have a question.",
+    bullets: [
+      '🛒 Supply Scout — shows how many materials you need this week. Tap it to review and check off as you gather.',
+      "🃏 Use the 'Customize Cards' pill to choose which action cards appear — including a Calendar card!",
+      '📌 Ask Scout and Today\'s Learning are always pinned — they\'re always here no matter what cards you pick.',
+    ],
     position: 'bottom',
   })
 
@@ -55,22 +63,6 @@ function buildTourSteps(
       '📖 Subjects — see what they\'re studying and their weekly schedule',
       '📚 Today\'s lesson list',
       '✏️ Quick link to edit their profile',
-    ],
-    position: 'bottom',
-  })
-
-  // Quick actions — always present, copy adapts by mode
-  const isFlexible = homeschoolStyle === 'flexible'
-  steps.push({
-    targetId: 'tour-quick-actions',
-    title: isFlexible ? 'Your Quick Log' : 'Your Quick Actions',
-    content: isFlexible
-      ? "Shortcuts for logging what you do each day. Tap any card to jump right in — and tap 'Ask Scout' anytime I can help."
-      : "Jump to Today's Learning, log attendance, check compliance, or plan a lesson. Tap 'Ask Scout' anytime you have a question.",
-    bullets: [
-      '🛒 Supply Scout — shows how many materials you need this week. Tap it to review and check off as you gather.',
-      "🃏 Use the 'Customize Cards' pill to choose which action cards appear on your dashboard.",
-      '📌 Ask Scout and Today\'s Learning are always pinned — they\'re always here no matter what cards you pick.',
     ],
     position: 'bottom',
   })

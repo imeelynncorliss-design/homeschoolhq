@@ -71,6 +71,7 @@ const QUICK_ACTION_CONFIG: Record<string, {
   transcript:  { emoji: '🎓', label: 'Transcript',          sub: 'GPA, courses, college records',      bg: 'linear-gradient(135deg,#fefce8,#fef08a)', iconBg: '#d97706', color: '#78350f', subColor: '#d97706', action: 'route',    href: '/transcript' },
   mastery:     { emoji: '🏆', label: 'Mastery Tracker',     sub: 'Standards & skill mastery',          bg: 'linear-gradient(135deg,#eff6ff,#dbeafe)', iconBg: '#2563eb', color: '#1e3a5f', subColor: '#3b82f6', action: 'route',    href: '/mastery' },
   portfolio:    { emoji: '🗂️', label: 'Portfolio',           sub: 'Work samples & highlights',          bg: 'linear-gradient(135deg,#fdf4ff,#fae8ff)', iconBg: '#9333ea', color: '#4a044e', subColor: '#a855f7', action: 'route',    href: '/portfolio' },
+  calendar:    { emoji: '📅', label: 'Calendar',            sub: 'View full month lesson calendar',    bg: 'linear-gradient(135deg,#eff6ff,#dbeafe)', iconBg: '#3b82f6', color: '#1e3a5f', subColor: '#3b82f6', action: 'route',    href: '/calendar' },
 }
 
 const DAY_CARDINAL: Record<number, string> = {
@@ -1221,7 +1222,6 @@ function DashboardContent() {
   const [tourAutoStart, setTourAutoStart]     = useState(false)
   const [tourFromWelcome, setTourFromWelcome] = useState(false)
   const [weekLessons, setWeekLessons]           = useState<Record<string, { lesson: any; kid: Kid }[]>>({})
-  const [selectedWeekDay, setSelectedWeekDay]   = useState<string | null>(null)
   const [weeklyMaterialsCount, setWeeklyMaterialsCount] = useState(0)
   const [todayAttendance, setTodayAttendance] = useState<Set<string>>(new Set()) // kid IDs marked present today
   const [attendanceSaving, setAttendanceSaving] = useState<Set<string>>(new Set())
@@ -1811,12 +1811,213 @@ function DashboardContent() {
             </div>
           )}
 
-          {/* Week Strip */}
-          <WeekStrip
-            weekLessons={weekLessons}
-            today={now}
-            onDayClick={key => setSelectedWeekDay(key)}
-          />
+          {/* ── Co-teacher simplified actions ── */}
+          {isCollaborator && (
+            <section>
+              <div style={css.sectionRow}>
+                <span style={css.secTitle}>QUICK ACTIONS</span>
+              </div>
+              <div className="quick-grid" style={css.quickGrid}>
+                {[
+                  { key: 'today',      emoji: '📝', label: "Today's Learning",  sub: "View today's agenda",          bg: 'linear-gradient(135deg,#ede9fe,#ddd6fe)', iconBg: '#7c3aed', color: '#4c1d95', subColor: '#7c3aed', onClick: () => setShowToday(true) },
+                  { key: 'attendance', emoji: '✅', label: 'Log Attendance',     sub: "Mark today's school day",       bg: 'linear-gradient(135deg,#d1fae5,#a7f3d0)', iconBg: '#059669', color: '#064e3b', subColor: '#059669', onClick: () => router.push('/attendance') },
+                  { key: 'reading',    emoji: '📚', label: 'Log a Book',         sub: 'Add to reading log',            bg: 'linear-gradient(135deg,#ede9fe,#ddd6fe)', iconBg: '#7c3aed', color: '#4c1d95', subColor: '#7c3aed', onClick: () => router.push('/reading-log') },
+                  { key: 'activity',   emoji: '🚌', label: 'Log an Activity',    sub: 'Field trip, project, co-op',    bg: 'linear-gradient(135deg,#ccfbf1,#99f6e4)', iconBg: '#0d9488', color: '#134e4a', subColor: '#0d9488', onClick: () => router.push('/field-trips') },
+                  { key: 'scout',      emoji: null as null, imgSrc: '/Cardinal_Mascot.png', label: 'Ask Scout', sub: 'Ask me anything, anytime', bg: 'linear-gradient(135deg,#fef3c7,#fde68a)', iconBg: '#f59e0b', color: '#78350f', subColor: '#d97706', onClick: () => window.dispatchEvent(new CustomEvent('open-scout-copilot')) },
+                ].map(btn => (
+                  <button key={btn.key} className="quick-btn"
+                    style={{ ...css.quickCard, background: btn.bg }}
+                    onClick={btn.onClick}>
+                    <div style={{ ...css.qIcon, background: btn.iconBg }}>
+                      {(btn as any).imgSrc
+                        ? <img src={(btn as any).imgSrc} alt={btn.label} style={{ width: 36, height: 36, objectFit: 'contain' }} />
+                        : <span style={{ fontSize: 28 }}>{btn.emoji}</span>
+                      }
+                    </div>
+                    <div>
+                      <div style={{ ...css.qLabel, color: btn.color }}>{btn.label}</div>
+                      <div style={{ ...css.qSub, color: btn.subColor }}>{btn.sub}</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Supply Scout + Quick Actions — wrapped together for tour highlight */}
+          {!isCollaborator && <div id="tour-quick-actions">
+
+          {/* Supply Scout card */}
+          <section>
+            <button
+              onClick={() => router.push('/supply-scout')}
+              style={{
+                width: '100%', background: weeklyMaterialsCount > 0
+                  ? 'linear-gradient(135deg,#fffbeb,#fef3c7)'
+                  : 'rgba(255,255,255,0.75)',
+                border: weeklyMaterialsCount > 0 ? '1.5px solid #fcd34d' : '1.5px solid rgba(209,213,219,0.6)',
+                borderRadius: 16, padding: '14px 18px',
+                display: 'flex', alignItems: 'center', gap: 14,
+                cursor: 'pointer', textAlign: 'left' as const,
+                boxShadow: weeklyMaterialsCount > 0 ? '0 2px 12px rgba(245,158,11,0.18)' : 'none',
+                fontFamily: "'Nunito', sans-serif", transition: 'all 0.15s',
+              }}
+            >
+              <div style={{
+                width: 44, height: 44, borderRadius: 12, flexShrink: 0,
+                background: weeklyMaterialsCount > 0 ? 'linear-gradient(135deg,#f59e0b,#d97706)' : '#e5e7eb',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22,
+              }}>🛒</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 14, fontWeight: 900, color: '#1a1a2e', marginBottom: 2 }}>Supply Scout</div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: weeklyMaterialsCount > 0 ? '#b45309' : '#6b7280' }}>
+                  {weeklyMaterialsCount > 0
+                    ? `${weeklyMaterialsCount} item${weeklyMaterialsCount !== 1 ? 's' : ''} needed this week — tap to review`
+                    : 'No supplies needed this week'}
+                </div>
+              </div>
+              {weeklyMaterialsCount > 0 && (
+                <div style={{
+                  background: '#f59e0b', color: '#fff', borderRadius: 20,
+                  padding: '4px 10px', fontSize: 13, fontWeight: 900, flexShrink: 0,
+                }}>
+                  🚩 {weeklyMaterialsCount}
+                </div>
+              )}
+            </button>
+          </section>
+
+          {/* Quick Actions — style-aware */}
+          <section>
+            <div style={{ ...css.sectionRow, justifyContent: 'space-between' }}>
+              <span style={css.secTitle}>
+                {homeschoolStyle === 'flexible' ? 'QUICK LOG' : 'QUICK ACTIONS'}
+              </span>
+              <button
+                onClick={() => setShowStylePicker(true)}
+                style={{
+                  fontSize: 12, fontWeight: 700, color: '#6b7280',
+                  background: 'rgba(255,255,255,0.75)', border: '1.5px solid rgba(209,213,219,0.8)',
+                  borderRadius: 20, padding: '5px 12px', cursor: 'pointer',
+                  fontFamily: "'Nunito', sans-serif",
+                }}
+              >
+                ✏️ Customize cards
+              </button>
+            </div>
+
+            {/* ── Default layout nudge (shown until parent picks a style) ── */}
+            {showDefaultNudge && (
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                background: 'rgba(196,181,253,0.15)', border: '1.5px solid rgba(124,58,237,0.25)',
+                borderRadius: 12, padding: '10px 14px', marginBottom: 12,
+              }}>
+                <img src="/Cardinal_Mascot.png" alt="Scout" style={{ width: 32, height: 32, objectFit: 'contain', flexShrink: 0 }} />
+                <div style={{ flex: 1, fontSize: 12, color: 'rgba(255,255,255,0.85)', fontWeight: 600, lineHeight: 1.5 }}>
+                  Using a <span style={{ fontWeight: 900, color: '#c4b5fd' }}>default layout</span> — not personalized yet.
+                </div>
+                <button
+                  onClick={() => { setShowStylePicker(true) }}
+                  style={{
+                    background: 'linear-gradient(135deg, #7c3aed, #a855f7)', border: 'none',
+                    borderRadius: 20, padding: '6px 12px', fontSize: 11, fontWeight: 800,
+                    color: '#fff', cursor: 'pointer', fontFamily: "'Nunito', sans-serif", flexShrink: 0,
+                  }}
+                >
+                  Personalize →
+                </button>
+                <button
+                  onClick={() => setShowDefaultNudge(false)}
+                  style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', fontSize: 16, cursor: 'pointer', padding: '0 2px', lineHeight: 1, flexShrink: 0 }}
+                  aria-label="Dismiss for now"
+                >✕</button>
+              </div>
+            )}
+
+            {/* ── Dynamic grid driven by pinnedFeatures ── */}
+            {(() => {
+              // Structured mode always gets Today's Learning first
+              const todayBtn = [{
+                key: '__today__',
+                emoji: '📝', label: "Today's Learning", sub: "Today & this week's agenda",
+                bg: 'linear-gradient(135deg,#ede9fe,#ddd6fe)', iconBg: '#7c3aed', color: '#4c1d95', subColor: '#7c3aed',
+                onClick: () => setShowToday(true),
+              }]
+
+              // Pinned features (skip pulse_check — that's a section toggle, not a button)
+              const pinnedBtns = pinnedFeatures
+                .filter(fid => fid !== 'pulse_check' && QUICK_ACTION_CONFIG[fid])
+                .map(fid => {
+                  const c = QUICK_ACTION_CONFIG[fid]
+                  const onClick =
+                    c.action === 'route'    ? () => router.push(c.href!)
+                    : c.action === 'lesson'  ? () => setShowGenerator(true)
+                    : c.action === 'activity'? () => setShowActivity(true)
+                    : c.action === 'scout'   ? () => window.dispatchEvent(new CustomEvent('open-scout-copilot'))
+                    : () => {}
+                  return { key: fid, ...c, onClick }
+                })
+
+              // Always append Ask Scout (SOS)
+              const helpBtn = {
+                key: '__help__',
+                emoji: null as null, imgSrc: '/Cardinal_Mascot.png', label: 'Ask Scout', sub: 'Ask me anything, anytime',
+                bg: 'linear-gradient(135deg,#fef3c7,#fde68a)', iconBg: '#f59e0b', color: '#78350f', subColor: '#d97706',
+                onClick: () => window.dispatchEvent(new CustomEvent('open-scout-copilot')),
+              }
+
+              const allBtns = [...todayBtn, ...pinnedBtns, helpBtn]
+
+              return (
+                <div className="quick-grid" style={css.quickGrid}>
+                  {allBtns.map(btn => (
+                    <button key={btn.key} className="quick-btn"
+                      style={{ ...css.quickCard, background: btn.bg }}
+                      onClick={btn.onClick}>
+                      <div style={{ ...css.qIcon, background: btn.iconBg }}>
+                        {(btn as any).imgSrc
+                          ? <img src={(btn as any).imgSrc} alt={btn.label} style={{ width: 36, height: 36, objectFit: 'contain' }} />
+                          : <span style={{ fontSize: 28 }}>{btn.emoji}</span>
+                        }
+                      </div>
+                      <div>
+                        <div style={{ ...css.qLabel, color: btn.color }}>{btn.label}</div>
+                        <div style={{ ...css.qSub, color: btn.subColor }}>{btn.sub}</div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )
+            })()}
+
+            {/* Life Happens FAB */}
+            <div id="tour-life-happens" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, padding: '8px 0 4px' }}>
+              <button style={css.lifeFab} onClick={() => setShowLifeHappens(true)}>
+                <span style={{ fontSize: 44 }}>🌤️</span>
+              </button>
+              <span style={{ fontSize: 15, fontWeight: 800, color: '#fbbf24', fontFamily: "'Nunito', sans-serif", letterSpacing: 0.5 }}>
+                Life Happens
+              </span>
+            </div>
+
+            {/* Replay tour — subtle link below Life Happens */}
+            <div style={{ textAlign: 'center', paddingTop: 6, paddingBottom: 4 }}>
+              <button
+                onClick={() => { localStorage.removeItem('hq_tour_done'); setTourAutoStart(false); setShowTour(true) }}
+                style={{
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  fontSize: 15, fontWeight: 700, color: 'rgba(255,255,255,0.55)',
+                  fontFamily: "'Nunito', sans-serif",
+                  letterSpacing: 0.3,
+                }}
+              >
+                🗺️ Replay tour
+              </button>
+            </div>
+          </section>
+
+          </div>}{/* end tour-quick-actions wrapper (admin only) */}
 
           {/* ── Child Profile Cards — always visible ── */}
           <section id="tour-pulse">
@@ -1831,7 +2032,7 @@ function DashboardContent() {
                 <div style={{ fontSize: 13, color: '#4b5563', marginTop: 6 }}>Add a child in Profile to get started</div>
               </div>
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 170px))', justifyContent: 'center', gap: 14 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 200px))', justifyContent: 'center', gap: 14 }}>
                 {kidPulses.map((pulse, idx) => {
                   const colorIdx  = pulse.kid.color_index  ?? idx
                   const avatarIdx = pulse.kid.avatar_index ?? idx
@@ -1946,39 +2147,6 @@ function DashboardContent() {
               </div>
             )}
           </section>
-
-          {/* ── Co-teacher simplified actions ── */}
-          {isCollaborator && (
-            <section>
-              <div style={css.sectionRow}>
-                <span style={css.secTitle}>QUICK ACTIONS</span>
-              </div>
-              <div className="quick-grid" style={css.quickGrid}>
-                {[
-                  { key: 'today',      emoji: '📝', label: "Today's Learning",  sub: "View today's agenda",          bg: 'linear-gradient(135deg,#ede9fe,#ddd6fe)', iconBg: '#7c3aed', color: '#4c1d95', subColor: '#7c3aed', onClick: () => setShowToday(true) },
-                  { key: 'attendance', emoji: '✅', label: 'Log Attendance',     sub: "Mark today's school day",       bg: 'linear-gradient(135deg,#d1fae5,#a7f3d0)', iconBg: '#059669', color: '#064e3b', subColor: '#059669', onClick: () => router.push('/attendance') },
-                  { key: 'reading',    emoji: '📚', label: 'Log a Book',         sub: 'Add to reading log',            bg: 'linear-gradient(135deg,#ede9fe,#ddd6fe)', iconBg: '#7c3aed', color: '#4c1d95', subColor: '#7c3aed', onClick: () => router.push('/reading-log') },
-                  { key: 'activity',   emoji: '🚌', label: 'Log an Activity',    sub: 'Field trip, project, co-op',    bg: 'linear-gradient(135deg,#ccfbf1,#99f6e4)', iconBg: '#0d9488', color: '#134e4a', subColor: '#0d9488', onClick: () => router.push('/field-trips') },
-                  { key: 'scout',      emoji: null as null, imgSrc: '/Cardinal_Mascot.png', label: 'Ask Scout', sub: 'Ask me anything, anytime', bg: 'linear-gradient(135deg,#fef3c7,#fde68a)', iconBg: '#f59e0b', color: '#78350f', subColor: '#d97706', onClick: () => window.dispatchEvent(new CustomEvent('open-scout-copilot')) },
-                ].map(btn => (
-                  <button key={btn.key} className="quick-btn"
-                    style={{ ...css.quickCard, background: btn.bg }}
-                    onClick={btn.onClick}>
-                    <div style={{ ...css.qIcon, background: btn.iconBg }}>
-                      {(btn as any).imgSrc
-                        ? <img src={(btn as any).imgSrc} alt={btn.label} style={{ width: 36, height: 36, objectFit: 'contain' }} />
-                        : <span style={{ fontSize: 28 }}>{btn.emoji}</span>
-                      }
-                    </div>
-                    <div>
-                      <div style={{ ...css.qLabel, color: btn.color }}>{btn.label}</div>
-                      <div style={{ ...css.qSub, color: btn.subColor }}>{btn.sub}</div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </section>
-          )}
 
           {/* Supply Scout + Quick Actions — wrapped together for tour highlight */}
           {!isCollaborator && <div id="tour-quick-actions">
@@ -2217,19 +2385,6 @@ function DashboardContent() {
             }}
           />
         )}
-        {/* Day Drawer — opened from week strip */}
-        {selectedWeekDay && (
-          <DayDrawer
-            dateKey={selectedWeekDay}
-            entries={weekLessons[selectedWeekDay] ?? []}
-            onClose={() => setSelectedWeekDay(null)}
-            onLessonClick={(lesson, kidName) => {
-              setSelectedKidName(kidName)
-              setSelectedLesson(lesson as LessonViewModalLesson)
-            }}
-          />
-        )}
-
         {selectedLesson && (
           <LessonViewModal
             lesson={selectedLesson}
