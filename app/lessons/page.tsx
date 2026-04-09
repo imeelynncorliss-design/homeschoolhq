@@ -610,82 +610,84 @@ function LessonsContent() {
         return (
           <>
             <div onClick={() => setShowAddLessonSheet(false)} style={{
-              position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 400,
-            }} />
-            <div style={{
-              position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 401,
-              background: '#fff', borderRadius: '24px 24px 0 0',
-              boxShadow: '0 -8px 40px rgba(0,0,0,0.2)',
-              fontFamily: "'Nunito', sans-serif",
+              position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 400,
+              display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: '0 16px',
             }}>
-              <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 0' }}>
-                <div style={{ width: 40, height: 4, borderRadius: 2, background: '#e5e7eb' }} />
-              </div>
-              <div style={{ padding: '16px 20px 40px' }}>
-                <div style={{ fontSize: 18, fontWeight: 900, color: '#1e1b4b', marginBottom: 4 }}>
-                  Add a Lesson {choiceKid ? `for ${choiceKid.displayname}` : ''}
+              <div onClick={e => e.stopPropagation()} style={{
+                width: '100%', maxWidth: 440, zIndex: 401,
+                background: '#2d2b3d', borderRadius: '24px 24px 0 0',
+                boxShadow: '0 -8px 40px rgba(0,0,0,0.4)',
+                fontFamily: "'Nunito', sans-serif",
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 0' }}>
+                  <div style={{ width: 40, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.2)' }} />
                 </div>
-                <div style={{ fontSize: 13, color: '#6b7280', fontWeight: 600, marginBottom: 20 }}>
-                  How would you like to create this lesson?
+                <div style={{ padding: '16px 20px 40px' }}>
+                  <div style={{ fontSize: 18, fontWeight: 900, color: '#c4b5fd', marginBottom: 4 }}>
+                    Add a Lesson {choiceKid ? `for ${choiceKid.displayname}` : ''}
+                  </div>
+                  <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', fontWeight: 600, marginBottom: 20 }}>
+                    How would you like to create this lesson?
+                  </div>
+
+                  {/* Write your own */}
+                  <button
+                    onClick={() => {
+                      setSelectedKidForLesson(addLessonKidId)
+                      setShowAddLessonSheet(false)
+                      setShowLessonForm(true)
+                    }}
+                    style={{
+                      width: '100%', padding: '16px', borderRadius: 14,
+                      border: '1.5px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.07)',
+                      textAlign: 'left' as const, cursor: 'pointer', marginBottom: 10,
+                      fontFamily: "'Nunito', sans-serif",
+                    }}>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: '#fff', marginBottom: 3 }}>✏️ Write your own</div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.55)' }}>Add a custom lesson with your own title and notes</div>
+                  </button>
+
+                  {/* Generate with Scout */}
+                  <button
+                    onClick={() => {
+                      setShowAddLessonSheet(false)
+                      if (hasFeature('ai_lesson_generation')) {
+                        setShowGenerator(true)
+                      } else {
+                        setShowUpgradeModal(true)
+                      }
+                    }}
+                    style={{
+                      width: '100%', padding: '16px', borderRadius: 14,
+                      border: '1.5px solid rgba(124,58,237,0.4)', background: 'rgba(124,58,237,0.15)',
+                      textAlign: 'left' as const, cursor: 'pointer', marginBottom: 10,
+                      fontFamily: "'Nunito', sans-serif",
+                    }}>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: '#c4b5fd', marginBottom: 3 }}>
+                      ✨ Generate with Scout{!hasFeature('ai_lesson_generation') ? ' 🔒' : ''}
+                    </div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.55)' }}>
+                      {hasFeature('ai_lesson_generation') ? 'Let Scout create a lesson plan for you' : 'Pro feature — upgrade to unlock Scout-generated plans'}
+                    </div>
+                  </button>
+
+                  {/* From curriculum */}
+                  <button
+                    onClick={() => {
+                      setSelectedKidForImport(choiceKid || null)
+                      setShowAddLessonSheet(false)
+                      setShowImporter(true)
+                    }}
+                    style={{
+                      width: '100%', padding: '16px', borderRadius: 14,
+                      border: '1.5px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.07)',
+                      textAlign: 'left' as const, cursor: 'pointer',
+                      fontFamily: "'Nunito', sans-serif",
+                    }}>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: '#fff', marginBottom: 3 }}>📋 From curriculum</div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.55)' }}>Import from your curriculum or a pre-planned lesson</div>
+                  </button>
                 </div>
-
-                {/* Write your own */}
-                <button
-                  onClick={() => {
-                    setSelectedKidForLesson(addLessonKidId)
-                    setShowAddLessonSheet(false)
-                    setShowLessonForm(true)
-                  }}
-                  style={{
-                    width: '100%', padding: '16px', borderRadius: 14,
-                    border: '1.5px solid #e5e7eb', background: '#f9fafb',
-                    textAlign: 'left' as const, cursor: 'pointer', marginBottom: 10,
-                    fontFamily: "'Nunito', sans-serif",
-                  }}>
-                  <div style={{ fontSize: 15, fontWeight: 800, color: '#1e1b4b', marginBottom: 3 }}>✏️ Write your own</div>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: '#6b7280' }}>Add a custom lesson with your own title and notes</div>
-                </button>
-
-                {/* Generate with Scout */}
-                <button
-                  onClick={() => {
-                    setShowAddLessonSheet(false)
-                    if (hasFeature('ai_lesson_generation')) {
-                      setShowGenerator(true)
-                    } else {
-                      setShowUpgradeModal(true)
-                    }
-                  }}
-                  style={{
-                    width: '100%', padding: '16px', borderRadius: 14,
-                    border: '1.5px solid #ede9fe', background: '#faf5ff',
-                    textAlign: 'left' as const, cursor: 'pointer', marginBottom: 10,
-                    fontFamily: "'Nunito', sans-serif",
-                  }}>
-                  <div style={{ fontSize: 15, fontWeight: 800, color: '#7c3aed', marginBottom: 3 }}>
-                    ✨ Generate with Scout{!hasFeature('ai_lesson_generation') ? ' 🔒' : ''}
-                  </div>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: '#6b7280' }}>
-                    {hasFeature('ai_lesson_generation') ? 'Let Scout create a lesson plan for you' : 'Pro feature — upgrade to unlock Scout-generated plans'}
-                  </div>
-                </button>
-
-                {/* From curriculum */}
-                <button
-                  onClick={() => {
-                    setSelectedKidForImport(choiceKid || null)
-                    setShowAddLessonSheet(false)
-                    setShowImporter(true)
-                  }}
-                  style={{
-                    width: '100%', padding: '16px', borderRadius: 14,
-                    border: '1.5px solid #e5e7eb', background: '#f9fafb',
-                    textAlign: 'left' as const, cursor: 'pointer',
-                    fontFamily: "'Nunito', sans-serif",
-                  }}>
-                  <div style={{ fontSize: 15, fontWeight: 800, color: '#1e1b4b', marginBottom: 3 }}>📋 From curriculum</div>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: '#6b7280' }}>Import from your curriculum or a pre-planned lesson</div>
-                </button>
               </div>
             </div>
           </>
@@ -695,7 +697,7 @@ function LessonsContent() {
       {/* ── Add Lesson Modal ──────────────────────────────────────────── */}
       {showLessonForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div style={{ background: '#fff', borderRadius: 20, width: '100%', maxWidth: 480, maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 64px rgba(0,0,0,0.22)', fontFamily: "'Nunito', sans-serif" }}>
+          <div style={{ background: '#fff', borderRadius: 20, width: '100%', maxWidth: 420, maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 64px rgba(0,0,0,0.22)', fontFamily: "'Nunito', sans-serif" }}>
 
             {/* Header */}
             <div style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #a855f7 100%)', padding: '14px 20px', borderRadius: '20px 20px 0 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>

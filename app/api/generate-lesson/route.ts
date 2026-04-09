@@ -111,7 +111,8 @@ Return ONLY valid JSON:
   ]
 }
 
-CRITICAL: Return ONLY the JSON object. No markdown, no backticks, no text before or after.`;
+CRITICAL: Return ONLY the JSON object. No markdown, no backticks, no text before or after.
+IMPORTANT: All field values must be plain prose text. Do NOT use markdown formatting inside field values — no ## headings, no **bold**, no *italic*, no bullet dashes, no > blockquotes.`;
 
     console.log('generate-lesson: calling Claude for', kid.displayname)
 
@@ -138,10 +139,31 @@ CRITICAL: Return ONLY the JSON object. No markdown, no backticks, no text before
         }, { status: 500 })
       }
 
+    // Strip any markdown that slipped through in field values
+    function stripMd(s: string): string {
+      if (!s) return s
+      return s
+        .replace(/^#{1,6}\s+/gm, '')        // ## headings
+        .replace(/\*\*(.+?)\*\*/g, '$1')    // **bold**
+        .replace(/\*(.+?)\*/g, '$1')       // *italic*
+        .replace(/^[-*]\s+/gm, '')         // leading bullet dashes
+        .replace(/`(.+?)`/g, '$1')         // `code`
+        .trim()
+    }
+    const cleanedVariations = (lessonData.variations || []).map((v: any) => ({
+      ...v,
+      description: stripMd(v.description),
+      overview: stripMd(v.overview),
+      activities: (v.activities || []).map((a: any) => ({ ...a, description: stripMd(a.description) })),
+      learningObjectives: (v.learningObjectives || []).map(stripMd),
+      assessmentIdeas: (v.assessmentIdeas || []).map(stripMd),
+      extensions: (v.extensions || []).map(stripMd),
+    }))
+
     // Return the generated lessons
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
-      variations: lessonData.variations || [],
+      variations: cleanedVariations,
       childName: kid.displayname,
       personalizedFor: {
         learningStyle: kid.learning_style,

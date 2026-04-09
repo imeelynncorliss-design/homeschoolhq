@@ -82,6 +82,7 @@ export default function LessonGenerator({ kids, userId, onClose, onLessonSaved, 
     startDate: initialDate || new Date().toISOString().split('T')[0],
     topic: '',
   });
+  const [durationDays, setDurationDays] = useState(1);
 
   // ── Fetch org ID and existing custom subjects ──────────────────────────────
   useEffect(() => {
@@ -260,36 +261,44 @@ ${objectivesHtml}${activitiesHtml}${materialsHtml}${assessmentHtml}
       if (kidError) console.error('Error fetching kid:', kidError);
       if (!kid?.organization_id) { alert('Could not find organization. Please refresh.'); return; }
 
-      const lessonPayload: any = {
-        kid_id: formData.childId,
-        user_id: userId,
-        subject: formData.subject,
-        title: variation.title,
-        description: JSON.stringify(variation),
-        lesson_source: 'scout',
-        lesson_date: formData.startDate,
-        duration_minutes: Number(formData.duration) || 30,
-        status: 'not_started',
-        organization_id: kid.organization_id,
-        assigned_to_user_id: assignedTo || null,
-      };
+      const baseDate = new Date(formData.startDate + 'T12:00:00');
+      const days = Math.max(1, durationDays);
 
-      if (formData.courseId) lessonPayload.course_id = formData.courseId;
+      const lessonPayloads = Array.from({ length: days }, (_, i) => {
+        const d = new Date(baseDate);
+        d.setDate(d.getDate() + i);
+        const dateStr = d.toISOString().split('T')[0];
+        const title = days > 1 ? `${variation.title} — Day ${i + 1} of ${days}` : variation.title;
+        const payload: any = {
+          kid_id: formData.childId,
+          user_id: userId,
+          subject: formData.subject,
+          title,
+          description: JSON.stringify(variation),
+          lesson_source: 'scout',
+          lesson_date: dateStr,
+          duration_minutes: Number(formData.duration) || 30,
+          status: 'not_started',
+          organization_id: kid.organization_id,
+          assigned_to_user_id: assignedTo || null,
+        };
+        if (formData.courseId) payload.course_id = formData.courseId;
+        return payload;
+      });
 
-      const { error } = await supabase.from('lessons').insert([lessonPayload]).select().single();
+      const { error } = await supabase.from('lessons').insert(lessonPayloads);
 
       if (error) {
         alert(`❌ Failed to save lesson: ${error.message}`);
       } else {
-        const formattedDate = new Date(formData.startDate + 'T12:00:00').toLocaleDateString('en-US', {
-          weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
-        });
+        const formattedDate = baseDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
         const courseNote = formData.courseId
           ? `\n📚 Added to: ${availableCourses.find(c => c.id === formData.courseId)?.course_name || 'course'}`
           : '';
+        const dayNote = days > 1 ? `\n📅 Spread over ${days} days (${formData.duration} min each)` : '';
         setSelectedVariation(variation);
         onLessonSaved?.();
-        alert(`✅ Lesson scheduled!\n\n"${variation.title}" scheduled for ${kid.displayname} on ${formattedDate}.${courseNote}`);
+        alert(`✅ Lesson scheduled!\n\n"${variation.title}" for ${kid.displayname} starting ${formattedDate}.${dayNote}${courseNote}`);
       }
     } catch (error: any) {
       alert(`❌ Failed to save lesson: ${error.message}`);
@@ -469,30 +478,55 @@ ${objectivesHtml}${activitiesHtml}${materialsHtml}${assessmentHtml}
               <label className="block text-sm font-medium text-gray-900 mb-1">
                 Goal or Topic <span className="text-gray-400 font-normal">(what should this lesson be about?)</span>
               </label>
-              <input
-                type="text"
+              <textarea
+                rows={3}
                 value={formData.topic}
                 onChange={(e) => setFormData({ ...formData, topic: e.target.value })}
-                placeholder="e.g. Intro to fractions, Chapter 5 vocabulary, American Revolution causes…"
-                className="w-full border rounded-lg px-3 py-2 text-gray-900"
+                placeholder="e.g. Intro to fractions, Chapter 5 vocabulary, American Revolution causes, the story of Noah over 3 days…"
+                className="w-full border rounded-lg px-3 py-2 text-gray-900 resize-none"
+                style={{ fontFamily: "'Nunito', sans-serif" }}
               />
             </div>
 
             {/* Duration */}
             <div>
-              <label className="block text-sm font-medium text-gray-900 mb-1">Duration</label>
-              <div className="flex gap-2">
+              <label className="block text-sm font-medium text-gray-900 mb-1">Session Length</label>
+              <div className="flex gap-2 flex-wrap">
                 {[15, 30, 45, 60].map(min => (
                   <button
                     key={min}
                     onClick={() => setFormData({ ...formData, duration: min })}
-                    className={`px-4 py-2 rounded-lg ${formData.duration === min ? 'text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-900'}`}
+                    className={`px-4 py-2 rounded-lg text-sm font-bold ${formData.duration === min ? 'text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}
                     style={formData.duration === min ? { background: 'linear-gradient(135deg,#4f46e5,#7c3aed)' } : {}}
                   >
                     {min} min
                   </button>
                 ))}
               </div>
+            </div>
+
+            {/* Days */}
+            <div>
+              <label className="block text-sm font-medium text-gray-900 mb-1">
+                Spread over <span className="text-gray-400 font-normal">(creates one lesson per consecutive day)</span>
+              </label>
+              <div className="flex gap-2 flex-wrap">
+                {[1, 2, 3, 4, 5].map(d => (
+                  <button
+                    key={d}
+                    onClick={() => setDurationDays(d)}
+                    className={`px-4 py-2 rounded-lg text-sm font-bold ${durationDays === d ? 'text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}
+                    style={durationDays === d ? { background: 'linear-gradient(135deg,#4f46e5,#7c3aed)' } : {}}
+                  >
+                    {d === 1 ? '1 day' : `${d} days`}
+                  </button>
+                ))}
+              </div>
+              {durationDays > 1 && (
+                <p style={{ fontSize: 12, color: '#7c3aed', marginTop: 6, fontWeight: 600 }}>
+                  ✓ Saves {durationDays} lessons ({formData.duration} min each) on {durationDays} consecutive days starting on the date below
+                </p>
+              )}
             </div>
 
             {/* Assign To (collaborators only) */}
