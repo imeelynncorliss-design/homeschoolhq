@@ -1272,7 +1272,7 @@ function SubjectsContent() {
             onClick={e => e.stopPropagation()}
             style={{
               background: '#fff', borderRadius: 20, width: '100%', maxWidth: 480,
-              maxHeight: '90vh', display: 'flex', flexDirection: 'column',
+              maxHeight: 'calc(100vh - 120px)', display: 'flex', flexDirection: 'column',
               boxShadow: '0 24px 64px rgba(0,0,0,0.22)', fontFamily: "'Nunito', sans-serif",
             }}
           >
