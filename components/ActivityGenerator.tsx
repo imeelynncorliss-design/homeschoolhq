@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
 import { supabase } from '@/src/lib/supabase'
 import { CANONICAL_SUBJECTS } from '@/src/constants/subjects'
@@ -64,13 +64,32 @@ export default function ActivityGenerator({ kids, organizationId, onClose, onSav
   const { isDark } = useTheme()
   const [step, setStep] = useState<'setup' | 'vibe' | 'loading' | 'results'>('setup')
   const [selectedKidId, setSelectedKidId] = useState<string>(kids[0]?.id ?? '')
-  const [subject, setSubject] = useState('')
+  const [subjectSelect, setSubjectSelect] = useState('')
+  const [subjectCustom, setSubjectCustom] = useState('')
+  const [existingSubjects, setExistingSubjects] = useState<string[]>([])
   const [topic, setTopic] = useState('')
   const [scheduledDate, setScheduledDate] = useState(new Date().toISOString().split('T')[0])
   const [activities, setActivities] = useState<GeneratedActivity[]>([])
   const [savedIdx, setSavedIdx] = useState<Set<number>>(new Set())
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
+
+  const resolveSubject = () =>
+    subjectSelect === '__custom__' ? subjectCustom.trim() : subjectSelect
+
+  // Fetch existing custom subjects from org lessons
+  useEffect(() => {
+    if (!organizationId) return
+    supabase
+      .from('lessons')
+      .select('subject')
+      .eq('organization_id', organizationId)
+      .then(({ data }: { data: { subject: string }[] | null }) => {
+        if (!data) return
+        const unique = [...new Set(data.map(d => d.subject).filter(Boolean))] as string[]
+        setExistingSubjects(unique.filter((s: string) => !([...CANONICAL_SUBJECTS] as string[]).includes(s)))
+      })
+  }, [organizationId])
 
   const selectedKid = kids.find(k => k.id === selectedKidId)
 
@@ -85,6 +104,7 @@ export default function ActivityGenerator({ kids, organizationId, onClose, onSav
     .join(' & ')
 
   const handleGenerate = async (chosenVibe: string) => {
+    const subject = resolveSubject()
     setStep('loading')
     setError('')
     try {
@@ -104,6 +124,7 @@ export default function ActivityGenerator({ kids, organizationId, onClose, onSav
   }
 
   const handlePrintActivities = () => {
+    const subject = resolveSubject()
     const selectedKid = kids.find(k => k.id === selectedKidId)
     const rows = activities.map(act => `
       <div class="card">
@@ -156,6 +177,7 @@ ${rows}
   }
 
   const handlePrintOne = (act: GeneratedActivity) => {
+    const subject = resolveSubject()
     const stepsHtml = act.steps?.length
       ? `<h3>Steps</h3><ol>${act.steps.map(s => `<li>${s}</li>`).join('')}</ol>`
       : ''
@@ -197,6 +219,7 @@ ${stepsHtml}${haveHtml}${needHtml}
   const handleSave = async (idx: number) => {
     if (saving || savedIdx.has(idx)) return
     setSaving(true)
+    const subject = resolveSubject()
     const act = activities[idx]
     const { error: dbErr } = await supabase.from('lessons').insert({
       kid_id: selectedKidId,
@@ -383,12 +406,37 @@ ${stepsHtml}${haveHtml}${needHtml}
             {/* Subject */}
             <div style={s.field}>
               <label style={s.label}>Subject</label>
-              <select style={s.select} value={subject} onChange={e => setSubject(e.target.value)}>
+              <select style={s.select} value={subjectSelect} onChange={e => setSubjectSelect(e.target.value)}>
                 <option value="">Pick a subject…</option>
-                {CANONICAL_SUBJECTS.map(sub => (
-                  <option key={sub} value={sub}>{sub}</option>
-                ))}
+                <optgroup label="Standard Subjects">
+                  {CANONICAL_SUBJECTS.map(sub => (
+                    <option key={sub} value={sub}>{sub}</option>
+                  ))}
+                </optgroup>
+                {existingSubjects.length > 0 && (
+                  <optgroup label="Your Custom Subjects">
+                    {existingSubjects.map(sub => (
+                      <option key={sub} value={sub}>{sub}</option>
+                    ))}
+                  </optgroup>
+                )}
+                <option value="__custom__">✏️ Add a custom subject…</option>
               </select>
+              {subjectSelect === '__custom__' && (
+                <div style={{ marginTop: 8 }}>
+                  <input
+                    style={s.input}
+                    type="text"
+                    value={subjectCustom}
+                    onChange={e => setSubjectCustom(e.target.value)}
+                    placeholder="e.g. Latin, Robotics, Home Economics"
+                    autoFocus
+                  />
+                  <p style={{ fontSize: 12, color: '#9ca3af', marginTop: 4 }}>
+                    Use title case (e.g. "Latin" not "latin") so lessons group correctly.
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Optional topic */}
@@ -409,8 +457,8 @@ ${stepsHtml}${haveHtml}${needHtml}
               />
             </div>
 
-            <button style={{ ...s.primaryBtn, opacity: subject ? 1 : 0.45, cursor: subject ? 'pointer' : 'not-allowed' }}
-              disabled={!subject}
+            <button style={{ ...s.primaryBtn, opacity: resolveSubject() ? 1 : 0.45, cursor: resolveSubject() ? 'pointer' : 'not-allowed' }}
+              disabled={!resolveSubject()}
               onClick={() => setStep('vibe')}>
               Next: Pick a vibe →
             </button>
@@ -490,7 +538,7 @@ ${stepsHtml}${haveHtml}${needHtml}
                     <span style={{ fontSize: 28 }}>{act.emoji}</span>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: 800, fontSize: 15, color: '#2d1b69' }}>{act.title}</div>
-                      <div style={{ fontSize: 12, color: '#7c6faa', marginTop: 2 }}>⏱ {act.duration_minutes} min · {subject}</div>
+                      <div style={{ fontSize: 12, color: '#7c6faa', marginTop: 2 }}>⏱ {act.duration_minutes} min · {resolveSubject()}</div>
                     </div>
                     <button
                       style={{ ...s.saveBtn, ...(savedIdx.has(i) ? s.savedBtn : {}) }}

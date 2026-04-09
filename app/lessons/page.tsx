@@ -78,6 +78,7 @@ function LessonsContent() {
   const [selectedKidForLesson, setSelectedKidForLesson] = useState<string>('')
   const [lessonSubjectSelect, setLessonSubjectSelect] = useState('')
   const [lessonSubjectCustom, setLessonSubjectCustom] = useState('')
+  const [existingCustomSubjects, setExistingCustomSubjects] = useState<string[]>([])
   const [lessonTitle, setLessonTitle] = useState('')
   const [lessonDescription, setLessonDescription] = useState('')
   const [lessonDate, setLessonDate] = useState('')
@@ -167,6 +168,10 @@ function LessonsContent() {
         grouped[lesson.kid_id].push(lesson)
       })
       setLessonsByKid(grouped)
+
+      // Derive custom subjects (not in CANONICAL_SUBJECTS) from existing lessons
+      const uniqueSubjects = [...new Set(lessonsData.map((l: Lesson) => l.subject).filter(Boolean))] as string[]
+      setExistingCustomSubjects(uniqueSubjects.filter(s => !([...CANONICAL_SUBJECTS] as string[]).includes(s)))
     }
   }
 
@@ -748,8 +753,15 @@ function LessonsContent() {
                   required
                 >
                   <option value="">Choose a subject...</option>
-                  {CANONICAL_SUBJECTS.map(s => <option key={s} value={s}>{s}</option>)}
-                  <option value="__custom__">✏️ Custom subject...</option>
+                  <optgroup label="Standard Subjects">
+                    {CANONICAL_SUBJECTS.map(s => <option key={s} value={s}>{s}</option>)}
+                  </optgroup>
+                  {existingCustomSubjects.length > 0 && (
+                    <optgroup label="Your Custom Subjects">
+                      {existingCustomSubjects.map(s => <option key={s} value={s}>{s}</option>)}
+                    </optgroup>
+                  )}
+                  <option value="__custom__">✏️ Add a custom subject…</option>
                 </select>
                 {lessonSubjectSelect === '__custom__' && (
                   <input
@@ -939,8 +951,15 @@ function LessonsContent() {
                   required
                 >
                   <option value="">Choose a subject...</option>
-                  {CANONICAL_SUBJECTS.map(s => <option key={s} value={s}>{s}</option>)}
-                  <option value="__custom__">✏️ Custom subject...</option>
+                  <optgroup label="Standard Subjects">
+                    {CANONICAL_SUBJECTS.map(s => <option key={s} value={s}>{s}</option>)}
+                  </optgroup>
+                  {existingCustomSubjects.length > 0 && (
+                    <optgroup label="Your Custom Subjects">
+                      {existingCustomSubjects.map(s => <option key={s} value={s}>{s}</option>)}
+                    </optgroup>
+                  )}
+                  <option value="__custom__">✏️ Add a custom subject…</option>
                 </select>
                 {editLessonSubjectSelect === '__custom__' && (
                   <input
