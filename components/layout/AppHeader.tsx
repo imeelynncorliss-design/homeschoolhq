@@ -680,7 +680,13 @@ export default function AppHeader() {
   const bubbleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Draggable FAB
-  const [fabPos, setFabPos] = useState<{ top: number; right: number } | null>(null)
+  const [fabPos, setFabPos] = useState<{ top: number; right: number } | null>(() => {
+    if (typeof window === 'undefined') return null
+    try {
+      const saved = localStorage.getItem('scout-fab-pos')
+      return saved ? JSON.parse(saved) : null
+    } catch { return null }
+  })
   const dragRef = useRef<{ startX: number; startY: number; startTop: number; startRight: number } | null>(null)
   const isDraggingRef = useRef(false)
 
@@ -702,7 +708,9 @@ export default function AppHeader() {
     isDraggingRef.current = true
     const newTop = Math.max(60, Math.min(window.innerHeight - 96, dragRef.current.startTop + dy))
     const newRight = Math.max(8, Math.min(window.innerWidth - 88, dragRef.current.startRight - dx))
-    setFabPos({ top: newTop, right: newRight })
+    const pos = { top: newTop, right: newRight }
+    setFabPos(pos)
+    try { localStorage.setItem('scout-fab-pos', JSON.stringify(pos)) } catch {}
   }
 
   const onFabPointerUp = (e: React.PointerEvent<HTMLButtonElement>) => {
