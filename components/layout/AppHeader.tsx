@@ -679,6 +679,47 @@ export default function AppHeader() {
   const [scoutDot, setScoutDot] = useState(false)
   const bubbleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  // Draggable FAB
+  const [fabPos, setFabPos] = useState<{ top: number; right: number } | null>(null)
+  const dragRef = useRef<{ startX: number; startY: number; startTop: number; startRight: number } | null>(null)
+  const isDraggingRef = useRef(false)
+
+  const onFabPointerDown = (e: React.PointerEvent<HTMLButtonElement>) => {
+    const el = e.currentTarget
+    const rect = el.getBoundingClientRect()
+    const top = rect.top
+    const right = window.innerWidth - rect.right
+    dragRef.current = { startX: e.clientX, startY: e.clientY, startTop: top, startRight: right }
+    isDraggingRef.current = false
+    el.setPointerCapture(e.pointerId)
+  }
+
+  const onFabPointerMove = (e: React.PointerEvent<HTMLButtonElement>) => {
+    if (!dragRef.current) return
+    const dx = e.clientX - dragRef.current.startX
+    const dy = e.clientY - dragRef.current.startY
+    if (!isDraggingRef.current && Math.abs(dx) < 4 && Math.abs(dy) < 4) return
+    isDraggingRef.current = true
+    const newTop = Math.max(60, Math.min(window.innerHeight - 96, dragRef.current.startTop + dy))
+    const newRight = Math.max(8, Math.min(window.innerWidth - 88, dragRef.current.startRight - dx))
+    setFabPos({ top: newTop, right: newRight })
+  }
+
+  const onFabPointerUp = (e: React.PointerEvent<HTMLButtonElement>) => {
+    const wasDragging = isDraggingRef.current
+    dragRef.current = null
+    isDraggingRef.current = false
+    if (!wasDragging) {
+      // treat as click
+      if (scoutNudge && !showCopilot) {
+        setShowScoutBubble(v => !v)
+        setScoutDot(false)
+      } else {
+        setShowCopilot(v => !v)
+      }
+    }
+  }
+
   const betaEnabled = process.env.NEXT_PUBLIC_BETA_FEEDBACK_ENABLED === 'true'
 
   useEffect(() => {
@@ -905,23 +946,19 @@ export default function AppHeader() {
         </div>
       </header>
 
-      {/* ── Floating Scout FAB (bottom-right, always visible) ── */}
+      {/* ── Floating Scout FAB (draggable) ── */}
       {userId && (
         <>
-          {/* Nudge bubble — appears above the FAB */}
+          {/* Nudge bubble — follows FAB position */}
           {scoutNudge && showScoutBubble && (
             <div style={{
-              position: 'fixed', top: 152, right: 12, zIndex: 9995,
+              position: 'fixed',
+              top: (fabPos?.top ?? 64) + 88,
+              right: fabPos?.right ?? 12,
+              zIndex: 9995,
               width: 290, fontFamily: "'Nunito', sans-serif",
               animation: 'scout-bubble-in 0.3s ease forwards',
             }}>
-              {/* Tail pointing up toward Scout FAB */}
-              <div style={{
-                width: 0, height: 0, borderStyle: 'solid',
-                borderWidth: '0 10px 10px 10px',
-                borderColor: 'transparent transparent #fff transparent',
-                marginLeft: 'auto', marginRight: 28,
-              }} />
               <div style={{
                 background: '#fff', borderRadius: 18,
                 boxShadow: '0 16px 48px rgba(0,0,0,0.18), 0 2px 8px rgba(124,58,237,0.12)',
@@ -963,37 +1000,29 @@ export default function AppHeader() {
             </div>
           )}
 
-          {/* FAB button — sits clearly above BottomNav on mobile */}
+          {/* FAB button — drag to reposition, tap to open */}
           <button
             className="scout-fab"
-            onClick={() => {
-              if (scoutNudge && !showCopilot) {
-                setShowScoutBubble(v => !v)
-                setScoutDot(false)
-              } else {
-                setShowCopilot(v => !v)
-              }
-            }}
-            title="Chat with Scout"
+            title="Chat with Scout (drag to move)"
             style={{
-              position: 'fixed', top: 64, right: 12, zIndex: 9994,
+              position: 'fixed',
+              top: fabPos?.top ?? 64,
+              right: fabPos?.right ?? 12,
+              zIndex: 9994,
               width: 80, height: 80, borderRadius: '50%',
               background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #a855f7 100%)',
-              border: '3px solid rgba(255,255,255,0.9)', cursor: 'pointer',
+              border: '3px solid rgba(255,255,255,0.9)',
+              cursor: isDraggingRef.current ? 'grabbing' : 'grab',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               boxShadow: '0 8px 28px rgba(124,58,237,0.55), 0 3px 10px rgba(0,0,0,0.25)',
-              transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+              touchAction: 'none',
+              userSelect: 'none',
             }}
-            onMouseEnter={e => {
-              (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1.08)'
-              ;(e.currentTarget as HTMLButtonElement).style.boxShadow = '0 10px 36px rgba(124,58,237,0.7), 0 3px 10px rgba(0,0,0,0.25)'
-            }}
-            onMouseLeave={e => {
-              (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)'
-              ;(e.currentTarget as HTMLButtonElement).style.boxShadow = '0 8px 28px rgba(124,58,237,0.55), 0 3px 10px rgba(0,0,0,0.25)'
-            }}
+            onPointerDown={onFabPointerDown}
+            onPointerMove={onFabPointerMove}
+            onPointerUp={onFabPointerUp}
           >
-            <img src="/Cardinal_Mascot.png" alt="Scout" style={{ width: 54, height: 54, objectFit: 'contain' }} />
+            <img src="/Cardinal_Mascot.png" alt="Scout" style={{ width: 54, height: 54, objectFit: 'contain', pointerEvents: 'none' }} />
             {scoutDot && (
               <span style={{
                 position: 'absolute', top: 4, right: 4,

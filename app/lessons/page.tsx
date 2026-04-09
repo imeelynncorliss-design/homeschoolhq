@@ -83,6 +83,7 @@ function LessonsContent() {
   const [lessonDate, setLessonDate] = useState('')
   const [lessonDurationValue, setLessonDurationValue] = useState<number>(30)
   const [lessonDurationUnit, setLessonDurationUnit] = useState<DurationUnit>('minutes')
+  const [lessonDays, setLessonDays] = useState(1)
   const [lessonAssignedTo, setLessonAssignedTo] = useState('')
   const [showImporter, setShowImporter] = useState(false)
   const [selectedKidForImport, setSelectedKidForImport] = useState<any>(null)
@@ -234,6 +235,7 @@ function LessonsContent() {
     setLessonDate('')
     setLessonDurationValue(30)
     setLessonDurationUnit('minutes')
+    setLessonDays(1)
     setLessonAssignedTo('')
   }
 
@@ -246,19 +248,31 @@ function LessonsContent() {
     if (!orgId) return
     const durationInMinutes = convertDurationToMinutes(lessonDurationValue, lessonDurationUnit)
     const resolvedSubject = lessonSubjectSelect === '__custom__' ? lessonSubjectCustom : lessonSubjectSelect
+    const days = Math.max(1, lessonDays)
+    const baseDate = lessonDate ? new Date(lessonDate + 'T12:00:00') : null
 
-    const { error } = await supabase.from('lessons').insert([{
-      user_id: user.id,
-      organization_id: orgId,
-      kid_id: selectedKidForLesson,
-      subject: resolvedSubject,
-      title: lessonTitle,
-      description: lessonDescription,
-      lesson_date: lessonDate || null,
-      duration_minutes: durationInMinutes,
-      status: 'not_started',
-      assigned_to_user_id: lessonAssignedTo || null,
-    }])
+    const payloads = Array.from({ length: days }, (_, i) => {
+      let dateStr: string | null = null
+      if (baseDate) {
+        const d = new Date(baseDate)
+        d.setDate(d.getDate() + i)
+        dateStr = d.toISOString().split('T')[0]
+      }
+      return {
+        user_id: user.id,
+        organization_id: orgId,
+        kid_id: selectedKidForLesson,
+        subject: resolvedSubject,
+        title: days > 1 ? `${lessonTitle} — Day ${i + 1} of ${days}` : lessonTitle,
+        description: lessonDescription,
+        lesson_date: dateStr,
+        duration_minutes: durationInMinutes,
+        status: 'not_started',
+        assigned_to_user_id: lessonAssignedTo || null,
+      }
+    })
+
+    const { error } = await supabase.from('lessons').insert(payloads)
 
     if (error) {
       alert('Error adding lesson: ' + error.message)
@@ -789,9 +803,9 @@ function LessonsContent() {
                 </div>
               )}
 
-              {/* Duration */}
+              {/* Session Length */}
               <div style={{ background: '#faf5ff', border: '1.5px solid #ddd6fe', borderRadius: 12, padding: '12px 14px' }}>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 800, color: '#4c1d95', letterSpacing: 0.5, marginBottom: 8 }}>DURATION</label>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 800, color: '#4c1d95', letterSpacing: 0.5, marginBottom: 8 }}>SESSION LENGTH</label>
                 <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
                   {[15, 30, 45, 60].map(min => (
                     <button
@@ -813,20 +827,42 @@ function LessonsContent() {
                   <input
                     type="number"
                     min="1"
-                    value={lessonDurationValue}
-                    onChange={(e) => setLessonDurationValue(parseInt(e.target.value) || 1)}
-                    style={{ width: 70, padding: '7px 10px', border: '1.5px solid #d1d5db', borderRadius: 8, fontSize: 14, fontWeight: 600, color: '#1a1a2e', fontFamily: "'Nunito', sans-serif" }}
+                    placeholder="Other"
+                    value={lessonDurationUnit === 'minutes' && ![15,30,45,60].includes(lessonDurationValue) ? lessonDurationValue : ''}
+                    onChange={(e) => { setLessonDurationValue(parseInt(e.target.value) || 1); setLessonDurationUnit('minutes') }}
+                    style={{ width: 72, padding: '7px 10px', border: '1.5px solid #d1d5db', borderRadius: 8, fontSize: 14, fontWeight: 600, color: '#1a1a2e', fontFamily: "'Nunito', sans-serif" }}
                   />
-                  <select
-                    value={lessonDurationUnit}
-                    onChange={(e) => setLessonDurationUnit(e.target.value as DurationUnit)}
-                    style={{ flex: 1, padding: '7px 10px', border: '1.5px solid #d1d5db', borderRadius: 8, fontSize: 14, fontWeight: 600, color: '#1a1a2e', fontFamily: "'Nunito', sans-serif" }}
-                  >
-                    <option value="minutes">minutes</option>
-                    <option value="days">days</option>
-                    <option value="weeks">weeks</option>
-                  </select>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: '#6b7280', alignSelf: 'center' }}>minutes</span>
                 </div>
+              </div>
+
+              {/* Spread over */}
+              <div style={{ background: '#faf5ff', border: '1.5px solid #ddd6fe', borderRadius: 12, padding: '12px 14px' }}>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 800, color: '#4c1d95', letterSpacing: 0.5, marginBottom: 8 }}>
+                  SPREAD OVER <span style={{ fontWeight: 600, color: '#9ca3af', letterSpacing: 0 }}>(creates one lesson per day)</span>
+                </label>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {[1, 2, 3, 4, 5].map(d => (
+                    <button
+                      key={d}
+                      type="button"
+                      onClick={() => setLessonDays(d)}
+                      style={{
+                        flex: 1, padding: '7px 0', borderRadius: 8, fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 13, cursor: 'pointer', border: 'none',
+                        background: lessonDays === d ? 'linear-gradient(135deg,#7c3aed,#a855f7)' : '#fff',
+                        color: lessonDays === d ? '#fff' : '#374151',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+                      }}
+                    >
+                      {d === 1 ? '1 day' : `${d}d`}
+                    </button>
+                  ))}
+                </div>
+                {lessonDays > 1 && (
+                  <p style={{ fontSize: 12, color: '#7c3aed', marginTop: 8, fontWeight: 600 }}>
+                    ✓ Saves {lessonDays} lessons ({lessonDurationValue} min each) on {lessonDays} consecutive days
+                  </p>
+                )}
               </div>
 
               {/* Schedule */}

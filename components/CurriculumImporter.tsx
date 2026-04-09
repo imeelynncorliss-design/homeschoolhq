@@ -388,8 +388,8 @@ export default function CurriculumImporter({ childId, childName, onClose, onImpo
   ];
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 p-4 overflow-y-auto">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full flex flex-col my-4" style={{ maxHeight: 'calc(100vh - 2rem)' }}>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" style={{ paddingTop: 72 }}>
+      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full flex flex-col" style={{ maxHeight: 'calc(100vh - 88px)' }}>
 
         {/* ── Fixed header with X ── */}
         <div className="bg-white border-b px-6 py-4 flex justify-between items-center rounded-t-lg flex-shrink-0">
