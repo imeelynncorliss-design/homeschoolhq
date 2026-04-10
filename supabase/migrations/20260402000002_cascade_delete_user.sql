@@ -39,16 +39,31 @@ ALTER TABLE family_collaborators
   ADD CONSTRAINT family_collaborators_user_id_fkey
     FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
 
--- 7. collaborator_invites (two user references)
-ALTER TABLE collaborator_invites
-  DROP CONSTRAINT IF EXISTS collaborator_invites_from_user_id_fkey,
-  ADD CONSTRAINT collaborator_invites_from_user_id_fkey
-    FOREIGN KEY (from_user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
+-- 7. collaborator_invites (two user references) — guard against missing columns
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'collaborator_invites' AND column_name = 'from_user_id'
+  ) THEN
+    ALTER TABLE collaborator_invites
+      DROP CONSTRAINT IF EXISTS collaborator_invites_from_user_id_fkey;
+    ALTER TABLE collaborator_invites
+      ADD CONSTRAINT collaborator_invites_from_user_id_fkey
+        FOREIGN KEY (from_user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
+  END IF;
 
-ALTER TABLE collaborator_invites
-  DROP CONSTRAINT IF EXISTS collaborator_invites_to_user_id_fkey,
-  ADD CONSTRAINT collaborator_invites_to_user_id_fkey
-    FOREIGN KEY (to_user_id) REFERENCES auth.users(id) ON DELETE SET NULL;
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'collaborator_invites' AND column_name = 'to_user_id'
+  ) THEN
+    ALTER TABLE collaborator_invites
+      DROP CONSTRAINT IF EXISTS collaborator_invites_to_user_id_fkey;
+    ALTER TABLE collaborator_invites
+      ADD CONSTRAINT collaborator_invites_to_user_id_fkey
+        FOREIGN KEY (to_user_id) REFERENCES auth.users(id) ON DELETE SET NULL;
+  END IF;
+END $$;
 
 -- 8. community_profiles
 ALTER TABLE community_profiles

@@ -21,18 +21,24 @@ CREATE UNIQUE INDEX IF NOT EXISTS daily_subject_logs_kid_date_idx
 -- RLS
 ALTER TABLE daily_subject_logs ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Org owners can manage daily subject logs"
-  ON daily_subject_logs FOR ALL
-  USING (
-    organization_id IN (
-      SELECT id FROM organizations WHERE user_id = auth.uid()
-    )
-  );
+DO $$ BEGIN
+  CREATE POLICY "Org owners can manage daily subject logs"
+    ON daily_subject_logs FOR ALL
+    USING (
+      organization_id IN (
+        SELECT id FROM organizations WHERE user_id = auth.uid()
+      )
+    );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
-CREATE POLICY "Co-teachers can manage daily subject logs"
-  ON daily_subject_logs FOR ALL
-  USING (
-    organization_id IN (
-      SELECT organization_id FROM user_organizations WHERE user_id = auth.uid()
-    )
-  );
+DO $$ BEGIN
+  CREATE POLICY "Co-teachers can manage daily subject logs"
+    ON daily_subject_logs FOR ALL
+    USING (
+      organization_id IN (
+        SELECT organization_id FROM user_organizations WHERE user_id = auth.uid()
+      )
+    );
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;

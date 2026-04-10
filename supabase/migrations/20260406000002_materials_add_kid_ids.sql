@@ -4,5 +4,3 @@
 
 ALTER TABLE materials ADD COLUMN IF NOT EXISTS kid_ids uuid[] DEFAULT NULL;
 
--- Optional index for filtering by kid
-CREATE INDEX IF NOT EXISTS materials_kid_ids_idx ON materials USING GIN (kid_ids);

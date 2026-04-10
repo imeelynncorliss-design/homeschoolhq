@@ -23,37 +23,46 @@ create index if not exists co_teacher_tasks_asgn_idx on co_teacher_tasks(assigne
 alter table co_teacher_tasks enable row level security;
 
 -- Admins: full access within their org
-create policy "admins manage co_teacher_tasks"
-  on co_teacher_tasks for all
-  using (
-    organization_id in (
-      select organization_id from user_organizations
-      where user_id = auth.uid() and role = 'admin'
-    )
-  );
+do $$ begin
+  create policy "admins manage co_teacher_tasks"
+    on co_teacher_tasks for all
+    using (
+      organization_id in (
+        select organization_id from user_organizations
+        where user_id = auth.uid() and role = 'admin'
+      )
+    );
+exception when duplicate_object then null;
+end $$;
 
 -- Co-teachers: read tasks for their org (assigned to them or open)
-create policy "co_teachers read tasks"
-  on co_teacher_tasks for select
-  using (
-    organization_id in (
-      select organization_id from family_collaborators
-      where user_id = auth.uid()
-    )
-  );
+do $$ begin
+  create policy "co_teachers read tasks"
+    on co_teacher_tasks for select
+    using (
+      organization_id in (
+        select organization_id from family_collaborators
+        where user_id = auth.uid()
+      )
+    );
+exception when duplicate_object then null;
+end $$;
 
 -- Co-teachers: update (mark complete) tasks assigned to them or open ones
-create policy "co_teachers update their tasks"
-  on co_teacher_tasks for update
-  using (
-    organization_id in (
-      select organization_id from family_collaborators
-      where user_id = auth.uid()
-    )
-    and (
-      assigned_to_collaborator_id is null
-      or assigned_to_collaborator_id in (
-        select id from family_collaborators where user_id = auth.uid()
+do $$ begin
+  create policy "co_teachers update their tasks"
+    on co_teacher_tasks for update
+    using (
+      organization_id in (
+        select organization_id from family_collaborators
+        where user_id = auth.uid()
       )
-    )
-  );
+      and (
+        assigned_to_collaborator_id is null
+        or assigned_to_collaborator_id in (
+          select id from family_collaborators where user_id = auth.uid()
+        )
+      )
+    );
+exception when duplicate_object then null;
+end $$;
