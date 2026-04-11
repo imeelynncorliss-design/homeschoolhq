@@ -190,7 +190,7 @@ export default function PricingPage() {
               },
               {
                 q: 'How does HomeschoolReady compare to other planners?',
-                a: 'Homeschool Planet charges $84.95/year for a single tier with no AI generation. HomeschoolReady Essential is just $60/year, and Pro at $90/year adds unlimited AI lesson generation, state compliance automation, and co-teacher collaboration — features no competitor currently offers.',
+                a: 'Most homeschool planners charge $80–100/year for basic planning features without smart lesson generation, state compliance automation, or co-teacher collaboration. HomeschoolReady Essential starts at just $60/year, and Pro at $90/year includes all of those capabilities — features most planners don't offer at any price.',
               },
               {
                 q: 'What states are supported for compliance tracking?',
@@ -198,7 +198,7 @@ export default function PricingPage() {
               },
               {
                 q: 'What is Scout, and what does Basic vs Full Copilot mean?',
-                a: "Scout is HomeschoolReady's AI assistant — your knowledgeable homeschool companion available on every page. On Free and Essential (Basic), Scout answers questions, explains concepts, and helps you think through your curriculum. On Pro and Premium (Full Copilot), Scout goes further: generating complete lesson plans, activity guides, and assessments personalized to your child's grade and learning style, importing state standards directly into your planner, and adapting any lesson for a different child with one tap — all with no monthly generation cap.",
+                a: "Scout is HomeschoolReady's built-in copilot — your knowledgeable homeschool companion available on every page. On Free and Essential (Basic), Scout answers questions, explains concepts, and helps you think through your curriculum. On Pro and Premium (Full Copilot), Scout goes further: generating complete lesson plans, activity guides, and assessments personalized to your child's grade and learning style, importing state standards directly into your planner, and adapting any lesson for a different child with one tap — all with no monthly generation cap.",
               },
               {
                 q: 'How many Scout lesson and activity generations do I get?',
