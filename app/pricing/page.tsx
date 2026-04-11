@@ -190,7 +190,7 @@ export default function PricingPage() {
               },
               {
                 q: 'How does HomeschoolReady compare to other planners?',
-                a: 'Most homeschool planners charge $80–100/year for basic planning features without smart lesson generation, state compliance automation, or co-teacher collaboration. HomeschoolReady Essential starts at just $60/year, and Pro at $90/year includes all of those capabilities — features most planners don't offer at any price.',
+                a: "Most homeschool planners charge $80–100/year for basic planning features without smart lesson generation, state compliance automation, or co-teacher collaboration. HomeschoolReady Essential starts at just $60/year, and Pro at $90/year includes all of those capabilities — features most planners don't offer at any price.",
               },
               {
                 q: 'What states are supported for compliance tracking?',
