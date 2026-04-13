@@ -1080,9 +1080,14 @@ function OnboardingInner() {
           setOrgId(resolvedOrgId)
         }
       } else {
+        const referralSource = sessionStorage.getItem('hsr_referral') || null
         const { data: newOrg, error: orgError } = await supabase
           .from('organizations')
-          .insert({ user_id: user.id, name: schoolName.trim() || 'My Homeschool' })
+          .insert({
+            user_id: user.id,
+            name: schoolName.trim() || 'My Homeschool',
+            ...(referralSource ? { referral_source: referralSource } : {}),
+          })
           .select('id')
           .single()
 
@@ -1091,6 +1096,8 @@ function OnboardingInner() {
           setSaving(false)
           return
         }
+
+        if (referralSource) sessionStorage.removeItem('hsr_referral')
 
         await supabase.from('user_organizations').insert({
           user_id: user.id,

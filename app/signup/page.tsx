@@ -29,6 +29,8 @@ function SignupContent() {
     if (code) {
       setHasInviteCode(true)
       setInviteCode(code.toUpperCase())
+      // Stash in sessionStorage so it survives the email-confirmation redirect chain
+      sessionStorage.setItem('hsr_referral', code)
     }
   }, [])
 

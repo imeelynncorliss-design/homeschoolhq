@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/src/lib/supabase'
 import Link from 'next/link'
@@ -13,6 +13,14 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const router = useRouter()
   const supabase = createClient()
+
+  // Capture ?invite= referral param into sessionStorage so it survives the
+  // Supabase email-confirmation redirect chain and is available at org creation.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const invite = params.get('invite')
+    if (invite) sessionStorage.setItem('hsr_referral', invite)
+  }, [])
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
