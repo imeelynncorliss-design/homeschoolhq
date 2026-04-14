@@ -31,7 +31,7 @@ export default function BetaNDAPage() {
         <section style={{ marginBottom: 32 }}>
           <h2 style={{ fontSize: 18, fontWeight: 800, marginBottom: 12 }}>1. Purpose</h2>
           <p>
-            HomeschoolReady, LLC is developing HomeschoolReady, an AI-powered homeschool management platform (the "Beta
+            HomeschoolReady, LLC is developing HomeschoolReady, a technology-powered homeschool management platform (the "Beta
             Product"). You have been invited to participate in a closed beta program to test the Beta Product prior to its
             commercial release. This Agreement governs your access to and use of the Beta Product and any related
             Confidential Information.
@@ -149,7 +149,17 @@ export default function BetaNDAPage() {
         </section>
 
         <section style={{ marginBottom: 32 }}>
-          <h2 style={{ fontSize: 18, fontWeight: 800, marginBottom: 12 }}>12. Contact</h2>
+          <h2 style={{ fontSize: 18, fontWeight: 800, marginBottom: 12 }}>12. Data Continuity</h2>
+          <p>
+            Educational data entered by Beta Tester during the beta program (including student profiles, attendance
+            records, and lesson plans) will be preserved and available in Beta Tester's account upon commercial release,
+            subject to any migration requirements communicated by Company. Beta Tester may export or delete their data
+            at any time during or after the beta period.
+          </p>
+        </section>
+
+        <section style={{ marginBottom: 32 }}>
+          <h2 style={{ fontSize: 18, fontWeight: 800, marginBottom: 12 }}>13. Contact</h2>
           <p>
             Questions about this Agreement? Contact us at{' '}
             <a href="mailto:legal@homeschoolready.app" style={{ color: '#7c3aed', fontWeight: 700 }}>

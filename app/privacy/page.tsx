@@ -35,8 +35,8 @@ export default function PrivacyPage() {
       </section>
 
       <section style={{ marginBottom: 32 }}>
-        <h2 style={{ fontSize: 18, fontWeight: 800, marginBottom: 12 }}>3. AI & Your Data</h2>
-        <p>When you use AI features, your prompts and student context are sent to our AI provider to generate responses. We do not use your personal data to train AI models. We select AI providers who offer data protection agreements consistent with this policy.</p>
+        <h2 style={{ fontSize: 18, fontWeight: 800, marginBottom: 12 }}>3. Technology & Your Data</h2>
+        <p>When you use Scout and other platform features, your prompts and student context are sent to our technology providers to generate personalized responses. We do not use your personal data to train external models. We select providers who offer data protection agreements consistent with this policy.</p>
       </section>
 
       <section style={{ marginBottom: 32 }}>
