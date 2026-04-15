@@ -92,6 +92,7 @@ export default function BottomNav() {
         borderTop: '1px solid rgba(255,255,255,0.1)',
         display: 'flex', flexDirection: 'column', zIndex: 100,
         boxShadow: '0 -4px 20px rgba(79,70,229,0.35)',
+        paddingBottom: 'env(safe-area-inset-bottom)',
       }}>
         <div style={{
           textAlign: 'center', fontSize: 9, fontWeight: 600,

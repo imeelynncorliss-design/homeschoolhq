@@ -27,12 +27,19 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "HomeschoolReady",
-  description: "AI-powered homeschool management",
+  description: "Homeschool management for modern families",
   other: {
     // Tell Dark Reader this site manages its own dark mode — prevents double-inversion
     // Users who want dark mode should use the 🌙 toggle in the app header
     'darkreader-lock': '',
   },
+};
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  viewportFit: 'cover',
 };
 
 export default function RootLayout({
