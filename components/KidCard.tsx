@@ -27,6 +27,8 @@ export default function KidCard({ kid, isSelected, onSelect, onEdit, onDelete }:
   const [showMenu, setShowMenu] = useState(false)
   const [showVibeModal, setShowVibeModal] = useState(false)
   const [vibeValue, setVibeValue] = useState(kid.todays_vibe || '')
+  const [showHookModal, setShowHookModal] = useState(false)
+  const [hookValue, setHookValue] = useState(kid.current_hook || '')
   const menuRef = useRef<HTMLDivElement>(null)
 
   // Close menu when clicking outside
@@ -46,9 +48,19 @@ export default function KidCard({ kid, isSelected, onSelect, onEdit, onDelete }:
       .from('kids')
       .update({ todays_vibe: vibeValue })
       .eq('id', kid.id)
-    
+
     setShowVibeModal(false)
-    // Refresh the page to show updated vibe
+    window.location.reload()
+  }
+
+  const updateHook = async () => {
+    const { supabase } = await import('@/src/lib/supabase')
+    await supabase
+      .from('kids')
+      .update({ current_hook: hookValue })
+      .eq('id', kid.id)
+
+    setShowHookModal(false)
     window.location.reload()
   }
 
@@ -143,12 +155,26 @@ export default function KidCard({ kid, isSelected, onSelect, onEdit, onDelete }:
 
       {/* Hook and Today's Vibe - Right under name/grade info */}
       <div className="space-y-1">
-        {kid.current_hook && (
+        <div className="flex items-center justify-between">
           <p className="text-xs text-blue-700 font-medium flex items-center gap-1">
             <span>🎯</span>
-            <span>Hook: {kid.current_hook}</span>
+            <span>Hook: {kid.current_hook || <span className="text-gray-400 italic font-normal">None set</span>}</span>
           </p>
-        )}
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              setHookValue(kid.current_hook || '')
+              setShowHookModal(true)
+            }}
+            className="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
+            title="Update interests"
+          >
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+            </svg>
+            Update
+          </button>
+        </div>
         <div className="flex items-center justify-between">
           {kid.todays_vibe ? (
             <p className="text-xs text-purple-700 font-medium flex items-center gap-1">
@@ -174,6 +200,57 @@ export default function KidCard({ kid, isSelected, onSelect, onEdit, onDelete }:
           </button>
         </div>
       </div>
+
+      {/* Interests / Hook Update Modal */}
+      {showHookModal && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4 pt-4 pb-24"
+          onClick={() => setShowHookModal(false)}
+        >
+          <div
+            className="bg-white rounded-lg p-6 max-w-md w-full mx-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-bold text-gray-900">Interests 🎯</h3>
+              <button
+                onClick={() => setShowHookModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className="text-sm text-gray-600 mb-3">
+              What is {kid.displayname} into right now? Scout weaves these into every lesson.
+            </p>
+
+            <input
+              type="text"
+              value={hookValue}
+              onChange={(e) => setHookValue(e.target.value)}
+              placeholder="e.g., Minecraft, Dinosaurs, Drawing animals, Space..."
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 mb-4"
+              autoFocus
+            />
+
+            <div className="flex gap-2">
+              <button
+                onClick={updateHook}
+                className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 font-medium"
+              >
+                Save Interests
+              </button>
+              <button
+                onClick={() => setShowHookModal(false)}
+                className="flex-1 border border-gray-300 py-2 rounded-lg hover:bg-gray-50 text-gray-900"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Vibe Update Modal */}
       {showVibeModal && (

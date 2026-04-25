@@ -59,6 +59,7 @@ export default function CompliancePage() {
   const [schoolYearStart, setSchoolYearStart] = useState<string>('')
   const [schoolYearEnd, setSchoolYearEnd] = useState<string>('')
   const [saving, setSaving] = useState(false)
+  const [settingsLoadedOnce, setSettingsLoadedOnce] = useState(false)
 
   // Get organization ID and kids
   useEffect(() => {
@@ -91,6 +92,13 @@ export default function CompliancePage() {
     }
     loadData()
   }, [router])
+
+  // Mark settings as initialized after first load so refreshSettings() doesn't re-show the spinner
+  useEffect(() => {
+    if (!settingsLoading && !settingsLoadedOnce) {
+      setSettingsLoadedOnce(true)
+    }
+  }, [settingsLoading, settingsLoadedOnce])
 
   // Load settings and set state — fall back to organizations.state if compliance settings missing
   useEffect(() => {
@@ -341,7 +349,7 @@ export default function CompliancePage() {
     return 'bg-red-600'
   }
 
-  if (loading || settingsLoading || templatesLoading) {
+  if (loading || (!settingsLoadedOnce && settingsLoading) || templatesLoading) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: colors.pageBackground }}>
         <div style={{ color: colors.purple, fontWeight: 700, fontSize: 16 }}>Loading compliance data...</div>
