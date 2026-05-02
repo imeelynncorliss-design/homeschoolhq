@@ -491,7 +491,7 @@ function ParentsCornerContent() {
                     title: 'Dashboard — Getting started',
                     desc: 'Full onboarding walkthrough: create your account, name your school, select your state, add your first child, and tour the Quick Actions cards.',
                     duration: '2 min',
-                    loomUrl: null as string | null,
+                    loomUrl: 'https://www.loom.com/embed/37d89fbdca1a44faa33b0f5338a1e2ad' as string | null,
                   },
                   {
                     title: 'Scout copilot — Your teaching sidekick',
