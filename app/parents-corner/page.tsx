@@ -496,7 +496,7 @@ function ParentsCornerContent() {
                   {
                     title: 'Scout copilot — Your teaching sidekick',
                     desc: 'Ask Scout to plan a lesson, generate an activity, or answer any homeschool question. See how Scout uses your child\'s grade and learning style to personalize every response.',
-                    duration: '2 min',
+                    duration: '3 min',
                     loomUrl: 'https://www.loom.com/embed/3308cac6138446219a9e67d02c682d56' as string | null,
                   },
                   {
