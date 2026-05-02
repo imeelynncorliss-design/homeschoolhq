@@ -471,84 +471,131 @@ function ParentsCornerContent() {
         {activeSection === 'videos' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
 
-            {/* Coming soon banner */}
+            {/* Banner */}
             <div style={{ background: 'linear-gradient(135deg, #f5f3ff, #ede9fe)', border: '1.5px solid #c4b5fd', borderRadius: 14, padding: '14px 18px', display: 'flex', gap: 12, alignItems: 'flex-start' }}>
               <span style={{ fontSize: 22, flexShrink: 0 }}>🎬</span>
               <div>
-                <div style={{ fontSize: 14, fontWeight: 800, color: '#5b21b6', marginBottom: 3 }}>How-To Videos — Coming Soon</div>
+                <div style={{ fontSize: 14, fontWeight: 800, color: '#5b21b6', marginBottom: 3 }}>How-To Videos — In Production</div>
                 <p style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.6, margin: 0 }}>
-                  Short, focused walkthroughs for every feature. Each video is 2–3 minutes — enough to get you moving without sitting through a course.
+                  Short, focused walkthroughs for every feature — around 2 minutes each. New videos drop as they&apos;re recorded.
                 </p>
               </div>
             </div>
 
-            {/* Video categories */}
-            {[
+            {/* Video list — add a loomUrl to make a card live */}
+            {([
               {
-                category: '🚀 Getting Started',
+                priority: '🔴 Critical — Start here',
                 videos: [
-                  { title: 'Setting up your school profile',          desc: 'Add your kids, set grades, learning styles, and school year dates.' },
-                  { title: 'Taking the teaching style quiz',          desc: 'Find your homeschool style and let Scout personalize your experience.' },
-                  { title: 'Navigating the dashboard',                desc: 'A quick tour of every section and what each card does.' },
+                  {
+                    title: 'Dashboard — Getting started',
+                    desc: 'Full onboarding walkthrough: create your account, name your school, select your state, add your first child, and tour the Quick Actions cards.',
+                    duration: '2 min',
+                    loomUrl: null as string | null,
+                  },
+                  {
+                    title: 'Scout copilot — Your teaching sidekick',
+                    desc: 'Ask Scout to plan a lesson, generate an activity, or answer any homeschool question. See how Scout uses your child\'s grade and learning style to personalize every response.',
+                    duration: '2 min',
+                    loomUrl: null as string | null,
+                  },
+                  {
+                    title: 'Daily attendance — One-tap tracking',
+                    desc: 'Mark school days, log hours, handle absences and vacation days, and export attendance records for compliance reporting.',
+                    duration: '2 min',
+                    loomUrl: null as string | null,
+                  },
+                  {
+                    title: 'State compliance — Know your requirements',
+                    desc: 'Understand your state\'s homeschool rules, see how HomeschoolReady tracks your days and hours automatically, and generate a PDF compliance report.',
+                    duration: '2 min',
+                    loomUrl: null as string | null,
+                  },
                 ],
               },
               {
-                category: '📋 Scheduling & Planning',
+                priority: '🟡 High',
                 videos: [
-                  { title: 'Importing a curriculum',                  desc: 'Upload a PDF table of contents and let Scout extract your lessons automatically.' },
-                  { title: 'Bulk scheduling lessons',                 desc: 'Assign dates to a full semester of lessons in minutes.' },
-                  { title: 'Setting up vacation & school-off days',   desc: 'Block out holidays and breaks so Scout never schedules on those days.' },
+                  {
+                    title: 'Lesson planning — Build your week',
+                    desc: 'Create lessons manually or with Scout, schedule them across the week, use the bulk scheduler for recurring subjects, and track completion with red/yellow/green check-ins.',
+                    duration: '2 min',
+                    loomUrl: null as string | null,
+                  },
+                  {
+                    title: 'Learner profiles — Know your kids',
+                    desc: 'Set up each child\'s profile, choose their VARK learning style, and see how those choices shape everything Scout recommends for them.',
+                    duration: '2 min',
+                    loomUrl: null as string | null,
+                  },
                 ],
               },
               {
-                category: '📊 Records & Compliance',
+                priority: '🟢 More features',
                 videos: [
-                  { title: 'Logging attendance',                      desc: 'Mark school days, track hours, and stay compliant with your state requirements.' },
-                  { title: 'Using the reading log',                   desc: 'Add books, track pages, and build a year-end reading record.' },
-                  { title: 'Logging field trips & activities',        desc: 'Record co-ops, field trips, and projects that count toward your school day.' },
-                  { title: 'Generating a progress report',            desc: 'See completion rates, lesson trends, and subject coverage at a glance.' },
+                  {
+                    title: 'Supply Scout — Weekly prep made easy',
+                    desc: 'See everything you need for the week — organized by lesson — so one Sunday check means one trip to the store.',
+                    duration: '1.5 min',
+                    loomUrl: null as string | null,
+                  },
+                  {
+                    title: 'Curriculum import — Bring your own',
+                    desc: 'Upload a PDF or photo of your curriculum and let Scout extract the lessons and schedule them on your calendar automatically.',
+                    duration: '2 min',
+                    loomUrl: null as string | null,
+                  },
+                  {
+                    title: 'Progress reports — See the big picture',
+                    desc: 'Track subject coverage, review completion trends, and generate a transcript — so you always know exactly where each child stands.',
+                    duration: '2 min',
+                    loomUrl: null as string | null,
+                  },
+                  {
+                    title: 'Co-teacher collab — Homeschool is a team sport',
+                    desc: 'Invite a spouse, tutor, or co-op partner with a join code. Manage what they can see and do — without sharing your password.',
+                    duration: '2 min',
+                    loomUrl: null as string | null,
+                  },
                 ],
               },
-              {
-                category: '🤖 Using Scout AI',
-                videos: [
-                  { title: 'Generating a lesson with Scout',          desc: 'Ask Scout to plan a personalized lesson in seconds — tailored to your child\'s style.' },
-                  { title: 'Generating an activity',                  desc: 'Get hands-on activity ideas that match your child\'s interests and intelligences.' },
-                  { title: 'Aligning a lesson to standards',          desc: 'Tag lessons to Common Core or state standards for automatic coverage tracking.' },
-                ],
-              },
-              {
-                category: '👩‍🏫 Co-Teachers',
-                videos: [
-                  { title: 'Inviting a co-teacher or aide',           desc: 'Send an invite link and get someone helping in under 2 minutes.' },
-                  { title: 'Assigning tasks to your co-teacher',      desc: 'Create tasks, assign them, and check them off as they\'re completed.' },
-                ],
-              },
-            ].map(group => (
-              <div key={group.category}>
+            ] as { priority: string; videos: { title: string; desc: string; duration: string; loomUrl: string | null }[] }[]).map(group => (
+              <div key={group.priority}>
                 <div style={{ fontSize: 12, fontWeight: 900, color: '#7c3aed', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 10 }}>
-                  {group.category}
+                  {group.priority}
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 12 }}>
                   {group.videos.map(v => (
-                    <div key={v.title} style={{ background: '#fff', borderRadius: 14, border: '1.5px solid #e5e7eb', overflow: 'hidden' }}>
-                      {/* Thumbnail placeholder */}
+                    <div
+                      key={v.title}
+                      style={{ background: '#fff', borderRadius: 14, border: '1.5px solid #e5e7eb', overflow: 'hidden', cursor: v.loomUrl ? 'pointer' : 'default' }}
+                      onClick={() => v.loomUrl && window.open(v.loomUrl, '_blank', 'noopener')}
+                    >
+                      {/* Thumbnail */}
                       <div style={{
-                        height: 130, background: 'linear-gradient(135deg, #3d3a52, #4f46e5)',
+                        height: 130,
+                        background: v.loomUrl
+                          ? 'linear-gradient(135deg, #5b21b6, #7c3aed)'
+                          : 'linear-gradient(135deg, #3d3a52, #4f46e5)',
                         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6,
                       }}>
                         <div style={{
                           width: 44, height: 44, borderRadius: '50%',
-                          background: 'rgba(255,255,255,0.15)', border: '2px solid rgba(255,255,255,0.3)',
+                          background: 'rgba(255,255,255,0.18)', border: '2px solid rgba(255,255,255,0.35)',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                         }}>
-                          <span style={{ fontSize: 18, marginLeft: 3 }}>▶</span>
+                          <span style={{ fontSize: 18, marginLeft: v.loomUrl ? 3 : 3 }}>▶</span>
                         </div>
-                        <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.5)', letterSpacing: 0.5 }}>COMING SOON</div>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: v.loomUrl ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.5)', letterSpacing: 0.5 }}>
+                          {v.loomUrl ? 'WATCH NOW' : 'COMING SOON'}
+                        </div>
                       </div>
                       {/* Info */}
                       <div style={{ padding: '12px 14px' }}>
-                        <div style={{ fontSize: 13, fontWeight: 800, color: '#1f2937', marginBottom: 4, lineHeight: 1.3 }}>{v.title}</div>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 4 }}>
+                          <div style={{ fontSize: 13, fontWeight: 800, color: '#1f2937', lineHeight: 1.3 }}>{v.title}</div>
+                          <div style={{ fontSize: 10, fontWeight: 700, color: '#9ca3af', whiteSpace: 'nowrap', paddingTop: 2 }}>{v.duration}</div>
+                        </div>
                         <div style={{ fontSize: 11, color: '#6b7280', lineHeight: 1.5 }}>{v.desc}</div>
                       </div>
                     </div>
