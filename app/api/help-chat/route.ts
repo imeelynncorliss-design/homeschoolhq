@@ -113,7 +113,7 @@ async function fetchStateCompliance(stateCode: string): Promise<string | null> {
 
 export async function POST(request: NextRequest) {
   try {
-    const { messages, userId, userState, userName, homeschoolStyle } = await request.json();
+    const { messages, userId, organizationId, userState, userName, homeschoolStyle } = await request.json();
 
     // Usage guardrail — enforce monthly tier limits
     if (userId) {
@@ -122,6 +122,11 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: usage.error }, { status: 429 })
       }
     }
+
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
 
     // Personalization: inject parent's name if available
     let systemPrompt = BASE_SYSTEM_PROMPT;
@@ -136,6 +141,22 @@ export async function POST(request: NextRequest) {
         ? 'They prefer low-key, interest-led learning without rigid schedules. When suggesting lesson plans, activities, or approaches, keep things open-ended and adaptable. Avoid overly structured or time-pressured suggestions.'
         : 'They follow deliberate lesson plans, track progress carefully, and value clear objectives and measurable outcomes. When suggesting lessons or activities, include structure, sequencing, and things they can record.'
       systemPrompt += `\n\n## Family Teaching Style\nThis family's homeschool style is **${styleLabel}**. ${styleDesc}`
+    }
+
+    // Inject all children's profiles so Scout can personalise by child
+    if (organizationId) {
+      const { data: kids } = await supabase
+        .from('kids')
+        .select('displayname, age, grade, learning_style, current_hook, mi_profile')
+        .eq('organization_id', organizationId)
+        .neq('archived', true)
+
+      if (kids && kids.length > 0) {
+        const kidsContext = kids.map((k: { displayname: string; age: number | null; grade: string | null; learning_style: string | null; current_hook: string | null; mi_profile: string[] | null }) =>
+          `- **${k.displayname}** — Grade: ${k.grade || 'unknown'}, Age: ${k.age || 'unknown'}, Learning style: ${k.learning_style || 'not set'}, Current interests: ${k.current_hook || 'not set'}${k.mi_profile?.length ? `, Multiple intelligences: ${k.mi_profile.join(', ')}` : ''}`
+        ).join('\n')
+        systemPrompt += `\n\n## Children in this family\nYou have full access to these learner profiles. Use them whenever the parent asks about a specific child or requests activities, lessons, or advice tailored to their kids — do NOT ask for information you already have here.\n\n${kidsContext}`
+      }
     }
 
     // RAG: inject state compliance context if we know the user's state
