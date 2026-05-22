@@ -978,14 +978,10 @@ export default function CurriculumImporter({ childId, childName, onClose, onImpo
                 </button>
                 <button
                   onClick={() => {
-                    // Configure selectedLessons based on action
-                    if (priorLessonAction === 'skip' || priorLessonAction === 'complete') {
-                      // Prior lessons excluded from selectedLessons (handled separately in importLessons)
-                      setSelectedLessons(new Set(extractedLessons.map((_, i) => i).filter(i => i >= startingLessonIndex)));
-                    } else {
-                      // 'past' and 'manual' — show all lessons in preview
-                      setSelectedLessons(new Set(extractedLessons.map((_, i) => i)));
-                    }
+                    // All options: only forward lessons are pre-selected. For skip/complete/past,
+                    // prior lessons are handled separately in importLessons(). For manual, prior
+                    // lessons are unchecked so the user can opt them in individually.
+                    setSelectedLessons(new Set(extractedLessons.map((_, i) => i).filter(i => i >= startingLessonIndex)));
                     setStep('preview');
                   }}
                   disabled={priorLessonAction === 'past' && !startDate}
