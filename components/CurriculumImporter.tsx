@@ -945,7 +945,7 @@ export default function CurriculumImporter({ childId, childName, onClose, onImpo
               {priorLessonAction === 'past' && !startDate && (
                 <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
                   <p className="text-sm text-amber-800 font-medium">
-                    ⚠️ A start date is required for backdating. Go back and set one under "Schedule lessons starting from a specific date."
+                    ⚠️ A start date is required for backdating. Go back and set one under &quot;Schedule lessons starting from a specific date.&quot;
                   </p>
                 </div>
               )}
