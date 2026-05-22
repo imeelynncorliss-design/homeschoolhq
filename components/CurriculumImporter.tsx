@@ -1005,15 +1005,21 @@ export default function CurriculumImporter({ childId, childName, onClose, onImpo
                 </p>
                 <button
                   onClick={() => {
-                    if (selectedLessons.size === extractedLessons.length) {
-                      setSelectedLessons(new Set());
-                    } else {
-                      setSelectedLessons(new Set(extractedLessons.map((_, i) => i)));
-                    }
+                    const restricted = startingLessonIndex > 0 && priorLessonAction !== 'manual';
+                    const forwardIndices = extractedLessons.map((_, i) => i).filter(i => i >= startingLessonIndex);
+                    const selectableIndices = restricted ? forwardIndices : extractedLessons.map((_, i) => i);
+                    const allSelected = selectableIndices.every(i => selectedLessons.has(i));
+                    setSelectedLessons(allSelected ? new Set() : new Set(selectableIndices));
                   }}
                   className="text-sm text-blue-600 hover:text-blue-800 font-medium"
                 >
-                  {selectedLessons.size === extractedLessons.length ? '❌ Deselect All' : '✅ Select All'}
+                  {(() => {
+                    const restricted = startingLessonIndex > 0 && priorLessonAction !== 'manual';
+                    const forwardIndices = extractedLessons.map((_, i) => i).filter(i => i >= startingLessonIndex);
+                    const selectableIndices = restricted ? forwardIndices : extractedLessons.map((_, i) => i);
+                    const allSelected = selectableIndices.every(i => selectedLessons.has(i));
+                    return allSelected ? '❌ Deselect All' : '✅ Select All';
+                  })()}
                 </button>
               </div>
 
