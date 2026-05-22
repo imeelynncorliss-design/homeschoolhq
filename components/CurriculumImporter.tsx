@@ -29,7 +29,11 @@ export default function CurriculumImporter({ childId, childName, onClose, onImpo
   const [selectedLessons, setSelectedLessons] = useState<Set<number>>(new Set());
   const [lessonDurations, setLessonDurations] = useState<{ [key: number]: { value: number; unit: DurationUnit } }>({});
   const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState<'upload' | 'preview' | 'success'>('upload');
+  const [step, setStep] = useState<'upload' | 'midyear' | 'preview' | 'success'>('upload');
+
+  // Mid-year start settings
+  const [startingLessonIndex, setStartingLessonIndex] = useState<number>(0);
+  const [priorLessonAction, setPriorLessonAction] = useState<'skip' | 'complete' | 'past' | 'manual'>('skip');
   const [error, setError] = useState<string>('');
   const [importResults, setImportResults] = useState<{ imported: number; skipped: number }>({ imported: 0, skipped: 0 });
 
@@ -92,10 +96,10 @@ export default function CurriculumImporter({ childId, childName, onClose, onImpo
         .eq('organization_id', orgId);
 
       if (data) {
-        const uniqueExisting = [...new Set(data.map(d => d.subject).filter(Boolean))] as string[];
+        const uniqueExisting = [...new Set(data.map((d: { subject: string }) => d.subject).filter(Boolean))] as string[];
         // Only keep subjects that are NOT already in the canonical list
         // (canonical ones will appear via the canonical list in the dropdown)
-        const nonCanonicalExisting = uniqueExisting.filter(s => !CANONICAL_SUBJECTS.includes(s))
+        const nonCanonicalExisting = uniqueExisting.filter(s => !CANONICAL_SUBJECTS.includes(s as never))
         setExistingSubjects(nonCanonicalExisting);
       }
 
@@ -180,6 +184,8 @@ export default function CurriculumImporter({ childId, childName, onClose, onImpo
 
         setExtractedLessons(lessonsWithSubject);
         setSelectedLessons(new Set(lessonsWithSubject.map((_: any, i: number) => i)));
+        setStartingLessonIndex(0);
+        setPriorLessonAction('skip');
 
         if (applyBulkDuration) {
           const bulkDurations: { [key: number]: { value: number; unit: DurationUnit } } = {};
@@ -189,7 +195,7 @@ export default function CurriculumImporter({ childId, childName, onClose, onImpo
           setLessonDurations(bulkDurations);
         }
 
-        setStep('preview');
+        setStep('midyear');
       }
     } catch (error) {
       console.error('Extract error:', error);
@@ -230,6 +236,8 @@ export default function CurriculumImporter({ childId, childName, onClose, onImpo
 
     setExtractedLessons(lessons);
     setSelectedLessons(new Set(lessons.map((_, i) => i)));
+    setStartingLessonIndex(0);
+    setPriorLessonAction('skip');
 
     if (applyBulkDuration) {
       const bulkDurations: { [key: number]: { value: number; unit: DurationUnit } } = {};
@@ -238,7 +246,7 @@ export default function CurriculumImporter({ childId, childName, onClose, onImpo
     }
 
     setError('');
-    setStep('preview');
+    setStep('midyear');
   };
 
   const importLessons = async () => {
@@ -329,6 +337,49 @@ export default function CurriculumImporter({ childId, childName, onClose, onImpo
             status: 'not_started',
             planning_period_id: activePlanningPeriod?.id || null,
           });
+        }
+      }
+
+      // Insert prior-lesson rows for 'complete' and 'past' options (separate call so
+      // completed:true can be included without conflicting with the forward-lesson type)
+      if (startingLessonIndex > 0 && (priorLessonAction === 'complete' || priorLessonAction === 'past')) {
+        const priorSlice = extractedLessons.slice(0, startingLessonIndex);
+        const newPriorLessons = priorSlice.filter(lesson =>
+          !existingLessons?.some((existing: any) =>
+            existing.title === lesson.title && existing.subject === lesson.subject
+          )
+        );
+
+        if (newPriorLessons.length > 0) {
+          // For 'past': backdate one lesson per school day going backwards from startDate
+          let pastDates: (string | null)[] = newPriorLessons.map(() => null);
+          if (priorLessonAction === 'past' && useStartDate && startDate) {
+            const activeDays = scheduleDays.size > 0 ? scheduleDays : new Set([1, 2, 3, 4, 5]);
+            const computed: string[] = [];
+            const cursor = new Date(startDate + 'T12:00:00');
+            cursor.setDate(cursor.getDate() - 1);
+            while (computed.length < newPriorLessons.length) {
+              if (activeDays.has(cursor.getDay())) computed.unshift(cursor.toISOString().split('T')[0]);
+              cursor.setDate(cursor.getDate() - 1);
+            }
+            pastDates = computed;
+          }
+
+          const priorRows = newPriorLessons.map((lesson, i) => ({
+            kid_id: childId,
+            user_id: userId,
+            organization_id: organizationId,
+            subject: lesson.subject,
+            title: lesson.title,
+            description: lesson.description,
+            lesson_date: pastDates[i] ?? null,
+            duration_minutes: null as number | null,
+            status: 'completed',
+            completed: true,
+            planning_period_id: activePlanningPeriod?.id ?? null,
+          }));
+
+          await supabase.from('lessons').insert(priorRows);
         }
       }
 
@@ -772,11 +823,189 @@ export default function CurriculumImporter({ childId, childName, onClose, onImpo
             </div>
           )}
 
+          {/* ── Where Are You Starting? (mid-year step) ── */}
+          {step === 'midyear' && (
+            <div className="space-y-5">
+              <div>
+                <h3 className="text-lg font-bold text-gray-900 mb-1">📍 Where are you starting?</h3>
+                <p className="text-sm text-gray-600">
+                  We found <strong>{extractedLessons.length} lessons</strong>. Are you starting from the beginning, or picking up mid-curriculum?
+                </p>
+              </div>
+
+              {/* Lesson picker */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Start at which lesson?
+                </label>
+                <select
+                  value={startingLessonIndex}
+                  onChange={e => {
+                    const idx = parseInt(e.target.value);
+                    setStartingLessonIndex(idx);
+                    if (idx === 0) setPriorLessonAction('skip');
+                  }}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-2 text-gray-900 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                >
+                  {extractedLessons.map((lesson, i) => (
+                    <option key={i} value={i}>
+                      {i === 0 ? '📘 ' : ''}Lesson {i + 1}: {lesson.title}
+                    </option>
+                  ))}
+                </select>
+                {startingLessonIndex === 0 ? (
+                  <p className="text-xs text-gray-500">Starting from the beginning — no prior lessons to handle.</p>
+                ) : (
+                  <p className="text-xs text-purple-700 font-medium">
+                    {startingLessonIndex} lesson{startingLessonIndex !== 1 ? 's' : ''} before this one.
+                  </p>
+                )}
+              </div>
+
+              {/* Prior lesson handling — only shown when not starting at the beginning */}
+              {startingLessonIndex > 0 && (
+                <div className="space-y-3">
+                  <label className="block text-sm font-medium text-gray-700">
+                    What should we do with Lessons 1–{startingLessonIndex}?
+                  </label>
+
+                  {(
+                    [
+                      {
+                        value: 'skip',
+                        label: 'Skip / don\'t schedule',
+                        sublabel: 'Recommended — don\'t add these lessons at all. Clean slate going forward.',
+                        badge: 'Recommended',
+                      },
+                      {
+                        value: 'complete',
+                        label: 'Mark as completed',
+                        sublabel: 'Add them as finished lessons. Good for progress records.',
+                        badge: null,
+                      },
+                      {
+                        value: 'past',
+                        label: 'Add as past lessons (with estimated dates)',
+                        sublabel: 'Backdate using your school days, counting back from your start date.',
+                        badge: null,
+                      },
+                      {
+                        value: 'manual',
+                        label: 'I\'ll decide lesson by lesson',
+                        sublabel: 'Show all lessons in the next step so you can pick individually.',
+                        badge: null,
+                      },
+                    ] as const
+                  ).map(option => {
+                    const active = priorLessonAction === option.value;
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => setPriorLessonAction(option.value)}
+                        style={{
+                          width: '100%', textAlign: 'left', padding: '12px 14px', borderRadius: 12,
+                          border: `2px solid ${active ? '#7c3aed' : '#e5e7eb'}`,
+                          background: active ? '#f5f3ff' : '#fafafa',
+                          cursor: 'pointer', fontFamily: 'inherit', display: 'block',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+                          <span style={{
+                            width: 16, height: 16, borderRadius: '50%', flexShrink: 0,
+                            border: `2px solid ${active ? '#7c3aed' : '#d1d5db'}`,
+                            background: active ? '#7c3aed' : 'transparent',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          }}>
+                            {active && <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#fff', display: 'block' }} />}
+                          </span>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: active ? '#5b21b6' : '#374151' }}>
+                            {option.label}
+                          </span>
+                          {option.badge && (
+                            <span style={{
+                              fontSize: 10, fontWeight: 800, color: '#7c3aed',
+                              background: '#ede9fe', borderRadius: 20, padding: '2px 8px',
+                              letterSpacing: 0.3,
+                            }}>
+                              {option.badge}
+                            </span>
+                          )}
+                        </div>
+                        <p style={{ fontSize: 11, color: '#6b7280', marginLeft: 24, lineHeight: 1.45 }}>
+                          {option.sublabel}
+                        </p>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Start date reminder / requirement */}
+              {priorLessonAction === 'past' && !startDate && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                  <p className="text-sm text-amber-800 font-medium">
+                    ⚠️ A start date is required for backdating. Go back and set one under "Schedule lessons starting from a specific date."
+                  </p>
+                </div>
+              )}
+
+              {/* Summary callout */}
+              <div style={{ background: '#f0fdf4', border: '1.5px solid #86efac', borderRadius: 12, padding: '12px 14px' }}>
+                <p className="text-sm font-semibold text-green-800 mb-1">What will happen:</p>
+                <ul className="text-xs text-green-700 space-y-1">
+                  {startingLessonIndex > 0 && (
+                    <li>
+                      • Lessons 1–{startingLessonIndex}:{' '}
+                      {priorLessonAction === 'skip'     && 'not imported'}
+                      {priorLessonAction === 'complete' && 'imported and marked as completed'}
+                      {priorLessonAction === 'past'     && 'imported with estimated past dates'}
+                      {priorLessonAction === 'manual'   && 'shown in preview for you to decide'}
+                    </li>
+                  )}
+                  <li>
+                    • Lesson{startingLessonIndex + 1 < extractedLessons.length ? 's' : ''} {startingLessonIndex + 1}–{extractedLessons.length}: imported{useStartDate && startDate ? `, scheduled from ${new Date(startDate + 'T00:00:00').toLocaleDateString()}` : ' (unscheduled — assign dates later)'}
+                  </li>
+                </ul>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setStep('upload')}
+                  className="flex-1 border border-gray-300 py-3 rounded-lg hover:bg-gray-50 text-gray-900"
+                >
+                  ← Back
+                </button>
+                <button
+                  onClick={() => {
+                    // Configure selectedLessons based on action
+                    if (priorLessonAction === 'skip' || priorLessonAction === 'complete') {
+                      // Prior lessons excluded from selectedLessons (handled separately in importLessons)
+                      setSelectedLessons(new Set(extractedLessons.map((_, i) => i).filter(i => i >= startingLessonIndex)));
+                    } else {
+                      // 'past' and 'manual' — show all lessons in preview
+                      setSelectedLessons(new Set(extractedLessons.map((_, i) => i)));
+                    }
+                    setStep('preview');
+                  }}
+                  disabled={priorLessonAction === 'past' && !startDate}
+                  className="flex-1 text-white py-3 rounded-xl font-bold disabled:opacity-50"
+                  style={{ background: 'linear-gradient(135deg, #7c3aed, #a855f7)', fontFamily: "'Nunito', sans-serif" }}
+                >
+                  Review Lessons →
+                </button>
+              </div>
+            </div>
+          )}
+
           {step === 'preview' && (
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <p className="text-gray-600">
-                  Found {extractedLessons.length} lessons. Select which ones to import:
+                  {startingLessonIndex > 0 && priorLessonAction !== 'manual'
+                    ? <>Showing <strong>{selectedLessons.size}</strong> upcoming lessons (Lesson {startingLessonIndex + 1}–{extractedLessons.length}).</>
+                    : <>Found {extractedLessons.length} lessons. Select which ones to import:</>
+                  }
                 </p>
                 <button
                   onClick={() => {
@@ -791,6 +1020,21 @@ export default function CurriculumImporter({ childId, childName, onClose, onImpo
                   {selectedLessons.size === extractedLessons.length ? '❌ Deselect All' : '✅ Select All'}
                 </button>
               </div>
+
+              {/* Prior lesson context banner */}
+              {startingLessonIndex > 0 && (
+                <div style={{ background: '#faf5ff', border: '1.5px solid #ddd6fe', borderRadius: 10, padding: '10px 14px' }}>
+                  <p className="text-sm text-purple-800 font-semibold mb-0.5">
+                    📍 Mid-curriculum start — Lessons 1–{startingLessonIndex}
+                  </p>
+                  <p className="text-xs text-purple-600">
+                    {priorLessonAction === 'skip'     && 'Not imported — keeping your schedule clean.'}
+                    {priorLessonAction === 'complete' && 'Will be imported and marked as completed.'}
+                    {priorLessonAction === 'past'     && `Will be imported with estimated past dates (backdated from ${startDate ? new Date(startDate + 'T00:00:00').toLocaleDateString() : 'your start date'}).`}
+                    {priorLessonAction === 'manual'   && 'Shown below — unchecked by default. Check any you want to include.'}
+                  </p>
+                </div>
+              )}
 
               {useStartDate && startDate && (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
@@ -872,7 +1116,7 @@ export default function CurriculumImporter({ childId, childName, onClose, onImpo
 
               <div className="flex gap-3">
                 <button
-                  onClick={() => setStep('upload')}
+                  onClick={() => setStep('midyear')}
                   className="flex-1 border border-gray-300 py-3 rounded-lg hover:bg-gray-50 text-gray-900"
                 >
                   ← Back
