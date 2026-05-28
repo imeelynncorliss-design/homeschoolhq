@@ -3,8 +3,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { updateStudentProficiency, getStudentAllProficiencies } from '@/lib/utils-standards';
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+function getSupabaseAdmin() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error('Missing Supabase admin environment variables');
+  }
+
+  return createClient(supabaseUrl, serviceRoleKey);
+}
 
 // EXISTING: Get student proficiencies
 export async function GET(
@@ -71,7 +79,7 @@ export async function DELETE(
     const token = authHeader.replace('Bearer ', '');
 
     // Verify user with Supabase
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = getSupabaseAdmin();
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
 
     if (authError || !user) {

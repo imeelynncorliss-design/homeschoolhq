@@ -1,6 +1,14 @@
 import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+function getResendClient() {
+  const apiKey = process.env.RESEND_API_KEY;
+
+  if (!apiKey) {
+    throw new Error('Missing RESEND_API_KEY environment variable');
+  }
+
+  return new Resend(apiKey);
+}
 
 const FROM_EMAIL = 'noreply@homeschoolready.app'
 const FROM_NAME = 'HomeschoolReady'
@@ -26,6 +34,8 @@ export async function sendInviteEmail({
     'Co-Teacher'
 
   const acceptUrl = `https://app.homeschoolready.app/signup?invite=${inviteCode}`
+
+  const resend = getResendClient();
 
   const { data, error } = await resend.emails.send({
     from: `${FROM_NAME} <${FROM_EMAIL}>`,

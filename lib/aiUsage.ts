@@ -1,13 +1,20 @@
 import { createClient } from '@supabase/supabase-js'
 import { AI_LIMITS, TIER_INFO, TIER_ORDER, type UserTier } from './tierTesting'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function getSupabaseAdmin() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error('Missing Supabase admin environment variables')
+  }
+
+  return createClient(supabaseUrl, serviceRoleKey)
+}
 
 /** Server-safe tier lookup — uses service-role client, no localStorage */
 async function getUserTier(userId: string): Promise<UserTier> {
+  const supabase = getSupabaseAdmin()
   const { data } = await supabase
     .from('user_subscriptions')
     .select('tier')
@@ -40,6 +47,7 @@ export async function checkAndIncrementUsage(
   userId: string,
   type: UsageType
 ): Promise<{ allowed: boolean; error?: string }> {
+  const supabase = getSupabaseAdmin()
   const tier = await getUserTier(userId)
   const limit = AI_LIMITS[tier][type]
 

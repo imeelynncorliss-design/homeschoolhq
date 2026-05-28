@@ -5,7 +5,7 @@
  * Place at: src/lib/invites.ts
  */
 
-import { createClient } from '@/src/lib/supabase';
+import { createClient } from '@/src/lib/supabase/client';
 
 // Omits 0/O/1/I to avoid confusion when reading codes aloud or by eye
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';

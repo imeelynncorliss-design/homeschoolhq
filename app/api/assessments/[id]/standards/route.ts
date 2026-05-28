@@ -2,17 +2,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+function getSupabaseClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseKey) {
-  console.error('Missing Supabase environment variables');
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error('Missing Supabase environment variables');
+  }
+
+  return createClient(supabaseUrl, supabaseKey);
 }
-
-const supabase = createClient(supabaseUrl!, supabaseKey!);
 
 // Add this helper function
 async function getUserFromRequest(request: NextRequest) {
+  const supabase = getSupabaseClient();
   const authHeader = request.headers.get('authorization');
   if (!authHeader) {
     return null;
@@ -34,6 +37,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const supabase = getSupabaseClient();
     const { id: assessmentId } = await params;
     console.log('Fetching standards for assessment:', assessmentId);
 
@@ -117,6 +121,7 @@ export async function POST(
       );
     }
     
+    const supabase = getSupabaseClient();
     const { id: assessmentId } = await params;
     const body = await request.json();
     const { standard_ids, alignment_strength = 'full', notes } = body;
@@ -192,6 +197,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const supabase = getSupabaseClient();
     const body = await request.json();
     const { assessment_standard_id } = body;
 

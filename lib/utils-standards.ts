@@ -3,7 +3,7 @@
 // Database query helpers for standards system
 // ============================================================================
 
-import { supabase } from '@/src/lib/supabase';
+import { createClient } from '@/src/lib/supabase/client';
 import type {
   Standard,
   StandardsFilterParams,
@@ -22,8 +22,7 @@ import type {
 // ============================================================================
 
 export function getSupabaseClient() {
-  // Uses the centralized client imported at the top
-  return supabase;
+  return createClient();
 }
 
 // ============================================================================
@@ -73,7 +72,7 @@ export async function getStandards(
   }
 
   // Transform the data to populate missing fields
-const transformedStandards = (data || []).map(standard => ({
+const transformedStandards = (data || []).map((standard: any) => ({
   ...standard,
   code: standard.code || standard.standard_code,
   framework: standard.framework || (
@@ -455,7 +454,7 @@ export async function getStandardsGaps(
     .neq('proficiency_level', 'not_started');
 
   const addressedIds = new Set(
-    addressedData?.map((p) => p.standard_id) || []
+    addressedData?.map((p: { standard_id: string }) => p.standard_id) || []
   );
 
   // Find gaps

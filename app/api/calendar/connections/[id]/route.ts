@@ -1,7 +1,7 @@
 // app/api/calendar/connections/[id]/route.ts
 // Delete/Manage Individual Calendar Connection
 
-import { createClient } from '@/src/lib/supabase';
+import { createClient } from '@/src/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { getGoogleCalendarService } from '@/src/lib/calendar/google-calendar-service';
 import { getOutlookCalendarService } from '@/src/lib/calendar/outlook-calendar-service';
@@ -15,7 +15,7 @@ export async function DELETE(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const supabase = createClient(); // ADD THIS LINE
+    const supabase = await createClient();
     const params = await context.params; // ADD THIS LINE
     
     let userId: string | null = null;
