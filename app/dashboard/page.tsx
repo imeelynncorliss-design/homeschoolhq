@@ -1465,12 +1465,15 @@ function DashboardContent() {
         // Fetch today's attendance
         const { data: attData } = await supabase
           .from('daily_attendance')
-          .select('kid_id, status, auto_generated')
+          .select('kid_id, status, auto_generated, notes')
           .eq('organization_id', orgId)
           .eq('attendance_date', todayStr)
           .in('kid_id', uniqueKids.map((k: any) => k.id))
         const presentStatuses = new Set(['full_day', 'half_day'])
-        setTodayAttendance(new Set((attData || []).filter((a: any) => presentStatuses.has(a.status) && a.auto_generated !== true).map((a: any) => a.kid_id)))
+        // Dashboard child cards should only reflect the dashboard quick-mark action.
+        // Existing attendance/backfill/manual rows can be valid compliance records but should not
+        // make the child card look like the quick "Mark present" button was tapped today.
+        setTodayAttendance(new Set((attData || []).filter((a: any) => presentStatuses.has(a.status) && a.auto_generated !== true && a.notes === 'Dashboard quick present').map((a: any) => a.kid_id)))
       }
 
       setLoading(false)
@@ -1515,7 +1518,7 @@ function DashboardContent() {
     const todayStr = localDateString()
     try {
       const { error } = await supabase.from('daily_attendance').upsert(
-        { organization_id: organizationId, kid_id: kidId, user_id: user.id, attendance_date: todayStr, status: 'full_day', hours: 6, auto_generated: false },
+        { organization_id: organizationId, kid_id: kidId, user_id: user.id, attendance_date: todayStr, status: 'full_day', hours: 6, notes: 'Dashboard quick present', auto_generated: false },
         { onConflict: 'organization_id,kid_id,attendance_date' }
       )
       if (error) throw error
