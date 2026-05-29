@@ -58,6 +58,10 @@ export default function CalendarView({
     ].join('-')
   }
 
+  function dayOfMonth(dateStr: string): number {
+    return Number(dateStr.split('-')[2])
+  }
+
   // Generate calendar grid (6 weeks)
   const firstDayOfMonth = new Date(year, month, 1).getDay()
   const daysInMonth = new Date(year, month + 1, 0).getDate()
@@ -277,7 +281,7 @@ export default function CalendarView({
               {day && (
                 <>
                   <div className={`text-sm font-medium ${day.isCurrentMonth ? 'text-gray-900' : 'text-gray-400'}`}>
-                    {new Date(day.date).getDate()}
+                    {dayOfMonth(day.date)}
                   </div>
                   
                   {day.isCurrentMonth && visibleActivityCount > 0 && (
