@@ -129,6 +129,14 @@ function subjectColor(subject: string): string {
   return SUBJECT_PALETTE[Math.abs(hash) % SUBJECT_PALETTE.length]
 }
 
+function localDateString(date = new Date()): string {
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, '0'),
+    String(date.getDate()).padStart(2, '0'),
+  ].join('-')
+}
+
 // ─── Pulse Ring ───────────────────────────────────────────────────────────────
 
 function PulseRing({ pct, color, size = 120 }: { pct: number; color: string; size?: number }) {
@@ -1360,11 +1368,7 @@ function DashboardContent() {
       const uniqueKids = Array.from(new Map((kidsData || []).map((k: any) => [k.id, k])).values()) as any[]
 
       if (uniqueKids.length) {
-        const todayStr   = [
-          now.getFullYear(),
-          String(now.getMonth() + 1).padStart(2, '0'),
-          String(now.getDate()).padStart(2, '0'),
-        ].join('-')
+        const todayStr = localDateString(now)
         const lessonsMap: Record<string, any[]> = {}
 
         const pulses: KidPulse[] = await Promise.all(
@@ -1491,7 +1495,7 @@ function DashboardContent() {
   const markAttendanceToday = async (kidId: string) => {
     if (!organizationId || !user?.id) return
     setAttendanceSaving(prev => new Set(prev).add(kidId))
-    const todayStr = new Date().toISOString().split('T')[0]
+    const todayStr = localDateString()
     try {
       const { error } = await supabase.from('daily_attendance').upsert(
         { organization_id: organizationId, kid_id: kidId, user_id: user.id, attendance_date: todayStr, status: 'full_day', hours: 6 },
