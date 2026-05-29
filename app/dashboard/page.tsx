@@ -1381,6 +1381,8 @@ function DashboardContent() {
       // Deduplicate by id — guards against rare DB duplicates
       const uniqueKids = Array.from(new Map((kidsData || []).map((k: any) => [k.id, k])).values()) as any[]
 
+      setTodayAttendance(new Set())
+
       if (uniqueKids.length) {
         const todayStr = localDateString(now)
         const lessonsMap: Record<string, any[]> = {}
@@ -1467,7 +1469,8 @@ function DashboardContent() {
           .eq('organization_id', orgId)
           .eq('attendance_date', todayStr)
           .in('kid_id', uniqueKids.map((k: any) => k.id))
-        setTodayAttendance(new Set((attData || []).filter((a: any) => a.status !== 'no_school').map((a: any) => a.kid_id)))
+        const presentStatuses = new Set(['full_day', 'half_day'])
+        setTodayAttendance(new Set((attData || []).filter((a: any) => presentStatuses.has(a.status)).map((a: any) => a.kid_id)))
       }
 
       setLoading(false)

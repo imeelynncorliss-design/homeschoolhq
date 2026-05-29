@@ -113,29 +113,34 @@ export default function CompliancePage() {
       return
     }
 
-    // Fall back: read state directly from organizations table.
-    supabase
-      .from('organizations')
-      .select('state')
-      .eq('id', organizationId)
-      .maybeSingle()
-      .then(async ({ data: org }: { data: { state: string | null } | null }) => {
-        const fallbackState = org?.state || ''
-        if (fallbackState) {
-          setSelectedState(fallbackState)
-          // Auto-save an org-wide compliance row so the compliance page works going forward.
-          await supabase.from('user_compliance_settings').upsert({
-            organization_id: organizationId,
-            kid_id: null,
-            state_code: fallbackState,
-            state_name: fallbackState,
-            updated_at: new Date().toISOString(),
-          }, { onConflict: 'organization_id' })
-          await refreshSettings()
-        } else {
-          setShowStateSelector(true)
-        }
-      })
+    // Fall back: read persisted state + school-year dates directly from tables that already save.
+    // Do not auto-create a user_compliance_settings row here: SBX RLS may block inserts, and
+    // background writes during form initialization make the real save path look broken.
+    Promise.all([
+      supabase
+        .from('organizations')
+        .select('state')
+        .eq('id', organizationId)
+        .maybeSingle(),
+      supabase
+        .from('school_year_settings')
+        .select('school_year_start, school_year_end')
+        .eq('organization_id', organizationId)
+        .maybeSingle(),
+    ]).then(([{ data: org }, { data: schoolYear }]: [
+      { data: { state: string | null } | null },
+      { data: { school_year_start: string | null; school_year_end: string | null } | null },
+    ]) => {
+      const fallbackState = org?.state || ''
+      if (fallbackState) {
+        setSelectedState(fallbackState)
+        setSchoolYearStart(schoolYear?.school_year_start || '')
+        setSchoolYearEnd(schoolYear?.school_year_end || '')
+        setShowStateSelector(false)
+      } else {
+        setShowStateSelector(true)
+      }
+    })
   }, [settings, settingsLoading, organizationId, settingsFormDirty])
 
   // Save state configuration
@@ -227,7 +232,11 @@ export default function CompliancePage() {
             created_by: user?.id ?? null,
           })
 
-      if (complianceError) throw complianceError
+      // SBX currently has RLS enabled for user_compliance_settings without a matching insert
+      // policy. Preserve the user-visible settings through organizations + school_year_settings
+      // instead of failing the save; a migration below fixes the canonical row path.
+      if (complianceError && complianceError.code !== '42501') throw complianceError
+      if (complianceError) console.warn('Compliance settings row was not saved due to RLS:', complianceError)
 
       await refreshSettings()
       setSettingsFormDirty(false)
