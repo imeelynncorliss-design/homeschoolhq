@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { supabase } from '@/src/lib/supabase'
 
 interface DayDetailsProps {
@@ -48,6 +49,11 @@ export default function DayDetails({ date, onClose, userId, organizationId, onEd
   const [activities, setActivities] = useState<DayActivity[]>([])
   const [loading, setLoading] = useState(true)
   const [updatingLesson, setUpdatingLesson] = useState<string | null>(null)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     loadDayActivities()
@@ -192,9 +198,11 @@ export default function DayDetails({ date, onClose, userId, organizationId, onEd
     day: 'numeric'
   })
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black bg-opacity-50 px-4 py-4 sm:py-6">
-      <div className="w-full max-w-2xl max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-3rem)] flex flex-col rounded-xl bg-white shadow-2xl">
+  if (!mounted) return null
+
+  const modal = (
+    <div className="fixed inset-0 z-[9999] overflow-y-auto bg-black bg-opacity-50 px-4 py-4 sm:py-6">
+      <div className="relative mx-auto flex max-h-[calc(100vh-2rem)] w-[min(calc(100vw-2rem),42rem)] flex-col rounded-xl bg-white shadow-2xl sm:max-h-[calc(100vh-3rem)]">
 
         {/* Header */}
         <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4 rounded-t-xl flex-shrink-0">
@@ -391,4 +399,6 @@ export default function DayDetails({ date, onClose, userId, organizationId, onEd
       </div>
     </div>
   )
+
+  return createPortal(modal, document.body)
 }
