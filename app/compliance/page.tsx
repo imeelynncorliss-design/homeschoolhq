@@ -60,6 +60,7 @@ export default function CompliancePage() {
   const [schoolYearEnd, setSchoolYearEnd] = useState<string>('')
   const [saving, setSaving] = useState(false)
   const [settingsLoadedOnce, setSettingsLoadedOnce] = useState(false)
+  const [settingsFormDirty, setSettingsFormDirty] = useState(false)
 
   // Get organization ID and kids
   useEffect(() => {
@@ -100,43 +101,42 @@ export default function CompliancePage() {
     }
   }, [settingsLoading, settingsLoadedOnce])
 
-  // Load settings and set state — fall back to organizations.state if compliance settings missing
+  // Load persisted settings into the form without overwriting in-progress edits.
   useEffect(() => {
-    if (!settingsLoading && organizationId) {
-      if (settings && settings.state_code) {
-        setSelectedState(settings.state_code)
-        setSchoolYearStart(settings.school_year_start_date || '')
-        setSchoolYearEnd(settings.school_year_end_date || '')
-        setShowStateSelector(false)
-      } else {
-        // Fall back: read state directly from organizations table
-        supabase
-          .from('organizations')
-          .select('state')
-          .eq('id', organizationId)
-          .maybeSingle()
-          .then(async ({ data: org }: { data: { state: string | null } | null }) => {
-            const fallbackState = org?.state || ''
-            if (fallbackState) {
-              setSelectedState(fallbackState)
-              // Auto-save an org-wide compliance row so the compliance page works going forward.
-              if (organizationId) {
-                await supabase.from('user_compliance_settings').upsert({
-                  organization_id: organizationId,
-                  kid_id: null,
-                  state_code: fallbackState,
-                  state_name: fallbackState,
-                  updated_at: new Date().toISOString(),
-                }, { onConflict: 'organization_id' })
-                await refreshSettings()
-              }
-            } else {
-              setShowStateSelector(true)
-            }
-          })
-      }
+    if (settingsLoading || !organizationId || settingsFormDirty) return
+
+    if (settings && settings.state_code) {
+      setSelectedState(settings.state_code)
+      setSchoolYearStart(settings.school_year_start_date || '')
+      setSchoolYearEnd(settings.school_year_end_date || '')
+      setShowStateSelector(false)
+      return
     }
-  }, [settings, settingsLoading, organizationId])
+
+    // Fall back: read state directly from organizations table.
+    supabase
+      .from('organizations')
+      .select('state')
+      .eq('id', organizationId)
+      .maybeSingle()
+      .then(async ({ data: org }: { data: { state: string | null } | null }) => {
+        const fallbackState = org?.state || ''
+        if (fallbackState) {
+          setSelectedState(fallbackState)
+          // Auto-save an org-wide compliance row so the compliance page works going forward.
+          await supabase.from('user_compliance_settings').upsert({
+            organization_id: organizationId,
+            kid_id: null,
+            state_code: fallbackState,
+            state_name: fallbackState,
+            updated_at: new Date().toISOString(),
+          }, { onConflict: 'organization_id' })
+          await refreshSettings()
+        } else {
+          setShowStateSelector(true)
+        }
+      })
+  }, [settings, settingsLoading, organizationId, settingsFormDirty])
 
   // Save state configuration
   async function handleSaveState() {
@@ -201,6 +201,7 @@ export default function CompliancePage() {
       if (complianceError) throw complianceError
 
       await refreshSettings()
+      setSettingsFormDirty(false)
       setShowStateSelector(false)
       alert('✅ State settings saved!')
     } catch (err) {
@@ -411,7 +412,10 @@ export default function CompliancePage() {
           </div>
           {settings && (
             <button
-              onClick={() => setShowStateSelector(false)}
+              onClick={() => {
+                setSettingsFormDirty(false)
+                setShowStateSelector(false)
+              }}
               style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: '#9ca3af', padding: 4, lineHeight: 1 }}
             >
               ✕
@@ -425,7 +429,10 @@ export default function CompliancePage() {
             <label style={{ display: 'block', fontSize: 12, fontWeight: 800, color: '#4c1d95', letterSpacing: 0.5, marginBottom: 6 }}>YOUR STATE</label>
             <select
               value={selectedState}
-              onChange={(e) => setSelectedState(e.target.value)}
+              onChange={(e) => {
+                setSettingsFormDirty(true)
+                setSelectedState(e.target.value)
+              }}
               style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #d1d5db', borderRadius: 10, fontSize: 14, fontWeight: 600, color: '#1a1a2e', fontFamily: "'Nunito', sans-serif", boxSizing: 'border-box' }}
             >
               <option value="">Select your state...</option>
@@ -465,7 +472,10 @@ export default function CompliancePage() {
               <input
                 type="date"
                 value={schoolYearStart}
-                onChange={(e) => setSchoolYearStart(e.target.value)}
+                onChange={(e) => {
+                  setSettingsFormDirty(true)
+                  setSchoolYearStart(e.target.value)
+                }}
                 style={{ width: '100%', padding: '10px 10px', border: '1.5px solid #d1d5db', borderRadius: 10, fontSize: 13, fontWeight: 600, color: '#1a1a2e', fontFamily: "'Nunito', sans-serif", boxSizing: 'border-box' }}
               />
             </div>
@@ -474,7 +484,10 @@ export default function CompliancePage() {
               <input
                 type="date"
                 value={schoolYearEnd}
-                onChange={(e) => setSchoolYearEnd(e.target.value)}
+                onChange={(e) => {
+                  setSettingsFormDirty(true)
+                  setSchoolYearEnd(e.target.value)
+                }}
                 style={{ width: '100%', padding: '10px 10px', border: '1.5px solid #d1d5db', borderRadius: 10, fontSize: 13, fontWeight: 600, color: '#1a1a2e', fontFamily: "'Nunito', sans-serif", boxSizing: 'border-box' }}
               />
             </div>
@@ -491,7 +504,10 @@ export default function CompliancePage() {
           <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
             {settings && (
               <button
-                onClick={() => setShowStateSelector(false)}
+                onClick={() => {
+                  setSettingsFormDirty(false)
+                  setShowStateSelector(false)
+                }}
                 style={{ flex: 1, padding: '12px 0', borderRadius: 12, border: '1.5px solid #e5e7eb', background: '#f9fafb', color: '#374151', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}
               >
                 Cancel
@@ -550,6 +566,8 @@ export default function CompliancePage() {
         <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'flex-end' }}>
           <button
             onClick={() => {
+              setSettingsFormDirty(false)
+              setSelectedState(settings?.state_code || '')
               setSchoolYearStart(settings?.school_year_start_date || '')
               setSchoolYearEnd(settings?.school_year_end_date || '')
               setShowStateSelector(true)

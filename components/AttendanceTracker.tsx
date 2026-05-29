@@ -111,6 +111,7 @@ export default function AttendanceTracker({ kids, organizationId, userId }: Atte
   const [calendarMonth, setCalendarMonth] = useState(new Date().getMonth())
   const [dismissedSuggestions, setDismissedSuggestions] = useState<Set<string>>(new Set())
   const [attendanceMarkedToday, setAttendanceMarkedToday] = useState(false)
+  const [todayDate, setTodayDate] = useState(formatLocalDate(new Date()))
   const [selectedDate, setSelectedDate] = useState<string | null>(null)  
   const [requiredDays, setRequiredDays] = useState(180)
   const [schoolYearStart, setSchoolYearStart] = useState<string>('')
@@ -147,8 +148,15 @@ useEffect(() => {
 }, [organizationId, userId])
 
   useEffect(() => {
+    const updateToday = () => setTodayDate(formatLocalDate(new Date()))
+    updateToday()
+    const interval = window.setInterval(updateToday, 60_000)
+    return () => window.clearInterval(interval)
+  }, [])
+
+  useEffect(() => {
     checkTodaysAttendance()
-  }, [manualAttendance]) 
+  }, [manualAttendance, selectedKid, todayDate])
 
   useEffect(() => {
     groupByMonth()
@@ -208,8 +216,11 @@ useEffect(() => {
   }
 
   function checkTodaysAttendance() {
-    const today = new Date().toLocaleDateString('en-CA')
-    const todayAttendance = manualAttendance.some(a => a.attendance_date === today)
+    const todayAttendance = manualAttendance.some(a => {
+      const matchesDate = a.attendance_date === todayDate
+      const matchesKid = selectedKid === 'all' || a.kid_id === selectedKid
+      return matchesDate && matchesKid
+    })
     setAttendanceMarkedToday(todayAttendance)
   }
 
@@ -839,7 +850,7 @@ useEffect(() => {
           </button>
           <button
             onClick={() => {
-              setMarkingDate(new Date().toLocaleDateString('en-CA'))
+              setMarkingDate(todayDate)
               setShowMarkModal(true)
             }}
             className="px-4 py-2 text-white rounded-lg font-medium"
