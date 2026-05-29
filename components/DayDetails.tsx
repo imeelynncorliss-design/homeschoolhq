@@ -234,7 +234,7 @@ export default function DayDetails({ date, onClose, userId, organizationId, onEd
 
         {/* Body */}
         <div className="overflow-y-auto flex-1 p-4 space-y-3">
-          {missingAttendance && onMarkAttendance && (
+          {missingAttendance && !attendance && onMarkAttendance && (
             <div className="rounded-lg border border-amber-300 bg-amber-50 p-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>

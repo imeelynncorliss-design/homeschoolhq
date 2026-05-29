@@ -138,7 +138,7 @@ export default function CalendarView({
   function getDayBorder(day: CalendarDay | null) {
     if (!day) return 'border-gray-200'
     if (day.isToday) return 'border-2 border-blue-500'
-    if (day.isMissingAttendance) return 'border-2 border-amber-400'
+    if (!day.manualAttendance && day.isMissingAttendance) return 'border-2 border-amber-400'
     return 'border border-gray-200'
   }
 
@@ -299,7 +299,7 @@ export default function CalendarView({
                     </div>
                   )}
 
-                  {day.isCurrentMonth && filters.showLessons && day.isMissingAttendance && (
+                  {day.isCurrentMonth && filters.showLessons && !day.manualAttendance && day.isMissingAttendance && (
                     <div className="mt-0.5 inline-flex items-center rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold text-amber-800">
                       Missing
                     </div>
