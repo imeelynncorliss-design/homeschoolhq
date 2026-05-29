@@ -1465,12 +1465,12 @@ function DashboardContent() {
         // Fetch today's attendance
         const { data: attData } = await supabase
           .from('daily_attendance')
-          .select('kid_id, status')
+          .select('kid_id, status, auto_generated')
           .eq('organization_id', orgId)
           .eq('attendance_date', todayStr)
           .in('kid_id', uniqueKids.map((k: any) => k.id))
         const presentStatuses = new Set(['full_day', 'half_day'])
-        setTodayAttendance(new Set((attData || []).filter((a: any) => presentStatuses.has(a.status)).map((a: any) => a.kid_id)))
+        setTodayAttendance(new Set((attData || []).filter((a: any) => presentStatuses.has(a.status) && a.auto_generated !== true).map((a: any) => a.kid_id)))
       }
 
       setLoading(false)
@@ -1515,7 +1515,7 @@ function DashboardContent() {
     const todayStr = localDateString()
     try {
       const { error } = await supabase.from('daily_attendance').upsert(
-        { organization_id: organizationId, kid_id: kidId, user_id: user.id, attendance_date: todayStr, status: 'full_day', hours: 6 },
+        { organization_id: organizationId, kid_id: kidId, user_id: user.id, attendance_date: todayStr, status: 'full_day', hours: 6, auto_generated: false },
         { onConflict: 'organization_id,kid_id,attendance_date' }
       )
       if (error) throw error
