@@ -162,10 +162,11 @@ useEffect(() => {
       try {
         const { data: complianceData } = await supabase
           .from('user_compliance_settings')
-          .select('annual_days_goal')
+          .select('required_annual_days')
           .eq('organization_id', organizationId)
+          .is('kid_id', null)
           .maybeSingle()
-        if (complianceData?.annual_days_goal) setRequiredDays(complianceData.annual_days_goal)
+        if (complianceData?.required_annual_days) setRequiredDays(complianceData.required_annual_days)
 
         const { data } = await supabase
           .from('school_year_settings')

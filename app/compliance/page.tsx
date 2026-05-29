@@ -119,10 +119,11 @@ export default function CompliancePage() {
             const fallbackState = org?.state || ''
             if (fallbackState) {
               setSelectedState(fallbackState)
-              // Auto-save so compliance page works going forward
+              // Auto-save an org-wide compliance row so the compliance page works going forward.
               if (organizationId) {
                 await supabase.from('user_compliance_settings').upsert({
                   organization_id: organizationId,
+                  kid_id: null,
                   state_code: fallbackState,
                   state_name: fallbackState,
                   updated_at: new Date().toISOString(),
@@ -144,38 +145,60 @@ export default function CompliancePage() {
       return
     }
 
+    if (templatesLoading) {
+      alert('State requirements are still loading. Please try again in a moment.')
+      return
+    }
+
     try {
       setSaving(true)
       
       const template = getTemplate(selectedState)
+      const now = new Date().toISOString()
+      const requiredAnnualDays = template?.required_days ?? settings?.required_annual_days ?? 180
+      const requiredAnnualHours = template?.required_hours ?? settings?.required_annual_hours ?? 0
       
       const settingsData = {
         organization_id: organizationId,
+        kid_id: null,
         state_code: selectedState,
         state_name: template?.state_name || selectedState,
         school_year_start_date: schoolYearStart,
         school_year_end_date: schoolYearEnd,
-        required_annual_days: template?.required_days || 0,
-        required_annual_hours: template?.required_hours || 0,
-        template_source: 'state_template',
+        required_annual_days: requiredAnnualDays,
+        required_annual_hours: requiredAnnualHours,
+        template_source: template?.status === 'active' ? 'state_template' : 'state_compliance_basic',
+        updated_at: now,
       }
 
-      // Keep organizations.state in sync so profile reflects the same state
-      await supabase
+      // Keep organizations.state in sync so profile reflects the same state.
+      const { error: organizationError } = await supabase
         .from('organizations')
         .update({ state: selectedState })
         .eq('id', organizationId)
 
-      if (settings?.id) {
-        await supabase
-          .from('user_compliance_settings')
-          .update(settingsData)
-          .eq('id', settings.id)
-      } else {
-        await supabase
-          .from('user_compliance_settings')
-          .insert(settingsData)
-      }
+      if (organizationError) throw organizationError
+
+      // Keep AttendanceTracker and calendar views on the same school-year range.
+      const { error: schoolYearError } = await supabase
+        .from('school_year_settings')
+        .upsert({
+          organization_id: organizationId,
+          school_year_start: schoolYearStart,
+          school_year_end: schoolYearEnd,
+          annual_goal_type: requiredAnnualHours > 0 ? 'hours' : 'days',
+          annual_goal_value: requiredAnnualHours > 0 ? requiredAnnualHours : requiredAnnualDays,
+          updated_at: now,
+        }, { onConflict: 'organization_id' })
+
+      if (schoolYearError) throw schoolYearError
+
+      // Store one canonical org-wide compliance row; avoid selecting stale kid-specific rows.
+      const { error: complianceError } = await supabase
+        .from('user_compliance_settings')
+        .upsert(settingsData, { onConflict: 'organization_id' })
+
+      if (complianceError) throw complianceError
 
       await refreshSettings()
       setShowStateSelector(false)

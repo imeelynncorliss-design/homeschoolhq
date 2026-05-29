@@ -5,7 +5,9 @@ import { getOrganizationId } from '@/src/lib/getOrganizationId'
 export interface ComplianceSettings {
   id: string
   organization_id: string
+  kid_id: string | null
   state_code: string | null
+  state_name: string | null
   required_annual_days: number
   required_annual_hours: number
   school_year_start_date: string | null
@@ -68,6 +70,7 @@ export function useComplianceSettings(): UseComplianceSettingsReturn {
         .from('user_compliance_settings')
         .select('*')
         .eq('organization_id', organizationId)
+        .is('kid_id', null)
         .order('updated_at', { ascending: false })
         .limit(1)
         .maybeSingle()

@@ -89,12 +89,13 @@ export default function ProgressDashboard({ userId, organizationId }: ProgressDa
       // Compliance goal override
       const { data: complianceData } = await supabase
         .from('user_compliance_settings')
-        .select('annual_days_goal')
+        .select('required_annual_days')
         .eq('organization_id', organizationId)
+        .is('kid_id', null)
         .maybeSingle()
 
-      if (complianceData?.annual_days_goal) {
-        setRequiredDays(complianceData.annual_days_goal)
+      if (complianceData?.required_annual_days) {
+        setRequiredDays(complianceData.required_annual_days)
       } else if (settingsData?.annual_goal_value) {
         setRequiredDays(settingsData.annual_goal_value)
       }

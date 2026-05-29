@@ -100,7 +100,15 @@ export default function SchoolYearConfig({ userId }: SchoolYearConfigProps) {
 
   const loadConfig = async () => {
     if (!organizationId) return
-    const { data } = await supabase.from('school_year_settings').select('*').eq('organization_id', organizationId).single()
+    const [{ data }, { data: compliance }] = await Promise.all([
+      supabase.from('school_year_settings').select('*').eq('organization_id', organizationId).single(),
+      supabase
+        .from('user_compliance_settings')
+        .select('state_code, state_name, required_annual_days, required_annual_hours, notes')
+        .eq('organization_id', organizationId)
+        .is('kid_id', null)
+        .maybeSingle(),
+    ])
     if (data) {
       setConfig({
         school_year_start: data.school_year_start || '',
@@ -109,9 +117,17 @@ export default function SchoolYearConfig({ userId }: SchoolYearConfigProps) {
         annual_goal_value: data.annual_goal_value || 180,
         weekly_goal_hours: data.weekly_goal_hours || 25,
       })
-      if (data.selected_state) { setSelectedState(data.selected_state); setShowCustomFields(data.selected_state === 'CUSTOM') }
-      if (data.custom_required_days || data.custom_required_hours || data.custom_compliance_notes || data.custom_state_name) {
-        setCustomCompliance({ stateName: data.custom_state_name || '', days: data.custom_required_days?.toString() || '', hours: data.custom_required_hours?.toString() || '', notes: data.custom_compliance_notes || '' })
+    }
+    if (compliance?.state_code) {
+      setSelectedState(compliance.state_code)
+      setShowCustomFields(compliance.state_code === 'CUSTOM')
+      if (compliance.state_code === 'CUSTOM') {
+        setCustomCompliance({
+          stateName: compliance.state_name || '',
+          days: compliance.required_annual_days?.toString() || '',
+          hours: compliance.required_annual_hours?.toString() || '',
+          notes: compliance.notes || '',
+        })
       }
     }
     setLoading(false)
@@ -123,11 +139,6 @@ export default function SchoolYearConfig({ userId }: SchoolYearConfigProps) {
     const { data: existing } = await supabase.from('school_year_settings').select('id').eq('organization_id', organizationId).single()
     const dataToSave = {
       ...config,
-      selected_state: selectedState,
-      custom_state_name: showCustomFields ? customCompliance.stateName : null,
-      custom_required_days: showCustomFields && customCompliance.days ? parseInt(customCompliance.days) : null,
-      custom_required_hours: showCustomFields && customCompliance.hours ? parseInt(customCompliance.hours) : null,
-      custom_compliance_notes: showCustomFields ? customCompliance.notes : null,
       organization_id: organizationId,
       user_id: userId,
     }
@@ -137,8 +148,35 @@ export default function SchoolYearConfig({ userId }: SchoolYearConfigProps) {
     } else {
       result = await supabase.from('school_year_settings').insert([dataToSave])
     }
+
+    const requiredDays = showCustomFields && customCompliance.days
+      ? parseInt(customCompliance.days)
+      : stateRequirements?.required_days ?? (config.annual_goal_type === 'lessons' ? config.annual_goal_value : 180)
+    const requiredHours = showCustomFields && customCompliance.hours
+      ? parseInt(customCompliance.hours)
+      : stateRequirements?.required_hours ?? (config.annual_goal_type === 'hours' ? config.annual_goal_value : 0)
+    const now = new Date().toISOString()
+
+    const [{ error: orgError }, { error: complianceError }] = await Promise.all([
+      supabase.from('organizations').update({ state: selectedState || null, updated_at: now }).eq('id', organizationId),
+      supabase.from('user_compliance_settings').upsert({
+        organization_id: organizationId,
+        kid_id: null,
+        state_code: selectedState || null,
+        state_name: showCustomFields ? customCompliance.stateName : ((stateRequirements?.state_name ?? selectedState) || null),
+        school_year_start_date: config.school_year_start,
+        school_year_end_date: config.school_year_end || null,
+        required_annual_days: requiredDays,
+        required_annual_hours: requiredHours,
+        notes: showCustomFields ? customCompliance.notes : null,
+        template_source: showCustomFields ? 'custom' : 'state_template',
+        updated_at: now,
+      }, { onConflict: 'organization_id' }),
+    ])
+
     setSaving(false)
-    if (result.error) { alert(`Error saving: ${result.error.message}`) }
+    const error = result.error || orgError || complianceError
+    if (error) { alert(`Error saving: ${error.message}`) }
     else { alert('Settings saved successfully!'); loadConfig() }
   }
 
