@@ -155,6 +155,7 @@ export default function CompliancePage() {
       
       const template = getTemplate(selectedState)
       const now = new Date().toISOString()
+      const { data: { user } } = await supabase.auth.getUser()
       const requiredAnnualDays = template?.required_days ?? settings?.required_annual_days ?? 180
       const requiredAnnualHours = template?.required_hours ?? settings?.required_annual_hours ?? 0
       
@@ -180,23 +181,46 @@ export default function CompliancePage() {
       if (organizationError) throw organizationError
 
       // Keep AttendanceTracker and calendar views on the same school-year range.
-      const { error: schoolYearError } = await supabase
+      // Use explicit update-or-insert instead of upsert/onConflict so this works even if SBX lacks
+      // an organization_id unique constraint.
+      const schoolYearData = {
+        organization_id: organizationId,
+        user_id: user?.id ?? null,
+        school_year_start: schoolYearStart,
+        school_year_end: schoolYearEnd,
+        annual_goal_type: requiredAnnualHours > 0 ? 'hours' : 'days',
+        annual_goal_value: requiredAnnualHours > 0 ? requiredAnnualHours : requiredAnnualDays,
+        updated_at: now,
+      }
+      const { data: existingSchoolYear, error: existingSchoolYearError } = await supabase
         .from('school_year_settings')
-        .upsert({
-          organization_id: organizationId,
-          school_year_start: schoolYearStart,
-          school_year_end: schoolYearEnd,
-          annual_goal_type: requiredAnnualHours > 0 ? 'hours' : 'days',
-          annual_goal_value: requiredAnnualHours > 0 ? requiredAnnualHours : requiredAnnualDays,
-          updated_at: now,
-        }, { onConflict: 'organization_id' })
+        .select('id')
+        .eq('organization_id', organizationId)
+        .maybeSingle()
+
+      if (existingSchoolYearError) throw existingSchoolYearError
+
+      const { error: schoolYearError } = existingSchoolYear?.id
+        ? await supabase.from('school_year_settings').update(schoolYearData).eq('id', existingSchoolYear.id)
+        : await supabase.from('school_year_settings').insert(schoolYearData)
 
       if (schoolYearError) throw schoolYearError
 
       // Store one canonical org-wide compliance row; avoid selecting stale kid-specific rows.
-      const { error: complianceError } = await supabase
+      // Use explicit update-or-insert instead of upsert/onConflict so this works even if SBX lacks
+      // an organization_id unique constraint.
+      const { data: existingCompliance, error: existingComplianceError } = await supabase
         .from('user_compliance_settings')
-        .upsert(settingsData, { onConflict: 'organization_id' })
+        .select('id')
+        .eq('organization_id', organizationId)
+        .is('kid_id', null)
+        .maybeSingle()
+
+      if (existingComplianceError) throw existingComplianceError
+
+      const { error: complianceError } = existingCompliance?.id
+        ? await supabase.from('user_compliance_settings').update(settingsData).eq('id', existingCompliance.id)
+        : await supabase.from('user_compliance_settings').insert(settingsData)
 
       if (complianceError) throw complianceError
 

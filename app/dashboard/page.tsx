@@ -1232,6 +1232,7 @@ function DashboardContent() {
   const [weekLessons, setWeekLessons]           = useState<Record<string, { lesson: any; kid: Kid }[]>>({})
   const [weeklyMaterialsCount, setWeeklyMaterialsCount] = useState(0)
   const [todayAttendance, setTodayAttendance] = useState<Set<string>>(new Set()) // kid IDs marked present today
+  const [todayKey, setTodayKey] = useState(localDateString())
   const [attendanceSaving, setAttendanceSaving] = useState<Set<string>>(new Set())
 
   const now         = new Date()
@@ -1246,6 +1247,19 @@ function DashboardContent() {
     if (preview === 'welcome' && !orgTeachingStyle) setOrgTeachingStyle('traditional')
     if (preview === 'curriculum') setShowCurriculumNudge(true)
   }, [searchParams])
+
+  useEffect(() => {
+    const updateToday = () => setTodayKey(localDateString())
+    updateToday()
+    const interval = window.setInterval(updateToday, 60_000)
+    window.addEventListener('focus', updateToday)
+    document.addEventListener('visibilitychange', updateToday)
+    return () => {
+      window.clearInterval(interval)
+      window.removeEventListener('focus', updateToday)
+      document.removeEventListener('visibilitychange', updateToday)
+    }
+  }, [])
 
   useEffect(() => {
     const load = async () => {
@@ -1459,7 +1473,7 @@ function DashboardContent() {
       setLoading(false)
     }
     load()
-  }, [])
+  }, [todayKey])
 
   // Refresh week lessons from DB — called when user opens the This Week view
   const refreshWeekLessons = async () => {
