@@ -672,7 +672,8 @@ useEffect(() => {
             status,
             hours,
             notes: notes || null,
-            auto_generated: false
+            auto_generated: false,
+            user_id: userId
           })
           .eq('id', existing.id)
           .select();
@@ -685,6 +686,7 @@ useEffect(() => {
             organization_id: organizationId,
             attendance_date: date,
             kid_id: kidId,
+            user_id: userId,
             status,
             hours,
             notes: notes || null,
@@ -717,6 +719,7 @@ useEffect(() => {
         organization_id: organizationId,
         attendance_date: date,
         kid_id: selectedKid !== 'all' ? selectedKid : null,
+        user_id: userId,
         status,
         hours,
         auto_generated: true
@@ -1264,6 +1267,7 @@ useEffect(() => {
           organizationId={organizationId}
           schoolYearStart={schoolYearStart || undefined}
           existingDates={manualAttendance.map(a => a.attendance_date)}
+          userId={userId}
           onClose={() => setShowBackfill(false)}
           onComplete={() => { setShowBackfill(false); loadData() }}
         />

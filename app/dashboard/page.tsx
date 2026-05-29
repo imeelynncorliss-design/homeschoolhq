@@ -1489,15 +1489,22 @@ function DashboardContent() {
   }
 
   const markAttendanceToday = async (kidId: string) => {
-    if (!organizationId) return
+    if (!organizationId || !user?.id) return
     setAttendanceSaving(prev => new Set(prev).add(kidId))
     const todayStr = new Date().toISOString().split('T')[0]
-    await supabase.from('daily_attendance').upsert(
-      { organization_id: organizationId, kid_id: kidId, attendance_date: todayStr, status: 'full_day', hours: 6 },
-      { onConflict: 'organization_id,kid_id,attendance_date' }
-    )
-    setTodayAttendance(prev => new Set(prev).add(kidId))
-    setAttendanceSaving(prev => { const n = new Set(prev); n.delete(kidId); return n })
+    try {
+      const { error } = await supabase.from('daily_attendance').upsert(
+        { organization_id: organizationId, kid_id: kidId, user_id: user.id, attendance_date: todayStr, status: 'full_day', hours: 6 },
+        { onConflict: 'organization_id,kid_id,attendance_date' }
+      )
+      if (error) throw error
+      setTodayAttendance(prev => new Set(prev).add(kidId))
+    } catch (error) {
+      console.error('Error marking attendance:', error)
+      alert('Failed to save attendance. Please try again.')
+    } finally {
+      setAttendanceSaving(prev => { const n = new Set(prev); n.delete(kidId); return n })
+    }
   }
 
   // Dispatch Scout nudge once data is loaded
