@@ -2,14 +2,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+function getSupabaseAdmin() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error('Missing Supabase admin environment variables');
+  }
+
+  return createClient(supabaseUrl, serviceRoleKey);
+}
 
 // GET - Fetch template standards
 export async function GET(request: NextRequest) {
   try {
+    const supabaseAdmin = getSupabaseAdmin();
     const searchParams = request.nextUrl.searchParams;
     const stateCode = searchParams.get('state_code');
     const subject = searchParams.get('subject');
@@ -53,6 +60,7 @@ export async function GET(request: NextRequest) {
 // POST - Copy template to user_standards
 export async function POST(request: NextRequest) {
   try {
+    const supabaseAdmin = getSupabaseAdmin();
     // Get user's organization
     const authHeader = request.headers.get('authorization');
     if (!authHeader) {

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { supabase } from '@/src/lib/supabase'
 
 interface DayDetailsProps {
@@ -8,7 +9,16 @@ interface DayDetailsProps {
   onClose: () => void
   userId: string
   organizationId: string
-  onEditLesson?: (lesson: any) => void 
+  onEditLesson?: (lesson: any) => void
+  attendance?: {
+    status: 'full_day' | 'half_day' | 'no_school'
+    hours: number
+    notes?: string | null
+  }
+  missingAttendance?: boolean
+  suggestedStatus?: 'full_day' | 'half_day'
+  suggestedHours?: number
+  onMarkAttendance?: (date: string, defaultHours?: number) => void
 }
 
 interface LessonActivity {
@@ -35,10 +45,15 @@ interface OtherActivity {
 
 type DayActivity = LessonActivity | OtherActivity
 
-export default function DayDetails({ date, onClose, userId, organizationId, onEditLesson }: DayDetailsProps) {
+export default function DayDetails({ date, onClose, userId, organizationId, onEditLesson, attendance, missingAttendance, suggestedStatus, suggestedHours, onMarkAttendance }: DayDetailsProps) {
   const [activities, setActivities] = useState<DayActivity[]>([])
   const [loading, setLoading] = useState(true)
   const [updatingLesson, setUpdatingLesson] = useState<string | null>(null)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     loadDayActivities()
@@ -183,9 +198,11 @@ export default function DayDetails({ date, onClose, userId, organizationId, onEd
     day: 'numeric'
   })
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4 pt-4 pb-24">
-      <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[85vh] flex flex-col">
+  if (!mounted) return null
+
+  const modal = (
+    <div className="fixed inset-0 z-[9999] overflow-y-auto bg-black bg-opacity-50 px-4 py-4 sm:py-6">
+      <div className="relative mx-auto flex max-h-[calc(100vh-2rem)] w-[min(calc(100vw-2rem),42rem)] flex-col rounded-xl bg-white shadow-2xl sm:max-h-[calc(100vh-3rem)]">
 
         {/* Header */}
         <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4 rounded-t-xl flex-shrink-0">
@@ -217,6 +234,32 @@ export default function DayDetails({ date, onClose, userId, organizationId, onEd
 
         {/* Body */}
         <div className="overflow-y-auto flex-1 p-4 space-y-3">
+          {missingAttendance && !attendance && onMarkAttendance && (
+            <div className="rounded-lg border border-amber-300 bg-amber-50 p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <p className="text-sm font-bold text-amber-900">Attendance missing for this lesson day</p>
+                  <p className="mt-1 text-sm text-amber-800">
+                    Lessons are planned here, but no attendance has been recorded yet. Suggested: {suggestedStatus === 'half_day' ? 'Half Day' : 'Full Day'} ({suggestedHours ?? 4}h).
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onMarkAttendance(date, suggestedHours)}
+                  className="whitespace-nowrap rounded-lg bg-amber-600 px-3 py-2 text-sm font-semibold text-white hover:bg-amber-700"
+                >
+                  Mark attendance
+                </button>
+              </div>
+            </div>
+          )}
+
+          {attendance && (
+            <div className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-800">
+              ✅ Attendance recorded: {attendance.status === 'full_day' ? 'Full Day' : attendance.status === 'half_day' ? 'Half Day' : 'No School'} · {attendance.hours}h
+            </div>
+          )}
+
           {loading ? (
             <div className="text-center py-12 text-gray-400">Loading...</div>
           ) : activities.length === 0 ? (
@@ -356,4 +399,6 @@ export default function DayDetails({ date, onClose, userId, organizationId, onEd
       </div>
     </div>
   )
+
+  return createPortal(modal, document.body)
 }

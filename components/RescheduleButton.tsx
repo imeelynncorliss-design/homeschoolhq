@@ -58,7 +58,7 @@ export default function RescheduleButton({
             .eq('organization_id', orgId)
 
           if (vacations && mounted) {
-            const holidays: Holiday[] = vacations.map(v => ({
+            const holidays: Holiday[] = vacations.map((v: { name: string; start_date: string; end_date: string }) => ({
               name: v.name,
               start: v.start_date,
               end: v.end_date,

@@ -52,7 +52,8 @@ export function useStateComplianceTemplates() {
         }
 
         // Merge: prefer detailed template when available, otherwise use basic data
-        const merged: StateComplianceTemplate[] = (basicData || []).map(b => {
+        const merged: StateComplianceTemplate[] = (basicData || []).map((b: Partial<StateComplianceTemplate> & { state_code: string; state_name: string }) => {
+          const requiredHours = b.required_hours ?? 0
           const detail = detailMap.get(b.state_code)
           if (detail) {
             return { ...detail, status: 'active' } as StateComplianceTemplate
@@ -62,9 +63,9 @@ export function useStateComplianceTemplates() {
             state_name: b.state_name,
             status: 'basic',
             required_days: b.required_days ?? 180,
-            required_hours: b.required_hours ?? 0,
+            required_hours: requiredHours,
             day_requirement_type: 'required' as const,
-            hour_requirement_type: b.required_hours > 0 ? 'required' as const : 'none' as const,
+            hour_requirement_type: requiredHours > 0 ? 'required' as const : 'none' as const,
             hours_by_grade_level: null,
             required_subjects: null,
             parental_qualifications: null,

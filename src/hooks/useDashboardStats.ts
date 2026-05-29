@@ -190,7 +190,8 @@ export function useDashboardStats(organizationId: string | null): DashboardStats
       .from("user_compliance_settings")
       .select("state_code, required_annual_days")
       .eq("organization_id", organizationId)
-      .order("created_at", { ascending: false })
+      .is("kid_id", null)
+      .order("updated_at", { ascending: false })
       .limit(1)
       .maybeSingle();
 

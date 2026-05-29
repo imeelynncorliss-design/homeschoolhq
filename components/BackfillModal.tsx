@@ -7,6 +7,7 @@ interface BackfillModalProps {
   organizationId: string
   schoolYearStart?: string        // e.g. '2025-01-04' — pre-fills the From date
   existingDates: string[]         // dates already in daily_attendance — will be skipped
+  userId: string
   onClose: () => void
   onComplete: () => void          // called after successful save so parent reloads data
 }
@@ -27,6 +28,7 @@ export default function BackfillModal({
   organizationId,
   schoolYearStart,
   existingDates,
+  userId,
   onClose,
   onComplete,
 }: BackfillModalProps) {
@@ -93,6 +95,7 @@ export default function BackfillModal({
           organization_id: organizationId,
           attendance_date: date,
           kid_id: null,
+          user_id: userId,
           status: 'full_day' as const,
           hours: hoursPerDay,
           notes: 'Backfilled',

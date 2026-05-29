@@ -12,9 +12,15 @@ import {
   saveGeneratedActivity,
 } from '@/lib/utils-standards';
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+function getAnthropicClient() {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+
+  if (!apiKey) {
+    throw new Error('Missing ANTHROPIC_API_KEY environment variable');
+  }
+
+  return new Anthropic({ apiKey });
+}
 
 // POST - Generate an activity for a standard
 export async function POST(
@@ -118,6 +124,7 @@ Important:
 Return ONLY the JSON object, no other text.`;
 
     // Call Claude API
+    const anthropic = getAnthropicClient();
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 2000,

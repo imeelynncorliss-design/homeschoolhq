@@ -7,7 +7,7 @@
 
 import { useState, useEffect } from 'react';
 import type { Standard } from '@/src/types/standards'
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@/src/lib/supabase/client'
 
 interface StandardsPickerProps {
   isOpen: boolean;
@@ -30,10 +30,7 @@ export function StandardsPicker({
   multiSelect = true,
   title = 'Select Standards',
 }: StandardsPickerProps) {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+  const supabase = createClient()
   
   // State
   const [standards, setStandards] = useState<Standard[]>([]);

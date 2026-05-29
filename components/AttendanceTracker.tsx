@@ -47,6 +47,9 @@ interface DayData {
   socialEventCount: number
   coopClassCount: number
   manualAttendance?: ManualAttendance
+  isMissingAttendance?: boolean
+  suggestedStatus?: 'full_day' | 'half_day'
+  suggestedHours?: number
   isSchoolDay: boolean
   totalHours: number
   isCurrentMonth?: boolean
@@ -72,6 +75,14 @@ interface SuggestedDay {
 
 type ViewMode = 'list' | 'calendar'
 type TabMode = 'overview' | 'insights' | 'goals'
+
+function formatLocalDate(date: Date): string {
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, '0'),
+    String(date.getDate()).padStart(2, '0'),
+  ].join('-')
+}
 
 export default function AttendanceTracker({ kids, organizationId, userId }: AttendanceTrackerProps) {
   const supabase = useMemo(() => createBrowserClient(
@@ -100,6 +111,7 @@ export default function AttendanceTracker({ kids, organizationId, userId }: Atte
   const [calendarMonth, setCalendarMonth] = useState(new Date().getMonth())
   const [dismissedSuggestions, setDismissedSuggestions] = useState<Set<string>>(new Set())
   const [attendanceMarkedToday, setAttendanceMarkedToday] = useState(false)
+  const [todayDate, setTodayDate] = useState(formatLocalDate(new Date()))
   const [selectedDate, setSelectedDate] = useState<string | null>(null)  
   const [requiredDays, setRequiredDays] = useState(180)
   const [schoolYearStart, setSchoolYearStart] = useState<string>('')
@@ -136,8 +148,15 @@ useEffect(() => {
 }, [organizationId, userId])
 
   useEffect(() => {
+    const updateToday = () => setTodayDate(formatLocalDate(new Date()))
+    updateToday()
+    const interval = window.setInterval(updateToday, 60_000)
+    return () => window.clearInterval(interval)
+  }, [])
+
+  useEffect(() => {
     checkTodaysAttendance()
-  }, [manualAttendance]) 
+  }, [manualAttendance, selectedKid, todayDate])
 
   useEffect(() => {
     groupByMonth()
@@ -151,10 +170,11 @@ useEffect(() => {
       try {
         const { data: complianceData } = await supabase
           .from('user_compliance_settings')
-          .select('annual_days_goal')
+          .select('required_annual_days')
           .eq('organization_id', organizationId)
+          .is('kid_id', null)
           .maybeSingle()
-        if (complianceData?.annual_days_goal) setRequiredDays(complianceData.annual_days_goal)
+        if (complianceData?.required_annual_days) setRequiredDays(complianceData.required_annual_days)
 
         const { data } = await supabase
           .from('school_year_settings')
@@ -196,8 +216,12 @@ useEffect(() => {
   }
 
   function checkTodaysAttendance() {
-    const today = new Date().toLocaleDateString('en-CA')
-    const todayAttendance = manualAttendance.some(a => a.attendance_date === today)
+    const todayAttendance = manualAttendance.some(a => {
+      const matchesDate = a.attendance_date === todayDate
+      const matchesKid = selectedKid === 'all' || a.kid_id === selectedKid
+      const countsAsPresent = (a.status === 'full_day' || a.status === 'half_day') && a.auto_generated !== true
+      return matchesDate && matchesKid && countsAsPresent
+    })
     setAttendanceMarkedToday(todayAttendance)
   }
 
@@ -337,7 +361,7 @@ useEffect(() => {
       let current = new Date(yearStart)
       while (current <= yearEnd) {
         if (current.getDay() === dayOfWeek) {
-          allDates.add(current.toLocaleDateString('en-CA'))
+          allDates.add(formatLocalDate(current))
         }
         current.setDate(current.getDate() + 1)
       }
@@ -356,7 +380,7 @@ useEffect(() => {
       const socialEventCount = socialEvents.filter(e => e.event_date === date).length
 
       // Count co-op classes for this date
-      const dayOfWeek = new Date(date).getDay()
+      const dayOfWeek = parseLocalDate(date).getDay()
       const coopClassCount = coopEnrollments.filter(enrollment => {
         if (!enrollment.coop_classes) return false
         const classDayOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
@@ -550,20 +574,20 @@ useEffect(() => {
 
     const allDates = new Set<string>()
     lessons.forEach(l => {
-      if (l.lesson_date >= startDate.toISOString().split('T')[0] && 
-          l.lesson_date <= endDate.toISOString().split('T')[0]) {
+      if (l.lesson_date >= formatLocalDate(startDate) && 
+          l.lesson_date <= formatLocalDate(endDate)) {
         allDates.add(l.lesson_date)
       }
     })
     manualAttendance.forEach(a => {
-      if (a.attendance_date >= startDate.toISOString().split('T')[0] && 
-          a.attendance_date <= endDate.toISOString().split('T')[0]) {
+      if (a.attendance_date >= formatLocalDate(startDate) && 
+          a.attendance_date <= formatLocalDate(endDate)) {
         allDates.add(a.attendance_date)
       }
     })
     socialEvents.forEach(e => {
-      if (e.event_date >= startDate.toISOString().split('T')[0] && 
-          e.event_date <= endDate.toISOString().split('T')[0]) {
+      if (e.event_date >= formatLocalDate(startDate) && 
+          e.event_date <= formatLocalDate(endDate)) {
         allDates.add(e.event_date)
       }
     })
@@ -577,7 +601,7 @@ useEffect(() => {
       let current = new Date(startDate)
       while (current <= endDate) {
         if (current.getDay() === dayOfWeek) {
-          allDates.add(current.toLocaleDateString('en-CA'))
+          allDates.add(formatLocalDate(current))
         }
         current.setDate(current.getDate() + 1)
       }
@@ -594,7 +618,7 @@ useEffect(() => {
 
       const socialEventCount = socialEvents.filter(e => e.event_date === date).length
 
-      const dayOfWeek = new Date(date).getDay()
+      const dayOfWeek = parseLocalDate(date).getDay()
       const coopClassCount = coopEnrollments.filter(enrollment => {
         if (!enrollment.coop_classes) return false
         const classDayOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
@@ -620,9 +644,13 @@ useEffect(() => {
         totalHours = lessonHours
       }
 
-      const dayDate = new Date(date)
+      const dayDate = parseLocalDate(date)
       const isCurrentMonth = dayDate.getMonth() === calendarMonth && dayDate.getFullYear() === calendarYear
-      const isToday = date === new Date().toLocaleDateString('en-CA')
+      const today = new Date().toLocaleDateString('en-CA')
+      const isToday = date === today
+      const isMissingAttendance = !dateAttendance && lessonHours > 0 && date <= today
+      const suggestedStatus: 'full_day' | 'half_day' = lessonHours >= 3 ? 'full_day' : 'half_day'
+      const suggestedHours = lessonHours >= 3 ? 4 : 2
 
       return {
         date,
@@ -631,6 +659,9 @@ useEffect(() => {
         socialEventCount,
         coopClassCount,
         manualAttendance: dateAttendance,
+        isMissingAttendance,
+        suggestedStatus: isMissingAttendance ? suggestedStatus : undefined,
+        suggestedHours: isMissingAttendance ? suggestedHours : undefined,
         isSchoolDay,
         totalHours,
         isCurrentMonth,
@@ -657,6 +688,12 @@ useEffect(() => {
     setSearchTerm('')
   }
 
+  function openMarkAttendance(date: string, defaultHours?: number) {
+    setMarkingDate(date)
+    setMarkingDefaultHours(defaultHours)
+    setShowMarkModal(true)
+  }
+
   async function markAttendance(date: string, status: 'full_day' | 'half_day' | 'no_school', hours: number, notes: string, kidId: string | null) {
     try {
       
@@ -672,7 +709,8 @@ useEffect(() => {
             status,
             hours,
             notes: notes || null,
-            auto_generated: false
+            auto_generated: false,
+            user_id: userId
           })
           .eq('id', existing.id)
           .select();
@@ -685,6 +723,7 @@ useEffect(() => {
             organization_id: organizationId,
             attendance_date: date,
             kid_id: kidId,
+            user_id: userId,
             status,
             hours,
             notes: notes || null,
@@ -717,6 +756,7 @@ useEffect(() => {
         organization_id: organizationId,
         attendance_date: date,
         kid_id: selectedKid !== 'all' ? selectedKid : null,
+        user_id: userId,
         status,
         hours,
         auto_generated: true
@@ -811,7 +851,7 @@ useEffect(() => {
           </button>
           <button
             onClick={() => {
-              setMarkingDate(new Date().toLocaleDateString('en-CA'))
+              setMarkingDate(todayDate)
               setShowMarkModal(true)
             }}
             className="px-4 py-2 text-white rounded-lg font-medium"
@@ -936,8 +976,8 @@ useEffect(() => {
                       setResolveDate(date)
                       setResolveAttendance(att || null)
                     } else {
-                      setMarkingDate(date)
-                      setShowMarkModal(true)
+                      const suggestion = suggestions.find(s => s.date === date)
+                      openMarkAttendance(date, suggestion?.suggestedHours)
                     }
                   }}
                 />
@@ -1236,6 +1276,14 @@ useEffect(() => {
     onClose={() => setSelectedDate(null)}
     userId={userId}
     organizationId={organizationId}
+    attendance={manualAttendance.find(a => a.attendance_date === selectedDate)}
+    missingAttendance={calendarDays.find(d => d.date === selectedDate)?.isMissingAttendance}
+    suggestedStatus={calendarDays.find(d => d.date === selectedDate)?.suggestedStatus}
+    suggestedHours={calendarDays.find(d => d.date === selectedDate)?.suggestedHours}
+    onMarkAttendance={(date, defaultHours) => {
+      setSelectedDate(null)
+      openMarkAttendance(date, defaultHours)
+    }}
   />
 )}
 {resolveDate && resolveAttendance && (
@@ -1264,6 +1312,7 @@ useEffect(() => {
           organizationId={organizationId}
           schoolYearStart={schoolYearStart || undefined}
           existingDates={manualAttendance.map(a => a.attendance_date)}
+          userId={userId}
           onClose={() => setShowBackfill(false)}
           onComplete={() => { setShowBackfill(false); loadData() }}
         />
@@ -1290,7 +1339,7 @@ function MarkAttendanceModal({ date, kids, selectedKid, existingAttendance, defa
   const { isDark } = useTheme()
   const darkCardStyle: React.CSSProperties = isDark ? { backgroundColor: 'var(--hr-bg-surface)', borderColor: 'rgba(255,255,255,0.12)' } : {}
 
-  const [status, setStatus] = useState<'full_day' | 'half_day' | 'no_school'>(existingAttendance?.status || 'full_day')
+  const [status, setStatus] = useState<'full_day' | 'half_day' | 'no_school'>(existingAttendance?.status || (defaultHours === 2 ? 'half_day' : 'full_day'))
   const [hours, setHours] = useState(existingAttendance?.hours ?? defaultHours ?? 4)
   const [notes, setNotes] = useState(existingAttendance?.notes || '')
   const [kidId, setKidId] = useState<string | null>(

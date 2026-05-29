@@ -1135,16 +1135,21 @@ function OnboardingInner() {
     setSaving(true)
     const days = skip ? 180 : (parseInt(complianceDays) || 180)
     const hours = skip ? 0 : complianceHours
-    await supabase.from('user_compliance_settings').upsert({
-      organization_id: orgId,
-      state_code: selectedState || null,
-      state_name: selectedStateName || null,
-      school_year_start_date: schoolYearStart,
-      school_year_end_date: schoolYearEnd || null,
-      required_annual_days: days,
-      required_annual_hours: hours,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: 'organization_id' })
+    const now = new Date().toISOString()
+    await Promise.all([
+      supabase.from('organizations').update({ state: selectedState || null, updated_at: now }).eq('id', orgId),
+      supabase.from('user_compliance_settings').upsert({
+        organization_id: orgId,
+        kid_id: null,
+        state_code: selectedState || null,
+        state_name: selectedStateName || null,
+        school_year_start_date: schoolYearStart,
+        school_year_end_date: schoolYearEnd || null,
+        required_annual_days: days,
+        required_annual_hours: hours,
+        updated_at: now,
+      }, { onConflict: 'organization_id' }),
+    ])
     setSaving(false)
     setStep1Sub('school_year')
   }
@@ -1161,7 +1166,6 @@ function OnboardingInner() {
       supabase.from('school_year_settings').upsert({
         organization_id: orgId,
         user_id: user.id,
-        state: selectedState,
         school_year_start: startDate,
         school_year_end: endDate || null,
         annual_goal_value: parseInt(annualGoal) || 180,
@@ -1171,7 +1175,7 @@ function OnboardingInner() {
         school_year_start_date: startDate,
         school_year_end_date: endDate || null,
         updated_at: new Date().toISOString(),
-      }).eq('organization_id', orgId),
+      }).eq('organization_id', orgId).is('kid_id', null),
     ])
 
     setSaving(false)

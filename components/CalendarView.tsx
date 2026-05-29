@@ -16,6 +16,9 @@ interface CalendarDay {
     hours: number
     notes?: string | null
   }
+  isMissingAttendance?: boolean
+  suggestedStatus?: 'full_day' | 'half_day'
+  suggestedHours?: number
   isSchoolDay: boolean
   totalHours: number
 }
@@ -47,6 +50,18 @@ export default function CalendarView({
   
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
+  function formatLocalDate(date: Date): string {
+    return [
+      date.getFullYear(),
+      String(date.getMonth() + 1).padStart(2, '0'),
+      String(date.getDate()).padStart(2, '0'),
+    ].join('-')
+  }
+
+  function dayOfMonth(dateStr: string): number {
+    return Number(dateStr.split('-')[2])
+  }
+
   // Generate calendar grid (6 weeks)
   const firstDayOfMonth = new Date(year, month, 1).getDay()
   const daysInMonth = new Date(year, month + 1, 0).getDate()
@@ -57,7 +72,7 @@ export default function CalendarView({
   // Previous month days
   for (let i = firstDayOfMonth - 1; i >= 0; i--) {
     const prevMonthDate = new Date(year, month - 1, daysInPrevMonth - i)
-    const dateStr = prevMonthDate.toISOString().split('T')[0]
+    const dateStr = formatLocalDate(prevMonthDate)
     const dayData = days.find(d => d.date === dateStr)
     
     calendarDays.push(dayData ? { ...dayData, isCurrentMonth: false } : null)
@@ -66,9 +81,9 @@ export default function CalendarView({
   // Current month days
   for (let i = 1; i <= daysInMonth; i++) {
     const currentDate = new Date(year, month, i)
-    const dateStr = currentDate.toISOString().split('T')[0]
+    const dateStr = formatLocalDate(currentDate)
     const dayData = days.find(d => d.date === dateStr)
-    const isToday = dateStr === new Date().toISOString().split('T')[0]
+    const isToday = dateStr === formatLocalDate(new Date())
     
     calendarDays.push(dayData ? { ...dayData, isCurrentMonth: true, isToday } : {
       date: dateStr,
@@ -87,7 +102,7 @@ export default function CalendarView({
   const remainingDays = 42 - calendarDays.length
   for (let i = 1; i <= remainingDays; i++) {
     const nextMonthDate = new Date(year, month + 1, i)
-    const dateStr = nextMonthDate.toISOString().split('T')[0]
+    const dateStr = formatLocalDate(nextMonthDate)
     const dayData = days.find(d => d.date === dateStr)
     
     calendarDays.push(dayData ? { ...dayData, isCurrentMonth: false } : null)
@@ -112,6 +127,8 @@ export default function CalendarView({
       if (day.manualAttendance.status === 'half_day') return 'bg-yellow-100 hover:bg-yellow-200'
       if (day.manualAttendance.status === 'no_school') return 'bg-gray-100 hover:bg-gray-200'
     }
+
+    if (filters.showLessons && day.isMissingAttendance) return 'bg-amber-50 hover:bg-amber-100'
     
     const hasVisibleActivities = getVisibleActivityCount(day) > 0
     if (hasVisibleActivities) {
@@ -133,6 +150,7 @@ export default function CalendarView({
   function getDayBorder(day: CalendarDay | null) {
     if (!day) return 'border-gray-200'
     if (day.isToday) return 'border-2 border-blue-500'
+    if (!day.manualAttendance && day.isMissingAttendance) return 'border-2 border-amber-400'
     return 'border border-gray-200'
   }
 
@@ -215,6 +233,12 @@ export default function CalendarView({
             <span className="text-gray-600">📚 Lessons</span>
           </div>
         )}
+        {filters.showLessons && (
+          <div className="flex items-center gap-1">
+            <div className="w-4 h-4 bg-amber-50 border-2 border-amber-400 rounded"></div>
+            <span className="text-gray-600">⚠️ Missing attendance</span>
+          </div>
+        )}
         {filters.showSocialEvents && (
           <div className="flex items-center gap-1">
             <div className="w-4 h-4 bg-purple-50 border border-gray-300 rounded"></div>
@@ -257,7 +281,7 @@ export default function CalendarView({
               {day && (
                 <>
                   <div className={`text-sm font-medium ${day.isCurrentMonth ? 'text-gray-900' : 'text-gray-400'}`}>
-                    {new Date(day.date).getDate()}
+                    {dayOfMonth(day.date)}
                   </div>
                   
                   {day.isCurrentMonth && visibleActivityCount > 0 && (
@@ -284,6 +308,12 @@ export default function CalendarView({
                   {day.isCurrentMonth && filters.showManualAttendance && day.manualAttendance && (
                     <div className="text-[10px] text-gray-600 font-bold mt-0.5">
                       {day.manualAttendance.hours}h
+                    </div>
+                  )}
+
+                  {day.isCurrentMonth && filters.showLessons && !day.manualAttendance && day.isMissingAttendance && (
+                    <div className="mt-0.5 inline-flex items-center rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold text-amber-800">
+                      Missing
                     </div>
                   )}
                   

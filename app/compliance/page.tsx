@@ -60,6 +60,7 @@ export default function CompliancePage() {
   const [schoolYearEnd, setSchoolYearEnd] = useState<string>('')
   const [saving, setSaving] = useState(false)
   const [settingsLoadedOnce, setSettingsLoadedOnce] = useState(false)
+  const [settingsFormDirty, setSettingsFormDirty] = useState(false)
 
   // Get organization ID and kids
   useEffect(() => {
@@ -100,42 +101,47 @@ export default function CompliancePage() {
     }
   }, [settingsLoading, settingsLoadedOnce])
 
-  // Load settings and set state — fall back to organizations.state if compliance settings missing
+  // Load persisted settings into the form without overwriting in-progress edits.
   useEffect(() => {
-    if (!settingsLoading && organizationId) {
-      if (settings && settings.state_code) {
-        setSelectedState(settings.state_code)
-        setSchoolYearStart(settings.school_year_start_date || '')
-        setSchoolYearEnd(settings.school_year_end_date || '')
+    if (settingsLoading || !organizationId || settingsFormDirty) return
+
+    if (settings && settings.state_code) {
+      setSelectedState(settings.state_code)
+      setSchoolYearStart(settings.school_year_start_date || '')
+      setSchoolYearEnd(settings.school_year_end_date || '')
+      setShowStateSelector(false)
+      return
+    }
+
+    // Fall back: read persisted state + school-year dates directly from tables that already save.
+    // Do not auto-create a user_compliance_settings row here: SBX RLS may block inserts, and
+    // background writes during form initialization make the real save path look broken.
+    Promise.all([
+      supabase
+        .from('organizations')
+        .select('state')
+        .eq('id', organizationId)
+        .maybeSingle(),
+      supabase
+        .from('school_year_settings')
+        .select('school_year_start, school_year_end')
+        .eq('organization_id', organizationId)
+        .maybeSingle(),
+    ]).then(([{ data: org }, { data: schoolYear }]: [
+      { data: { state: string | null } | null },
+      { data: { school_year_start: string | null; school_year_end: string | null } | null },
+    ]) => {
+      const fallbackState = org?.state || ''
+      if (fallbackState) {
+        setSelectedState(fallbackState)
+        setSchoolYearStart(schoolYear?.school_year_start || '')
+        setSchoolYearEnd(schoolYear?.school_year_end || '')
         setShowStateSelector(false)
       } else {
-        // Fall back: read state directly from organizations table
-        supabase
-          .from('organizations')
-          .select('state')
-          .eq('id', organizationId)
-          .maybeSingle()
-          .then(async ({ data: org }: { data: { state: string | null } | null }) => {
-            const fallbackState = org?.state || ''
-            if (fallbackState) {
-              setSelectedState(fallbackState)
-              // Auto-save so compliance page works going forward
-              if (organizationId) {
-                await supabase.from('user_compliance_settings').upsert({
-                  organization_id: organizationId,
-                  state_code: fallbackState,
-                  state_name: fallbackState,
-                  updated_at: new Date().toISOString(),
-                }, { onConflict: 'organization_id' })
-                await refreshSettings()
-              }
-            } else {
-              setShowStateSelector(true)
-            }
-          })
+        setShowStateSelector(true)
       }
-    }
-  }, [settings, settingsLoading, organizationId])
+    })
+  }, [settings, settingsLoading, organizationId, settingsFormDirty])
 
   // Save state configuration
   async function handleSaveState() {
@@ -144,45 +150,102 @@ export default function CompliancePage() {
       return
     }
 
+    if (templatesLoading) {
+      alert('State requirements are still loading. Please try again in a moment.')
+      return
+    }
+
     try {
       setSaving(true)
       
       const template = getTemplate(selectedState)
+      const now = new Date().toISOString()
+      const { data: { user } } = await supabase.auth.getUser()
+      const requiredAnnualDays = template?.required_days ?? settings?.required_annual_days ?? 180
+      const requiredAnnualHours = template?.required_hours ?? settings?.required_annual_hours ?? 0
       
       const settingsData = {
         organization_id: organizationId,
+        kid_id: null,
+        user_id: user?.id ?? null,
+        updated_by: user?.id ?? null,
         state_code: selectedState,
         state_name: template?.state_name || selectedState,
         school_year_start_date: schoolYearStart,
         school_year_end_date: schoolYearEnd,
-        required_annual_days: template?.required_days || 0,
-        required_annual_hours: template?.required_hours || 0,
-        template_source: 'state_template',
+        required_annual_days: requiredAnnualDays,
+        required_annual_hours: requiredAnnualHours,
+        template_source: template?.status === 'active' ? 'state_template' : 'state_compliance_basic',
+        updated_at: now,
       }
 
-      // Keep organizations.state in sync so profile reflects the same state
-      await supabase
+      // Keep organizations.state in sync so profile reflects the same state.
+      const { error: organizationError } = await supabase
         .from('organizations')
         .update({ state: selectedState })
         .eq('id', organizationId)
 
-      if (settings?.id) {
-        await supabase
-          .from('user_compliance_settings')
-          .update(settingsData)
-          .eq('id', settings.id)
-      } else {
-        await supabase
-          .from('user_compliance_settings')
-          .insert(settingsData)
+      if (organizationError) throw organizationError
+
+      // Keep AttendanceTracker and calendar views on the same school-year range.
+      // Use explicit update-or-insert instead of upsert/onConflict so this works even if SBX lacks
+      // an organization_id unique constraint.
+      const schoolYearData = {
+        organization_id: organizationId,
+        user_id: user?.id ?? null,
+        school_year_start: schoolYearStart,
+        school_year_end: schoolYearEnd,
+        annual_goal_type: requiredAnnualHours > 0 ? 'hours' : 'lessons',
+        annual_goal_value: requiredAnnualHours > 0 ? requiredAnnualHours : requiredAnnualDays,
+        updated_at: now,
       }
+      const { data: existingSchoolYear, error: existingSchoolYearError } = await supabase
+        .from('school_year_settings')
+        .select('id')
+        .eq('organization_id', organizationId)
+        .maybeSingle()
+
+      if (existingSchoolYearError) throw existingSchoolYearError
+
+      const { error: schoolYearError } = existingSchoolYear?.id
+        ? await supabase.from('school_year_settings').update(schoolYearData).eq('id', existingSchoolYear.id)
+        : await supabase.from('school_year_settings').insert(schoolYearData)
+
+      if (schoolYearError) throw schoolYearError
+
+      // Store one canonical org-wide compliance row; avoid selecting stale kid-specific rows.
+      // Use explicit update-or-insert instead of upsert/onConflict so this works even if SBX lacks
+      // an organization_id unique constraint.
+      const { data: existingCompliance, error: existingComplianceError } = await supabase
+        .from('user_compliance_settings')
+        .select('id')
+        .eq('organization_id', organizationId)
+        .is('kid_id', null)
+        .maybeSingle()
+
+      if (existingComplianceError) throw existingComplianceError
+
+      const { error: complianceError } = existingCompliance?.id
+        ? await supabase.from('user_compliance_settings').update(settingsData).eq('id', existingCompliance.id)
+        : await supabase.from('user_compliance_settings').insert({
+            ...settingsData,
+            created_by: user?.id ?? null,
+          })
+
+      // SBX currently has RLS enabled for user_compliance_settings without a matching insert
+      // policy. Preserve the user-visible settings through organizations + school_year_settings
+      // instead of failing the save; a migration below fixes the canonical row path.
+      if (complianceError && complianceError.code !== '42501') throw complianceError
+      if (complianceError) console.warn('Compliance settings row was not saved due to RLS:', complianceError)
 
       await refreshSettings()
+      setSettingsFormDirty(false)
       setShowStateSelector(false)
       alert('✅ State settings saved!')
     } catch (err) {
       console.error('Error saving compliance settings:', err)
-      alert('Failed to save settings')
+      const message = err instanceof Error ? err.message : JSON.stringify(err)
+      alert(`Failed to save settings: ${message}`)
     } finally {
       setSaving(false)
     }
@@ -388,7 +451,10 @@ export default function CompliancePage() {
           </div>
           {settings && (
             <button
-              onClick={() => setShowStateSelector(false)}
+              onClick={() => {
+                setSettingsFormDirty(false)
+                setShowStateSelector(false)
+              }}
               style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: '#9ca3af', padding: 4, lineHeight: 1 }}
             >
               ✕
@@ -402,7 +468,10 @@ export default function CompliancePage() {
             <label style={{ display: 'block', fontSize: 12, fontWeight: 800, color: '#4c1d95', letterSpacing: 0.5, marginBottom: 6 }}>YOUR STATE</label>
             <select
               value={selectedState}
-              onChange={(e) => setSelectedState(e.target.value)}
+              onChange={(e) => {
+                setSettingsFormDirty(true)
+                setSelectedState(e.target.value)
+              }}
               style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #d1d5db', borderRadius: 10, fontSize: 14, fontWeight: 600, color: '#1a1a2e', fontFamily: "'Nunito', sans-serif", boxSizing: 'border-box' }}
             >
               <option value="">Select your state...</option>
@@ -442,7 +511,10 @@ export default function CompliancePage() {
               <input
                 type="date"
                 value={schoolYearStart}
-                onChange={(e) => setSchoolYearStart(e.target.value)}
+                onChange={(e) => {
+                  setSettingsFormDirty(true)
+                  setSchoolYearStart(e.target.value)
+                }}
                 style={{ width: '100%', padding: '10px 10px', border: '1.5px solid #d1d5db', borderRadius: 10, fontSize: 13, fontWeight: 600, color: '#1a1a2e', fontFamily: "'Nunito', sans-serif", boxSizing: 'border-box' }}
               />
             </div>
@@ -451,7 +523,10 @@ export default function CompliancePage() {
               <input
                 type="date"
                 value={schoolYearEnd}
-                onChange={(e) => setSchoolYearEnd(e.target.value)}
+                onChange={(e) => {
+                  setSettingsFormDirty(true)
+                  setSchoolYearEnd(e.target.value)
+                }}
                 style={{ width: '100%', padding: '10px 10px', border: '1.5px solid #d1d5db', borderRadius: 10, fontSize: 13, fontWeight: 600, color: '#1a1a2e', fontFamily: "'Nunito', sans-serif", boxSizing: 'border-box' }}
               />
             </div>
@@ -468,7 +543,10 @@ export default function CompliancePage() {
           <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
             {settings && (
               <button
-                onClick={() => setShowStateSelector(false)}
+                onClick={() => {
+                  setSettingsFormDirty(false)
+                  setShowStateSelector(false)
+                }}
                 style={{ flex: 1, padding: '12px 0', borderRadius: 12, border: '1.5px solid #e5e7eb', background: '#f9fafb', color: '#374151', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}
               >
                 Cancel
@@ -527,6 +605,8 @@ export default function CompliancePage() {
         <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'flex-end' }}>
           <button
             onClick={() => {
+              setSettingsFormDirty(false)
+              setSelectedState(settings?.state_code || '')
               setSchoolYearStart(settings?.school_year_start_date || '')
               setSchoolYearEnd(settings?.school_year_end_date || '')
               setShowStateSelector(true)

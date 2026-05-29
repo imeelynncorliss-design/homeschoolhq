@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, Suspense } from 'react'
 import { useRouter } from 'next/navigation'
-import { createBrowserClient } from '@supabase/ssr'
+import { createClient } from '@/src/lib/supabase/client'
 import { useAppHeader } from '@/components/layout/AppHeader'
 import AuthGuard from '@/components/AuthGuard'
 import AssessmentStandardsManager from '@/components/AssessmentStandardsManager'
@@ -13,9 +13,12 @@ import { Lightbulb, ChevronDown, ChevronRight } from 'lucide-react'
 import { getOrganizationId } from '@/src/lib/getOrganizationId'
 import { pageShell, colors } from '@/src/lib/designTokens'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-const supabase = createBrowserClient(supabaseUrl, supabaseKey)
+const supabase = new Proxy({} as ReturnType<typeof createClient>, {
+  get(_target, prop) {
+    const client = createClient()
+    return client[prop as keyof typeof client]
+  },
+})
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -117,19 +120,19 @@ function AssessmentsContent() {
       if (assessmentsError) throw assessmentsError
       if (!assessmentsData) { setAssessments([]); return }
 
-      const assessmentIds = assessmentsData.map(a => a.id)
+      const assessmentIds = assessmentsData.map((a: any) => a.id)
       const { data: results } = await supabase.from('assessment_results').select('*').in('assessment_id', assessmentIds)
       const { data: standardsCounts } = await supabase.from('assessment_standards').select('assessment_id').in('assessment_id', assessmentIds)
 
       const standardsMap = new Map<string, number>()
-      standardsCounts?.forEach(s => {
+      standardsCounts?.forEach((s: any) => {
         standardsMap.set(s.assessment_id, (standardsMap.get(s.assessment_id) || 0) + 1)
       })
 
-      const combined = assessmentsData.map(assessment => {
+      const combined = assessmentsData.map((assessment: any) => {
         const lessonData = Array.isArray(assessment.lessons) ? assessment.lessons[0] : assessment.lessons
         const kidData = Array.isArray(assessment.kids) ? assessment.kids[0] : assessment.kids
-        const result = results?.find(r => r.assessment_id === assessment.id)
+        const result = results?.find((r: any) => r.assessment_id === assessment.id)
         return {
           id: assessment.id,
           lesson_id: assessment.lesson_id,

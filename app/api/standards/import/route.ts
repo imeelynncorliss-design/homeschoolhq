@@ -5,14 +5,26 @@ import { NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { getOrganizationId } from '@/src/lib/auth-helpers'
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+function getSupabaseAdmin() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY!
-});
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error('Missing Supabase admin environment variables');
+  }
+
+  return createClient(supabaseUrl, serviceRoleKey);
+}
+
+function getAnthropicClient() {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+
+  if (!apiKey) {
+    throw new Error('Missing ANTHROPIC_API_KEY environment variable');
+  }
+
+  return new Anthropic({ apiKey });
+}
 
 export async function POST(request: Request) {
   const cookieStore = await cookies();
@@ -30,6 +42,8 @@ export async function POST(request: Request) {
   );
 
   try {
+    const supabaseAdmin = getSupabaseAdmin();
+    const anthropic = getAnthropicClient();
     const { data: { session } } = await supabase.auth.getSession();
     
     if (!session) {
@@ -169,6 +183,7 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  const supabaseAdmin = getSupabaseAdmin();
   const cookieStore = await cookies();
 
   const supabase = createServerClient(

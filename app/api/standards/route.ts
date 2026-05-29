@@ -7,14 +7,21 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+function getSupabaseAdmin() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error('Missing Supabase admin environment variables');
+  }
+
+  return createClient(supabaseUrl, serviceRoleKey);
+}
 
 // Helper to get user's organization
 async function getUserOrganization(request?: NextRequest) {
   try {
+    const supabaseAdmin = getSupabaseAdmin();
     let user = null;
     
     // First try Authorization header (from fetch requests)
@@ -54,6 +61,7 @@ async function getUserOrganization(request?: NextRequest) {
 }
 export async function GET(request: NextRequest) {
   try {
+    const supabaseAdmin = getSupabaseAdmin();
     // Get user's organization - pass request for auth header
     const { error: authError, organizationId } = await getUserOrganization(request);
     if (authError || !organizationId) {
@@ -145,6 +153,7 @@ export async function GET(request: NextRequest) {
 // POST - Create a custom standard
 export async function POST(request: NextRequest) {
   try {
+    const supabaseAdmin = getSupabaseAdmin();
     // Get user's organization - pass request for auth header
     const { error: authError, organizationId } = await getUserOrganization(request);
     if (authError || !organizationId) {
@@ -239,6 +248,7 @@ export async function POST(request: NextRequest) {
 // DELETE - Remove a custom standard
 export async function DELETE(request: NextRequest) {
   try {
+    const supabaseAdmin = getSupabaseAdmin();
     // Get user's organization - pass request for auth header
     const { error: authError, organizationId } = await getUserOrganization(request);
     if (authError || !organizationId) {

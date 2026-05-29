@@ -129,6 +129,14 @@ function subjectColor(subject: string): string {
   return SUBJECT_PALETTE[Math.abs(hash) % SUBJECT_PALETTE.length]
 }
 
+function localDateString(date = new Date()): string {
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, '0'),
+    String(date.getDate()).padStart(2, '0'),
+  ].join('-')
+}
+
 // ─── Pulse Ring ───────────────────────────────────────────────────────────────
 
 function PulseRing({ pct, color, size = 120 }: { pct: number; color: string; size?: number }) {
@@ -1224,6 +1232,7 @@ function DashboardContent() {
   const [weekLessons, setWeekLessons]           = useState<Record<string, { lesson: any; kid: Kid }[]>>({})
   const [weeklyMaterialsCount, setWeeklyMaterialsCount] = useState(0)
   const [todayAttendance, setTodayAttendance] = useState<Set<string>>(new Set()) // kid IDs marked present today
+  const [todayKey, setTodayKey] = useState(localDateString())
   const [attendanceSaving, setAttendanceSaving] = useState<Set<string>>(new Set())
 
   const now         = new Date()
@@ -1238,6 +1247,19 @@ function DashboardContent() {
     if (preview === 'welcome' && !orgTeachingStyle) setOrgTeachingStyle('traditional')
     if (preview === 'curriculum') setShowCurriculumNudge(true)
   }, [searchParams])
+
+  useEffect(() => {
+    const updateToday = () => setTodayKey(localDateString())
+    updateToday()
+    const interval = window.setInterval(updateToday, 60_000)
+    window.addEventListener('focus', updateToday)
+    document.addEventListener('visibilitychange', updateToday)
+    return () => {
+      window.clearInterval(interval)
+      window.removeEventListener('focus', updateToday)
+      document.removeEventListener('visibilitychange', updateToday)
+    }
+  }, [])
 
   useEffect(() => {
     const load = async () => {
@@ -1359,12 +1381,10 @@ function DashboardContent() {
       // Deduplicate by id — guards against rare DB duplicates
       const uniqueKids = Array.from(new Map((kidsData || []).map((k: any) => [k.id, k])).values()) as any[]
 
+      setTodayAttendance(new Set())
+
       if (uniqueKids.length) {
-        const todayStr   = [
-          now.getFullYear(),
-          String(now.getMonth() + 1).padStart(2, '0'),
-          String(now.getDate()).padStart(2, '0'),
-        ].join('-')
+        const todayStr = localDateString(now)
         const lessonsMap: Record<string, any[]> = {}
 
         const pulses: KidPulse[] = await Promise.all(
@@ -1445,17 +1465,21 @@ function DashboardContent() {
         // Fetch today's attendance
         const { data: attData } = await supabase
           .from('daily_attendance')
-          .select('kid_id')
+          .select('kid_id, status, auto_generated, notes')
           .eq('organization_id', orgId)
           .eq('attendance_date', todayStr)
           .in('kid_id', uniqueKids.map((k: any) => k.id))
-        setTodayAttendance(new Set((attData || []).map((a: any) => a.kid_id)))
+        const presentStatuses = new Set(['full_day', 'half_day'])
+        // Dashboard child cards should only reflect the dashboard quick-mark action.
+        // Existing attendance/backfill/manual rows can be valid compliance records but should not
+        // make the child card look like the quick "Mark present" button was tapped today.
+        setTodayAttendance(new Set((attData || []).filter((a: any) => presentStatuses.has(a.status) && a.auto_generated !== true && a.notes === 'Dashboard quick present').map((a: any) => a.kid_id)))
       }
 
       setLoading(false)
     }
     load()
-  }, [])
+  }, [todayKey])
 
   // Refresh week lessons from DB — called when user opens the This Week view
   const refreshWeekLessons = async () => {
@@ -1489,15 +1513,22 @@ function DashboardContent() {
   }
 
   const markAttendanceToday = async (kidId: string) => {
-    if (!organizationId) return
+    if (!organizationId || !user?.id) return
     setAttendanceSaving(prev => new Set(prev).add(kidId))
-    const todayStr = new Date().toISOString().split('T')[0]
-    await supabase.from('daily_attendance').upsert(
-      { organization_id: organizationId, kid_id: kidId, attendance_date: todayStr, status: 'full_day', hours: 6 },
-      { onConflict: 'organization_id,kid_id,attendance_date' }
-    )
-    setTodayAttendance(prev => new Set(prev).add(kidId))
-    setAttendanceSaving(prev => { const n = new Set(prev); n.delete(kidId); return n })
+    const todayStr = localDateString()
+    try {
+      const { error } = await supabase.from('daily_attendance').upsert(
+        { organization_id: organizationId, kid_id: kidId, user_id: user.id, attendance_date: todayStr, status: 'full_day', hours: 6, notes: 'Dashboard quick present', auto_generated: false },
+        { onConflict: 'organization_id,kid_id,attendance_date' }
+      )
+      if (error) throw error
+      setTodayAttendance(prev => new Set(prev).add(kidId))
+    } catch (error) {
+      console.error('Error marking attendance:', error)
+      alert('Failed to save attendance. Please try again.')
+    } finally {
+      setAttendanceSaving(prev => { const n = new Set(prev); n.delete(kidId); return n })
+    }
   }
 
   // Dispatch Scout nudge once data is loaded

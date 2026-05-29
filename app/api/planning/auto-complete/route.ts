@@ -2,10 +2,16 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+function getSupabaseClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error('Missing Supabase admin environment variables');
+  }
+
+  return createClient(supabaseUrl, serviceRoleKey);
+}
 
 /**
  * Auto-Complete Planning Tasks
@@ -21,6 +27,7 @@ const supabase = createClient(
  */
 export async function POST(request: Request) {
   try {
+    const supabase = getSupabaseClient();
     const { organization_id, planning_period_id, trigger_event } = await request.json();
 
     if (!organization_id) {
