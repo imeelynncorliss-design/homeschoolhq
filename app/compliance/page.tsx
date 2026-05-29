@@ -162,6 +162,8 @@ export default function CompliancePage() {
       const settingsData = {
         organization_id: organizationId,
         kid_id: null,
+        user_id: user?.id ?? null,
+        updated_by: user?.id ?? null,
         state_code: selectedState,
         state_name: template?.state_name || selectedState,
         school_year_start_date: schoolYearStart,
@@ -188,7 +190,7 @@ export default function CompliancePage() {
         user_id: user?.id ?? null,
         school_year_start: schoolYearStart,
         school_year_end: schoolYearEnd,
-        annual_goal_type: requiredAnnualHours > 0 ? 'hours' : 'days',
+        annual_goal_type: requiredAnnualHours > 0 ? 'hours' : 'lessons',
         annual_goal_value: requiredAnnualHours > 0 ? requiredAnnualHours : requiredAnnualDays,
         updated_at: now,
       }
@@ -220,7 +222,10 @@ export default function CompliancePage() {
 
       const { error: complianceError } = existingCompliance?.id
         ? await supabase.from('user_compliance_settings').update(settingsData).eq('id', existingCompliance.id)
-        : await supabase.from('user_compliance_settings').insert(settingsData)
+        : await supabase.from('user_compliance_settings').insert({
+            ...settingsData,
+            created_by: user?.id ?? null,
+          })
 
       if (complianceError) throw complianceError
 
@@ -230,7 +235,8 @@ export default function CompliancePage() {
       alert('✅ State settings saved!')
     } catch (err) {
       console.error('Error saving compliance settings:', err)
-      alert('Failed to save settings')
+      const message = err instanceof Error ? err.message : JSON.stringify(err)
+      alert(`Failed to save settings: ${message}`)
     } finally {
       setSaving(false)
     }

@@ -219,7 +219,8 @@ useEffect(() => {
     const todayAttendance = manualAttendance.some(a => {
       const matchesDate = a.attendance_date === todayDate
       const matchesKid = selectedKid === 'all' || a.kid_id === selectedKid
-      return matchesDate && matchesKid
+      const countsAsPresent = a.status !== 'no_school'
+      return matchesDate && matchesKid && countsAsPresent
     })
     setAttendanceMarkedToday(todayAttendance)
   }

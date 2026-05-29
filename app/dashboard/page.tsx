@@ -1463,11 +1463,11 @@ function DashboardContent() {
         // Fetch today's attendance
         const { data: attData } = await supabase
           .from('daily_attendance')
-          .select('kid_id')
+          .select('kid_id, status')
           .eq('organization_id', orgId)
           .eq('attendance_date', todayStr)
           .in('kid_id', uniqueKids.map((k: any) => k.id))
-        setTodayAttendance(new Set((attData || []).map((a: any) => a.kid_id)))
+        setTodayAttendance(new Set((attData || []).filter((a: any) => a.status !== 'no_school').map((a: any) => a.kid_id)))
       }
 
       setLoading(false)
