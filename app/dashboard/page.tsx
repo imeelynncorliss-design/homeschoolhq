@@ -60,18 +60,18 @@ const QUICK_ACTION_CONFIG: Record<string, {
   action: 'route' | 'lesson' | 'activity' | 'today' | 'scout'
   href?: string
 }> = {
-  daily_log:   { emoji: '📝', label: 'Daily Subject Log',  sub: 'Log subjects — no lesson needed',    bg: 'linear-gradient(135deg,#f5f3ff,#ede9fe)', iconBg: '#7c3aed', color: '#4c1d95', subColor: '#7c3aed', action: 'route',    href: '/daily-log' },
-  attendance:  { emoji: '✅', label: 'Log Attendance',      sub: 'Mark today\'s school day',          bg: 'linear-gradient(135deg,#d1fae5,#a7f3d0)', iconBg: '#059669', color: '#064e3b', subColor: '#059669', action: 'route',    href: '/attendance' },
-  reading_log: { emoji: '📚', label: 'Log a Book',          sub: 'Add to reading log',                bg: 'linear-gradient(135deg,#ede9fe,#ddd6fe)', iconBg: '#7c3aed', color: '#4c1d95', subColor: '#7c3aed', action: 'route',    href: '/reading-log' },
-  field_trips: { emoji: '🚌', label: 'Log an Activity',     sub: 'Field trip, project, co-op',        bg: 'linear-gradient(135deg,#ccfbf1,#99f6e4)', iconBg: '#0d9488', color: '#134e4a', subColor: '#0d9488', action: 'route',    href: '/field-trips' },
-  ai_lessons:  { emoji: '🤖', label: 'Plan a Lesson',       sub: 'Use me if you need a lesson',       bg: 'linear-gradient(135deg,#ede9fe,#ddd6fe)', iconBg: '#7c3aed', color: '#4c1d95', subColor: '#7c3aed', action: 'lesson' },
-  ai_activity: { emoji: '🎯', label: 'Generate Activity',   sub: 'Use me if you need an activity idea', bg: 'linear-gradient(135deg,#ccfbf1,#99f6e4)', iconBg: '#0d9488', color: '#134e4a', subColor: '#0d9488', action: 'activity' },
-  compliance:  { emoji: '📋', label: 'Compliance',          sub: 'Days/hours vs. requirements',        bg: 'linear-gradient(135deg,#fef2f2,#fee2e2)', iconBg: '#dc2626', color: '#7f1d1d', subColor: '#dc2626', action: 'route',    href: '/compliance' },
-  progress:    { emoji: '📊', label: 'Progress Reports',    sub: 'Learning analytics by subject',      bg: 'linear-gradient(135deg,#f0fdf4,#dcfce7)', iconBg: '#16a34a', color: '#14532d', subColor: '#16a34a', action: 'route',    href: '/progress' },
-  transcript:  { emoji: '🎓', label: 'Transcript',          sub: 'GPA, courses, college records',      bg: 'linear-gradient(135deg,#fefce8,#fef08a)', iconBg: '#d97706', color: '#78350f', subColor: '#d97706', action: 'route',    href: '/transcript' },
-  mastery:     { emoji: '🏆', label: 'Mastery Tracker',     sub: 'Standards & skill mastery',          bg: 'linear-gradient(135deg,#eff6ff,#dbeafe)', iconBg: '#2563eb', color: '#1e3a5f', subColor: '#3b82f6', action: 'route',    href: '/mastery' },
-  portfolio:    { emoji: '🗂️', label: 'Portfolio',           sub: 'Work samples & highlights',          bg: 'linear-gradient(135deg,#fdf4ff,#fae8ff)', iconBg: '#9333ea', color: '#4a044e', subColor: '#a855f7', action: 'route',    href: '/portfolio' },
-  calendar:    { emoji: '📅', label: 'Calendar',            sub: 'View full month lesson calendar',    bg: 'linear-gradient(135deg,#eff6ff,#dbeafe)', iconBg: '#3b82f6', color: '#1e3a5f', subColor: '#3b82f6', action: 'route',    href: '/calendar' },
+  daily_log:   { emoji: '📝', label: 'Daily Log',       sub: 'Subjects covered — no lesson needed', bg: 'linear-gradient(135deg,#f5f3ff,#ede9fe)', iconBg: '#7c3aed', color: '#4c1d95', subColor: '#7c3aed', action: 'route',    href: '/daily-log' },
+  attendance:  { emoji: '✅', label: 'Attendance',      sub: 'Mark school days and hours',          bg: 'linear-gradient(135deg,#d1fae5,#a7f3d0)', iconBg: '#059669', color: '#064e3b', subColor: '#059669', action: 'route',    href: '/attendance' },
+  reading_log: { emoji: '📚', label: 'Reading Log',     sub: 'Track books and reading',             bg: 'linear-gradient(135deg,#ede9fe,#ddd6fe)', iconBg: '#7c3aed', color: '#4c1d95', subColor: '#7c3aed', action: 'route',    href: '/reading-log' },
+  field_trips: { emoji: '🚌', label: 'Activities',      sub: 'Trips, projects, co-op, life',        bg: 'linear-gradient(135deg,#ccfbf1,#99f6e4)', iconBg: '#0d9488', color: '#134e4a', subColor: '#0d9488', action: 'route',    href: '/field-trips' },
+  ai_lessons:  { emoji: '🤖', label: 'Plan Lesson',     sub: 'Generate a lesson with Scout',        bg: 'linear-gradient(135deg,#ede9fe,#ddd6fe)', iconBg: '#7c3aed', color: '#4c1d95', subColor: '#7c3aed', action: 'lesson' },
+  ai_activity: { emoji: '🎯', label: 'Activity Idea',   sub: 'Generate a hands-on idea',            bg: 'linear-gradient(135deg,#ccfbf1,#99f6e4)', iconBg: '#0d9488', color: '#134e4a', subColor: '#0d9488', action: 'activity' },
+  compliance:  { emoji: '📋', label: 'Compliance',      sub: 'State, days, hours, dates',           bg: 'linear-gradient(135deg,#fef2f2,#fee2e2)', iconBg: '#dc2626', color: '#7f1d1d', subColor: '#dc2626', action: 'route',    href: '/compliance' },
+  progress:    { emoji: '📊', label: 'Progress',        sub: 'Subject and lesson trends',           bg: 'linear-gradient(135deg,#f0fdf4,#dcfce7)', iconBg: '#16a34a', color: '#14532d', subColor: '#16a34a', action: 'route',    href: '/progress' },
+  transcript:  { emoji: '🎓', label: 'Transcript',      sub: 'GPA, courses, records',               bg: 'linear-gradient(135deg,#fefce8,#fef08a)', iconBg: '#d97706', color: '#78350f', subColor: '#d97706', action: 'route',    href: '/transcript' },
+  mastery:     { emoji: '🏆', label: 'Mastery',         sub: 'Standards and skills',                bg: 'linear-gradient(135deg,#eff6ff,#dbeafe)', iconBg: '#2563eb', color: '#1e3a5f', subColor: '#3b82f6', action: 'route',    href: '/mastery' },
+  portfolio:   { emoji: '🗂️', label: 'Portfolio',       sub: 'Work samples and highlights',         bg: 'linear-gradient(135deg,#fdf4ff,#fae8ff)', iconBg: '#9333ea', color: '#4a044e', subColor: '#a855f7', action: 'route',    href: '/portfolio' },
+  calendar:    { emoji: '📅', label: 'Calendar',        sub: 'Month view and lesson days',          bg: 'linear-gradient(135deg,#eff6ff,#dbeafe)', iconBg: '#3b82f6', color: '#1e3a5f', subColor: '#3b82f6', action: 'route',    href: '/calendar' },
 }
 
 const DAY_CARDINAL: Record<number, string> = {
@@ -1923,7 +1923,7 @@ function DashboardContent() {
           <section>
             <div style={{ ...css.sectionRow, justifyContent: 'space-between' }}>
               <span style={css.secTitle}>
-                {homeschoolStyle === 'flexible' ? 'QUICK LOG' : 'QUICK ACTIONS'}
+                {homeschoolStyle === 'flexible' ? 'QUICK LOG' : 'HOME CARDS'}
               </span>
               <button
                 onClick={() => setShowStylePicker(true)}
@@ -1934,7 +1934,7 @@ function DashboardContent() {
                   fontFamily: "'Nunito', sans-serif",
                 }}
               >
-                ✏️ Customize cards
+                ✏️ Customize Home
               </button>
             </div>
 
@@ -1947,7 +1947,7 @@ function DashboardContent() {
               }}>
                 <img src="/Cardinal_Mascot.png" alt="Scout" style={{ width: 32, height: 32, objectFit: 'contain', flexShrink: 0 }} />
                 <div style={{ flex: 1, fontSize: 12, color: 'rgba(255,255,255,0.85)', fontWeight: 600, lineHeight: 1.5 }}>
-                  Using a <span style={{ fontWeight: 900, color: '#c4b5fd' }}>default layout</span> — not personalized yet.
+                  Using a <span style={{ fontWeight: 900, color: '#c4b5fd' }}>starter layout</span>. Customize your Home cards whenever you're ready.
                 </div>
                 <button
                   onClick={() => { setShowStylePicker(true) }}
@@ -1972,7 +1972,7 @@ function DashboardContent() {
               // Structured mode always gets Today's Learning first
               const todayBtn = [{
                 key: '__today__',
-                emoji: '📝', label: "Today's Learning", sub: "Today & this week's agenda",
+                emoji: '📝', label: "Today's Plan", sub: "Today & this week's agenda",
                 bg: 'linear-gradient(135deg,#ede9fe,#ddd6fe)', iconBg: '#7c3aed', color: '#4c1d95', subColor: '#7c3aed',
                 onClick: () => setShowToday(true),
               }]

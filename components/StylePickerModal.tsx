@@ -91,8 +91,8 @@ export default function StylePickerModal({ userId, stateAbbr, isFirstTime, onCom
             <div style={hdr}>
               <img src="/Cardinal_Mascot.png" alt="Scout" style={{ width: 48, height: 48, objectFit: 'contain' }} />
               <div style={{ flex: 1 }}>
-                <div id="style-picker-title" style={hdrTitle}>Let's set up your home screen 🏡</div>
-                <div style={hdrSub}>Quick question before we dive in</div>
+                <div id="style-picker-title" style={hdrTitle}>Customize your Home screen 🏡</div>
+                <div style={hdrSub}>Choose a starter layout — you can change cards anytime</div>
               </div>
               <button onClick={onCancel} style={xBtn} aria-label="Close" title="Close">✕</button>
             </div>
@@ -120,31 +120,31 @@ export default function StylePickerModal({ userId, stateAbbr, isFirstTime, onCom
               How do you like to homeschool?
             </div>
             <div style={{ padding: '0 24px 16px', fontSize: 13, color: '#6b7280', lineHeight: 1.5 }}>
-              This personalizes your home screen. You can always change it with the ✏️ button.
+              This only sets your starter cards. Parents can customize the Home cards anytime from Customize Home.
             </div>
 
             {/* Style cards */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, padding: '0 24px 24px' }}>
 
               <button style={styleCard('#ecfdf5', '#d1fae5', '#065f46')} onClick={() => pickStyle('flexible')}>
-                <span style={{ fontSize: 36, lineHeight: 1, marginBottom: 8 }}>🌿</span>
-                <div style={{ fontWeight: 900, fontSize: 14, color: '#065f46', marginBottom: 6 }}>Flexible & Relaxed</div>
-                <div style={{ fontSize: 11, color: '#065f46', opacity: 0.8, lineHeight: 1.5, marginBottom: 12 }}>
-                  I log what we do and keep it low-key — no rigid schedule
+                <span style={{ fontSize: 34, lineHeight: 1, marginBottom: 8 }}>🌿</span>
+                <div style={{ fontWeight: 900, fontSize: 14, color: '#065f46', marginBottom: 6 }}>Simple Logging</div>
+                <div style={{ fontSize: 11, color: '#065f46', opacity: 0.82, lineHeight: 1.45, marginBottom: 12 }}>
+                  Best for quick logging without a strict schedule
                 </div>
                 <div style={{ padding: '7px 14px', borderRadius: 20, background: '#059669', color: '#fff', fontSize: 11, fontWeight: 800 }}>
-                  This is me →
+                  Choose Simple →
                 </div>
               </button>
 
               <button style={styleCard('#eff6ff', '#e0e7ff', '#1e3a5f')} onClick={() => pickStyle('structured')}>
-                <span style={{ fontSize: 36, lineHeight: 1, marginBottom: 8 }}>📐</span>
-                <div style={{ fontWeight: 900, fontSize: 14, color: '#1e3a5f', marginBottom: 6 }}>Structured & Planned</div>
-                <div style={{ fontSize: 11, color: '#1e3a5f', opacity: 0.8, lineHeight: 1.5, marginBottom: 12 }}>
-                  I track lessons, hours, and standards — I like being organized
+                <span style={{ fontSize: 34, lineHeight: 1, marginBottom: 8 }}>📐</span>
+                <div style={{ fontWeight: 900, fontSize: 14, color: '#1e3a5f', marginBottom: 6 }}>Detailed Planning</div>
+                <div style={{ fontSize: 11, color: '#1e3a5f', opacity: 0.82, lineHeight: 1.45, marginBottom: 12 }}>
+                  Best for lesson plans, hours, and standards tracking
                 </div>
                 <div style={{ padding: '7px 14px', borderRadius: 20, background: '#4f46e5', color: '#fff', fontSize: 11, fontWeight: 800 }}>
-                  This is me →
+                  Choose Detailed →
                 </div>
               </button>
 
@@ -159,7 +159,7 @@ export default function StylePickerModal({ userId, stateAbbr, isFirstTime, onCom
               <img src="/Cardinal_Mascot.png" alt="Scout" style={{ width: 40, height: 40, objectFit: 'contain' }} />
               <div style={{ flex: 1 }}>
                 <div style={hdrTitle}>
-                  {style === 'flexible' ? '🌿 Flexible & Relaxed' : '📐 Structured & Planned'}
+                  {style === 'flexible' ? '🌿 Simple Logging' : '📐 Detailed Planning'}
                 </div>
                 <div style={hdrSub}>Choose your Home tab cards</div>
               </div>
@@ -205,7 +205,7 @@ export default function StylePickerModal({ userId, stateAbbr, isFirstTime, onCom
             <div style={{ display: 'flex', gap: 10, padding: '0 24px 24px' }}>
               <button onClick={() => setStep(1)} style={btnGhost}>← Back</button>
               <button onClick={handleSave} disabled={saving} style={{ ...btnPrimary, flex: 1 }}>
-                {saving ? 'Saving…' : '✓ Save & Set Up My Dashboard'}
+                {saving ? 'Saving…' : '✓ Save Home Cards'}
               </button>
             </div>
           </div>
