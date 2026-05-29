@@ -50,6 +50,14 @@ export default function CalendarView({
   
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
+  function formatLocalDate(date: Date): string {
+    return [
+      date.getFullYear(),
+      String(date.getMonth() + 1).padStart(2, '0'),
+      String(date.getDate()).padStart(2, '0'),
+    ].join('-')
+  }
+
   // Generate calendar grid (6 weeks)
   const firstDayOfMonth = new Date(year, month, 1).getDay()
   const daysInMonth = new Date(year, month + 1, 0).getDate()
@@ -60,7 +68,7 @@ export default function CalendarView({
   // Previous month days
   for (let i = firstDayOfMonth - 1; i >= 0; i--) {
     const prevMonthDate = new Date(year, month - 1, daysInPrevMonth - i)
-    const dateStr = prevMonthDate.toISOString().split('T')[0]
+    const dateStr = formatLocalDate(prevMonthDate)
     const dayData = days.find(d => d.date === dateStr)
     
     calendarDays.push(dayData ? { ...dayData, isCurrentMonth: false } : null)
@@ -69,9 +77,9 @@ export default function CalendarView({
   // Current month days
   for (let i = 1; i <= daysInMonth; i++) {
     const currentDate = new Date(year, month, i)
-    const dateStr = currentDate.toISOString().split('T')[0]
+    const dateStr = formatLocalDate(currentDate)
     const dayData = days.find(d => d.date === dateStr)
-    const isToday = dateStr === new Date().toISOString().split('T')[0]
+    const isToday = dateStr === formatLocalDate(new Date())
     
     calendarDays.push(dayData ? { ...dayData, isCurrentMonth: true, isToday } : {
       date: dateStr,
@@ -90,7 +98,7 @@ export default function CalendarView({
   const remainingDays = 42 - calendarDays.length
   for (let i = 1; i <= remainingDays; i++) {
     const nextMonthDate = new Date(year, month + 1, i)
-    const dateStr = nextMonthDate.toISOString().split('T')[0]
+    const dateStr = formatLocalDate(nextMonthDate)
     const dayData = days.find(d => d.date === dateStr)
     
     calendarDays.push(dayData ? { ...dayData, isCurrentMonth: false } : null)

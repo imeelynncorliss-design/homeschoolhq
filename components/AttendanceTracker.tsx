@@ -76,6 +76,14 @@ interface SuggestedDay {
 type ViewMode = 'list' | 'calendar'
 type TabMode = 'overview' | 'insights' | 'goals'
 
+function formatLocalDate(date: Date): string {
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, '0'),
+    String(date.getDate()).padStart(2, '0'),
+  ].join('-')
+}
+
 export default function AttendanceTracker({ kids, organizationId, userId }: AttendanceTrackerProps) {
   const supabase = useMemo(() => createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -340,7 +348,7 @@ useEffect(() => {
       let current = new Date(yearStart)
       while (current <= yearEnd) {
         if (current.getDay() === dayOfWeek) {
-          allDates.add(current.toLocaleDateString('en-CA'))
+          allDates.add(formatLocalDate(current))
         }
         current.setDate(current.getDate() + 1)
       }
@@ -359,7 +367,7 @@ useEffect(() => {
       const socialEventCount = socialEvents.filter(e => e.event_date === date).length
 
       // Count co-op classes for this date
-      const dayOfWeek = new Date(date).getDay()
+      const dayOfWeek = parseLocalDate(date).getDay()
       const coopClassCount = coopEnrollments.filter(enrollment => {
         if (!enrollment.coop_classes) return false
         const classDayOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
@@ -553,20 +561,20 @@ useEffect(() => {
 
     const allDates = new Set<string>()
     lessons.forEach(l => {
-      if (l.lesson_date >= startDate.toISOString().split('T')[0] && 
-          l.lesson_date <= endDate.toISOString().split('T')[0]) {
+      if (l.lesson_date >= formatLocalDate(startDate) && 
+          l.lesson_date <= formatLocalDate(endDate)) {
         allDates.add(l.lesson_date)
       }
     })
     manualAttendance.forEach(a => {
-      if (a.attendance_date >= startDate.toISOString().split('T')[0] && 
-          a.attendance_date <= endDate.toISOString().split('T')[0]) {
+      if (a.attendance_date >= formatLocalDate(startDate) && 
+          a.attendance_date <= formatLocalDate(endDate)) {
         allDates.add(a.attendance_date)
       }
     })
     socialEvents.forEach(e => {
-      if (e.event_date >= startDate.toISOString().split('T')[0] && 
-          e.event_date <= endDate.toISOString().split('T')[0]) {
+      if (e.event_date >= formatLocalDate(startDate) && 
+          e.event_date <= formatLocalDate(endDate)) {
         allDates.add(e.event_date)
       }
     })
@@ -580,7 +588,7 @@ useEffect(() => {
       let current = new Date(startDate)
       while (current <= endDate) {
         if (current.getDay() === dayOfWeek) {
-          allDates.add(current.toLocaleDateString('en-CA'))
+          allDates.add(formatLocalDate(current))
         }
         current.setDate(current.getDate() + 1)
       }
@@ -597,7 +605,7 @@ useEffect(() => {
 
       const socialEventCount = socialEvents.filter(e => e.event_date === date).length
 
-      const dayOfWeek = new Date(date).getDay()
+      const dayOfWeek = parseLocalDate(date).getDay()
       const coopClassCount = coopEnrollments.filter(enrollment => {
         if (!enrollment.coop_classes) return false
         const classDayOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
@@ -623,7 +631,7 @@ useEffect(() => {
         totalHours = lessonHours
       }
 
-      const dayDate = new Date(date)
+      const dayDate = parseLocalDate(date)
       const isCurrentMonth = dayDate.getMonth() === calendarMonth && dayDate.getFullYear() === calendarYear
       const today = new Date().toLocaleDateString('en-CA')
       const isToday = date === today
