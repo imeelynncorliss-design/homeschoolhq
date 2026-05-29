@@ -47,6 +47,9 @@ interface DayData {
   socialEventCount: number
   coopClassCount: number
   manualAttendance?: ManualAttendance
+  isMissingAttendance?: boolean
+  suggestedStatus?: 'full_day' | 'half_day'
+  suggestedHours?: number
   isSchoolDay: boolean
   totalHours: number
   isCurrentMonth?: boolean
@@ -622,7 +625,11 @@ useEffect(() => {
 
       const dayDate = new Date(date)
       const isCurrentMonth = dayDate.getMonth() === calendarMonth && dayDate.getFullYear() === calendarYear
-      const isToday = date === new Date().toLocaleDateString('en-CA')
+      const today = new Date().toLocaleDateString('en-CA')
+      const isToday = date === today
+      const isMissingAttendance = !dateAttendance && lessonHours > 0 && date <= today
+      const suggestedStatus: 'full_day' | 'half_day' = lessonHours >= 3 ? 'full_day' : 'half_day'
+      const suggestedHours = lessonHours >= 3 ? 4 : 2
 
       return {
         date,
@@ -631,6 +638,9 @@ useEffect(() => {
         socialEventCount,
         coopClassCount,
         manualAttendance: dateAttendance,
+        isMissingAttendance,
+        suggestedStatus: isMissingAttendance ? suggestedStatus : undefined,
+        suggestedHours: isMissingAttendance ? suggestedHours : undefined,
         isSchoolDay,
         totalHours,
         isCurrentMonth,
@@ -655,6 +665,12 @@ useEffect(() => {
     setStartDateFilter('')
     setEndDateFilter('')
     setSearchTerm('')
+  }
+
+  function openMarkAttendance(date: string, defaultHours?: number) {
+    setMarkingDate(date)
+    setMarkingDefaultHours(defaultHours)
+    setShowMarkModal(true)
   }
 
   async function markAttendance(date: string, status: 'full_day' | 'half_day' | 'no_school', hours: number, notes: string, kidId: string | null) {
@@ -939,8 +955,8 @@ useEffect(() => {
                       setResolveDate(date)
                       setResolveAttendance(att || null)
                     } else {
-                      setMarkingDate(date)
-                      setShowMarkModal(true)
+                      const suggestion = suggestions.find(s => s.date === date)
+                      openMarkAttendance(date, suggestion?.suggestedHours)
                     }
                   }}
                 />
@@ -1239,6 +1255,14 @@ useEffect(() => {
     onClose={() => setSelectedDate(null)}
     userId={userId}
     organizationId={organizationId}
+    attendance={manualAttendance.find(a => a.attendance_date === selectedDate)}
+    missingAttendance={calendarDays.find(d => d.date === selectedDate)?.isMissingAttendance}
+    suggestedStatus={calendarDays.find(d => d.date === selectedDate)?.suggestedStatus}
+    suggestedHours={calendarDays.find(d => d.date === selectedDate)?.suggestedHours}
+    onMarkAttendance={(date, defaultHours) => {
+      setSelectedDate(null)
+      openMarkAttendance(date, defaultHours)
+    }}
   />
 )}
 {resolveDate && resolveAttendance && (
@@ -1294,7 +1318,7 @@ function MarkAttendanceModal({ date, kids, selectedKid, existingAttendance, defa
   const { isDark } = useTheme()
   const darkCardStyle: React.CSSProperties = isDark ? { backgroundColor: 'var(--hr-bg-surface)', borderColor: 'rgba(255,255,255,0.12)' } : {}
 
-  const [status, setStatus] = useState<'full_day' | 'half_day' | 'no_school'>(existingAttendance?.status || 'full_day')
+  const [status, setStatus] = useState<'full_day' | 'half_day' | 'no_school'>(existingAttendance?.status || (defaultHours === 2 ? 'half_day' : 'full_day'))
   const [hours, setHours] = useState(existingAttendance?.hours ?? defaultHours ?? 4)
   const [notes, setNotes] = useState(existingAttendance?.notes || '')
   const [kidId, setKidId] = useState<string | null>(

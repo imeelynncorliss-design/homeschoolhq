@@ -8,7 +8,16 @@ interface DayDetailsProps {
   onClose: () => void
   userId: string
   organizationId: string
-  onEditLesson?: (lesson: any) => void 
+  onEditLesson?: (lesson: any) => void
+  attendance?: {
+    status: 'full_day' | 'half_day' | 'no_school'
+    hours: number
+    notes?: string | null
+  }
+  missingAttendance?: boolean
+  suggestedStatus?: 'full_day' | 'half_day'
+  suggestedHours?: number
+  onMarkAttendance?: (date: string, defaultHours?: number) => void
 }
 
 interface LessonActivity {
@@ -35,7 +44,7 @@ interface OtherActivity {
 
 type DayActivity = LessonActivity | OtherActivity
 
-export default function DayDetails({ date, onClose, userId, organizationId, onEditLesson }: DayDetailsProps) {
+export default function DayDetails({ date, onClose, userId, organizationId, onEditLesson, attendance, missingAttendance, suggestedStatus, suggestedHours, onMarkAttendance }: DayDetailsProps) {
   const [activities, setActivities] = useState<DayActivity[]>([])
   const [loading, setLoading] = useState(true)
   const [updatingLesson, setUpdatingLesson] = useState<string | null>(null)
@@ -217,6 +226,32 @@ export default function DayDetails({ date, onClose, userId, organizationId, onEd
 
         {/* Body */}
         <div className="overflow-y-auto flex-1 p-4 space-y-3">
+          {missingAttendance && onMarkAttendance && (
+            <div className="rounded-lg border border-amber-300 bg-amber-50 p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <p className="text-sm font-bold text-amber-900">Attendance missing for this lesson day</p>
+                  <p className="mt-1 text-sm text-amber-800">
+                    Lessons are planned here, but no attendance has been recorded yet. Suggested: {suggestedStatus === 'half_day' ? 'Half Day' : 'Full Day'} ({suggestedHours ?? 4}h).
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onMarkAttendance(date, suggestedHours)}
+                  className="whitespace-nowrap rounded-lg bg-amber-600 px-3 py-2 text-sm font-semibold text-white hover:bg-amber-700"
+                >
+                  Mark attendance
+                </button>
+              </div>
+            </div>
+          )}
+
+          {attendance && (
+            <div className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-800">
+              ✅ Attendance recorded: {attendance.status === 'full_day' ? 'Full Day' : attendance.status === 'half_day' ? 'Half Day' : 'No School'} · {attendance.hours}h
+            </div>
+          )}
+
           {loading ? (
             <div className="text-center py-12 text-gray-400">Loading...</div>
           ) : activities.length === 0 ? (

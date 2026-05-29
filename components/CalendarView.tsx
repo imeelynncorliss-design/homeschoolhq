@@ -16,6 +16,9 @@ interface CalendarDay {
     hours: number
     notes?: string | null
   }
+  isMissingAttendance?: boolean
+  suggestedStatus?: 'full_day' | 'half_day'
+  suggestedHours?: number
   isSchoolDay: boolean
   totalHours: number
 }
@@ -112,6 +115,8 @@ export default function CalendarView({
       if (day.manualAttendance.status === 'half_day') return 'bg-yellow-100 hover:bg-yellow-200'
       if (day.manualAttendance.status === 'no_school') return 'bg-gray-100 hover:bg-gray-200'
     }
+
+    if (filters.showLessons && day.isMissingAttendance) return 'bg-amber-50 hover:bg-amber-100'
     
     const hasVisibleActivities = getVisibleActivityCount(day) > 0
     if (hasVisibleActivities) {
@@ -133,6 +138,7 @@ export default function CalendarView({
   function getDayBorder(day: CalendarDay | null) {
     if (!day) return 'border-gray-200'
     if (day.isToday) return 'border-2 border-blue-500'
+    if (day.isMissingAttendance) return 'border-2 border-amber-400'
     return 'border border-gray-200'
   }
 
@@ -215,6 +221,12 @@ export default function CalendarView({
             <span className="text-gray-600">📚 Lessons</span>
           </div>
         )}
+        {filters.showLessons && (
+          <div className="flex items-center gap-1">
+            <div className="w-4 h-4 bg-amber-50 border-2 border-amber-400 rounded"></div>
+            <span className="text-gray-600">⚠️ Missing attendance</span>
+          </div>
+        )}
         {filters.showSocialEvents && (
           <div className="flex items-center gap-1">
             <div className="w-4 h-4 bg-purple-50 border border-gray-300 rounded"></div>
@@ -284,6 +296,12 @@ export default function CalendarView({
                   {day.isCurrentMonth && filters.showManualAttendance && day.manualAttendance && (
                     <div className="text-[10px] text-gray-600 font-bold mt-0.5">
                       {day.manualAttendance.hours}h
+                    </div>
+                  )}
+
+                  {day.isCurrentMonth && filters.showLessons && day.isMissingAttendance && (
+                    <div className="mt-0.5 inline-flex items-center rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold text-amber-800">
+                      Missing
                     </div>
                   )}
                   
