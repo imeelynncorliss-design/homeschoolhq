@@ -9,12 +9,10 @@ import { getRegLevel, REG_LABEL, REG_DESC } from '@/lib/stateRegulation'
 
 export const STYLE_FEATURES = [
   { id: 'pulse_check', emoji: '🎯', label: 'Progress Dials',           desc: 'Daily % completion rings per child' },
-  { id: 'daily_log',   emoji: '📝', label: 'Daily Subject Log',         desc: 'Log subjects covered — no lesson needed' },
   { id: 'attendance',  emoji: '✅', label: 'Attendance Tracking',      desc: 'Log school days and hours' },
   { id: 'reading_log', emoji: '📚', label: 'Reading Log',              desc: 'Track books read this year' },
-  { id: 'field_trips', emoji: '🚌', label: 'Field Trips & Activities', desc: 'Log outings, co-ops, projects' },
-  { id: 'ai_lessons',  emoji: '🤖', label: 'Plan a Lesson',            desc: 'Use me if you need a lesson' },
-  { id: 'ai_activity', emoji: '🎯', label: 'Generate Activity',        desc: 'Use me if you need an activity idea' },
+  { id: 'field_trips', emoji: '🚌', label: 'Activities',               desc: 'Log trips or generate activity ideas' },
+  { id: 'ai_lessons',  emoji: '📚', label: 'Add Lesson',               desc: 'Generate, write, or use curriculum' },
   { id: 'compliance',  emoji: '📋', label: 'Compliance Tracking',      desc: 'Days/hours vs. state requirements' },
   { id: 'progress',    emoji: '📊', label: 'Progress Reports',         desc: 'Learning analytics by subject' },
   { id: 'transcript',  emoji: '🎓', label: 'Transcript Builder',       desc: 'GPA, courses, college-ready records' },
@@ -25,9 +23,9 @@ export const STYLE_FEATURES = [
 
 // ─── Defaults per style ───────────────────────────────────────────────────────
 
-export const DEFAULT_FLEXIBLE   = ['daily_log', 'attendance', 'reading_log', 'field_trips']
+export const DEFAULT_FLEXIBLE   = ['attendance', 'reading_log', 'field_trips']
 export const DEFAULT_STRUCTURED = ['pulse_check', 'attendance', 'compliance', 'ai_lessons', 'progress']
-export const DEFAULT_UNSTYLED   = ['ai_lessons', 'ai_activity', 'attendance', 'reading_log']
+export const DEFAULT_UNSTYLED   = ['ai_lessons', 'field_trips', 'attendance', 'reading_log']
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
