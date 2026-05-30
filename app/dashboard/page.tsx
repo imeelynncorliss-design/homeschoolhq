@@ -2574,6 +2574,8 @@ function DashboardContent() {
             userId={user.id}
             stateAbbr={schoolState}
             isFirstTime={homeschoolStyle === null}
+            currentStyle={homeschoolStyle ?? null}
+            currentPins={pinnedFeatures}
             onComplete={(style, pins) => {
               setHomeschoolStyle(style)
               setPinnedFeatures(pins)
