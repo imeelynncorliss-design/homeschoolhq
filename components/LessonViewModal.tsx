@@ -278,6 +278,7 @@ export default function LessonViewModal({
   const [matUrl, setMatUrl]     = useState('')
   const [matSaving, setMatSaving]   = useState(false)
   const [matSaved, setMatSaved]     = useState(false)
+  const [matError, setMatError]     = useState<string | null>(null)
   // All org materials, sorted: subject-match first
   const [allOrgMaterials, setAllOrgMaterials] = useState<any[]>([])
   // IDs of materials already linked to this child (have kid_id in kid_ids)
@@ -348,6 +349,7 @@ export default function LessonViewModal({
   const saveMatToLibrary = async () => {
     if (!matName.trim() || !organizationId) return
     setMatSaving(true)
+    setMatError(null)
     try {
       const payload = {
         organization_id: organizationId,
@@ -357,7 +359,8 @@ export default function LessonViewModal({
         url: matUrl.trim() || null,
         kid_ids: lesson.kid_id ? [lesson.kid_id] : null,
       }
-      const { data: inserted } = await supabase.from('materials').insert([payload]).select().single()
+      const { data: inserted, error } = await supabase.from('materials').insert([payload]).select().single()
+      if (error) throw error
       if (inserted) {
         const subjectLower = (lesson.subject ?? '').toLowerCase()
         setAllOrgMaterials(prev => {
@@ -372,20 +375,28 @@ export default function LessonViewModal({
       setMatName(''); setMatUrl(''); setMatType('textbook')
       setMatSaved(true)
       setTimeout(() => setMatSaved(false), 2500)
-    } catch (e) { console.error(e) }
+    } catch (e: any) {
+      console.error(e)
+      setMatError(e?.message || 'Could not save this material. Please try again.')
+    }
     finally { setMatSaving(false) }
   }
 
   const linkMaterialToChild = async (mat: any) => {
     if (!lesson.kid_id || linkingMatId) return
     setLinkingMatId(mat.id)
+    setMatError(null)
     try {
       const currentIds: string[] = Array.isArray(mat.kid_ids) ? mat.kid_ids : []
       if (currentIds.includes(lesson.kid_id)) { setLinkedMatIds(prev => new Set([...prev, mat.id])); return }
       const newIds = [...currentIds, lesson.kid_id]
-      await supabase.from('materials').update({ kid_ids: newIds }).eq('id', mat.id)
+      const { error } = await supabase.from('materials').update({ kid_ids: newIds }).eq('id', mat.id)
+      if (error) throw error
       setAllOrgMaterials(prev => prev.map(m => m.id === mat.id ? { ...m, kid_ids: newIds } : m))
       setLinkedMatIds(prev => new Set([...prev, mat.id]))
+    } catch (e: any) {
+      console.error(e)
+      setMatError(e?.message || 'Could not link this material. Please try again.')
     } finally { setLinkingMatId(null) }
   }
 
@@ -1227,6 +1238,14 @@ ${overviewHtml}${objectivesHtml}${materialsHtml}${activitiesHtml}${assessmentHtm
                 >
                   {matSaved ? '✓ Saved to My Materials!' : matSaving ? 'Saving…' : '+ Save to My Materials'}
                 </button>
+                <div style={{ fontSize: 11, color: '#6b7280', fontFamily: 'system-ui, sans-serif', lineHeight: 1.4 }}>
+                  New materials save immediately and are linked to this child.
+                </div>
+                {matError && (
+                  <div style={{ padding: '8px 10px', borderRadius: 10, background: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', fontSize: 12, fontWeight: 700, fontFamily: 'system-ui, sans-serif' }}>
+                    {matError}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -1273,7 +1292,7 @@ ${overviewHtml}${objectivesHtml}${materialsHtml}${activitiesHtml}${assessmentHtm
                             disabled={linkingMatId === m.id}
                             style={{ flexShrink: 0, padding: '4px 10px', borderRadius: 8, border: '1.5px solid #ddd6fe', background: '#f5f3ff', color: '#7c3aed', fontSize: 11, fontWeight: 800, cursor: 'pointer', fontFamily: 'system-ui, sans-serif' }}
                           >
-                            {linkingMatId === m.id ? '…' : 'Link'}
+                            {linkingMatId === m.id ? 'Saving…' : 'Save link'}
                           </button>
                         )}
                       </div>
