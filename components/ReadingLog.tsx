@@ -253,13 +253,13 @@ export default function ReadingLog({ organizationId, kids }: ReadingLogProps) {
 
       {/* Add/Edit Modal */}
       {showForm && (
-        <div onClick={() => { setShowForm(false); resetForm() }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px 16px 88px' }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 24, width: '100%', maxWidth: 480, maxHeight: 'calc(100vh - 112px)', overflowY: 'auto', padding: 28, boxShadow: '0 24px 64px rgba(0,0,0,0.18)', position: 'relative' }}>
-            <button aria-label="Close" title="Close" onClick={() => { setShowForm(false); resetForm() }} style={{ position: 'absolute', top: 16, right: 16, background: '#f3f4f6', border: 'none', borderRadius: '50%', width: 32, height: 32, fontSize: 18, color: '#6b7280', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
-            <h3 style={{ fontSize: 18, fontWeight: 800, color: '#111827', margin: '0 0 20px' }}>
+        <div onClick={() => { setShowForm(false); resetForm() }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', zIndex: 50, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '12px 12px max(12px, env(safe-area-inset-bottom))', overflowY: 'auto' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 20, width: '100%', maxWidth: 480, maxHeight: 'calc(100dvh - 24px)', overflowY: 'auto', padding: '22px 18px 18px', boxShadow: '0 24px 64px rgba(0,0,0,0.18)', position: 'relative', margin: '0 auto' }}>
+            <button aria-label="Close" title="Close" onClick={() => { setShowForm(false); resetForm() }} style={{ position: 'absolute', top: 12, right: 12, background: '#f3f4f6', border: 'none', borderRadius: '50%', width: 32, height: 32, fontSize: 18, color: '#6b7280', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+            <h3 style={{ fontSize: 18, fontWeight: 800, color: '#111827', margin: '0 40px 16px 0' }}>
               {editingBook ? 'Edit Book' : 'Add Book'}
             </h3>
-            <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div>
                 <label style={labelStyle}>Book Title *</label>
                 <input value={fTitle} onChange={e => setFTitle(e.target.value)} required placeholder="e.g. Charlotte's Web" style={inputStyle} />
@@ -299,9 +299,9 @@ export default function ReadingLog({ organizationId, kids }: ReadingLogProps) {
                   </div>
                 </div>
               )}
-              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
-                <button type="button" onClick={() => { setShowForm(false); resetForm() }} style={btn.ghost}>Cancel</button>
-                <button type="submit" disabled={saving} style={btn.primary}>{saving ? 'Saving...' : editingBook ? 'Save Changes' : `Add Book${copyKidIds.length ? ` for ${copyKidIds.length + 1} Kids` : ''}`}</button>
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4, flexWrap: 'wrap' }}>
+                <button type="button" onClick={() => { setShowForm(false); resetForm() }} style={{ ...btn.ghost, flex: '1 1 120px' }}>Cancel</button>
+                <button type="submit" disabled={saving} style={{ ...btn.primary, flex: '1 1 180px' }}>{saving ? 'Saving...' : editingBook ? 'Save Changes' : `Add Book${copyKidIds.length ? ` for ${copyKidIds.length + 1} Kids` : ''}`}</button>
               </div>
             </form>
           </div>
