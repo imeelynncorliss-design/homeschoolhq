@@ -64,9 +64,6 @@ const QUICK_ACTION_CONFIG: Record<string, {
   reading_log: { emoji: '📚', label: 'Reading Log',     sub: 'Track books and reading',             bg: 'linear-gradient(135deg,#ede9fe,#ddd6fe)', iconBg: '#7c3aed', color: '#4c1d95', subColor: '#7c3aed', action: 'route',    href: '/reading-log' },
   field_trips: { emoji: '🚌', label: 'Activities',      sub: 'Log or generate activities',          bg: 'linear-gradient(135deg,#ccfbf1,#99f6e4)', iconBg: '#0d9488', color: '#134e4a', subColor: '#0d9488', action: 'activity_choice' },
   ai_lessons:  { emoji: '📚', label: 'Add Lesson',      sub: 'Generate, write, or use curriculum',  bg: 'linear-gradient(135deg,#ede9fe,#ddd6fe)', iconBg: '#7c3aed', color: '#4c1d95', subColor: '#7c3aed', action: 'lesson_choice' },
-  compliance:  { emoji: '📋', label: 'Compliance',      sub: 'State, days, hours, dates',           bg: 'linear-gradient(135deg,#fef2f2,#fee2e2)', iconBg: '#dc2626', color: '#7f1d1d', subColor: '#dc2626', action: 'route',    href: '/compliance' },
-  progress:    { emoji: '📊', label: 'Progress',        sub: 'Subject and lesson trends',           bg: 'linear-gradient(135deg,#f0fdf4,#dcfce7)', iconBg: '#16a34a', color: '#14532d', subColor: '#16a34a', action: 'route',    href: '/progress' },
-  transcript:  { emoji: '🎓', label: 'Transcript',      sub: 'GPA, courses, records',               bg: 'linear-gradient(135deg,#fefce8,#fef08a)', iconBg: '#d97706', color: '#78350f', subColor: '#d97706', action: 'route',    href: '/transcript' },
   mastery:     { emoji: '🏆', label: 'Mastery',         sub: 'Standards and skills',                bg: 'linear-gradient(135deg,#eff6ff,#dbeafe)', iconBg: '#2563eb', color: '#1e3a5f', subColor: '#3b82f6', action: 'route',    href: '/mastery' },
   portfolio:   { emoji: '🗂️', label: 'Portfolio',       sub: 'Work samples and highlights',         bg: 'linear-gradient(135deg,#fdf4ff,#fae8ff)', iconBg: '#9333ea', color: '#4a044e', subColor: '#a855f7', action: 'route',    href: '/portfolio' },
   calendar:    { emoji: '📅', label: 'Calendar',        sub: 'Month view and lesson days',          bg: 'linear-gradient(135deg,#eff6ff,#dbeafe)', iconBg: '#3b82f6', color: '#1e3a5f', subColor: '#3b82f6', action: 'route',    href: '/calendar' },
@@ -2037,9 +2034,9 @@ function DashboardContent() {
                 onClick: () => setShowToday(true),
               }]
 
-              // Pinned features (skip pulse_check — that's a section toggle, not a button)
+              // Pinned features
               const pinnedBtns = pinnedFeatures
-                .filter(fid => fid !== 'pulse_check' && QUICK_ACTION_CONFIG[fid])
+                .filter(fid => QUICK_ACTION_CONFIG[fid])
                 .map(fid => {
                   const c = QUICK_ACTION_CONFIG[fid]
                   const onClick =
@@ -2135,7 +2132,7 @@ function DashboardContent() {
                     ? pulse.kid.learning_style.split(',').map((s: string) => s.trim().toLowerCase()).filter(Boolean)
                     : []
                   const hasProfile = styles.length > 0 || (pulse.kid.mi_profile && pulse.kid.mi_profile.length > 0)
-                  const showRing = homeschoolStyle === 'structured' || pinnedFeatures.includes('pulse_check')
+                  const showRing = homeschoolStyle === 'structured'
                   const ringR = 44
                   const ringC = 2 * Math.PI * ringR
                   return (

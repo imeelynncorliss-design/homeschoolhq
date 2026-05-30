@@ -8,14 +8,10 @@ import { getRegLevel, REG_LABEL, REG_DESC } from '@/lib/stateRegulation'
 // ─── Feature options ──────────────────────────────────────────────────────────
 
 export const STYLE_FEATURES = [
-  { id: 'pulse_check', emoji: '🎯', label: 'Progress Dials',           desc: 'Daily % completion rings per child' },
   { id: 'attendance',  emoji: '✅', label: 'Attendance Tracking',      desc: 'Log school days and hours' },
   { id: 'reading_log', emoji: '📚', label: 'Reading Log',              desc: 'Track books read this year' },
   { id: 'field_trips', emoji: '🚌', label: 'Activities',               desc: 'Log trips or generate activity ideas' },
   { id: 'ai_lessons',  emoji: '📚', label: 'Add Lesson',               desc: 'Generate, write, or use curriculum' },
-  { id: 'compliance',  emoji: '📋', label: 'Compliance Tracking',      desc: 'Days/hours vs. state requirements' },
-  { id: 'progress',    emoji: '📊', label: 'Progress Reports',         desc: 'Learning analytics by subject' },
-  { id: 'transcript',  emoji: '🎓', label: 'Transcript Builder',       desc: 'GPA, courses, college-ready records' },
   { id: 'mastery',     emoji: '🏆', label: 'Mastery Tracker',          desc: 'Standards & skill mastery' },
   { id: 'portfolio',   emoji: '🗂️', label: 'Portfolio',                desc: 'Work samples & highlights' },
   { id: 'calendar',    emoji: '📅', label: 'Calendar',                 desc: 'Full month lesson calendar' },
@@ -24,7 +20,7 @@ export const STYLE_FEATURES = [
 // ─── Defaults per style ───────────────────────────────────────────────────────
 
 export const DEFAULT_FLEXIBLE   = ['attendance', 'reading_log', 'field_trips']
-export const DEFAULT_STRUCTURED = ['pulse_check', 'attendance', 'compliance', 'ai_lessons', 'progress']
+export const DEFAULT_STRUCTURED = ['attendance', 'ai_lessons', 'field_trips', 'reading_log']
 export const DEFAULT_UNSTYLED   = ['ai_lessons', 'field_trips', 'attendance', 'reading_log']
 
 // ─── Props ────────────────────────────────────────────────────────────────────

@@ -43,20 +43,20 @@ function buildTourSteps(
       : "Jump to Today's Learning, log attendance, check compliance, or plan a lesson. Tap 'Ask Scout' anytime you have a question.",
     bullets: [
       '🛒 Supply Scout — shows how many materials you need this week. Tap it to review and check off as you gather.',
-      "🃏 Use the 'Customize Cards' pill to choose which action cards appear — including a Calendar card!",
+      "🃏 Use the 'Customize Home' pill to choose which shortcuts appear — including a Calendar card!",
       '📌 Ask Scout and Today\'s Learning are always pinned — they\'re always here no matter what cards you pick.',
     ],
     position: 'bottom',
   })
 
-  // Child profile cards — always shown; ring only for structured or pinned pulse
-  const showRing = homeschoolStyle === 'structured' || pinnedFeatures.includes('pulse_check')
+  // Child profile cards — always shown; ring only for structured families
+  const showRing = homeschoolStyle === 'structured'
   steps.push({
     targetId: 'tour-pulse',
     title: 'Your Learners 🐦',
     content: showRing
       ? 'Each card shows your child\'s bird avatar with a progress ring — the white arc fills as they complete today\'s lessons. Tap any card to see their:'
-      : 'Each card shows your child\'s bird avatar. Tap any card to see their profile. Progress rings appear automatically for Structured-style families, or you can pin the Progress Dials card in Quick Actions to add them.',
+      : 'Each card shows your child\'s bird avatar. Tap any card to see their profile and today\'s learning plan.',
     bullets: [
       '🎨 Learning style (Visual, Auditory, Kinesthetic, Read/Write)',
       '✨ MI Superpowers — their natural intelligence strengths',
