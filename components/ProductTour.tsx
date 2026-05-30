@@ -40,10 +40,10 @@ function buildTourSteps(
     title: isFlexMode ? 'Your Quick Log' : 'Your Quick Actions',
     content: isFlexMode
       ? "Shortcuts for logging what you do each day. Tap any card to jump right in — and tap 'Ask Scout' anytime I can help."
-      : "Jump to Today's Learning, log attendance, check compliance, or plan a lesson. Tap 'Ask Scout' anytime you have a question.",
+      : "Jump to Today's Learning, log attendance, plan lessons, or open activities. Tap 'Ask Scout' anytime you have a question.",
     bullets: [
       '🛒 Supply Scout — shows how many materials you need this week. Tap it to review and check off as you gather.',
-      "🃏 Use the 'Customize Home' pill to choose which shortcuts appear — including a Calendar card!",
+      "🃏 Use the 'Customize Home' pill to choose which shortcuts appear.",
       '📌 Ask Scout and Today\'s Learning are always pinned — they\'re always here no matter what cards you pick.',
     ],
     position: 'bottom',

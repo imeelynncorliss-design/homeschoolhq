@@ -12,9 +12,7 @@ export const STYLE_FEATURES = [
   { id: 'reading_log', emoji: '📚', label: 'Reading Log',              desc: 'Track books read this year' },
   { id: 'field_trips', emoji: '🚌', label: 'Activities',               desc: 'Log trips or generate activity ideas' },
   { id: 'ai_lessons',  emoji: '📚', label: 'Add Lesson',               desc: 'Generate, write, or use curriculum' },
-  { id: 'mastery',     emoji: '🏆', label: 'Mastery Tracker',          desc: 'Standards & skill mastery' },
   { id: 'portfolio',   emoji: '🗂️', label: 'Portfolio',                desc: 'Work samples & highlights' },
-  { id: 'calendar',    emoji: '📅', label: 'Calendar',                 desc: 'Full month lesson calendar' },
 ]
 
 // ─── Defaults per style ───────────────────────────────────────────────────────

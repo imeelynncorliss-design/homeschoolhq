@@ -64,9 +64,7 @@ const QUICK_ACTION_CONFIG: Record<string, {
   reading_log: { emoji: '📚', label: 'Reading Log',     sub: 'Track books and reading',             bg: 'linear-gradient(135deg,#ede9fe,#ddd6fe)', iconBg: '#7c3aed', color: '#4c1d95', subColor: '#7c3aed', action: 'route',    href: '/reading-log' },
   field_trips: { emoji: '🚌', label: 'Activities',      sub: 'Log or generate activities',          bg: 'linear-gradient(135deg,#ccfbf1,#99f6e4)', iconBg: '#0d9488', color: '#134e4a', subColor: '#0d9488', action: 'activity_choice' },
   ai_lessons:  { emoji: '📚', label: 'Add Lesson',      sub: 'Generate, write, or use curriculum',  bg: 'linear-gradient(135deg,#ede9fe,#ddd6fe)', iconBg: '#7c3aed', color: '#4c1d95', subColor: '#7c3aed', action: 'lesson_choice' },
-  mastery:     { emoji: '🏆', label: 'Mastery',         sub: 'Standards and skills',                bg: 'linear-gradient(135deg,#eff6ff,#dbeafe)', iconBg: '#2563eb', color: '#1e3a5f', subColor: '#3b82f6', action: 'route',    href: '/mastery' },
   portfolio:   { emoji: '🗂️', label: 'Portfolio',       sub: 'Work samples and highlights',         bg: 'linear-gradient(135deg,#fdf4ff,#fae8ff)', iconBg: '#9333ea', color: '#4a044e', subColor: '#a855f7', action: 'route',    href: '/portfolio' },
-  calendar:    { emoji: '📅', label: 'Calendar',        sub: 'Month view and lesson days',          bg: 'linear-gradient(135deg,#eff6ff,#dbeafe)', iconBg: '#3b82f6', color: '#1e3a5f', subColor: '#3b82f6', action: 'route',    href: '/calendar' },
 }
 
 const DAY_CARDINAL: Record<number, string> = {
@@ -1287,6 +1285,7 @@ function DashboardContent() {
   const [tourAutoStart, setTourAutoStart]     = useState(false)
   const [tourFromWelcome, setTourFromWelcome] = useState(false)
   const [weekLessons, setWeekLessons]           = useState<Record<string, { lesson: any; kid: Kid }[]>>({})
+  const [selectedDayKey, setSelectedDayKey]     = useState<string | null>(null)
   const [weeklyMaterialsCount, setWeeklyMaterialsCount] = useState(0)
   const [todayAttendance, setTodayAttendance] = useState<Set<string>>(new Set()) // kid IDs marked present today
   const [todayKey, setTodayKey] = useState(localDateString())
@@ -1976,6 +1975,12 @@ function DashboardContent() {
             </button>
           </section>
 
+          <WeekStrip
+            weekLessons={weekLessons}
+            today={now}
+            onDayClick={setSelectedDayKey}
+          />
+
           {/* Quick Actions — style-aware */}
           <section>
             <div style={{ ...css.sectionRow, justifyContent: 'space-between' }}>
@@ -2356,6 +2361,18 @@ function DashboardContent() {
             onSaved={(info) => {
               setShowActivity(false)
               router.push(info?.date ? `/calendar?date=${info.date}&saved=activity` : '/calendar')
+            }}
+          />
+        )}
+        {selectedDayKey && (
+          <DayDrawer
+            dateKey={selectedDayKey}
+            entries={weekLessons[selectedDayKey] || []}
+            onClose={() => setSelectedDayKey(null)}
+            onLessonClick={(lesson, kidName) => {
+              setSelectedDayKey(null)
+              setSelectedLesson(lesson as LessonViewModalLesson)
+              setSelectedKidName(kidName)
             }}
           />
         )}

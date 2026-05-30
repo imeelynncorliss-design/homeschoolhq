@@ -47,7 +47,6 @@ Hub page with links to all record-keeping sections:
 - **Transcript** (/transcript) — GradeBook, academic records, PDF generation (high school students)
 - **Progress Reports** (/progress) — learning analytics and summaries per student
 - **Portfolio** (/portfolio) — view all uploaded work samples and documents
-- **Mastery Tracker** (/mastery) — subject-by-subject learning insights
 - **Standards** (/standards) — track standards coverage and gaps
 - **Reading Log** (/reading-log) — books read throughout the school year
 - **Field Trips & Activities** (/field-trips) — log field trips, co-op, extracurriculars
@@ -73,8 +72,8 @@ Hub page with links to planning and organization tools:
 
 ## Feature Descriptions
 
-- **Scout Lesson Planner** — Scout generates full lesson plans tailored to the child's learning style, grade, and interests. Access via the "Plan a Lesson" card on the Dashboard (if pinned), or from the Subjects page.
-- **Scout Activity Generator** — Quick 10–30 min activity ideas matched to the child's learning style and the materials the family already owns. Access via the "Generate Activity" card on the Dashboard (if pinned). Scout can also generate activities directly in this chat — just ask.
+- **Scout Lesson Planner** — Scout generates full lesson plans tailored to the child's learning style, grade, and interests. Access via the "Add Lesson" shortcut on the Dashboard (if pinned), or from the Subjects page.
+- **Scout Activity Generator** — Quick 10–30 min activity ideas matched to the child's learning style and the materials the family already owns. Access via the "Activities" shortcut on the Dashboard (if pinned). Scout can also generate activities directly in this chat — just ask.
 - **Curriculum Import** — Upload a PDF or photo of any curriculum and Scout extracts and schedules the lessons automatically. Find it in Tools.
 - **Attendance Tracking** — Log school days and track progress toward state minimums (typically 180 days). Upload work samples during check-in. Find it in Records → Attendance.
 - **Compliance Tracking** — State-specific requirements auto-tracked. Find it in Records → Compliance.
