@@ -1047,20 +1047,28 @@ function WeekStrip({
       <div style={{ display: 'flex', flex: 1, gap: 2 }}>
         {days.map(({ key, dayName, dayNum, count }) => {
           const isToday = key === todayKey
+          const hasLessons = count > 0
           return (
             <button
               key={key}
               onClick={() => onDayClick(key)}
-              aria-label={`${dayName} ${dayNum}${count > 0 ? `, ${count} lesson${count === 1 ? '' : 's'} scheduled` : ''}`}
+              aria-label={`${dayName} ${dayNum}${hasLessons ? `, ${count} lesson${count === 1 ? '' : 's'} scheduled` : ''}`}
               style={{
                 flex: 1, display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 3,
-                padding: '5px 2px', borderRadius: 10, border: 'none', cursor: 'pointer',
-                background: isToday ? '#7c3aed' : 'transparent',
+                padding: '5px 2px', borderRadius: 10, border: hasLessons && !isToday ? '1.5px solid #7c3aed' : '1.5px solid transparent', cursor: 'pointer',
+                background: isToday ? '#7c3aed' : hasLessons ? '#f5f3ff' : 'transparent',
+                boxShadow: hasLessons && !isToday ? 'inset 0 0 0 1px rgba(124,58,237,0.12)' : 'none',
                 transition: 'background 0.15s',
               }}>
-              <span style={{ fontFamily: "'Nunito', sans-serif", fontSize: 9, fontWeight: 700, color: isToday ? 'rgba(255,255,255,0.85)' : '#6b7280', textTransform: 'uppercase' as const }}>{dayName}</span>
-              <span style={{ fontFamily: "'Nunito', sans-serif", fontSize: 15, fontWeight: 900, color: isToday ? '#fff' : '#111827', lineHeight: 1 }}>{dayNum}</span>
-              <div aria-hidden="true" style={{ width: 4, height: 4, borderRadius: '50%', background: count > 0 ? (isToday ? 'rgba(255,255,255,0.65)' : '#7c3aed') : 'transparent' }} />
+              <span style={{ fontFamily: "'Nunito', sans-serif", fontSize: 9, fontWeight: 800, color: isToday ? 'rgba(255,255,255,0.85)' : hasLessons ? '#5b21b6' : '#6b7280', textTransform: 'uppercase' as const }}>{dayName}</span>
+              <span style={{ fontFamily: "'Nunito', sans-serif", fontSize: 15, fontWeight: 900, color: isToday ? '#fff' : hasLessons ? '#4c1d95' : '#111827', lineHeight: 1 }}>{dayNum}</span>
+              {hasLessons ? (
+                <span style={{ fontFamily: "'Nunito', sans-serif", fontSize: 9, fontWeight: 900, lineHeight: 1, color: isToday ? '#fff' : '#5b21b6', background: isToday ? 'rgba(255,255,255,0.22)' : '#ede9fe', borderRadius: 999, padding: '2px 5px', minWidth: 18, textAlign: 'center' }}>
+                  {count} {count === 1 ? 'lesson' : 'lessons'}
+                </span>
+              ) : (
+                <span aria-hidden="true" style={{ height: 13 }} />
+              )}
             </button>
           )
         })}

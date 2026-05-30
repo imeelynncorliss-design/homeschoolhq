@@ -253,53 +253,60 @@ export default function ReadingLog({ organizationId, kids }: ReadingLogProps) {
 
       {/* Add/Edit Modal */}
       {showForm && (
-        <div onClick={() => { setShowForm(false); resetForm() }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', zIndex: 50, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '12px 12px max(12px, env(safe-area-inset-bottom))', overflowY: 'auto' }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 20, width: '100%', maxWidth: 480, maxHeight: 'calc(100dvh - 24px)', overflowY: 'auto', padding: '22px 18px 18px', boxShadow: '0 24px 64px rgba(0,0,0,0.18)', position: 'relative', margin: '0 auto' }}>
-            <button aria-label="Close" title="Close" onClick={() => { setShowForm(false); resetForm() }} style={{ position: 'absolute', top: 12, right: 12, background: '#f3f4f6', border: 'none', borderRadius: '50%', width: 32, height: 32, fontSize: 18, color: '#6b7280', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
-            <h3 style={{ fontSize: 18, fontWeight: 800, color: '#111827', margin: '0 40px 16px 0' }}>
-              {editingBook ? 'Edit Book' : 'Add Book'}
-            </h3>
-            <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div>
-                <label style={labelStyle}>Book Title *</label>
-                <input value={fTitle} onChange={e => setFTitle(e.target.value)} required placeholder="e.g. Charlotte's Web" style={inputStyle} />
-              </div>
-              <div>
-                <label style={labelStyle}>Author</label>
-                <input value={fAuthor} onChange={e => setFAuthor(e.target.value)} placeholder="e.g. E.B. White" style={inputStyle} />
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div
+          onClick={() => { setShowForm(false); resetForm() }}
+          style={{ position: 'fixed', inset: 0, height: '100dvh', background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', zIndex: 9998, display: 'flex', alignItems: 'stretch', justifyContent: 'center', padding: 0, overflow: 'hidden' }}
+        >
+          <div onClick={e => e.stopPropagation()} style={{ background: '#fff', width: '100%', maxWidth: 560, height: '100dvh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 24px 64px rgba(0,0,0,0.18)', position: 'relative' }}>
+            <div style={{ flexShrink: 0, padding: '18px 18px 12px', borderBottom: '1px solid #f3f4f6' }}>
+              <button aria-label="Close" title="Close" onClick={() => { setShowForm(false); resetForm() }} style={{ position: 'absolute', top: 12, right: 12, background: '#f3f4f6', border: 'none', borderRadius: '50%', width: 34, height: 34, fontSize: 18, color: '#6b7280', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+              <h3 style={{ fontSize: 18, fontWeight: 800, color: '#111827', margin: '0 44px 0 0' }}>
+                {editingBook ? 'Edit Book' : 'Add Book'}
+              </h3>
+            </div>
+            <form onSubmit={handleSave} style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+              <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <div>
-                  <label style={labelStyle}>Pages</label>
-                  <input type="number" value={fPages} onChange={e => setFPages(e.target.value)} placeholder="184" min="1" style={inputStyle} />
+                  <label style={labelStyle}>Book Title *</label>
+                  <input value={fTitle} onChange={e => setFTitle(e.target.value)} required placeholder="e.g. Charlotte's Web" style={inputStyle} />
                 </div>
                 <div>
-                  <label style={labelStyle}>Date Completed</label>
-                  <input type="date" value={fDate} onChange={e => setFDate(e.target.value)} style={inputStyle} />
+                  <label style={labelStyle}>Author</label>
+                  <input value={fAuthor} onChange={e => setFAuthor(e.target.value)} placeholder="e.g. E.B. White" style={inputStyle} />
                 </div>
-              </div>
-              <div>
-                <label style={labelStyle}>Notes (optional)</label>
-                <textarea value={fNotes} onChange={e => setFNotes(e.target.value)} placeholder="What did they think of it?" rows={3} style={{ ...inputStyle, resize: 'vertical' }} />
-              </div>
-              {!editingBook && kids.filter(k => k.id !== selectedKid).length > 0 && (
-                <div style={{ background: '#f9fafb', border: '1.5px solid #e5e7eb', borderRadius: 12, padding: '12px 14px' }}>
-                  <div style={{ ...labelStyle, marginBottom: 8 }}>Also save for</div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {kids.filter(k => k.id !== selectedKid).map(kid => (
-                      <label key={kid.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 700, color: '#374151', cursor: 'pointer' }}>
-                        <input
-                          type="checkbox"
-                          checked={copyKidIds.includes(kid.id)}
-                          onChange={() => toggleCopyKid(kid.id)}
-                        />
-                        {kid.displayname}
-                      </label>
-                    ))}
+                <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 12 }}>
+                  <div>
+                    <label style={labelStyle}>Pages</label>
+                    <input type="number" value={fPages} onChange={e => setFPages(e.target.value)} placeholder="184" min="1" style={inputStyle} />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Date Completed</label>
+                    <input type="date" value={fDate} onChange={e => setFDate(e.target.value)} style={inputStyle} />
                   </div>
                 </div>
-              )}
-              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4, flexWrap: 'wrap' }}>
+                <div>
+                  <label style={labelStyle}>Notes (optional)</label>
+                  <textarea value={fNotes} onChange={e => setFNotes(e.target.value)} placeholder="What did they think of it?" rows={3} style={{ ...inputStyle, resize: 'vertical' }} />
+                </div>
+                {!editingBook && kids.filter(k => k.id !== selectedKid).length > 0 && (
+                  <div style={{ background: '#f9fafb', border: '1.5px solid #e5e7eb', borderRadius: 12, padding: '12px 14px' }}>
+                    <div style={{ ...labelStyle, marginBottom: 8 }}>Also save for</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {kids.filter(k => k.id !== selectedKid).map(kid => (
+                        <label key={kid.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 700, color: '#374151', cursor: 'pointer' }}>
+                          <input
+                            type="checkbox"
+                            checked={copyKidIds.includes(kid.id)}
+                            onChange={() => toggleCopyKid(kid.id)}
+                          />
+                          {kid.displayname}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div style={{ flexShrink: 0, display: 'flex', gap: 10, justifyContent: 'flex-end', flexWrap: 'wrap', padding: '12px 18px max(12px, env(safe-area-inset-bottom))', borderTop: '1px solid #f3f4f6', background: '#fff' }}>
                 <button type="button" onClick={() => { setShowForm(false); resetForm() }} style={{ ...btn.ghost, flex: '1 1 120px' }}>Cancel</button>
                 <button type="submit" disabled={saving} style={{ ...btn.primary, flex: '1 1 180px' }}>{saving ? 'Saving...' : editingBook ? 'Save Changes' : `Add Book${copyKidIds.length ? ` for ${copyKidIds.length + 1} Kids` : ''}`}</button>
               </div>

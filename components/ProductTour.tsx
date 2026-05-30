@@ -37,7 +37,7 @@ function buildTourSteps(
   steps.push({
     targetId: 'tour-week-strip',
     title: 'Your Week at a Glance 📅',
-    content: "This compact calendar stays on Home so you can quickly orient yourself. Today is highlighted, dots show scheduled lessons, and 'View full calendar' opens the full calendar page.",
+    content: "This compact calendar stays on Home so you can quickly orient yourself. Today is highlighted, and days with lessons use a high-contrast outline plus a lesson count so they are easier to see.",
     position: 'bottom',
   })
 
@@ -131,7 +131,7 @@ function buildCoTeacherTourSteps(): TourStep[] {
     {
       targetId: 'tour-week-strip',
       title: 'Your Week at a Glance',
-      content: "A dot (●) below a date means lessons are scheduled that day. Tap any day to see what's planned — you can view, check in, or add notes right from there.",
+      content: "Days with scheduled lessons are outlined and labeled with a lesson count. Tap any day to see what's planned — you can view, check in, or add notes right from there.",
       position: 'bottom',
     },
     {
