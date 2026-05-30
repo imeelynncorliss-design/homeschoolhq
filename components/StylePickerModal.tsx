@@ -12,6 +12,7 @@ export const STYLE_FEATURES = [
   { id: 'reading_log', emoji: '📚', label: 'Reading Log',              desc: 'Track books read this year' },
   { id: 'field_trips', emoji: '🚌', label: 'Activities',               desc: 'Log trips or generate activity ideas' },
   { id: 'ai_lessons',  emoji: '📚', label: 'Add Lesson',               desc: 'Generate, write, or use curriculum' },
+  { id: 'materials',   emoji: '🧰', label: 'Materials',                desc: 'Supplies and teaching resources' },
   { id: 'portfolio',   emoji: '🗂️', label: 'Portfolio',                desc: 'Work samples & highlights' },
 ]
 

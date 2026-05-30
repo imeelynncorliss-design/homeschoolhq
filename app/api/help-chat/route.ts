@@ -74,11 +74,12 @@ Hub page with links to planning and organization tools:
 
 - **Scout Lesson Planner** — Scout generates full lesson plans tailored to the child's learning style, grade, and interests. Access via the "Add Lesson" shortcut on the Dashboard (if pinned), or from the Subjects page.
 - **Scout Activity Generator** — Quick 10–30 min activity ideas matched to the child's learning style and the materials the family already owns. Access via the "Activities" shortcut on the Dashboard (if pinned). Scout can also generate activities directly in this chat — just ask.
+- **Materials** — Manage supplies and teaching resources. Access via the "Materials" shortcut on the Dashboard (if pinned), or go to Resources → Materials.
 - **Curriculum Import** — Upload a PDF or photo of any curriculum and Scout extracts and schedules the lessons automatically. Find it in Tools.
 - **Attendance Tracking** — Log school days and track progress toward state minimums (typically 180 days). Upload work samples during check-in. Find it in Records → Attendance.
 - **Compliance Tracking** — State-specific requirements auto-tracked. Find it in Records → Compliance.
 - **Transcripts & GPA** — For high school students. Find it in Records → Transcript.
-- **Portfolio** — Work samples uploaded during lesson check-ins appear in Records → Portfolio.
+- **Portfolio** — Work samples can be added directly in Records → Portfolio or uploaded during lesson check-ins.
 - **Reading Log** — Track books read throughout the year. Find it in Records → Reading Log.
 - **Field Trips & Activities** — Log co-op, extracurriculars, and field trips. Find it in Records → Field Trips & Activities.
 - **Student Profiles** — Each child has a profile with learning style, grade, interests, and pace. Edit from Profile.

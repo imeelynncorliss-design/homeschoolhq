@@ -64,6 +64,7 @@ const QUICK_ACTION_CONFIG: Record<string, {
   reading_log: { emoji: '📚', label: 'Reading Log',     sub: 'Track books and reading',             bg: 'linear-gradient(135deg,#ede9fe,#ddd6fe)', iconBg: '#7c3aed', color: '#4c1d95', subColor: '#7c3aed', action: 'route',    href: '/reading-log' },
   field_trips: { emoji: '🚌', label: 'Activities',      sub: 'Log or generate activities',          bg: 'linear-gradient(135deg,#ccfbf1,#99f6e4)', iconBg: '#0d9488', color: '#134e4a', subColor: '#0d9488', action: 'activity_choice' },
   ai_lessons:  { emoji: '📚', label: 'Add Lesson',      sub: 'Generate, write, or use curriculum',  bg: 'linear-gradient(135deg,#ede9fe,#ddd6fe)', iconBg: '#7c3aed', color: '#4c1d95', subColor: '#7c3aed', action: 'lesson_choice' },
+  materials:   { emoji: '🧰', label: 'Materials',       sub: 'Supplies and resources',              bg: 'linear-gradient(135deg,#fffbeb,#fef3c7)', iconBg: '#d97706', color: '#78350f', subColor: '#d97706', action: 'route',    href: '/materials' },
   portfolio:   { emoji: '🗂️', label: 'Portfolio',       sub: 'Work samples and highlights',         bg: 'linear-gradient(135deg,#fdf4ff,#fae8ff)', iconBg: '#9333ea', color: '#4a044e', subColor: '#a855f7', action: 'route',    href: '/portfolio' },
 }
 

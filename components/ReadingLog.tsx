@@ -40,6 +40,7 @@ export default function ReadingLog({ organizationId, kids }: ReadingLogProps) {
   const [fPages, setFPages]             = useState('')
   const [fDate, setFDate]               = useState('')
   const [fNotes, setFNotes]             = useState('')
+  const [copyKidIds, setCopyKidIds]     = useState<string[]>([])
 
   const loadBooks = useCallback(async () => {
     if (!selectedKid) return
@@ -58,6 +59,7 @@ export default function ReadingLog({ organizationId, kids }: ReadingLogProps) {
 
   const resetForm = () => {
     setFTitle(''); setFAuthor(''); setFPages(''); setFDate(''); setFNotes('')
+    setCopyKidIds([])
     setEditingBook(null)
   }
 
@@ -65,9 +67,14 @@ export default function ReadingLog({ organizationId, kids }: ReadingLogProps) {
 
   const openEdit = (b: Book) => {
     setEditingBook(b)
+    setCopyKidIds([])
     setFTitle(b.title); setFAuthor(b.author ?? ''); setFPages(b.pages?.toString() ?? '')
     setFDate(b.date_completed ?? ''); setFNotes(b.notes ?? '')
     setShowForm(true)
+  }
+
+  const toggleCopyKid = (kidId: string) => {
+    setCopyKidIds(prev => prev.includes(kidId) ? prev.filter(id => id !== kidId) : [...prev, kidId])
   }
 
   const handleSave = async (e: React.FormEvent) => {
@@ -86,7 +93,8 @@ export default function ReadingLog({ organizationId, kids }: ReadingLogProps) {
     if (editingBook) {
       await supabase.from('reading_log').update(payload).eq('id', editingBook.id)
     } else {
-      await supabase.from('reading_log').insert([payload])
+      const copyRows = copyKidIds.map(kidId => ({ ...payload, kid_id: kidId }))
+      await supabase.from('reading_log').insert([payload, ...copyRows])
     }
     setSaving(false)
     setShowForm(false)
@@ -245,9 +253,9 @@ export default function ReadingLog({ organizationId, kids }: ReadingLogProps) {
 
       {/* Add/Edit Modal */}
       {showForm && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px 16px 88px' }}>
-          <div style={{ background: '#fff', borderRadius: 24, width: '100%', maxWidth: 480, padding: 28, boxShadow: '0 24px 64px rgba(0,0,0,0.18)', position: 'relative' }}>
-            <button onClick={() => { setShowForm(false); resetForm() }} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', fontSize: 18, color: '#9ca3af', cursor: 'pointer' }}>✕</button>
+        <div onClick={() => { setShowForm(false); resetForm() }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px 16px 88px' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 24, width: '100%', maxWidth: 480, maxHeight: 'calc(100vh - 112px)', overflowY: 'auto', padding: 28, boxShadow: '0 24px 64px rgba(0,0,0,0.18)', position: 'relative' }}>
+            <button aria-label="Close" title="Close" onClick={() => { setShowForm(false); resetForm() }} style={{ position: 'absolute', top: 16, right: 16, background: '#f3f4f6', border: 'none', borderRadius: '50%', width: 32, height: 32, fontSize: 18, color: '#6b7280', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
             <h3 style={{ fontSize: 18, fontWeight: 800, color: '#111827', margin: '0 0 20px' }}>
               {editingBook ? 'Edit Book' : 'Add Book'}
             </h3>
@@ -274,9 +282,26 @@ export default function ReadingLog({ organizationId, kids }: ReadingLogProps) {
                 <label style={labelStyle}>Notes (optional)</label>
                 <textarea value={fNotes} onChange={e => setFNotes(e.target.value)} placeholder="What did they think of it?" rows={3} style={{ ...inputStyle, resize: 'vertical' }} />
               </div>
+              {!editingBook && kids.filter(k => k.id !== selectedKid).length > 0 && (
+                <div style={{ background: '#f9fafb', border: '1.5px solid #e5e7eb', borderRadius: 12, padding: '12px 14px' }}>
+                  <div style={{ ...labelStyle, marginBottom: 8 }}>Also save for</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {kids.filter(k => k.id !== selectedKid).map(kid => (
+                      <label key={kid.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 700, color: '#374151', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={copyKidIds.includes(kid.id)}
+                          onChange={() => toggleCopyKid(kid.id)}
+                        />
+                        {kid.displayname}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
                 <button type="button" onClick={() => { setShowForm(false); resetForm() }} style={btn.ghost}>Cancel</button>
-                <button type="submit" disabled={saving} style={btn.primary}>{saving ? 'Saving...' : editingBook ? 'Save Changes' : 'Add Book'}</button>
+                <button type="submit" disabled={saving} style={btn.primary}>{saving ? 'Saving...' : editingBook ? 'Save Changes' : `Add Book${copyKidIds.length ? ` for ${copyKidIds.length + 1} Kids` : ''}`}</button>
               </div>
             </form>
           </div>
