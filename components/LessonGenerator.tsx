@@ -458,17 +458,18 @@ ${objectivesHtml}${activitiesHtml}${materialsHtml}${assessmentHtml}
             {formData.childId && resolveSubject() && resolveSubject() !== '__custom__' && (
               <div>
                 <label className="block text-sm font-medium text-gray-900 mb-1">
-                  Add to Course <span className="text-gray-400 font-normal">(optional)</span>
+                  Add to High School Course <span className="text-gray-400 font-normal">(optional)</span>
                 </label>
+                <p className="text-xs text-gray-500 mb-2">For transcript tracking. Grade-school lessons can be saved as standalone lessons.</p>
                 {loadingCourses ? (
                   <div className="border rounded-lg px-3 py-2 text-sm text-gray-500">Loading courses…</div>
                 ) : availableCourses.length === 0 ? (
                   <div style={{ border: '1.5px dashed #e5e7eb', borderRadius: 10, padding: '10px 12px', background: '#fafafa', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                     <p style={{ margin: 0, fontSize: 12, color: '#6b7280', lineHeight: 1.5 }}>
-                      No active <strong>{resolveSubject()}</strong> courses for {formData.childName}.
+                      No active high school <strong>{resolveSubject()}</strong> courses for {formData.childName}.
                     </p>
                     <a href="/courses" style={{ fontSize: 12, fontWeight: 700, color: '#7c3aed', whiteSpace: 'nowrap' as const, textDecoration: 'none', background: '#f5f3ff', border: '1px solid #ede9fe', borderRadius: 8, padding: '4px 10px' }}>
-                      + Create course
+                      + Create HS course
                     </a>
                   </div>
                 ) : (
@@ -478,7 +479,7 @@ ${objectivesHtml}${activitiesHtml}${materialsHtml}${assessmentHtml}
                       onChange={(e) => setFormData(prev => ({ ...prev, courseId: e.target.value }))}
                       className="w-full border rounded-lg px-3 py-2 text-gray-900"
                     >
-                      <option value="">No course — save as standalone lesson</option>
+                      <option value="">No high school course — save as standalone lesson</option>
                       {availableCourses.map(course => (
                         <option key={course.id} value={course.id}>
                           {course.course_name} ({course.grade_level} · {course.status.replace('_', ' ')})
@@ -487,7 +488,7 @@ ${objectivesHtml}${activitiesHtml}${materialsHtml}${assessmentHtml}
                     </select>
                     {formData.courseId && (
                       <p className="text-xs text-green-700 mt-1">
-                        ✓ This lesson will count toward the {availableCourses.find(c => c.id === formData.courseId)?.course_name} transcript
+                        ✓ This lesson will count toward the {availableCourses.find(c => c.id === formData.courseId)?.course_name} high school transcript
                       </p>
                     )}
                   </>
