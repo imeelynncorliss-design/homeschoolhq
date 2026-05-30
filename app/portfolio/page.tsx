@@ -18,6 +18,7 @@ interface Upload {
   file_size: number | null
   attendance_date: string
   lesson_id: string | null
+  kid_id: string | null
   created_at: string
   signedUrl: string | null
   lesson_title?: string | null
@@ -124,40 +125,42 @@ function PortfolioContent() {
       if (uploadsErr) throw uploadsErr
       if (!uploads || uploads.length === 0) { setGroups([]); setLoading(false); return }
 
-      const kidIds = [...new Set(uploads.map((u: { kid_id: string }) => u.kid_id).filter(Boolean))]
-
       const lessonIds = [...new Set(uploads.map((u: { lesson_id: string | null }) => u.lesson_id).filter(Boolean))] as string[]
-      let lessonMap: Record<string, { title: string; subject: string }> = {}
+      let lessonMap: Record<string, { title: string; subject: string; kid_id: string | null }> = {}
       if (lessonIds.length > 0) {
         const { data: lessons } = await supabase
-          .from('lessons').select('id, title, subject').in('id', lessonIds)
+          .from('lessons').select('id, title, subject, kid_id').in('id', lessonIds)
         if (lessons) {
           lessonMap = Object.fromEntries(
-            lessons.map((l: { id: string; title: string; subject: string }) => [l.id, { title: l.title, subject: l.subject }])
+            lessons.map((l: { id: string; title: string; subject: string; kid_id: string | null }) => [l.id, { title: l.title, subject: l.subject, kid_id: l.kid_id }])
           )
         }
       }
 
       const enriched: Upload[] = await Promise.all(
-        uploads.map(async (u: { id: string; file_name: string; file_path: string; file_type: string | null; file_size: number | null; attendance_date: string; lesson_id: string | null; created_at: string; kid_id: string }) => {
+        uploads.map(async (u: { id: string; file_name: string; file_path: string; file_type: string | null; file_size: number | null; attendance_date: string; lesson_id: string | null; created_at: string; kid_id: string | null }) => {
           const { data: signed } = await supabase.storage
             .from('portfolio-uploads').createSignedUrl(u.file_path, 3600)
           const lesson = u.lesson_id ? lessonMap[u.lesson_id] : null
-          return { ...u, signedUrl: signed?.signedUrl ?? null, lesson_title: lesson?.title ?? null, subject: lesson?.subject ?? null }
+          const kidId = u.kid_id ?? lesson?.kid_id ?? null
+          return { ...u, kid_id: kidId, signedUrl: signed?.signedUrl ?? null, lesson_title: lesson?.title ?? null, subject: lesson?.subject ?? null }
         })
       )
 
       const kidMap: Record<string, KidGroup> = {}
       for (const upload of enriched) {
-        const u = upload as Upload & { kid_id: string }
-        const kid = kids?.find((k: { id: string; displayname: string }) => k.id === u.kid_id)
-        const kidId = u.kid_id ?? 'unknown'
-        const kidName = kid?.displayname ?? 'Unknown Child'
+        const kid = kidList.find((k: { id: string; displayname: string }) => k.id === upload.kid_id)
+        const kidId = upload.kid_id ?? 'unassigned'
+        const kidName = kid?.displayname ?? 'Unassigned work'
         if (!kidMap[kidId]) kidMap[kidId] = { kid_id: kidId, kid_name: kidName, uploads: [] }
         kidMap[kidId].uploads.push(upload)
       }
 
-      const grouped = Object.values(kidMap)
+      const grouped = Object.values(kidMap).sort((a, b) => {
+        if (a.kid_id === 'unassigned') return 1
+        if (b.kid_id === 'unassigned') return -1
+        return kidList.findIndex(k => k.id === a.kid_id) - kidList.findIndex(k => k.id === b.kid_id)
+      })
       setGroups(grouped)
       if (grouped.length > 0) setActiveKid(grouped[0].kid_id)
     } catch (e: unknown) {
