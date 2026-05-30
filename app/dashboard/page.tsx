@@ -2325,7 +2325,7 @@ function DashboardContent() {
                 sub: 'Go to Lessons and write your own lesson',
                 onClick: () => {
                   setShowLessonChoice(false)
-                  router.push('/lessons')
+                  router.push('/lessons?add=manual')
                 },
               },
               {

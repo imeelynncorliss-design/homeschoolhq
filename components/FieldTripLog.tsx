@@ -280,8 +280,8 @@ export default function FieldTripLog({ organizationId, kids }: FieldTripLogProps
 
       {/* Add/Edit Modal */}
       {showForm && (
-        <div role="dialog" aria-modal="true" aria-labelledby="field-trip-form-title" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px 16px 88px' }}>
-          <div ref={trapRef} style={{ background: '#fff', borderRadius: 24, width: '100%', maxWidth: 480, maxHeight: 'calc(100vh - 104px)', overflowY: 'auto', padding: 28, boxShadow: '0 24px 64px rgba(0,0,0,0.18)' }}>
+        <div role="dialog" aria-modal="true" aria-labelledby="field-trip-form-title" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', zIndex: 50, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '18px 16px 88px', overflowY: 'auto' }}>
+          <div ref={trapRef} style={{ background: '#fff', borderRadius: 24, width: '100%', maxWidth: 480, maxHeight: 'calc(100dvh - 112px)', overflowY: 'auto', padding: 24, boxShadow: '0 24px 64px rgba(0,0,0,0.18)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
               <h3 id="field-trip-form-title" style={{ fontSize: 18, fontWeight: 800, color: '#111827', margin: 0 }}>
                 {editingTrip ? 'Edit Trip' : 'Add Field Trip'}

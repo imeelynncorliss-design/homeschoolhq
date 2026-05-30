@@ -219,11 +219,12 @@ function LessonsContent() {
     // Read ?date= param and pre-fill Add Lesson form
     const params = new URLSearchParams(window.location.search)
     const dateParam = params.get('date')
-    console.log('RAW dateParam from URL:', dateParam)
+    const addParam = params.get('add')
     if (dateParam) {
       const localDate = new Date(dateParam + 'T12:00:00').toISOString().split('T')[0]
-      console.log('localDate after conversion:', localDate)
       setLessonDate(localDate)
+      setShowLessonForm(true)
+    } else if (addParam === 'manual') {
       setShowLessonForm(true)
     }
     }
@@ -904,18 +905,32 @@ function LessonsContent() {
                 )}
               </div>
 
-              <button
-                type="submit"
-                disabled={addingLesson}
-                style={{
-                  width: '100%', padding: '13px 0', borderRadius: 12, border: 'none',
-                  background: addingLesson ? '#c4b5fd' : 'linear-gradient(135deg, #7c3aed, #a855f7)',
-                  color: '#fff', fontSize: 15, fontWeight: 800, cursor: addingLesson ? 'not-allowed' : 'pointer',
-                  fontFamily: "'Nunito', sans-serif", flexShrink: 0,
-                }}
-              >
-                {addingLesson ? 'Adding Lesson…' : 'Add Lesson'}
-              </button>
+              <div style={{ display: 'flex', gap: 10, flexShrink: 0 }}>
+                <button
+                  type="button"
+                  onClick={() => { setShowLessonForm(false); resetForm() }}
+                  disabled={addingLesson}
+                  style={{
+                    flex: 1, padding: '13px 0', borderRadius: 12, border: '1.5px solid #e5e7eb',
+                    background: '#fff', color: '#6b7280', fontSize: 15, fontWeight: 800,
+                    cursor: addingLesson ? 'not-allowed' : 'pointer', fontFamily: "'Nunito', sans-serif",
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={addingLesson}
+                  style={{
+                    flex: 2, padding: '13px 0', borderRadius: 12, border: 'none',
+                    background: addingLesson ? '#c4b5fd' : 'linear-gradient(135deg, #7c3aed, #a855f7)',
+                    color: '#fff', fontSize: 15, fontWeight: 800, cursor: addingLesson ? 'not-allowed' : 'pointer',
+                    fontFamily: "'Nunito', sans-serif",
+                  }}
+                >
+                  {addingLesson ? 'Adding Lesson…' : 'Add Lesson'}
+                </button>
+              </div>
             </form>
           </div>
         </div>
