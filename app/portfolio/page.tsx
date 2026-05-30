@@ -18,6 +18,7 @@ interface Upload {
   file_size: number | null
   attendance_date: string
   lesson_id: string | null
+  kid_id: string | null
   created_at: string
   signedUrl: string | null
   lesson_title?: string | null
@@ -50,17 +51,46 @@ function isImage(fileType: string | null, fileName: string) {
   return /\.(jpg|jpeg|png|gif|webp)$/i.test(fileName)
 }
 
+const uploadLabel: React.CSSProperties = {
+  display: 'block', fontSize: 11, fontWeight: 900, color: '#374151',
+  textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6,
+}
+const uploadInput: React.CSSProperties = {
+  width: '100%', boxSizing: 'border-box', padding: '10px 12px',
+  border: '1.5px solid #e5e7eb', borderRadius: 10, fontSize: 13,
+  fontFamily: "'Nunito', sans-serif", color: '#111827', background: '#fafafa',
+}
+const uploadPrimary: React.CSSProperties = {
+  padding: '10px 18px', borderRadius: 10, border: 'none',
+  background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: '#fff',
+  fontSize: 13, fontWeight: 800, fontFamily: "'Nunito', sans-serif",
+}
+const uploadGhost: React.CSSProperties = {
+  padding: '10px 16px', borderRadius: 10, border: '1.5px solid #e5e7eb',
+  background: '#fff', color: '#6b7280', fontSize: 13, fontWeight: 800,
+  cursor: 'pointer', fontFamily: "'Nunito', sans-serif",
+}
+
 // ─── Main content ─────────────────────────────────────────────────────────────
 
 function PortfolioContent() {
   useAppHeader({ title: '🗂️ Portfolio', backHref: '/reports' })
 
+  const [organizationId, setOrganizationId] = useState<string | null>(null)
+  const [userId, setUserId] = useState<string | null>(null)
+  const [kids, setKids] = useState<{ id: string; displayname: string }[]>([])
   const [groups, setGroups]     = useState<KidGroup[]>([])
   const [loading, setLoading]   = useState(true)
   const [error, setError]       = useState<string | null>(null)
   const [activeKid, setActiveKid] = useState<string | null>(null)
   const [preview, setPreview]   = useState<Upload | null>(null)
   const [deleting, setDeleting] = useState<string | null>(null)
+  const [showUpload, setShowUpload] = useState(false)
+  const [uploadKidId, setUploadKidId] = useState('')
+  const [uploadDate, setUploadDate] = useState(new Date().toISOString().slice(0, 10))
+  const [pendingFiles, setPendingFiles] = useState<File[]>([])
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
 
   useEffect(() => { load() }, [])
 
@@ -70,9 +100,22 @@ function PortfolioContent() {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
+      setUserId(user.id)
 
       const { orgId } = await getOrganizationId(user.id)
       if (!orgId) { setGroups([]); setLoading(false); return }
+      setOrganizationId(orgId)
+
+      const { data: kidsData } = await supabase
+        .from('kids')
+        .select('id, displayname')
+        .eq('organization_id', orgId)
+        .neq('archived', true)
+        .order('created_at', { ascending: true })
+      const kidList = kidsData || []
+      setKids(kidList)
+      if (!activeKid && kidList.length > 0) setActiveKid(kidList[0].id)
+      if (!uploadKidId && kidList.length > 0) setUploadKidId(kidList[0].id)
 
       const { data: uploads, error: uploadsErr } = await supabase
         .from('portfolio_uploads')
@@ -82,42 +125,42 @@ function PortfolioContent() {
       if (uploadsErr) throw uploadsErr
       if (!uploads || uploads.length === 0) { setGroups([]); setLoading(false); return }
 
-      const kidIds = [...new Set(uploads.map((u: { kid_id: string }) => u.kid_id).filter(Boolean))]
-      const { data: kids } = await supabase
-        .from('kids').select('id, displayname').in('id', kidIds)
-
       const lessonIds = [...new Set(uploads.map((u: { lesson_id: string | null }) => u.lesson_id).filter(Boolean))] as string[]
-      let lessonMap: Record<string, { title: string; subject: string }> = {}
+      let lessonMap: Record<string, { title: string; subject: string; kid_id: string | null }> = {}
       if (lessonIds.length > 0) {
         const { data: lessons } = await supabase
-          .from('lessons').select('id, title, subject').in('id', lessonIds)
+          .from('lessons').select('id, title, subject, kid_id').in('id', lessonIds)
         if (lessons) {
           lessonMap = Object.fromEntries(
-            lessons.map((l: { id: string; title: string; subject: string }) => [l.id, { title: l.title, subject: l.subject }])
+            lessons.map((l: { id: string; title: string; subject: string; kid_id: string | null }) => [l.id, { title: l.title, subject: l.subject, kid_id: l.kid_id }])
           )
         }
       }
 
       const enriched: Upload[] = await Promise.all(
-        uploads.map(async (u: { id: string; file_name: string; file_path: string; file_type: string | null; file_size: number | null; attendance_date: string; lesson_id: string | null; created_at: string; kid_id: string }) => {
+        uploads.map(async (u: { id: string; file_name: string; file_path: string; file_type: string | null; file_size: number | null; attendance_date: string; lesson_id: string | null; created_at: string; kid_id: string | null }) => {
           const { data: signed } = await supabase.storage
             .from('portfolio-uploads').createSignedUrl(u.file_path, 3600)
           const lesson = u.lesson_id ? lessonMap[u.lesson_id] : null
-          return { ...u, signedUrl: signed?.signedUrl ?? null, lesson_title: lesson?.title ?? null, subject: lesson?.subject ?? null }
+          const kidId = u.kid_id ?? lesson?.kid_id ?? null
+          return { ...u, kid_id: kidId, signedUrl: signed?.signedUrl ?? null, lesson_title: lesson?.title ?? null, subject: lesson?.subject ?? null }
         })
       )
 
       const kidMap: Record<string, KidGroup> = {}
       for (const upload of enriched) {
-        const u = upload as Upload & { kid_id: string }
-        const kid = kids?.find((k: { id: string; displayname: string }) => k.id === u.kid_id)
-        const kidId = u.kid_id ?? 'unknown'
-        const kidName = kid?.displayname ?? 'Unknown Child'
+        const kid = kidList.find((k: { id: string; displayname: string }) => k.id === upload.kid_id)
+        const kidId = upload.kid_id ?? 'unassigned'
+        const kidName = kid?.displayname ?? 'Unassigned work'
         if (!kidMap[kidId]) kidMap[kidId] = { kid_id: kidId, kid_name: kidName, uploads: [] }
         kidMap[kidId].uploads.push(upload)
       }
 
-      const grouped = Object.values(kidMap)
+      const grouped = Object.values(kidMap).sort((a, b) => {
+        if (a.kid_id === 'unassigned') return 1
+        if (b.kid_id === 'unassigned') return -1
+        return kidList.findIndex(k => k.id === a.kid_id) - kidList.findIndex(k => k.id === b.kid_id)
+      })
       setGroups(grouped)
       if (grouped.length > 0) setActiveKid(grouped[0].kid_id)
     } catch (e: unknown) {
@@ -140,12 +183,96 @@ function PortfolioContent() {
     setDeleting(null)
   }
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || [])
+    const oversized = files.filter(f => f.size > 10 * 1024 * 1024)
+    if (oversized.length > 0) {
+      setUploadError(`${oversized.map(f => f.name).join(', ')} exceeds the 10 MB limit.`)
+      return
+    }
+    setUploadError(null)
+    setPendingFiles(prev => [...prev, ...files].slice(0, 10))
+    e.target.value = ''
+  }
+
+  const removePendingFile = (index: number) =>
+    setPendingFiles(prev => prev.filter((_, i) => i !== index))
+
+  const closeUpload = () => {
+    setShowUpload(false)
+    setPendingFiles([])
+    setUploadError(null)
+  }
+
+  const handleUpload = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!organizationId || !userId || !uploadKidId || pendingFiles.length === 0) {
+      setUploadError('Choose a child and at least one file.')
+      return
+    }
+    setUploading(true)
+    setUploadError(null)
+
+    for (const file of pendingFiles) {
+      const path = `${organizationId}/${uploadKidId}/${uploadDate}/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`
+      const { error: storageError } = await supabase.storage
+        .from('portfolio-uploads')
+        .upload(path, file, { upsert: false })
+
+      if (storageError) {
+        setUploadError(`Failed to upload ${file.name}: ${storageError.message}`)
+        setUploading(false)
+        return
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('portfolio-uploads')
+        .getPublicUrl(path)
+
+      const { error: insertError } = await supabase.from('portfolio_uploads').insert({
+        organization_id: organizationId,
+        kid_id: uploadKidId,
+        attendance_date: uploadDate,
+        file_name: file.name,
+        file_url: publicUrl,
+        file_path: path,
+        file_type: file.type,
+        file_size: file.size,
+        uploaded_by: userId,
+      })
+      if (insertError) {
+        setUploadError(`Failed to save ${file.name}: ${insertError.message}`)
+        setUploading(false)
+        return
+      }
+    }
+
+    setUploading(false)
+    closeUpload()
+    await load()
+  }
+
   const activeGroup = groups.find(g => g.kid_id === activeKid)
 
   return (
     <div style={{ ...pageShell.root, paddingBottom: 80 }}>
       <main style={pageShell.main}>
-        <div className="hr-section-label" style={{ marginBottom: 14, marginTop: 8 }}>WORK SAMPLES & UPLOADED DOCUMENTS</div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 14, marginTop: 8 }}>
+          <div className="hr-section-label">WORK SAMPLES & UPLOADED DOCUMENTS</div>
+          {kids.length > 0 && (
+            <button
+              onClick={() => setShowUpload(true)}
+              style={{
+                padding: '9px 14px', borderRadius: 12, border: 'none',
+                background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: '#fff',
+                fontSize: 12, fontWeight: 800, cursor: 'pointer', fontFamily: "'Nunito', sans-serif",
+                flexShrink: 0,
+              }}
+            >
+              + Add Work
+            </button>
+          )}
+        </div>
 
         {/* Loading */}
         {loading && (
@@ -166,9 +293,18 @@ function PortfolioContent() {
           <div style={{ padding: '48px 20px', textAlign: 'center' }}>
             <div style={{ fontSize: 52, marginBottom: 12 }}>🗂️</div>
             <div style={{ fontSize: 16, fontWeight: 800, color: '#c4b5fd', marginBottom: 8 }}>No work samples yet</div>
-            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)', lineHeight: 1.6, fontWeight: 600 }}>
-              Upload photos or PDFs from the Check-In tab inside any lesson.
+            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)', lineHeight: 1.6, fontWeight: 600, marginBottom: 18 }}>
+              Upload photos or PDFs here, or from the Check-In tab inside any lesson.
             </div>
+            {kids.length > 0 && (
+              <button onClick={() => setShowUpload(true)} style={{
+                padding: '11px 18px', borderRadius: 12, border: 'none',
+                background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: '#fff',
+                fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: "'Nunito', sans-serif",
+              }}>
+                + Add Work Sample
+              </button>
+            )}
           </div>
         )}
 
@@ -292,6 +428,84 @@ function PortfolioContent() {
           </>
         )}
       </main>
+
+      {/* Upload modal */}
+      {showUpload && (
+        <div
+          onClick={closeUpload}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 9998,
+            background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(5px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '16px 16px 96px',
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: '#fff', borderRadius: 24, width: '100%', maxWidth: 500,
+              maxHeight: 'calc(100vh - 112px)', overflowY: 'auto', padding: 24,
+              boxShadow: '0 24px 64px rgba(0,0,0,0.22)', position: 'relative',
+              fontFamily: "'Nunito', sans-serif",
+            }}
+          >
+            <button
+              onClick={closeUpload}
+              aria-label="Close"
+              title="Close"
+              style={{
+                position: 'absolute', top: 14, right: 14,
+                width: 32, height: 32, borderRadius: '50%', border: 'none',
+                background: '#f3f4f6', color: '#6b7280', fontSize: 18,
+                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}
+            >×</button>
+            <h2 style={{ margin: '0 36px 6px 0', fontSize: 19, fontWeight: 900, color: '#1a1a2e' }}>Add work to Portfolio</h2>
+            <p style={{ margin: '0 0 18px', fontSize: 13, color: '#6b7280', lineHeight: 1.5, fontWeight: 600 }}>
+              Upload photos or PDFs of completed work, projects, worksheets, artwork, or documentation.
+            </p>
+
+            <form onSubmit={handleUpload} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div>
+                <label style={uploadLabel}>Child</label>
+                <select value={uploadKidId} onChange={e => setUploadKidId(e.target.value)} required style={uploadInput}>
+                  {kids.map(kid => <option key={kid.id} value={kid.id}>{kid.displayname}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={uploadLabel}>Date</label>
+                <input type="date" value={uploadDate} onChange={e => setUploadDate(e.target.value)} required style={uploadInput} />
+              </div>
+              <div>
+                <label style={uploadLabel}>Files</label>
+                <input type="file" multiple accept="image/*,application/pdf" onChange={handleFileChange} style={uploadInput} />
+                <div style={{ fontSize: 11, color: '#9ca3af', fontWeight: 600, marginTop: 6 }}>Images or PDFs, up to 10 MB each.</div>
+              </div>
+
+              {pendingFiles.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {pendingFiles.map((file, index) => (
+                    <div key={`${file.name}-${index}`} style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 10, padding: '9px 11px' }}>
+                      <span style={{ fontSize: 18 }}>{file.type.startsWith('image/') ? '🖼️' : '📄'}</span>
+                      <div style={{ flex: 1, minWidth: 0, fontSize: 12, fontWeight: 700, color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file.name}</div>
+                      <button type="button" onClick={() => removePendingFile(index)} style={{ border: 'none', background: 'none', color: '#ef4444', cursor: 'pointer', fontSize: 14 }}>✕</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {uploadError && <div style={{ fontSize: 12, color: '#dc2626', fontWeight: 700 }}>⚠️ {uploadError}</div>}
+
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
+                <button type="button" onClick={closeUpload} style={uploadGhost}>Cancel</button>
+                <button type="submit" disabled={uploading || pendingFiles.length === 0} style={{ ...uploadPrimary, opacity: uploading || pendingFiles.length === 0 ? 0.6 : 1, cursor: uploading || pendingFiles.length === 0 ? 'not-allowed' : 'pointer' }}>
+                  {uploading ? 'Uploading…' : 'Add to Portfolio'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Lightbox */}
       {preview && (

@@ -39,6 +39,7 @@ export default function FieldTripLog({ organizationId, kids }: FieldTripLogProps
 
   // Form state
   const [fTitle, setFTitle]           = useState('')
+  const [formKidIds, setFormKidIds]   = useState<string[]>([kids[0]?.id ?? ''].filter(Boolean))
   const [fLocation, setFLocation]     = useState('')
   const [fDescription, setFDescription] = useState('')
   const [fSubject, setFSubject]       = useState('')
@@ -61,26 +62,25 @@ export default function FieldTripLog({ organizationId, kids }: FieldTripLogProps
   useEffect(() => { loadTrips() }, [loadTrips])
 
   const resetForm = () => {
-    setFTitle(''); setFLocation(''); setFDescription(''); setFSubject(''); setFHours(''); setFDate('')
+    setFTitle(''); setFormKidIds([selectedKid].filter(Boolean)); setFLocation(''); setFDescription(''); setFSubject(''); setFHours(''); setFDate('')
     setEditingTrip(null)
   }
 
-  const openAdd = () => { resetForm(); setShowForm(true) }
+  const openAdd = () => { resetForm(); setFormKidIds([selectedKid].filter(Boolean)); setShowForm(true) }
 
   const openEdit = (t: FieldTrip) => {
     setEditingTrip(t)
-    setFTitle(t.title); setFLocation(t.location ?? ''); setFDescription(t.description ?? '')
+    setFTitle(t.title); setFormKidIds([t.kid_id]); setFLocation(t.location ?? ''); setFDescription(t.description ?? '')
     setFSubject(t.subject ?? ''); setFHours(t.hours?.toString() ?? ''); setFDate(t.trip_date)
     setShowForm(true)
   }
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!fTitle.trim() || !fDate) return
+    if (!fTitle.trim() || !fDate || formKidIds.length === 0) return
     setSaving(true)
-    const payload = {
+    const basePayload = {
       organization_id: organizationId,
-      kid_id: selectedKid,
       title: fTitle.trim(),
       location: fLocation.trim() || null,
       description: fDescription.trim() || null,
@@ -89,9 +89,9 @@ export default function FieldTripLog({ organizationId, kids }: FieldTripLogProps
       trip_date: fDate,
     }
     if (editingTrip) {
-      await supabase.from('field_trips').update(payload).eq('id', editingTrip.id)
+      await supabase.from('field_trips').update({ ...basePayload, kid_id: formKidIds[0] }).eq('id', editingTrip.id)
     } else {
-      await supabase.from('field_trips').insert([payload])
+      await supabase.from('field_trips').insert(formKidIds.map(kidId => ({ ...basePayload, kid_id: kidId })))
     }
     setSaving(false)
     setShowForm(false)
@@ -280,8 +280,8 @@ export default function FieldTripLog({ organizationId, kids }: FieldTripLogProps
 
       {/* Add/Edit Modal */}
       {showForm && (
-        <div role="dialog" aria-modal="true" aria-labelledby="field-trip-form-title" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px 16px 88px' }}>
-          <div ref={trapRef} style={{ background: '#fff', borderRadius: 24, width: '100%', maxWidth: 480, maxHeight: 'calc(100vh - 104px)', overflowY: 'auto', padding: 28, boxShadow: '0 24px 64px rgba(0,0,0,0.18)' }}>
+        <div role="dialog" aria-modal="true" aria-labelledby="field-trip-form-title" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', zIndex: 50, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '18px 16px 88px', overflowY: 'auto' }}>
+          <div ref={trapRef} style={{ background: '#fff', borderRadius: 24, width: '100%', maxWidth: 480, maxHeight: 'calc(100dvh - 112px)', overflowY: 'auto', padding: 24, boxShadow: '0 24px 64px rgba(0,0,0,0.18)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
               <h3 id="field-trip-form-title" style={{ fontSize: 18, fontWeight: 800, color: '#111827', margin: 0 }}>
                 {editingTrip ? 'Edit Trip' : 'Add Field Trip'}
@@ -289,6 +289,24 @@ export default function FieldTripLog({ organizationId, kids }: FieldTripLogProps
               <button onClick={() => { setShowForm(false); resetForm() }} aria-label="Close form" style={{ background: '#f3f4f6', border: 'none', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, color: '#6b7280', cursor: 'pointer', fontWeight: 700, flexShrink: 0 }}>✕</button>
             </div>
             <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {!editingTrip && kids.length > 1 && (
+                <div>
+                  <label style={labelStyle}>Students *</label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {kids.map(k => (
+                      <label key={k.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 700, color: '#374151' }}>
+                        <input
+                          type="checkbox"
+                          checked={formKidIds.includes(k.id)}
+                          onChange={(e) => setFormKidIds(prev => e.target.checked ? [...prev, k.id] : prev.filter(id => id !== k.id))}
+                        />
+                        {k.displayname}
+                      </label>
+                    ))}
+                  </div>
+                  <p style={{ margin: '6px 0 0', fontSize: 11, color: '#6b7280' }}>A separate activity record will be saved for each selected student.</p>
+                </div>
+              )}
               <div>
                 <label style={labelStyle}>Activity / Trip Name *</label>
                 <input value={fTitle} onChange={e => setFTitle(e.target.value)} required placeholder="e.g. Natural History Museum" style={inputStyle} />
@@ -320,7 +338,7 @@ export default function FieldTripLog({ organizationId, kids }: FieldTripLogProps
               </div>
               <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
                 <button type="button" onClick={() => { setShowForm(false); resetForm() }} style={btn.ghost}>Cancel</button>
-                <button type="submit" disabled={saving} style={btn.primary}>{saving ? 'Saving...' : editingTrip ? 'Save Changes' : 'Add Trip'}</button>
+                <button type="submit" disabled={saving || (!editingTrip && formKidIds.length === 0)} style={btn.primary}>{saving ? 'Saving...' : editingTrip ? 'Save Changes' : `Add Trip${formKidIds.length > 1 ? ` for ${formKidIds.length} kids` : ''}`}</button>
               </div>
             </form>
           </div>

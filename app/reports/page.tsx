@@ -11,13 +11,6 @@ function ReportsContent() {
 
   const hubCards = [
     {
-      icon: '📝',
-      label: 'Daily Subject Log',
-      desc: 'Quickly log subjects covered each day — no lesson required',
-      href: '/daily-log',
-      comingSoon: false,
-    },
-    {
       icon: '📅',
       label: 'Attendance',
       desc: 'Daily check-ins & school day tracking',
@@ -50,13 +43,6 @@ function ReportsContent() {
       label: 'Portfolio',
       desc: 'Work samples & uploaded documents',
       href: '/portfolio',
-      comingSoon: false,
-    },
-    {
-      icon: '🎯',
-      label: 'Mastery Tracker',
-      desc: 'Subject-by-subject learning insights from your check-ins',
-      href: '/mastery',
       comingSoon: false,
     },
     {
@@ -99,7 +85,7 @@ function ReportsContent() {
           Records
         </h1>
         <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.7)', fontWeight: 600, margin: '0 0 24px', lineHeight: 1.6 }}>
-          Track attendance, compliance, transcripts, and progress.
+          Track attendance, compliance, transcripts, reading, activities, and portfolio records.
         </p>
 
         {/* Hub cards */}

@@ -57,21 +57,15 @@ const LS_DISPLAY: Record<string, { label: string; emoji: string }> = {
 const QUICK_ACTION_CONFIG: Record<string, {
   emoji: string; label: string; sub: string
   bg: string; iconBg: string; color: string; subColor: string
-  action: 'route' | 'lesson' | 'activity' | 'today' | 'scout'
+  action: 'route' | 'lesson' | 'lesson_choice' | 'activity' | 'activity_choice' | 'today' | 'scout'
   href?: string
 }> = {
-  daily_log:   { emoji: '📝', label: 'Daily Subject Log',  sub: 'Log subjects — no lesson needed',    bg: 'linear-gradient(135deg,#f5f3ff,#ede9fe)', iconBg: '#7c3aed', color: '#4c1d95', subColor: '#7c3aed', action: 'route',    href: '/daily-log' },
-  attendance:  { emoji: '✅', label: 'Log Attendance',      sub: 'Mark today\'s school day',          bg: 'linear-gradient(135deg,#d1fae5,#a7f3d0)', iconBg: '#059669', color: '#064e3b', subColor: '#059669', action: 'route',    href: '/attendance' },
-  reading_log: { emoji: '📚', label: 'Log a Book',          sub: 'Add to reading log',                bg: 'linear-gradient(135deg,#ede9fe,#ddd6fe)', iconBg: '#7c3aed', color: '#4c1d95', subColor: '#7c3aed', action: 'route',    href: '/reading-log' },
-  field_trips: { emoji: '🚌', label: 'Log an Activity',     sub: 'Field trip, project, co-op',        bg: 'linear-gradient(135deg,#ccfbf1,#99f6e4)', iconBg: '#0d9488', color: '#134e4a', subColor: '#0d9488', action: 'route',    href: '/field-trips' },
-  ai_lessons:  { emoji: '🤖', label: 'Plan a Lesson',       sub: 'Use me if you need a lesson',       bg: 'linear-gradient(135deg,#ede9fe,#ddd6fe)', iconBg: '#7c3aed', color: '#4c1d95', subColor: '#7c3aed', action: 'lesson' },
-  ai_activity: { emoji: '🎯', label: 'Generate Activity',   sub: 'Use me if you need an activity idea', bg: 'linear-gradient(135deg,#ccfbf1,#99f6e4)', iconBg: '#0d9488', color: '#134e4a', subColor: '#0d9488', action: 'activity' },
-  compliance:  { emoji: '📋', label: 'Compliance',          sub: 'Days/hours vs. requirements',        bg: 'linear-gradient(135deg,#fef2f2,#fee2e2)', iconBg: '#dc2626', color: '#7f1d1d', subColor: '#dc2626', action: 'route',    href: '/compliance' },
-  progress:    { emoji: '📊', label: 'Progress Reports',    sub: 'Learning analytics by subject',      bg: 'linear-gradient(135deg,#f0fdf4,#dcfce7)', iconBg: '#16a34a', color: '#14532d', subColor: '#16a34a', action: 'route',    href: '/progress' },
-  transcript:  { emoji: '🎓', label: 'Transcript',          sub: 'GPA, courses, college records',      bg: 'linear-gradient(135deg,#fefce8,#fef08a)', iconBg: '#d97706', color: '#78350f', subColor: '#d97706', action: 'route',    href: '/transcript' },
-  mastery:     { emoji: '🏆', label: 'Mastery Tracker',     sub: 'Standards & skill mastery',          bg: 'linear-gradient(135deg,#eff6ff,#dbeafe)', iconBg: '#2563eb', color: '#1e3a5f', subColor: '#3b82f6', action: 'route',    href: '/mastery' },
-  portfolio:    { emoji: '🗂️', label: 'Portfolio',           sub: 'Work samples & highlights',          bg: 'linear-gradient(135deg,#fdf4ff,#fae8ff)', iconBg: '#9333ea', color: '#4a044e', subColor: '#a855f7', action: 'route',    href: '/portfolio' },
-  calendar:    { emoji: '📅', label: 'Calendar',            sub: 'View full month lesson calendar',    bg: 'linear-gradient(135deg,#eff6ff,#dbeafe)', iconBg: '#3b82f6', color: '#1e3a5f', subColor: '#3b82f6', action: 'route',    href: '/calendar' },
+  attendance:  { emoji: '✅', label: 'Attendance',      sub: 'Mark school days and hours',          bg: 'linear-gradient(135deg,#d1fae5,#a7f3d0)', iconBg: '#059669', color: '#064e3b', subColor: '#059669', action: 'route',    href: '/attendance' },
+  reading_log: { emoji: '📚', label: 'Reading Log',     sub: 'Track books and reading',             bg: 'linear-gradient(135deg,#ede9fe,#ddd6fe)', iconBg: '#7c3aed', color: '#4c1d95', subColor: '#7c3aed', action: 'route',    href: '/reading-log' },
+  field_trips: { emoji: '🚌', label: 'Activities',      sub: 'Log or generate activities',          bg: 'linear-gradient(135deg,#ccfbf1,#99f6e4)', iconBg: '#0d9488', color: '#134e4a', subColor: '#0d9488', action: 'activity_choice' },
+  ai_lessons:  { emoji: '📚', label: 'Add Lesson',      sub: 'Generate, write, or use curriculum',  bg: 'linear-gradient(135deg,#ede9fe,#ddd6fe)', iconBg: '#7c3aed', color: '#4c1d95', subColor: '#7c3aed', action: 'lesson_choice' },
+  materials:   { emoji: '🧰', label: 'Materials',       sub: 'Supplies and resources',              bg: 'linear-gradient(135deg,#fffbeb,#fef3c7)', iconBg: '#d97706', color: '#78350f', subColor: '#d97706', action: 'route',    href: '/materials' },
+  portfolio:   { emoji: '🗂️', label: 'Portfolio',       sub: 'Work samples and highlights',         bg: 'linear-gradient(135deg,#fdf4ff,#fae8ff)', iconBg: '#9333ea', color: '#4a044e', subColor: '#a855f7', action: 'route',    href: '/portfolio' },
 }
 
 const DAY_CARDINAL: Record<number, string> = {
@@ -151,6 +145,66 @@ function PulseRing({ pct, color, size = 120 }: { pct: number; color: string; siz
         strokeDasharray={`${(pct / 100) * c} ${c - (pct / 100) * c}`} strokeLinecap="round"
         style={{ transition: 'stroke-dasharray 1s cubic-bezier(0.4,0,0.2,1)' }} />
     </svg>
+  )
+}
+
+// ─── Dashboard Choice Sheet ──────────────────────────────────────────────────
+
+function ChoiceSheet({ title, subtitle, options, onClose }: {
+  title: string
+  subtitle: string
+  options: { emoji: string; label: string; sub: string; accent?: boolean; onClick: () => void }[]
+  onClose: () => void
+}) {
+  return (
+    <>
+      <div
+        onClick={onClose}
+        style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.42)', zIndex: 400 }}
+      />
+      <div style={{
+        position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 401,
+        background: '#2d2b3d', borderRadius: '24px 24px 0 0',
+        boxShadow: '0 -8px 40px rgba(0,0,0,0.4)',
+        fontFamily: "'Nunito', sans-serif",
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 0' }}>
+          <div style={{ width: 40, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.2)' }} />
+        </div>
+        <div style={{ padding: '16px 20px 40px', maxWidth: 520, margin: '0 auto' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 18 }}>
+            <div>
+              <div style={{ fontSize: 18, fontWeight: 900, color: '#c4b5fd', marginBottom: 4 }}>{title}</div>
+              <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', fontWeight: 600 }}>{subtitle}</div>
+            </div>
+            <button
+              onClick={onClose}
+              aria-label="Close"
+              style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: 10, color: 'rgba(255,255,255,0.8)', width: 32, height: 32, cursor: 'pointer', fontSize: 16 }}
+            >×</button>
+          </div>
+          {options.map(option => (
+            <button
+              key={option.label}
+              onClick={option.onClick}
+              style={{
+                width: '100%', padding: '16px', borderRadius: 14,
+                border: option.accent ? '1.5px solid rgba(124,58,237,0.4)' : '1.5px solid rgba(255,255,255,0.15)',
+                background: option.accent ? 'rgba(124,58,237,0.15)' : 'rgba(255,255,255,0.07)',
+                textAlign: 'left' as const, cursor: 'pointer', marginBottom: 10,
+                fontFamily: "'Nunito', sans-serif", display: 'flex', alignItems: 'center', gap: 12,
+              }}>
+              <span style={{ fontSize: 24, lineHeight: 1 }}>{option.emoji}</span>
+              <span style={{ flex: 1 }}>
+                <span style={{ display: 'block', fontSize: 15, fontWeight: 800, color: option.accent ? '#c4b5fd' : '#fff', marginBottom: 3 }}>{option.label}</span>
+                <span style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.55)' }}>{option.sub}</span>
+              </span>
+              <span style={{ color: option.accent ? '#c4b5fd' : 'rgba(255,255,255,0.45)', fontWeight: 900 }}>→</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </>
   )
 }
 
@@ -993,20 +1047,28 @@ function WeekStrip({
       <div style={{ display: 'flex', flex: 1, gap: 2 }}>
         {days.map(({ key, dayName, dayNum, count }) => {
           const isToday = key === todayKey
+          const hasLessons = count > 0
           return (
             <button
               key={key}
               onClick={() => onDayClick(key)}
-              aria-label={`${dayName} ${dayNum}${count > 0 ? `, ${count} lesson${count === 1 ? '' : 's'} scheduled` : ''}`}
+              aria-label={`${dayName} ${dayNum}${hasLessons ? `, ${count} lesson${count === 1 ? '' : 's'} scheduled` : ''}`}
               style={{
                 flex: 1, display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 3,
-                padding: '5px 2px', borderRadius: 10, border: 'none', cursor: 'pointer',
-                background: isToday ? '#7c3aed' : 'transparent',
+                padding: '5px 2px', borderRadius: 10, border: hasLessons && !isToday ? '1.5px solid #7c3aed' : '1.5px solid transparent', cursor: 'pointer',
+                background: isToday ? '#7c3aed' : hasLessons ? '#f5f3ff' : 'transparent',
+                boxShadow: hasLessons && !isToday ? 'inset 0 0 0 1px rgba(124,58,237,0.12)' : 'none',
                 transition: 'background 0.15s',
               }}>
-              <span style={{ fontFamily: "'Nunito', sans-serif", fontSize: 9, fontWeight: 700, color: isToday ? 'rgba(255,255,255,0.85)' : '#6b7280', textTransform: 'uppercase' as const }}>{dayName}</span>
-              <span style={{ fontFamily: "'Nunito', sans-serif", fontSize: 15, fontWeight: 900, color: isToday ? '#fff' : '#111827', lineHeight: 1 }}>{dayNum}</span>
-              <div aria-hidden="true" style={{ width: 4, height: 4, borderRadius: '50%', background: count > 0 ? (isToday ? 'rgba(255,255,255,0.65)' : '#7c3aed') : 'transparent' }} />
+              <span style={{ fontFamily: "'Nunito', sans-serif", fontSize: 9, fontWeight: 800, color: isToday ? 'rgba(255,255,255,0.85)' : hasLessons ? '#5b21b6' : '#6b7280', textTransform: 'uppercase' as const }}>{dayName}</span>
+              <span style={{ fontFamily: "'Nunito', sans-serif", fontSize: 15, fontWeight: 900, color: isToday ? '#fff' : hasLessons ? '#4c1d95' : '#111827', lineHeight: 1 }}>{dayNum}</span>
+              {hasLessons ? (
+                <span style={{ fontFamily: "'Nunito', sans-serif", fontSize: 9, fontWeight: 900, lineHeight: 1, color: isToday ? '#fff' : '#5b21b6', background: isToday ? 'rgba(255,255,255,0.22)' : '#ede9fe', borderRadius: 999, padding: '2px 5px', minWidth: 18, textAlign: 'center' }}>
+                  {count} {count === 1 ? 'lesson' : 'lessons'}
+                </span>
+              ) : (
+                <span aria-hidden="true" style={{ height: 13 }} />
+              )}
             </button>
           )
         })}
@@ -1211,6 +1273,8 @@ function DashboardContent() {
   const [showLifeHappens, setShowLifeHappens] = useState(false)
   const [showActivity, setShowActivity]       = useState(false)
   const [showGenerator, setShowGenerator]     = useState(false)
+  const [showActivityChoice, setShowActivityChoice] = useState(false)
+  const [showLessonChoice, setShowLessonChoice] = useState(false)
   const [activePulseKidId, setActivePulseKidId] = useState<string | null>(null)
   const [childProfileKidId, setChildProfileKidId] = useState<string | null>(null)
   const [profileTab, setProfileTab] = useState<'today' | 'style' | 'mi' | 'look' | 'subjects' | 'materials' | 'teachers'>('today')
@@ -1230,6 +1294,7 @@ function DashboardContent() {
   const [tourAutoStart, setTourAutoStart]     = useState(false)
   const [tourFromWelcome, setTourFromWelcome] = useState(false)
   const [weekLessons, setWeekLessons]           = useState<Record<string, { lesson: any; kid: Kid }[]>>({})
+  const [selectedDayKey, setSelectedDayKey]     = useState<string | null>(null)
   const [weeklyMaterialsCount, setWeeklyMaterialsCount] = useState(0)
   const [todayAttendance, setTodayAttendance] = useState<Set<string>>(new Set()) // kid IDs marked present today
   const [todayKey, setTodayKey] = useState(localDateString())
@@ -1919,11 +1984,17 @@ function DashboardContent() {
             </button>
           </section>
 
+          <WeekStrip
+            weekLessons={weekLessons}
+            today={now}
+            onDayClick={setSelectedDayKey}
+          />
+
           {/* Quick Actions — style-aware */}
           <section>
             <div style={{ ...css.sectionRow, justifyContent: 'space-between' }}>
               <span style={css.secTitle}>
-                {homeschoolStyle === 'flexible' ? 'QUICK LOG' : 'QUICK ACTIONS'}
+                {homeschoolStyle === 'flexible' ? 'QUICK LOG' : 'HOME CARDS'}
               </span>
               <button
                 onClick={() => setShowStylePicker(true)}
@@ -1934,7 +2005,7 @@ function DashboardContent() {
                   fontFamily: "'Nunito', sans-serif",
                 }}
               >
-                ✏️ Customize cards
+                ✏️ Customize Home
               </button>
             </div>
 
@@ -1947,7 +2018,7 @@ function DashboardContent() {
               }}>
                 <img src="/Cardinal_Mascot.png" alt="Scout" style={{ width: 32, height: 32, objectFit: 'contain', flexShrink: 0 }} />
                 <div style={{ flex: 1, fontSize: 12, color: 'rgba(255,255,255,0.85)', fontWeight: 600, lineHeight: 1.5 }}>
-                  Using a <span style={{ fontWeight: 900, color: '#c4b5fd' }}>default layout</span> — not personalized yet.
+                  Using a <span style={{ fontWeight: 900, color: '#c4b5fd' }}>starter layout</span>. Customize your Home cards whenever you're ready.
                 </div>
                 <button
                   onClick={() => { setShowStylePicker(true) }}
@@ -1972,21 +2043,23 @@ function DashboardContent() {
               // Structured mode always gets Today's Learning first
               const todayBtn = [{
                 key: '__today__',
-                emoji: '📝', label: "Today's Learning", sub: "Today & this week's agenda",
+                emoji: '📝', label: "Today's Plan", sub: "Today & this week's agenda",
                 bg: 'linear-gradient(135deg,#ede9fe,#ddd6fe)', iconBg: '#7c3aed', color: '#4c1d95', subColor: '#7c3aed',
                 onClick: () => setShowToday(true),
               }]
 
-              // Pinned features (skip pulse_check — that's a section toggle, not a button)
+              // Pinned features
               const pinnedBtns = pinnedFeatures
-                .filter(fid => fid !== 'pulse_check' && QUICK_ACTION_CONFIG[fid])
+                .filter(fid => QUICK_ACTION_CONFIG[fid])
                 .map(fid => {
                   const c = QUICK_ACTION_CONFIG[fid]
                   const onClick =
-                    c.action === 'route'    ? () => router.push(c.href!)
-                    : c.action === 'lesson'  ? () => setShowGenerator(true)
-                    : c.action === 'activity'? () => setShowActivity(true)
-                    : c.action === 'scout'   ? () => window.dispatchEvent(new CustomEvent('open-scout-copilot'))
+                    c.action === 'route'           ? () => router.push(c.href!)
+                    : c.action === 'lesson'         ? () => setShowGenerator(true)
+                    : c.action === 'lesson_choice'  ? () => setShowLessonChoice(true)
+                    : c.action === 'activity'       ? () => setShowActivity(true)
+                    : c.action === 'activity_choice'? () => setShowActivityChoice(true)
+                    : c.action === 'scout'          ? () => window.dispatchEvent(new CustomEvent('open-scout-copilot'))
                     : () => {}
                   return { key: fid, ...c, onClick }
                 })
@@ -2073,7 +2146,7 @@ function DashboardContent() {
                     ? pulse.kid.learning_style.split(',').map((s: string) => s.trim().toLowerCase()).filter(Boolean)
                     : []
                   const hasProfile = styles.length > 0 || (pulse.kid.mi_profile && pulse.kid.mi_profile.length > 0)
-                  const showRing = homeschoolStyle === 'structured' || pinnedFeatures.includes('pulse_check')
+                  const showRing = homeschoolStyle === 'structured'
                   const ringR = 44
                   const ringC = 2 * Math.PI * ringR
                   return (
@@ -2211,12 +2284,81 @@ function DashboardContent() {
             onAskScout={() => window.dispatchEvent(new CustomEvent('open-scout-copilot'))}
           />
         )}
+        {showActivityChoice && (
+          <ChoiceSheet
+            title="Activities"
+            subtitle="What would you like to do?"
+            onClose={() => setShowActivityChoice(false)}
+            options={[
+              {
+                emoji: '🚌',
+                label: 'Log field trip / activity',
+                sub: 'Use the existing field trip and activity log',
+                onClick: () => {
+                  setShowActivityChoice(false)
+                  router.push('/field-trips')
+                },
+              },
+              {
+                emoji: '🎯',
+                label: 'Generate activity idea',
+                sub: 'Let Scout suggest a hands-on activity',
+                accent: true,
+                onClick: () => {
+                  setShowActivityChoice(false)
+                  setShowActivity(true)
+                },
+              },
+            ]}
+          />
+        )}
+        {showLessonChoice && (
+          <ChoiceSheet
+            title="Add a Lesson"
+            subtitle="Choose the path that matches what you already have."
+            onClose={() => setShowLessonChoice(false)}
+            options={[
+              {
+                emoji: '✨',
+                label: 'Generate lesson',
+                sub: 'Let Scout create a lesson plan',
+                accent: true,
+                onClick: () => {
+                  setShowLessonChoice(false)
+                  setShowGenerator(true)
+                },
+              },
+              {
+                emoji: '✏️',
+                label: 'Write lesson manually',
+                sub: 'Go to Lessons and write your own lesson',
+                onClick: () => {
+                  setShowLessonChoice(false)
+                  router.push('/lessons?add=manual')
+                },
+              },
+              {
+                emoji: '📚',
+                label: 'Use curriculum',
+                sub: 'Import or work from an existing curriculum',
+                onClick: () => {
+                  setShowLessonChoice(false)
+                  router.push('/curriculum/import')
+                },
+              },
+            ]}
+          />
+        )}
         {showGenerator && (
           <LessonGenerator
             kids={kidPulses.map(p => ({ id: p.kid.id, displayname: p.kid.displayname, grade: p.kid.grade }))}
             userId={user?.id ?? ''}
             homeschoolStyle={homeschoolStyle ?? null}
             onClose={() => setShowGenerator(false)}
+            onLessonSaved={(info) => {
+              setShowGenerator(false)
+              router.push(info?.date ? `/calendar?date=${info.date}&saved=lesson` : '/calendar')
+            }}
           />
         )}
         {showActivity && (
@@ -2225,7 +2367,22 @@ function DashboardContent() {
             organizationId={organizationId}
             homeschoolStyle={homeschoolStyle ?? null}
             onClose={() => setShowActivity(false)}
-            onSaved={() => {}}
+            onSaved={(info) => {
+              setShowActivity(false)
+              router.push(info?.date ? `/calendar?date=${info.date}&saved=activity` : '/calendar')
+            }}
+          />
+        )}
+        {selectedDayKey && (
+          <DayDrawer
+            dateKey={selectedDayKey}
+            entries={weekLessons[selectedDayKey] || []}
+            onClose={() => setSelectedDayKey(null)}
+            onLessonClick={(lesson, kidName) => {
+              setSelectedDayKey(null)
+              setSelectedLesson(lesson as LessonViewModalLesson)
+              setSelectedKidName(kidName)
+            }}
           />
         )}
         {showToday && (
@@ -2440,6 +2597,8 @@ function DashboardContent() {
             userId={user.id}
             stateAbbr={schoolState}
             isFirstTime={homeschoolStyle === null}
+            currentStyle={homeschoolStyle ?? null}
+            currentPins={pinnedFeatures}
             onComplete={(style, pins) => {
               setHomeschoolStyle(style)
               setPinnedFeatures(pins)

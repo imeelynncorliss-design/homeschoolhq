@@ -36,7 +36,7 @@ type LessonGeneratorProps = {
   kids: Child[];
   userId: string;
   onClose: () => void;
-  onLessonSaved?: () => void;
+  onLessonSaved?: (info?: { date: string; kidIds: string[]; kind: 'lesson' }) => void;
   initialDate?: string;
   initialKidId?: string;
   initialSubject?: string;
@@ -69,6 +69,7 @@ export default function LessonGenerator({ kids, userId, onClose, onLessonSaved, 
   // Adapt modal
   const [showAdaptModal, setShowAdaptModal] = useState(false);
   const [adaptTargetChildId, setAdaptTargetChildId] = useState('');
+  const [copyToKidIds, setCopyToKidIds] = useState<string[]>([]);
 
   // Form data
   const initialKid = initialKidId ? kids.find(k => k.id === initialKidId) : undefined
@@ -172,6 +173,7 @@ export default function LessonGenerator({ kids, userId, onClose, onLessonSaved, 
   const handleChildSelect = (childId: string) => {
     const child = kids.find(c => c.id === childId);
     if (child) {
+      setCopyToKidIds(prev => prev.filter(id => id !== childId));
       setFormData({
         ...formData,
         childId,
@@ -264,13 +266,14 @@ ${objectivesHtml}${activitiesHtml}${materialsHtml}${assessmentHtml}
       const baseDate = new Date(formData.startDate + 'T12:00:00');
       const days = Math.max(1, durationDays);
 
-      const lessonPayloads = Array.from({ length: days }, (_, i) => {
+      const targetKidIds = [formData.childId, ...copyToKidIds.filter(id => id !== formData.childId)];
+      const lessonPayloads = targetKidIds.flatMap(kidId => Array.from({ length: days }, (_, i) => {
         const d = new Date(baseDate);
         d.setDate(d.getDate() + i);
         const dateStr = d.toISOString().split('T')[0];
         const title = days > 1 ? `${variation.title} — Day ${i + 1} of ${days}` : variation.title;
         const payload: any = {
-          kid_id: formData.childId,
+          kid_id: kidId,
           user_id: userId,
           subject: formData.subject,
           title,
@@ -282,9 +285,9 @@ ${objectivesHtml}${activitiesHtml}${materialsHtml}${assessmentHtml}
           organization_id: kid.organization_id,
           assigned_to_user_id: assignedTo || null,
         };
-        if (formData.courseId) payload.course_id = formData.courseId;
+        if (kidId === formData.childId && formData.courseId) payload.course_id = formData.courseId;
         return payload;
-      });
+      }));
 
       const { error } = await supabase.from('lessons').insert(lessonPayloads);
 
@@ -297,8 +300,9 @@ ${objectivesHtml}${activitiesHtml}${materialsHtml}${assessmentHtml}
           : '';
         const dayNote = days > 1 ? `\n📅 Spread over ${days} days (${formData.duration} min each)` : '';
         setSelectedVariation(variation);
-        onLessonSaved?.();
-        alert(`✅ Lesson scheduled!\n\n"${variation.title}" for ${kid.displayname} starting ${formattedDate}.${dayNote}${courseNote}`);
+        const copyNote = targetKidIds.length > 1 ? `\n👧 Saved for ${targetKidIds.length} students.` : '';
+        alert(`✅ Lesson scheduled!\n\n"${variation.title}" for ${kid.displayname} starting ${formattedDate}.${dayNote}${courseNote}${copyNote}`);
+        onLessonSaved?.({ date: formData.startDate, kidIds: targetKidIds, kind: 'lesson' });
       }
     } catch (error: any) {
       alert(`❌ Failed to save lesson: ${error.message}`);
@@ -391,6 +395,24 @@ ${objectivesHtml}${activitiesHtml}${materialsHtml}${assessmentHtml}
               </select>
             </div>
 
+            {kids.length > 1 && formData.childId && (
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2">Also save for</label>
+                <div className="space-y-2">
+                  {kids.filter(child => child.id !== formData.childId).map(child => (
+                    <label key={child.id} className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                      <input
+                        type="checkbox"
+                        checked={copyToKidIds.includes(child.id)}
+                        onChange={(e) => setCopyToKidIds(prev => e.target.checked ? [...prev, child.id] : prev.filter(id => id !== child.id))}
+                      />
+                      Copy generated lesson to {child.displayname}{child.grade ? ` (${child.grade})` : ''}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Subject */}
             <div>
               <label className="block text-sm font-medium text-gray-900 mb-1">Subject</label>
@@ -436,17 +458,18 @@ ${objectivesHtml}${activitiesHtml}${materialsHtml}${assessmentHtml}
             {formData.childId && resolveSubject() && resolveSubject() !== '__custom__' && (
               <div>
                 <label className="block text-sm font-medium text-gray-900 mb-1">
-                  Add to Course <span className="text-gray-400 font-normal">(optional)</span>
+                  Add to High School Course <span className="text-gray-400 font-normal">(optional)</span>
                 </label>
+                <p className="text-xs text-gray-500 mb-2">For transcript tracking. Grade-school lessons can be saved as standalone lessons.</p>
                 {loadingCourses ? (
                   <div className="border rounded-lg px-3 py-2 text-sm text-gray-500">Loading courses…</div>
                 ) : availableCourses.length === 0 ? (
                   <div style={{ border: '1.5px dashed #e5e7eb', borderRadius: 10, padding: '10px 12px', background: '#fafafa', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                     <p style={{ margin: 0, fontSize: 12, color: '#6b7280', lineHeight: 1.5 }}>
-                      No active <strong>{resolveSubject()}</strong> courses for {formData.childName}.
+                      No active high school <strong>{resolveSubject()}</strong> courses for {formData.childName}.
                     </p>
                     <a href="/courses" style={{ fontSize: 12, fontWeight: 700, color: '#7c3aed', whiteSpace: 'nowrap' as const, textDecoration: 'none', background: '#f5f3ff', border: '1px solid #ede9fe', borderRadius: 8, padding: '4px 10px' }}>
-                      + Create course
+                      + Create HS course
                     </a>
                   </div>
                 ) : (
@@ -456,7 +479,7 @@ ${objectivesHtml}${activitiesHtml}${materialsHtml}${assessmentHtml}
                       onChange={(e) => setFormData(prev => ({ ...prev, courseId: e.target.value }))}
                       className="w-full border rounded-lg px-3 py-2 text-gray-900"
                     >
-                      <option value="">No course — save as standalone lesson</option>
+                      <option value="">No high school course — save as standalone lesson</option>
                       {availableCourses.map(course => (
                         <option key={course.id} value={course.id}>
                           {course.course_name} ({course.grade_level} · {course.status.replace('_', ' ')})
@@ -465,7 +488,7 @@ ${objectivesHtml}${activitiesHtml}${materialsHtml}${assessmentHtml}
                     </select>
                     {formData.courseId && (
                       <p className="text-xs text-green-700 mt-1">
-                        ✓ This lesson will count toward the {availableCourses.find(c => c.id === formData.courseId)?.course_name} transcript
+                        ✓ This lesson will count toward the {availableCourses.find(c => c.id === formData.courseId)?.course_name} high school transcript
                       </p>
                     )}
                   </>
@@ -672,7 +695,7 @@ ${objectivesHtml}${activitiesHtml}${materialsHtml}${assessmentHtml}
                       className="flex-1 text-white py-3 rounded-xl font-bold text-sm transition-colors disabled:opacity-50"
                       style={{ background: 'linear-gradient(135deg,#4f46e5,#7c3aed)' }}
                     >
-                      {loading ? 'Saving…' : 'Schedule This Lesson'}
+                      {loading ? 'Saving…' : `Schedule${copyToKidIds.length ? ` for ${copyToKidIds.length + 1} kids` : ' This Lesson'}`}
                     </button>
                     <button
                       onClick={() => printVariation(variation)}

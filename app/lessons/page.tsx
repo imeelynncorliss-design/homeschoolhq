@@ -76,6 +76,7 @@ function LessonsContent() {
   const [showLessonForm, setShowLessonForm] = useState(false)
   const [addingLesson, setAddingLesson] = useState(false)
   const [selectedKidForLesson, setSelectedKidForLesson] = useState<string>('')
+  const [manualCopyKidIds, setManualCopyKidIds] = useState<string[]>([])
   const [lessonSubjectSelect, setLessonSubjectSelect] = useState('')
   const [lessonSubjectCustom, setLessonSubjectCustom] = useState('')
   const [existingCustomSubjects, setExistingCustomSubjects] = useState<string[]>([])
@@ -219,11 +220,12 @@ function LessonsContent() {
     // Read ?date= param and pre-fill Add Lesson form
     const params = new URLSearchParams(window.location.search)
     const dateParam = params.get('date')
-    console.log('RAW dateParam from URL:', dateParam)
+    const addParam = params.get('add')
     if (dateParam) {
       const localDate = new Date(dateParam + 'T12:00:00').toISOString().split('T')[0]
-      console.log('localDate after conversion:', localDate)
       setLessonDate(localDate)
+      setShowLessonForm(true)
+    } else if (addParam === 'manual') {
       setShowLessonForm(true)
     }
     }
@@ -242,6 +244,7 @@ function LessonsContent() {
     setLessonDurationUnit('minutes')
     setLessonDays(1)
     setLessonAssignedTo('')
+    setManualCopyKidIds([])
   }
 
   const addLesson = async (e: React.FormEvent) => {
@@ -256,7 +259,8 @@ function LessonsContent() {
     const days = Math.max(1, lessonDays)
     const baseDate = lessonDate ? new Date(lessonDate + 'T12:00:00') : null
 
-    const payloads = Array.from({ length: days }, (_, i) => {
+    const targetKidIds = [selectedKidForLesson, ...manualCopyKidIds.filter(id => id !== selectedKidForLesson)]
+    const payloads = targetKidIds.flatMap(kidId => Array.from({ length: days }, (_, i) => {
       let dateStr: string | null = null
       if (baseDate) {
         const d = new Date(baseDate)
@@ -266,7 +270,7 @@ function LessonsContent() {
       return {
         user_id: user.id,
         organization_id: orgId,
-        kid_id: selectedKidForLesson,
+        kid_id: kidId,
         subject: resolvedSubject,
         title: days > 1 ? `${lessonTitle} — Day ${i + 1} of ${days}` : lessonTitle,
         description: lessonDescription,
@@ -275,16 +279,21 @@ function LessonsContent() {
         status: 'not_started',
         assigned_to_user_id: lessonAssignedTo || null,
       }
-    })
+    }))
 
     const { error } = await supabase.from('lessons').insert(payloads)
 
     if (error) {
       alert('Error adding lesson: ' + error.message)
     } else {
+      const savedDate = lessonDate
       resetForm()
       setShowLessonForm(false)
-      await loadData(user.id, organizationId)
+      if (savedDate) {
+        router.push(`/calendar?date=${savedDate}&saved=lesson`)
+      } else {
+        await loadData(user.id, organizationId)
+      }
     }
     setAddingLesson(false)
   }
@@ -731,7 +740,10 @@ function LessonsContent() {
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 800, color: '#4c1d95', letterSpacing: 0.5, marginBottom: 5 }}>SELECT CHILD *</label>
                 <select
                   value={selectedKidForLesson}
-                  onChange={(e) => setSelectedKidForLesson(e.target.value)}
+                  onChange={(e) => {
+                    setSelectedKidForLesson(e.target.value)
+                    setManualCopyKidIds(prev => prev.filter(id => id !== e.target.value))
+                  }}
                   style={{ width: '100%', padding: '9px 12px', border: '1.5px solid #d1d5db', borderRadius: 10, fontSize: 14, fontWeight: 600, color: '#1a1a2e', fontFamily: "'Nunito', sans-serif", boxSizing: 'border-box' }}
                   required
                 >
@@ -743,6 +755,25 @@ function LessonsContent() {
                   ))}
                 </select>
               </div>
+
+              {kids.length > 1 && selectedKidForLesson && (
+                <div>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 800, color: '#4c1d95', letterSpacing: 0.5, marginBottom: 5 }}>ALSO SAVE FOR</label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+                    {kids.filter(kid => kid.id !== selectedKidForLesson).map(kid => (
+                      <label key={kid.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 700, color: '#374151' }}>
+                        <input
+                          type="checkbox"
+                          checked={manualCopyKidIds.includes(kid.id)}
+                          onChange={(e) => setManualCopyKidIds(prev => e.target.checked ? [...prev, kid.id] : prev.filter(id => id !== kid.id))}
+                          style={{ accentColor: '#7c3aed', width: 15, height: 15 }}
+                        />
+                        Copy this lesson to {kid.displayname}{kid.grade ? ` (Grade ${kid.grade})` : ''}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 800, color: '#4c1d95', letterSpacing: 0.5, marginBottom: 5 }}>SUBJECT *</label>
@@ -904,18 +935,32 @@ function LessonsContent() {
                 )}
               </div>
 
-              <button
-                type="submit"
-                disabled={addingLesson}
-                style={{
-                  width: '100%', padding: '13px 0', borderRadius: 12, border: 'none',
-                  background: addingLesson ? '#c4b5fd' : 'linear-gradient(135deg, #7c3aed, #a855f7)',
-                  color: '#fff', fontSize: 15, fontWeight: 800, cursor: addingLesson ? 'not-allowed' : 'pointer',
-                  fontFamily: "'Nunito', sans-serif", flexShrink: 0,
-                }}
-              >
-                {addingLesson ? 'Adding Lesson…' : 'Add Lesson'}
-              </button>
+              <div style={{ display: 'flex', gap: 10, flexShrink: 0 }}>
+                <button
+                  type="button"
+                  onClick={() => { setShowLessonForm(false); resetForm() }}
+                  disabled={addingLesson}
+                  style={{
+                    flex: 1, padding: '13px 0', borderRadius: 12, border: '1.5px solid #e5e7eb',
+                    background: '#fff', color: '#6b7280', fontSize: 15, fontWeight: 800,
+                    cursor: addingLesson ? 'not-allowed' : 'pointer', fontFamily: "'Nunito', sans-serif",
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={addingLesson}
+                  style={{
+                    flex: 2, padding: '13px 0', borderRadius: 12, border: 'none',
+                    background: addingLesson ? '#c4b5fd' : 'linear-gradient(135deg, #7c3aed, #a855f7)',
+                    color: '#fff', fontSize: 15, fontWeight: 800, cursor: addingLesson ? 'not-allowed' : 'pointer',
+                    fontFamily: "'Nunito', sans-serif",
+                  }}
+                >
+                  {addingLesson ? 'Adding Lesson…' : `Add Lesson${manualCopyKidIds.length ? ` for ${manualCopyKidIds.length + 1} kids` : ''}`}
+                </button>
+              </div>
             </form>
           </div>
         </div>

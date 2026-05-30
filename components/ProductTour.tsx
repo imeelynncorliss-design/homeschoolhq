@@ -33,30 +33,36 @@ function buildTourSteps(
 ): TourStep[] {
   const steps: TourStep[] = []
 
-  // Quick actions first — now above kid cards
+  // Persistent week strip — always shown on Home
+  steps.push({
+    targetId: 'tour-week-strip',
+    title: 'Your Week at a Glance 📅',
+    content: "This compact calendar stays on Home so you can quickly orient yourself. Today is highlighted, and days with lessons use a high-contrast outline plus a lesson count so they are easier to see.",
+    position: 'bottom',
+  })
+
+  // Quick actions — focused shortcut picker
   const isFlexMode = homeschoolStyle === 'flexible'
   steps.push({
     targetId: 'tour-quick-actions',
-    title: isFlexMode ? 'Your Quick Log' : 'Your Quick Actions',
-    content: isFlexMode
-      ? "Shortcuts for logging what you do each day. Tap any card to jump right in — and tap 'Ask Scout' anytime I can help."
-      : "Jump to Today's Learning, log attendance, check compliance, or plan a lesson. Tap 'Ask Scout' anytime you have a question.",
+    title: isFlexMode ? 'Your Quick Log' : 'Your Home Shortcuts',
+    content: "These are the shortcuts you chose for Home. Use them to jump into common workflows like attendance, reading, activities, lessons, materials, and portfolio.",
     bullets: [
-      '🛒 Supply Scout — shows how many materials you need this week. Tap it to review and check off as you gather.',
-      "🃏 Use the 'Customize Cards' pill to choose which action cards appear — including a Calendar card!",
-      '📌 Ask Scout and Today\'s Learning are always pinned — they\'re always here no matter what cards you pick.',
+      '🛒 Supply Scout — shows what materials you need this week.',
+      "🃏 Customize Home — choose which shortcuts appear here.",
+      "🐦 Ask Scout and Today's Plan stay available so help and the daily agenda are always close.",
     ],
     position: 'bottom',
   })
 
-  // Child profile cards — always shown; ring only for structured or pinned pulse
-  const showRing = homeschoolStyle === 'structured' || pinnedFeatures.includes('pulse_check')
+  // Child profile cards — always shown; ring only for structured families
+  const showRing = homeschoolStyle === 'structured'
   steps.push({
     targetId: 'tour-pulse',
     title: 'Your Learners 🐦',
     content: showRing
       ? 'Each card shows your child\'s bird avatar with a progress ring — the white arc fills as they complete today\'s lessons. Tap any card to see their:'
-      : 'Each card shows your child\'s bird avatar. Tap any card to see their profile. Progress rings appear automatically for Structured-style families, or you can pin the Progress Dials card in Quick Actions to add them.',
+      : 'Each card shows your child\'s bird avatar. Tap any card to see their profile and today\'s learning plan.',
     bullets: [
       '🎨 Learning style (Visual, Auditory, Kinesthetic, Read/Write)',
       '✨ MI Superpowers — their natural intelligence strengths',
@@ -74,9 +80,9 @@ function buildTourSteps(
     content: 'Everything your school needs is one tap away:',
     bullets: [
       '📚 Subjects — see what each child is learning and all their scheduled lessons',
-      '📋 Records — attendance, compliance, transcripts, reading logs, and more',
+      '📋 Records — attendance, compliance, transcripts, reading logs, portfolio, and activities',
       "🪴 For Parents — Teaching Blueprint, MI Tips, Learning Style Tips, Guides, and How-To Videos",
-      "💡 Resources — Teaching Styles, State Laws, and My Materials",
+      "💡 Resources — Teaching Styles, State Laws, and Materials",
       '🔧 Tools — import curriculum, bulk schedule, plan vacations, manage co-teachers',
     ],
     position: 'top',
@@ -108,7 +114,7 @@ function buildTourSteps(
   steps.push({
     targetId: 'tour-quick-actions',
     title: "Ask Scout Anything",
-    content: "I'm your 24/7 homeschool co-pilot. Ask me about state requirements, curriculum ideas, how to use any feature in the app — anything. Just tap the Ask Scout card.",
+    content: "I'm your 24/7 homeschool co-pilot. Ask me about state requirements, curriculum ideas, how to use any feature in the app — anything. Just tap Ask Scout on Home.",
     position: 'bottom',
   })
 
@@ -125,7 +131,7 @@ function buildCoTeacherTourSteps(): TourStep[] {
     {
       targetId: 'tour-week-strip',
       title: 'Your Week at a Glance',
-      content: "A dot (●) below a date means lessons are scheduled that day. Tap any day to see what's planned — you can view, check in, or add notes right from there.",
+      content: "Days with scheduled lessons are outlined and labeled with a lesson count. Tap any day to see what's planned — you can view, check in, or add notes right from there.",
       position: 'bottom',
     },
     {
