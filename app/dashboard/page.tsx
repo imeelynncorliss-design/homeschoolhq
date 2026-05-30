@@ -57,14 +57,14 @@ const LS_DISPLAY: Record<string, { label: string; emoji: string }> = {
 const QUICK_ACTION_CONFIG: Record<string, {
   emoji: string; label: string; sub: string
   bg: string; iconBg: string; color: string; subColor: string
-  action: 'route' | 'lesson' | 'activity' | 'today' | 'scout'
+  action: 'route' | 'lesson' | 'lesson_choice' | 'activity' | 'activity_choice' | 'today' | 'scout'
   href?: string
 }> = {
   daily_log:   { emoji: '📝', label: 'Daily Log',       sub: 'Subjects covered — no lesson needed', bg: 'linear-gradient(135deg,#f5f3ff,#ede9fe)', iconBg: '#7c3aed', color: '#4c1d95', subColor: '#7c3aed', action: 'route',    href: '/daily-log' },
   attendance:  { emoji: '✅', label: 'Attendance',      sub: 'Mark school days and hours',          bg: 'linear-gradient(135deg,#d1fae5,#a7f3d0)', iconBg: '#059669', color: '#064e3b', subColor: '#059669', action: 'route',    href: '/attendance' },
   reading_log: { emoji: '📚', label: 'Reading Log',     sub: 'Track books and reading',             bg: 'linear-gradient(135deg,#ede9fe,#ddd6fe)', iconBg: '#7c3aed', color: '#4c1d95', subColor: '#7c3aed', action: 'route',    href: '/reading-log' },
-  field_trips: { emoji: '🚌', label: 'Activities',      sub: 'Trips, projects, co-op, life',        bg: 'linear-gradient(135deg,#ccfbf1,#99f6e4)', iconBg: '#0d9488', color: '#134e4a', subColor: '#0d9488', action: 'route',    href: '/field-trips' },
-  ai_lessons:  { emoji: '🤖', label: 'Plan Lesson',     sub: 'Generate a lesson with Scout',        bg: 'linear-gradient(135deg,#ede9fe,#ddd6fe)', iconBg: '#7c3aed', color: '#4c1d95', subColor: '#7c3aed', action: 'lesson' },
+  field_trips: { emoji: '🚌', label: 'Activities',      sub: 'Log or generate activities',          bg: 'linear-gradient(135deg,#ccfbf1,#99f6e4)', iconBg: '#0d9488', color: '#134e4a', subColor: '#0d9488', action: 'activity_choice' },
+  ai_lessons:  { emoji: '🤖', label: 'Add Lesson',      sub: 'Generate, write, or use curriculum',  bg: 'linear-gradient(135deg,#ede9fe,#ddd6fe)', iconBg: '#7c3aed', color: '#4c1d95', subColor: '#7c3aed', action: 'lesson_choice' },
   ai_activity: { emoji: '🎯', label: 'Activity Idea',   sub: 'Generate a hands-on idea',            bg: 'linear-gradient(135deg,#ccfbf1,#99f6e4)', iconBg: '#0d9488', color: '#134e4a', subColor: '#0d9488', action: 'activity' },
   compliance:  { emoji: '📋', label: 'Compliance',      sub: 'State, days, hours, dates',           bg: 'linear-gradient(135deg,#fef2f2,#fee2e2)', iconBg: '#dc2626', color: '#7f1d1d', subColor: '#dc2626', action: 'route',    href: '/compliance' },
   progress:    { emoji: '📊', label: 'Progress',        sub: 'Subject and lesson trends',           bg: 'linear-gradient(135deg,#f0fdf4,#dcfce7)', iconBg: '#16a34a', color: '#14532d', subColor: '#16a34a', action: 'route',    href: '/progress' },
@@ -151,6 +151,66 @@ function PulseRing({ pct, color, size = 120 }: { pct: number; color: string; siz
         strokeDasharray={`${(pct / 100) * c} ${c - (pct / 100) * c}`} strokeLinecap="round"
         style={{ transition: 'stroke-dasharray 1s cubic-bezier(0.4,0,0.2,1)' }} />
     </svg>
+  )
+}
+
+// ─── Dashboard Choice Sheet ──────────────────────────────────────────────────
+
+function ChoiceSheet({ title, subtitle, options, onClose }: {
+  title: string
+  subtitle: string
+  options: { emoji: string; label: string; sub: string; accent?: boolean; onClick: () => void }[]
+  onClose: () => void
+}) {
+  return (
+    <>
+      <div
+        onClick={onClose}
+        style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.42)', zIndex: 400 }}
+      />
+      <div style={{
+        position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 401,
+        background: '#2d2b3d', borderRadius: '24px 24px 0 0',
+        boxShadow: '0 -8px 40px rgba(0,0,0,0.4)',
+        fontFamily: "'Nunito', sans-serif",
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 0' }}>
+          <div style={{ width: 40, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.2)' }} />
+        </div>
+        <div style={{ padding: '16px 20px 40px', maxWidth: 520, margin: '0 auto' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 18 }}>
+            <div>
+              <div style={{ fontSize: 18, fontWeight: 900, color: '#c4b5fd', marginBottom: 4 }}>{title}</div>
+              <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', fontWeight: 600 }}>{subtitle}</div>
+            </div>
+            <button
+              onClick={onClose}
+              aria-label="Close"
+              style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: 10, color: 'rgba(255,255,255,0.8)', width: 32, height: 32, cursor: 'pointer', fontSize: 16 }}
+            >×</button>
+          </div>
+          {options.map(option => (
+            <button
+              key={option.label}
+              onClick={option.onClick}
+              style={{
+                width: '100%', padding: '16px', borderRadius: 14,
+                border: option.accent ? '1.5px solid rgba(124,58,237,0.4)' : '1.5px solid rgba(255,255,255,0.15)',
+                background: option.accent ? 'rgba(124,58,237,0.15)' : 'rgba(255,255,255,0.07)',
+                textAlign: 'left' as const, cursor: 'pointer', marginBottom: 10,
+                fontFamily: "'Nunito', sans-serif", display: 'flex', alignItems: 'center', gap: 12,
+              }}>
+              <span style={{ fontSize: 24, lineHeight: 1 }}>{option.emoji}</span>
+              <span style={{ flex: 1 }}>
+                <span style={{ display: 'block', fontSize: 15, fontWeight: 800, color: option.accent ? '#c4b5fd' : '#fff', marginBottom: 3 }}>{option.label}</span>
+                <span style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.55)' }}>{option.sub}</span>
+              </span>
+              <span style={{ color: option.accent ? '#c4b5fd' : 'rgba(255,255,255,0.45)', fontWeight: 900 }}>→</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </>
   )
 }
 
@@ -1211,6 +1271,8 @@ function DashboardContent() {
   const [showLifeHappens, setShowLifeHappens] = useState(false)
   const [showActivity, setShowActivity]       = useState(false)
   const [showGenerator, setShowGenerator]     = useState(false)
+  const [showActivityChoice, setShowActivityChoice] = useState(false)
+  const [showLessonChoice, setShowLessonChoice] = useState(false)
   const [activePulseKidId, setActivePulseKidId] = useState<string | null>(null)
   const [childProfileKidId, setChildProfileKidId] = useState<string | null>(null)
   const [profileTab, setProfileTab] = useState<'today' | 'style' | 'mi' | 'look' | 'subjects' | 'materials' | 'teachers'>('today')
@@ -1983,10 +2045,12 @@ function DashboardContent() {
                 .map(fid => {
                   const c = QUICK_ACTION_CONFIG[fid]
                   const onClick =
-                    c.action === 'route'    ? () => router.push(c.href!)
-                    : c.action === 'lesson'  ? () => setShowGenerator(true)
-                    : c.action === 'activity'? () => setShowActivity(true)
-                    : c.action === 'scout'   ? () => window.dispatchEvent(new CustomEvent('open-scout-copilot'))
+                    c.action === 'route'           ? () => router.push(c.href!)
+                    : c.action === 'lesson'         ? () => setShowGenerator(true)
+                    : c.action === 'lesson_choice'  ? () => setShowLessonChoice(true)
+                    : c.action === 'activity'       ? () => setShowActivity(true)
+                    : c.action === 'activity_choice'? () => setShowActivityChoice(true)
+                    : c.action === 'scout'          ? () => window.dispatchEvent(new CustomEvent('open-scout-copilot'))
                     : () => {}
                   return { key: fid, ...c, onClick }
                 })
@@ -2209,6 +2273,71 @@ function DashboardContent() {
             onGenerateLesson={() => setShowGenerator(true)}
             onGenerateActivity={() => setShowActivity(true)}
             onAskScout={() => window.dispatchEvent(new CustomEvent('open-scout-copilot'))}
+          />
+        )}
+        {showActivityChoice && (
+          <ChoiceSheet
+            title="Activities"
+            subtitle="What would you like to do?"
+            onClose={() => setShowActivityChoice(false)}
+            options={[
+              {
+                emoji: '🚌',
+                label: 'Log field trip / activity',
+                sub: 'Use the existing field trip and activity log',
+                onClick: () => {
+                  setShowActivityChoice(false)
+                  router.push('/field-trips')
+                },
+              },
+              {
+                emoji: '🎯',
+                label: 'Generate activity idea',
+                sub: 'Let Scout suggest a hands-on activity',
+                accent: true,
+                onClick: () => {
+                  setShowActivityChoice(false)
+                  setShowActivity(true)
+                },
+              },
+            ]}
+          />
+        )}
+        {showLessonChoice && (
+          <ChoiceSheet
+            title="Add a Lesson"
+            subtitle="Choose the path that matches what you already have."
+            onClose={() => setShowLessonChoice(false)}
+            options={[
+              {
+                emoji: '✨',
+                label: 'Generate lesson',
+                sub: 'Let Scout create a lesson plan',
+                accent: true,
+                onClick: () => {
+                  setShowLessonChoice(false)
+                  setShowGenerator(true)
+                },
+              },
+              {
+                emoji: '✏️',
+                label: 'Add lesson manually',
+                sub: 'Go to Lessons and write your own lesson',
+                onClick: () => {
+                  setShowLessonChoice(false)
+                  router.push('/lessons')
+                },
+              },
+              {
+                emoji: '📚',
+                label: 'Use curriculum',
+                sub: 'Import or work from an existing curriculum',
+                onClick: () => {
+                  setShowLessonChoice(false)
+                  router.push('/curriculum/import')
+                },
+              },
+            ]}
           />
         )}
         {showGenerator && (
