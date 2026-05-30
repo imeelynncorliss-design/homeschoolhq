@@ -64,7 +64,7 @@ const QUICK_ACTION_CONFIG: Record<string, {
   attendance:  { emoji: '✅', label: 'Attendance',      sub: 'Mark school days and hours',          bg: 'linear-gradient(135deg,#d1fae5,#a7f3d0)', iconBg: '#059669', color: '#064e3b', subColor: '#059669', action: 'route',    href: '/attendance' },
   reading_log: { emoji: '📚', label: 'Reading Log',     sub: 'Track books and reading',             bg: 'linear-gradient(135deg,#ede9fe,#ddd6fe)', iconBg: '#7c3aed', color: '#4c1d95', subColor: '#7c3aed', action: 'route',    href: '/reading-log' },
   field_trips: { emoji: '🚌', label: 'Activities',      sub: 'Log or generate activities',          bg: 'linear-gradient(135deg,#ccfbf1,#99f6e4)', iconBg: '#0d9488', color: '#134e4a', subColor: '#0d9488', action: 'activity_choice' },
-  ai_lessons:  { emoji: '🤖', label: 'Add Lesson',      sub: 'Generate, write, or use curriculum',  bg: 'linear-gradient(135deg,#ede9fe,#ddd6fe)', iconBg: '#7c3aed', color: '#4c1d95', subColor: '#7c3aed', action: 'lesson_choice' },
+  ai_lessons:  { emoji: '📚', label: 'Add Lesson',      sub: 'Generate, write, or use curriculum',  bg: 'linear-gradient(135deg,#ede9fe,#ddd6fe)', iconBg: '#7c3aed', color: '#4c1d95', subColor: '#7c3aed', action: 'lesson_choice' },
   ai_activity: { emoji: '🎯', label: 'Activity Idea',   sub: 'Generate a hands-on idea',            bg: 'linear-gradient(135deg,#ccfbf1,#99f6e4)', iconBg: '#0d9488', color: '#134e4a', subColor: '#0d9488', action: 'activity' },
   compliance:  { emoji: '📋', label: 'Compliance',      sub: 'State, days, hours, dates',           bg: 'linear-gradient(135deg,#fef2f2,#fee2e2)', iconBg: '#dc2626', color: '#7f1d1d', subColor: '#dc2626', action: 'route',    href: '/compliance' },
   progress:    { emoji: '📊', label: 'Progress',        sub: 'Subject and lesson trends',           bg: 'linear-gradient(135deg,#f0fdf4,#dcfce7)', iconBg: '#16a34a', color: '#14532d', subColor: '#16a34a', action: 'route',    href: '/progress' },
@@ -2321,7 +2321,7 @@ function DashboardContent() {
               },
               {
                 emoji: '✏️',
-                label: 'Add lesson manually',
+                label: 'Write lesson manually',
                 sub: 'Go to Lessons and write your own lesson',
                 onClick: () => {
                   setShowLessonChoice(false)
@@ -2346,6 +2346,10 @@ function DashboardContent() {
             userId={user?.id ?? ''}
             homeschoolStyle={homeschoolStyle ?? null}
             onClose={() => setShowGenerator(false)}
+            onLessonSaved={(info) => {
+              setShowGenerator(false)
+              router.push(info?.date ? `/calendar?date=${info.date}&saved=lesson` : '/calendar')
+            }}
           />
         )}
         {showActivity && (
@@ -2354,7 +2358,10 @@ function DashboardContent() {
             organizationId={organizationId}
             homeschoolStyle={homeschoolStyle ?? null}
             onClose={() => setShowActivity(false)}
-            onSaved={() => {}}
+            onSaved={(info) => {
+              setShowActivity(false)
+              router.push(info?.date ? `/calendar?date=${info.date}&saved=activity` : '/calendar')
+            }}
           />
         )}
         {showToday && (

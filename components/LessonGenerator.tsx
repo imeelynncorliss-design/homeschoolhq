@@ -36,7 +36,7 @@ type LessonGeneratorProps = {
   kids: Child[];
   userId: string;
   onClose: () => void;
-  onLessonSaved?: () => void;
+  onLessonSaved?: (info?: { date: string; kidIds: string[]; kind: 'lesson' }) => void;
   initialDate?: string;
   initialKidId?: string;
   initialSubject?: string;
@@ -69,6 +69,7 @@ export default function LessonGenerator({ kids, userId, onClose, onLessonSaved, 
   // Adapt modal
   const [showAdaptModal, setShowAdaptModal] = useState(false);
   const [adaptTargetChildId, setAdaptTargetChildId] = useState('');
+  const [copyToKidIds, setCopyToKidIds] = useState<string[]>([]);
 
   // Form data
   const initialKid = initialKidId ? kids.find(k => k.id === initialKidId) : undefined
@@ -172,6 +173,7 @@ export default function LessonGenerator({ kids, userId, onClose, onLessonSaved, 
   const handleChildSelect = (childId: string) => {
     const child = kids.find(c => c.id === childId);
     if (child) {
+      setCopyToKidIds(prev => prev.filter(id => id !== childId));
       setFormData({
         ...formData,
         childId,
@@ -264,13 +266,14 @@ ${objectivesHtml}${activitiesHtml}${materialsHtml}${assessmentHtml}
       const baseDate = new Date(formData.startDate + 'T12:00:00');
       const days = Math.max(1, durationDays);
 
-      const lessonPayloads = Array.from({ length: days }, (_, i) => {
+      const targetKidIds = [formData.childId, ...copyToKidIds.filter(id => id !== formData.childId)];
+      const lessonPayloads = targetKidIds.flatMap(kidId => Array.from({ length: days }, (_, i) => {
         const d = new Date(baseDate);
         d.setDate(d.getDate() + i);
         const dateStr = d.toISOString().split('T')[0];
         const title = days > 1 ? `${variation.title} — Day ${i + 1} of ${days}` : variation.title;
         const payload: any = {
-          kid_id: formData.childId,
+          kid_id: kidId,
           user_id: userId,
           subject: formData.subject,
           title,
@@ -282,9 +285,9 @@ ${objectivesHtml}${activitiesHtml}${materialsHtml}${assessmentHtml}
           organization_id: kid.organization_id,
           assigned_to_user_id: assignedTo || null,
         };
-        if (formData.courseId) payload.course_id = formData.courseId;
+        if (kidId === formData.childId && formData.courseId) payload.course_id = formData.courseId;
         return payload;
-      });
+      }));
 
       const { error } = await supabase.from('lessons').insert(lessonPayloads);
 
@@ -297,8 +300,9 @@ ${objectivesHtml}${activitiesHtml}${materialsHtml}${assessmentHtml}
           : '';
         const dayNote = days > 1 ? `\n📅 Spread over ${days} days (${formData.duration} min each)` : '';
         setSelectedVariation(variation);
-        onLessonSaved?.();
-        alert(`✅ Lesson scheduled!\n\n"${variation.title}" for ${kid.displayname} starting ${formattedDate}.${dayNote}${courseNote}`);
+        const copyNote = targetKidIds.length > 1 ? `\n👧 Saved for ${targetKidIds.length} students.` : '';
+        alert(`✅ Lesson scheduled!\n\n"${variation.title}" for ${kid.displayname} starting ${formattedDate}.${dayNote}${courseNote}${copyNote}`);
+        onLessonSaved?.({ date: formData.startDate, kidIds: targetKidIds, kind: 'lesson' });
       }
     } catch (error: any) {
       alert(`❌ Failed to save lesson: ${error.message}`);
@@ -390,6 +394,24 @@ ${objectivesHtml}${activitiesHtml}${materialsHtml}${assessmentHtml}
                 ))}
               </select>
             </div>
+
+            {kids.length > 1 && formData.childId && (
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2">Also save for</label>
+                <div className="space-y-2">
+                  {kids.filter(child => child.id !== formData.childId).map(child => (
+                    <label key={child.id} className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                      <input
+                        type="checkbox"
+                        checked={copyToKidIds.includes(child.id)}
+                        onChange={(e) => setCopyToKidIds(prev => e.target.checked ? [...prev, child.id] : prev.filter(id => id !== child.id))}
+                      />
+                      Copy generated lesson to {child.displayname}{child.grade ? ` (${child.grade})` : ''}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Subject */}
             <div>
@@ -672,7 +694,7 @@ ${objectivesHtml}${activitiesHtml}${materialsHtml}${assessmentHtml}
                       className="flex-1 text-white py-3 rounded-xl font-bold text-sm transition-colors disabled:opacity-50"
                       style={{ background: 'linear-gradient(135deg,#4f46e5,#7c3aed)' }}
                     >
-                      {loading ? 'Saving…' : 'Schedule This Lesson'}
+                      {loading ? 'Saving…' : `Schedule${copyToKidIds.length ? ` for ${copyToKidIds.length + 1} kids` : ' This Lesson'}`}
                     </button>
                     <button
                       onClick={() => printVariation(variation)}

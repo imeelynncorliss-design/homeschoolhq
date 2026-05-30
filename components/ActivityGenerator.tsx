@@ -29,7 +29,7 @@ interface ActivityGeneratorProps {
   kids: Kid[]
   organizationId?: string | null
   onClose: () => void
-  onSaved?: () => void
+  onSaved?: (info?: { date: string; kidIds: string[]; kind: 'activity' }) => void
   homeschoolStyle?: 'flexible' | 'structured' | null
 }
 
@@ -64,6 +64,7 @@ export default function ActivityGenerator({ kids, organizationId, onClose, onSav
   const { isDark } = useTheme()
   const [step, setStep] = useState<'setup' | 'vibe' | 'loading' | 'results'>('setup')
   const [selectedKidId, setSelectedKidId] = useState<string>(kids[0]?.id ?? '')
+  const [copyToKidIds, setCopyToKidIds] = useState<string[]>([])
   const [subjectSelect, setSubjectSelect] = useState('')
   const [subjectCustom, setSubjectCustom] = useState('')
   const [existingSubjects, setExistingSubjects] = useState<string[]>([])
@@ -221,8 +222,9 @@ ${stepsHtml}${haveHtml}${needHtml}
     setSaving(true)
     const subject = resolveSubject()
     const act = activities[idx]
-    const { error: dbErr } = await supabase.from('lessons').insert({
-      kid_id: selectedKidId,
+    const targetKidIds = [selectedKidId, ...copyToKidIds.filter(id => id !== selectedKidId)]
+    const payloads = targetKidIds.map(kidId => ({
+      kid_id: kidId,
       organization_id: organizationId,
       subject,
       title: act.title,
@@ -234,11 +236,12 @@ ${stepsHtml}${haveHtml}${needHtml}
       lesson_date: scheduledDate,
       status: 'not_started',
       lesson_source: 'scout_activity',
-    })
+    }))
+    const { error: dbErr } = await supabase.from('lessons').insert(payloads)
     setSaving(false)
     if (dbErr) { setError('Failed to save activity'); return }
     setSavedIdx(prev => new Set([...prev, idx]))
-    onSaved?.()
+    onSaved?.({ date: scheduledDate, kidIds: targetKidIds, kind: 'activity' })
   }
 
   // ── Styles (dark-mode aware) ─────────────────────────────────────────────────
@@ -395,9 +398,30 @@ ${stepsHtml}${haveHtml}${needHtml}
                   {kids.map(k => (
                     <button key={k.id}
                       style={{ ...s.kidBtn, ...(selectedKidId === k.id ? s.kidBtnActive : {}) }}
-                      onClick={() => setSelectedKidId(k.id)}>
+                      onClick={() => {
+                        setSelectedKidId(k.id)
+                        setCopyToKidIds(prev => prev.filter(id => id !== k.id))
+                      }}>
                       {k.displayname}
                     </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {kids.length > 1 && (
+              <div style={s.field}>
+                <label style={s.label}>Also save for</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {kids.filter(k => k.id !== selectedKidId).map(k => (
+                    <label key={k.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 700, color: isDark ? 'var(--hr-text-primary)' : '#374151' }}>
+                      <input
+                        type="checkbox"
+                        checked={copyToKidIds.includes(k.id)}
+                        onChange={(e) => setCopyToKidIds(prev => e.target.checked ? [...prev, k.id] : prev.filter(id => id !== k.id))}
+                      />
+                      Copy this generated activity to {k.displayname}
+                    </label>
                   ))}
                 </div>
               </div>
@@ -544,7 +568,7 @@ ${stepsHtml}${haveHtml}${needHtml}
                       style={{ ...s.saveBtn, ...(savedIdx.has(i) ? s.savedBtn : {}) }}
                       onClick={() => handleSave(i)}
                       disabled={savedIdx.has(i)}>
-                      {savedIdx.has(i) ? '✓ Saved' : 'Save'}
+                      {savedIdx.has(i) ? '✓ Saved' : `Save${copyToKidIds.length ? ` for ${copyToKidIds.length + 1} kids` : ''}`}
                     </button>
                     <button
                       style={s.printOneBtn}

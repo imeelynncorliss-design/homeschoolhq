@@ -51,6 +51,8 @@ interface LessonCalendarProps {
   userId: string
   organizationId: string
   onEditLesson?: (lesson: any) => void
+  initialDate?: string
+  highlightedDate?: string
 }
 
 const CHILD_COLORS = [
@@ -82,9 +84,11 @@ export default function LessonCalendar({
   onStatusChange,
   userId,
   organizationId,
-  onEditLesson
+  onEditLesson,
+  initialDate,
+  highlightedDate
 }: LessonCalendarProps) {
-  const [currentDate, setCurrentDate] = useState(new Date())
+  const [currentDate, setCurrentDate] = useState(() => initialDate ? moment(initialDate + 'T12:00:00').toDate() : new Date())
   const [showFamilyNotes, setShowFamilyNotes] = useState(false)
   const [showDailyNotes, setShowDailyNotes] = useState(false)
   const [showDayView, setShowDayView] = useState(false)
@@ -95,6 +99,10 @@ export default function LessonCalendar({
   useEffect(() => {
     loadDatesWithNotes()
   }, [])
+
+  useEffect(() => {
+    if (initialDate) setCurrentDate(moment(initialDate + 'T12:00:00').toDate())
+  }, [initialDate])
 
   const loadDatesWithNotes = async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -114,9 +122,10 @@ export default function LessonCalendar({
   const DateCellWrapper = ({ children, value }: any) => {
     const dateStr = moment.utc(value).format('YYYY-MM-DD')
     const hasNotes = datesWithNotes.has(dateStr)
+    const isHighlighted = highlightedDate === dateStr
 
     return (
-      <div className="rbc-day-bg relative group">
+      <div className={`rbc-day-bg relative group ${isHighlighted ? 'hr-calendar-saved-day' : ''}`}>
         {children}
         <button
           onClick={(e) => {
@@ -307,6 +316,7 @@ export default function LessonCalendar({
 
   const eventStyleGetter = (event: any) => {
     let backgroundColor = ACTIVITY_COLORS.lesson
+    const isHighlighted = highlightedDate && moment(event.start).format('YYYY-MM-DD') === highlightedDate
     if (event.activityType === 'lesson') backgroundColor = kidColors[event.kidId] || ACTIVITY_COLORS.lesson
     else if (event.activityType === 'socialEvent') backgroundColor = ACTIVITY_COLORS.socialEvent
     else if (event.activityType === 'coopClass') backgroundColor = ACTIVITY_COLORS.coopClass
@@ -316,9 +326,10 @@ export default function LessonCalendar({
         borderRadius: '4px',
         opacity: 0.9,
         color: 'white',
-        border: '0px',
+        border: isHighlighted ? '2px solid #fbbf24' : '0px',
+        boxShadow: isHighlighted ? '0 0 0 3px rgba(251,191,36,0.35)' : undefined,
         display: 'block',
-        fontWeight: '500'
+        fontWeight: isHighlighted ? '800' : '500'
       }
     }
   }
@@ -372,6 +383,7 @@ export default function LessonCalendar({
         <style jsx global>{`
           .rbc-event { padding: 2px 5px; font-size: 12px; }
           .rbc-event:hover { opacity: 1 !important; cursor: pointer; }
+          .hr-calendar-saved-day { box-shadow: inset 0 0 0 3px rgba(251,191,36,0.7); background: rgba(254,243,199,0.45) !important; }
           @media print { .print-header { display: flex !important; } }
           ${printHeaderCSS()}
         `}</style>

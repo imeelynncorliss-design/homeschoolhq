@@ -2,7 +2,7 @@
 
 import { useEffect, useState, Suspense } from 'react'
 import { supabase } from '@/src/lib/supabase'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import LessonCalendar from '@/components/LessonCalendar'
 import LessonViewModal, { type LessonViewModalLesson } from '@/components/LessonViewModal'
 import AuthGuard from '@/components/AuthGuard'
@@ -13,6 +13,9 @@ import { colors } from '@/src/lib/designTokens'
 
 function CalendarContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const savedKind = searchParams?.get('saved')
+  const focusDate = searchParams?.get('date')
   useAppHeader({ title: '📅 Calendar' })
   const [user, setUser] = useState<any>(null)
   const [kids, setKids] = useState<any[]>([])
@@ -90,6 +93,12 @@ function CalendarContent() {
       {/* Page content */}
       <div style={{ padding: '16px 20px 0' }}>
 
+        {savedKind && focusDate && (
+          <div className="hr-card" style={{ padding: '12px 16px', marginBottom: 14, border: '1.5px solid #c4b5fd', background: '#f5f3ff', color: '#4c1d95', fontSize: 13, fontWeight: 800 }}>
+            ✓ Saved {savedKind === 'activity' ? 'activity' : 'lesson'} — showing it on the calendar for {new Date(focusDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}.
+          </div>
+        )}
+
         {/* Calendar */}
         {organizationId && user ? (
           <LessonCalendar
@@ -105,6 +114,8 @@ function CalendarContent() {
             }}
             userId={user.id}
             organizationId={organizationId}
+            initialDate={focusDate || undefined}
+            highlightedDate={focusDate || undefined}
           />
         ) : (
           <div className="hr-card" style={{ padding: '40px 24px', textAlign: 'center', color: '#6b7280', fontSize: 15, fontWeight: 600 }}>
