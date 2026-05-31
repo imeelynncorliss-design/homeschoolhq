@@ -105,7 +105,7 @@ export default function AttendanceTracker({ kids, organizationId, userId }: Atte
   const [showBackfill, setShowBackfill] = useState(false)
   const [markingDate, setMarkingDate] = useState<string>(new Date().toLocaleDateString('en-CA'))
   const [markingDefaultHours, setMarkingDefaultHours] = useState<number | undefined>(undefined)
-  const [viewMode, setViewMode] = useState<ViewMode>('list')
+  const [viewMode, setViewMode] = useState<ViewMode>('calendar')
   const [activeTab, setActiveTab] = useState<TabMode>('overview')
   const [calendarYear, setCalendarYear] = useState(new Date().getFullYear())
   const [calendarMonth, setCalendarMonth] = useState(new Date().getMonth())
@@ -505,9 +505,8 @@ useEffect(() => {
         result.push({ date: a.attendance_date, type: 'no_school_with_lessons', attendanceStatus: a.status, lessonHours, lessonCount })
         return
       }
-      if (a.status !== 'no_school' && lessonCount === 0) {
-        result.push({ date: a.attendance_date, type: 'attendance_no_lessons', attendanceHours: a.hours, attendanceStatus: a.status, lessonCount: 0 })
-      }
+      // Attendance-only days are valid by default. Some families use HomeschoolReady
+      // as an attendance ledger without planning every lesson in the app.
       if (a.status !== 'no_school' && lessonCount > 0 && Math.abs(a.hours - lessonHours) > 1) {
         result.push({ date: a.attendance_date, type: 'hours_mismatch', attendanceHours: a.hours, lessonHours, lessonCount })
       }

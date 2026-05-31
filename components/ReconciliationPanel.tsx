@@ -47,10 +47,10 @@ const DISCREPANCY_LABELS: Record<DiscrepancyDay['type'], { icon: string; label: 
   },
   attendance_no_lessons: {
     icon: '📭',
-    label: 'Attendance logged — no lessons',
-    description: (d) => `${d.attendanceHours?.toFixed(1)}h of attendance recorded but no lessons found`,
-    hint: 'Tap "Fix" to add a lesson, log a field trip, or mark it as reviewed.',
-    canDismiss: false,
+    label: 'Attendance-only day',
+    description: (d) => `${d.attendanceHours?.toFixed(1)}h of attendance recorded with no lessons attached`,
+    hint: 'This can be normal for attendance-only recordkeeping, field trips, projects, co-op, or offline learning.',
+    canDismiss: true,
   },
   outside_school_year: {
     icon: '📅',
@@ -110,19 +110,19 @@ export default function ReconciliationPanel({
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
 
-      {/* ── Suggested School Days ─────────────────────────────── */}
+      {/* ── Optional activity suggestions ─────────────────────── */}
       {suggestions.length > 0 && (
         <div style={{ background: '#eff6ff', border: '2px solid #bfdbfe', borderRadius: 8, padding: 16 }}>
           <div className="flex items-start justify-between mb-3">
             <div>
               <h3 style={{ fontSize: 18, fontWeight: 700, color: '#111827', display: 'flex', alignItems: 'center', gap: 8, margin: 0 }}>
-                <span>💡</span> Suggested School Days
+                <span>💡</span> Review Suggestions
                 <span style={{ fontSize: 13, fontWeight: 400, color: '#1d4ed8', background: '#dbeafe', padding: '2px 8px', borderRadius: 999 }}>
                   {suggestions.length}
                 </span>
               </h3>
               <p style={{ fontSize: 14, color: '#374151', marginTop: 4, marginBottom: 0 }}>
-                These days have lessons logged but no attendance record. Confirm them to count toward compliance.
+                We found lessons on these dates without attendance records. Use these suggestions if they counted as school days.
               </p>
             </div>
             <button onClick={onDismissAll} style={{ color: '#6b7280', fontSize: 14, whiteSpace: 'nowrap', marginLeft: 16, background: 'none', border: 'none', cursor: 'pointer' }}>
@@ -163,7 +163,7 @@ export default function ReconciliationPanel({
                   disabled={processing}
                   className="px-4 py-1.5 bg-blue-600 text-white rounded text-sm font-medium hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed"
                 >
-                  {processing ? 'Confirming...' : `Confirm ${selectedDates.size} Day${selectedDates.size !== 1 ? 's' : ''}`}
+                  {processing ? 'Adding...' : `Add ${selectedDates.size} Attendance Record${selectedDates.size !== 1 ? 's' : ''}`}
                 </button>
               </>
             )}
@@ -241,18 +241,18 @@ export default function ReconciliationPanel({
         </div>
       )}
 
-      {/* ── Reconciliation Panel ──────────────────────────────── */}
+      {/* ── Needs Attention ───────────────────────────────────── */}
       {discrepancies.length > 0 && (
         <div style={{ background: '#fffbeb', border: '2px solid #fde68a', borderRadius: 8, padding: 16 }}>
           <div className="mb-3">
             <h3 style={{ fontSize: 18, fontWeight: 700, color: '#111827', display: 'flex', alignItems: 'center', gap: 8, margin: 0 }}>
-              <span>🔍</span> Reconciliation Panel
+              <span>🔍</span> Needs Attention
               <span style={{ fontSize: 13, fontWeight: 400, color: '#92400e', background: '#fef3c7', padding: '2px 8px', borderRadius: 999 }}>
                 {discrepancies.length} issue{discrepancies.length !== 1 ? 's' : ''}
               </span>
             </h3>
             <p style={{ fontSize: 14, color: '#374151', marginTop: 4, marginBottom: 0 }}>
-              These attendance records have data conflicts that may affect your compliance numbers. Review each one.
+              These records may need a closer look. Attendance-only days are valid by default and are not shown here.
             </p>
           </div>
 
