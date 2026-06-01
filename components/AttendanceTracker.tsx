@@ -23,10 +23,23 @@ interface AttendanceTrackerProps {
 
 interface LessonData {
   id: string
+  title?: string
+  subject?: string
   lesson_date: string
   duration_minutes: number
   kid_id: string
+  status?: string
   completed: boolean
+}
+
+interface LessonContext {
+  id: string
+  title: string
+  subject?: string | null
+  kidId: string
+  kidName: string
+  durationMinutes: number
+  status?: string | null
 }
 
 interface ManualAttendance {
@@ -73,6 +86,17 @@ interface SuggestedDay {
   suggestedHours: number
 }
 
+interface DiscrepancyDay {
+  date: string
+  type: 'hours_mismatch' | 'no_school_with_lessons' | 'attendance_no_lessons' | 'outside_school_year'
+  attendanceHours?: number
+  lessonHours?: number
+  attendanceStatus?: string
+  lessonCount?: number
+  attendanceScope?: string
+  lessons?: LessonContext[]
+}
+
 type ViewMode = 'list' | 'calendar'
 type TabMode = 'overview' | 'insights' | 'goals'
 
@@ -105,7 +129,7 @@ export default function AttendanceTracker({ kids, organizationId, userId }: Atte
   const [showBackfill, setShowBackfill] = useState(false)
   const [markingDate, setMarkingDate] = useState<string>(new Date().toLocaleDateString('en-CA'))
   const [markingDefaultHours, setMarkingDefaultHours] = useState<number | undefined>(undefined)
-  const [viewMode, setViewMode] = useState<ViewMode>('list')
+  const [viewMode, setViewMode] = useState<ViewMode>('calendar')
   const [activeTab, setActiveTab] = useState<TabMode>('overview')
   const [calendarYear, setCalendarYear] = useState(new Date().getFullYear())
   const [calendarMonth, setCalendarMonth] = useState(new Date().getMonth())
@@ -475,14 +499,22 @@ useEffect(() => {
 
   // Reconciliation discrepancies
   const discrepancies = useMemo(() => {
-    const result: {
-      date: string
-      type: 'hours_mismatch' | 'no_school_with_lessons' | 'attendance_no_lessons' | 'outside_school_year'
-      attendanceHours?: number
-      lessonHours?: number
-      attendanceStatus?: string
-      lessonCount?: number
-    }[] = []
+    const result: DiscrepancyDay[] = []
+    const kidNameById = new Map<string, string>(kids.map((kid: any) => [kid.id, kid.displayname || kid.name || 'Unknown child']))
+
+    const buildLessonContext = (date: string): LessonContext[] => {
+      return lessons
+        .filter(l => l.lesson_date === date && (selectedKid === 'all' || l.kid_id === selectedKid))
+        .map(l => ({
+          id: l.id,
+          title: l.title || 'Untitled lesson',
+          subject: l.subject || null,
+          kidId: l.kid_id,
+          kidName: kidNameById.get(l.kid_id) || 'Unknown child',
+          durationMinutes: l.duration_minutes || 0,
+          status: l.status || null,
+        }))
+    }
 
     const lessonHoursByDate = new Map<string, { hours: number; count: number }>()
     lessons.forEach(l => {
@@ -500,20 +532,21 @@ useEffect(() => {
       const lessonData = lessonHoursByDate.get(a.attendance_date)
       const lessonHours = lessonData?.hours || 0
       const lessonCount = lessonData?.count || 0
+      const attendanceScope = a.kid_id ? (kidNameById.get(a.kid_id) || 'Specific child') : 'All children'
+      const lessonDetails = buildLessonContext(a.attendance_date)
 
       if (a.status === 'no_school' && lessonCount > 0) {
-        result.push({ date: a.attendance_date, type: 'no_school_with_lessons', attendanceStatus: a.status, lessonHours, lessonCount })
+        result.push({ date: a.attendance_date, type: 'no_school_with_lessons', attendanceStatus: a.status, lessonHours, lessonCount, attendanceScope, lessons: lessonDetails })
         return
       }
-      if (a.status !== 'no_school' && lessonCount === 0) {
-        result.push({ date: a.attendance_date, type: 'attendance_no_lessons', attendanceHours: a.hours, attendanceStatus: a.status, lessonCount: 0 })
-      }
+      // Attendance-only days are valid by default. Some families use HomeschoolReady
+      // as an attendance ledger without planning every lesson in the app.
       if (a.status !== 'no_school' && lessonCount > 0 && Math.abs(a.hours - lessonHours) > 1) {
-        result.push({ date: a.attendance_date, type: 'hours_mismatch', attendanceHours: a.hours, lessonHours, lessonCount })
+        result.push({ date: a.attendance_date, type: 'hours_mismatch', attendanceHours: a.hours, lessonHours, lessonCount, attendanceScope, lessons: lessonDetails })
       }
       if (schoolYearStart && schoolYearEnd && a.status !== 'no_school') {
         if (a.attendance_date < schoolYearStart || a.attendance_date > schoolYearEnd) {
-          result.push({ date: a.attendance_date, type: 'outside_school_year', attendanceHours: a.hours, attendanceStatus: a.status })
+          result.push({ date: a.attendance_date, type: 'outside_school_year', attendanceHours: a.hours, attendanceStatus: a.status, attendanceScope, lessons: lessonDetails })
         }
       }
     })
@@ -521,7 +554,7 @@ useEffect(() => {
     return result
       .filter(d => !dismissedDiscrepancies.has(d.date + ':' + d.type))
       .sort((a, b) => b.date.localeCompare(a.date))
-  }, [lessons, manualAttendance, selectedKid, schoolYearStart, schoolYearEnd, dismissedDiscrepancies])
+  }, [lessons, manualAttendance, selectedKid, schoolYearStart, schoolYearEnd, dismissedDiscrepancies, kids])
 
   // Generate suggestions for reconciliation
   const suggestions = useMemo((): SuggestedDay[] => {
@@ -533,6 +566,10 @@ useEffect(() => {
     Array.from(allDates).forEach(date => {
       const hasManual = manualAttendance.some(a => a.attendance_date === date)
       if (hasManual) return
+
+      // Future planned lessons should not create attendance review suggestions yet.
+      // Parents should only see catch-up prompts for days that have happened.
+      if (date > todayDate) return
 
       if (dismissedSuggestions.has(date)) return
 
@@ -559,7 +596,7 @@ useEffect(() => {
     })
 
     return suggested.sort((a, b) => b.date.localeCompare(a.date))
-  }, [lessons, manualAttendance, selectedKid, dismissedSuggestions])
+  }, [lessons, manualAttendance, selectedKid, dismissedSuggestions, todayDate])
 
   // Get calendar days for current view
   const calendarDays = useMemo(() => {
@@ -980,6 +1017,7 @@ useEffect(() => {
                       openMarkAttendance(date, suggestion?.suggestedHours)
                     }
                   }}
+                  onViewDate={(date) => setSelectedDate(date)}
                 />
               )}
 
@@ -1435,9 +1473,9 @@ function MarkAttendanceModal({ date, kids, selectedKid, existingAttendance, defa
   }
 
   return (
-    <div role="dialog" aria-modal="true" aria-labelledby="mark-attendance-title" className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4 pt-4 pb-24">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] flex flex-col">
-        <div className="p-6 overflow-y-auto flex-1">
+    <div role="dialog" aria-modal="true" aria-labelledby="mark-attendance-title" className="fixed inset-0 z-[10000] overflow-y-auto bg-black bg-opacity-50 px-4 py-4 sm:py-6">
+      <div className="relative mx-auto flex max-h-[calc(100vh-2rem)] w-full max-w-md flex-col rounded-lg bg-white shadow-xl sm:max-h-[calc(100vh-3rem)]">
+        <div className="flex-1 overflow-y-auto p-6">
           <h3 id="mark-attendance-title" className="text-xl font-bold text-gray-900 mb-4">
             Mark Attendance for {parseLocalDate(date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
           </h3>

@@ -238,9 +238,9 @@ export default function DayDetails({ date, onClose, userId, organizationId, onEd
             <div className="rounded-lg border border-amber-300 bg-amber-50 p-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                  <p className="text-sm font-bold text-amber-900">Attendance missing for this lesson day</p>
+                  <p className="text-sm font-bold text-amber-900">Review attendance for this day</p>
                   <p className="mt-1 text-sm text-amber-800">
-                    Lessons are planned here, but no attendance has been recorded yet. Suggested: {suggestedStatus === 'half_day' ? 'Half Day' : 'Full Day'} ({suggestedHours ?? 4}h).
+                    This day has planned lessons but no attendance record yet. If it counted as a school day, add attendance now. Suggested: {suggestedStatus === 'half_day' ? 'Half Day' : 'Full Day'} ({suggestedHours ?? 4}h).
                   </p>
                 </div>
                 <button
@@ -248,7 +248,7 @@ export default function DayDetails({ date, onClose, userId, organizationId, onEd
                   onClick={() => onMarkAttendance(date, suggestedHours)}
                   className="whitespace-nowrap rounded-lg bg-amber-600 px-3 py-2 text-sm font-semibold text-white hover:bg-amber-700"
                 >
-                  Mark attendance
+                  Add attendance
                 </button>
               </div>
             </div>

@@ -236,7 +236,7 @@ export default function CalendarView({
         {filters.showLessons && (
           <div className="flex items-center gap-1">
             <div className="w-4 h-4 bg-amber-50 border-2 border-amber-400 rounded"></div>
-            <span className="text-gray-600">⚠️ Missing attendance</span>
+            <span className="text-gray-600">Needs attendance</span>
           </div>
         )}
         {filters.showSocialEvents && (
@@ -313,7 +313,7 @@ export default function CalendarView({
 
                   {day.isCurrentMonth && filters.showLessons && !day.manualAttendance && day.isMissingAttendance && (
                     <div className="mt-0.5 inline-flex items-center rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold text-amber-800">
-                      Missing
+                      Needs att.
                     </div>
                   )}
                   
