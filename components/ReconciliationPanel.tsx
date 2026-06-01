@@ -11,6 +11,16 @@ interface SuggestedDay {
   suggestedHours: number
 }
 
+interface LessonContext {
+  id: string
+  title: string
+  subject?: string | null
+  kidId: string
+  kidName: string
+  durationMinutes: number
+  status?: string | null
+}
+
 interface DiscrepancyDay {
   date: string
   type: 'hours_mismatch' | 'no_school_with_lessons' | 'attendance_no_lessons' | 'outside_school_year'
@@ -18,6 +28,8 @@ interface DiscrepancyDay {
   lessonHours?: number
   attendanceStatus?: string
   lessonCount?: number
+  attendanceScope?: string
+  lessons?: LessonContext[]
 }
 
 interface ReconciliationPanelProps {
@@ -79,6 +91,7 @@ export default function ReconciliationPanel({
   const [showAllSuggestions, setShowAllSuggestions] = useState(false)
   const [showAllDiscrepancies, setShowAllDiscrepancies] = useState(false)
   const [expandedSuggestionMonths, setExpandedSuggestionMonths] = useState<Set<string>>(new Set())
+  const [expandedDiscrepancyMonths, setExpandedDiscrepancyMonths] = useState<Set<string>>(new Set())
 
   const suggestionGroups = useMemo(() => {
     const groups = new Map<string, { key: string; label: string; suggestions: SuggestedDay[] }>()
@@ -104,8 +117,32 @@ export default function ReconciliationPanel({
       .sort((a, b) => b.key.localeCompare(a.key))
   }, [suggestions])
 
+  const discrepancyGroups = useMemo(() => {
+    const groups = new Map<string, { key: string; label: string; discrepancies: DiscrepancyDay[] }>()
+
+    discrepancies.forEach((discrepancy) => {
+      const date = parseLocalDate(discrepancy.date)
+      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+      const label = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+      const existing = groups.get(key)
+
+      if (existing) {
+        existing.discrepancies.push(discrepancy)
+      } else {
+        groups.set(key, { key, label, discrepancies: [discrepancy] })
+      }
+    })
+
+    return Array.from(groups.values())
+      .map(group => ({
+        ...group,
+        discrepancies: group.discrepancies.sort((a, b) => b.date.localeCompare(a.date)),
+      }))
+      .sort((a, b) => b.key.localeCompare(a.key))
+  }, [discrepancies])
+
   const visibleSuggestionGroups = showAllSuggestions ? suggestionGroups : suggestionGroups.slice(0, 2)
-  const visibleDiscrepancies = showAllDiscrepancies ? discrepancies : discrepancies.slice(0, MAX_VISIBLE)
+  const visibleDiscrepancyGroups = showAllDiscrepancies ? discrepancyGroups : discrepancyGroups.slice(0, 2)
 
   function toggleDate(date: string) {
     const next = new Set(selectedDates)
@@ -132,8 +169,20 @@ export default function ReconciliationPanel({
     })
   }
 
+  function toggleDiscrepancyMonth(key: string) {
+    setExpandedDiscrepancyMonths(prev => {
+      const next = new Set(prev)
+      next.has(key) ? next.delete(key) : next.add(key)
+      return next
+    })
+  }
+
   function isSuggestionMonthExpanded(key: string, index: number) {
     return expandedSuggestionMonths.size === 0 ? index === 0 : expandedSuggestionMonths.has(key)
+  }
+
+  function isDiscrepancyMonthExpanded(key: string, index: number) {
+    return expandedDiscrepancyMonths.size === 0 ? index === 0 : expandedDiscrepancyMonths.has(key)
   }
 
   async function handleBulkConfirm() {
@@ -338,64 +387,115 @@ export default function ReconciliationPanel({
             </p>
           </div>
 
-          <div className="space-y-2">
-            {visibleDiscrepancies.map((d) => {
-              const meta = DISCREPANCY_LABELS[d.type]
+          <div className="space-y-3">
+            {visibleDiscrepancyGroups.map((group, groupIndex) => {
+              const expanded = isDiscrepancyMonthExpanded(group.key, groupIndex)
+
               return (
-                <div key={`${d.date}-${d.type}`} style={{ background: '#ffffff', borderRadius: 8, padding: 12, border: '2px solid #fde68a' }}>
-                  <div className="flex items-start gap-3">
-                    <span className="text-lg mt-0.5">{meta.icon}</span>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span style={{ fontWeight: 600, color: '#111827', fontSize: 14 }}>
-                          {parseLocalDate(d.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
-                        </span>
-                        <span style={{ padding: '2px 8px', fontSize: 12, fontWeight: 500, borderRadius: 4, background: '#fef3c7', color: '#92400e' }}>
-                          {meta.label}
-                        </span>
-                      </div>
-                      <p style={{ fontSize: 12, color: '#6b7280', marginTop: 4, marginBottom: 0 }}>{meta.description(d)}</p>
-                      {meta.hint && (
-                        <p style={{ fontSize: 12, color: '#2563eb', marginTop: 6, marginBottom: 0, lineHeight: 1.5 }}>{meta.hint}</p>
-                      )}
+                <div key={group.key} className="overflow-hidden rounded-lg border border-amber-200 bg-white">
+                  <button
+                    type="button"
+                    onClick={() => toggleDiscrepancyMonth(group.key)}
+                    className="flex w-full items-center gap-2 bg-amber-50 px-3 py-2 text-left text-sm font-bold text-amber-950"
+                  >
+                    <span>{expanded ? '▼' : '▶'}</span>
+                    <span>{group.label}</span>
+                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">
+                      {group.discrepancies.length}
+                    </span>
+                  </button>
+
+                  {expanded && (
+                    <div className="space-y-2 p-2">
+                      {group.discrepancies.map((d) => {
+                        const meta = DISCREPANCY_LABELS[d.type]
+                        const visibleLessons = (d.lessons || []).slice(0, 3)
+                        const extraLessonCount = Math.max((d.lessons?.length || 0) - visibleLessons.length, 0)
+
+                        return (
+                          <div key={`${d.date}-${d.type}`} style={{ background: '#ffffff', borderRadius: 8, padding: 12, border: '2px solid #fde68a' }}>
+                            <div className="flex items-start gap-3">
+                              <span className="text-lg mt-0.5">{meta.icon}</span>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span style={{ fontWeight: 600, color: '#111827', fontSize: 14 }}>
+                                    {parseLocalDate(d.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+                                  </span>
+                                  <span style={{ padding: '2px 8px', fontSize: 12, fontWeight: 500, borderRadius: 4, background: '#fef3c7', color: '#92400e' }}>
+                                    {meta.label}
+                                  </span>
+                                  {d.attendanceScope && (
+                                    <span style={{ padding: '2px 8px', fontSize: 12, fontWeight: 500, borderRadius: 4, background: '#f3f4f6', color: '#374151' }}>
+                                      Attendance: {d.attendanceScope}
+                                    </span>
+                                  )}
+                                </div>
+                                <p style={{ fontSize: 12, color: '#6b7280', marginTop: 4, marginBottom: 0 }}>{meta.description(d)}</p>
+                                {visibleLessons.length > 0 && (
+                                  <div className="mt-2 rounded-md bg-amber-50 px-3 py-2">
+                                    <p className="mb-1 text-xs font-bold uppercase tracking-wide text-amber-900">Lesson context</p>
+                                    <ul className="space-y-1">
+                                      {visibleLessons.map((lesson) => (
+                                        <li key={lesson.id} className="text-xs text-amber-900">
+                                          <span className="font-semibold">{lesson.title}</span>
+                                          {lesson.subject && <span> · {lesson.subject}</span>}
+                                          <span> · {lesson.kidName}</span>
+                                          {lesson.durationMinutes > 0 && <span> · {(lesson.durationMinutes / 60).toFixed(1)}h</span>}
+                                          {lesson.status && <span> · {lesson.status.replace(/_/g, ' ')}</span>}
+                                        </li>
+                                      ))}
+                                    </ul>
+                                    {extraLessonCount > 0 && (
+                                      <p className="mt-1 text-xs text-amber-700">+ {extraLessonCount} more lesson{extraLessonCount !== 1 ? 's' : ''}</p>
+                                    )}
+                                  </div>
+                                )}
+                                {meta.hint && (
+                                  <p style={{ fontSize: 12, color: '#2563eb', marginTop: 6, marginBottom: 0, lineHeight: 1.5 }}>{meta.hint}</p>
+                                )}
+                              </div>
+                              <div className="flex flex-col gap-1 items-end flex-shrink-0">
+                                {d.type === 'outside_school_year' ? (
+                                  <a href="/school-year" style={{ fontSize: 12, color: '#b45309', fontWeight: 500, whiteSpace: 'nowrap', textDecoration: 'underline' }}>
+                                    Fix →
+                                  </a>
+                                ) : (
+                                  <button
+                                    onClick={() => onFixDate(d.date)}
+                                    style={{ fontSize: 12, color: '#b45309', fontWeight: 500, whiteSpace: 'nowrap', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer' }}
+                                  >
+                                    Fix →
+                                  </button>
+                                )}
+                                {meta.canDismiss && (
+                                  <button
+                                    onClick={() => onDismissDiscrepancy(d.date, d.type)}
+                                    style={{ fontSize: 12, color: '#6b7280', fontWeight: 500, whiteSpace: 'nowrap', background: 'none', border: 'none', cursor: 'pointer' }}
+                                  >
+                                    Dismiss
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })}
                     </div>
-                    <div className="flex flex-col gap-1 items-end flex-shrink-0">
-                      {d.type === 'outside_school_year' ? (
-                        <a href="/school-year" style={{ fontSize: 12, color: '#b45309', fontWeight: 500, whiteSpace: 'nowrap', textDecoration: 'underline' }}>
-                          Fix →
-                        </a>
-                      ) : (
-                        <button
-                          onClick={() => onFixDate(d.date)}
-                          style={{ fontSize: 12, color: '#b45309', fontWeight: 500, whiteSpace: 'nowrap', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer' }}
-                        >
-                          Fix →
-                        </button>
-                      )}
-                      {meta.canDismiss && (
-                        <button
-                          onClick={() => onDismissDiscrepancy(d.date, d.type)}
-                          style={{ fontSize: 12, color: '#6b7280', fontWeight: 500, whiteSpace: 'nowrap', background: 'none', border: 'none', cursor: 'pointer' }}
-                        >
-                          Dismiss
-                        </button>
-                      )}
-                    </div>
-                  </div>
+                  )}
                 </div>
               )
             })}
           </div>
 
           {/* Show more / less toggle */}
-          {discrepancies.length > MAX_VISIBLE && (
+          {discrepancyGroups.length > 2 && (
             <button
               onClick={() => setShowAllDiscrepancies(v => !v)}
               style={{ marginTop: 12, width: '100%', fontSize: 14, color: '#b45309', fontWeight: 500, padding: '4px 0', border: '1px solid #fde68a', borderRadius: 8, background: '#ffffff', cursor: 'pointer' }}
             >
               {showAllDiscrepancies
-                ? `Show less ▲`
-                : `Show ${discrepancies.length - MAX_VISIBLE} more ▼`}
+                ? `Show fewer months ▲`
+                : `Show ${discrepancyGroups.length - 2} more month${discrepancyGroups.length - 2 !== 1 ? 's' : ''} ▼`}
             </button>
           )}
         </div>
