@@ -40,7 +40,10 @@ interface OtherActivity {
   type: 'social_event' | 'coop_class'
   title: string
   time?: string
+  endTime?: string
   location?: string
+  description?: string
+  sourceLabel: string
   details: any
 }
 
@@ -114,7 +117,10 @@ export default function DayDetails({ date, onClose, userId, organizationId, onEd
         type: 'social_event' as const,
         title: event.title,
         time: event.start_time,
+        endTime: event.end_time,
         location: event.location,
+        description: event.description,
+        sourceLabel: 'Social activity',
         details: event
       })))
     }
@@ -138,7 +144,10 @@ export default function DayDetails({ date, onClose, userId, organizationId, onEd
         type: 'coop_class' as const,
         title: cls.class_name,
         time: cls.start_time,
+        endTime: cls.end_time,
         location: cls.location,
+        description: cls.description,
+        sourceLabel: cls.coop?.name ? `Co-op class · ${cls.coop.name}` : 'Co-op class',
         details: cls
       })))
     }
@@ -400,16 +409,35 @@ export default function DayDetails({ date, onClose, userId, organizationId, onEd
                           <span className="text-lg flex-shrink-0">
                             {activity.type === 'social_event' ? '🎉' : '🏫'}
                           </span>
-                          <div className="flex-1">
-                            <p className="text-sm font-semibold text-gray-900">{activity.title}</p>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${
+                                activity.type === 'social_event'
+                                  ? 'bg-purple-100 text-purple-700'
+                                  : 'bg-green-100 text-green-700'
+                              }`}>
+                                {activity.sourceLabel}
+                              </span>
+                              <span className="text-[11px] font-semibold text-gray-400">Not a lesson</span>
+                            </div>
+                            <p className="mt-1 text-sm font-semibold text-gray-900">{activity.title || 'Untitled activity'}</p>
                             {activity.time && (
                               <p className="text-xs text-gray-500 mt-0.5">
                                 🕐 {new Date(`2000-01-01T${activity.time}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                                {activity.endTime && ` – ${new Date(`2000-01-01T${activity.endTime}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`}
                               </p>
                             )}
                             {activity.location && (
                               <p className="text-xs text-gray-500 mt-0.5">📍 {activity.location}</p>
                             )}
+                            {activity.description && (
+                              <p className="mt-2 rounded-md bg-white/70 p-2 text-xs leading-relaxed text-gray-600">
+                                {activity.description}
+                              </p>
+                            )}
+                            <p className="mt-2 text-[11px] text-gray-500">
+                              This item is shown for schedule context. Edit it from the {activity.type === 'social_event' ? 'Social' : 'Co-op'} area, not from attendance.
+                            </p>
                           </div>
                         </div>
                       </div>
