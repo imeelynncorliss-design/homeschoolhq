@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { parseLocalDate } from '@/src/lib/utils'
 
 interface SuggestedDay {
@@ -78,8 +78,33 @@ export default function ReconciliationPanel({
   const [processing, setProcessing] = useState(false)
   const [showAllSuggestions, setShowAllSuggestions] = useState(false)
   const [showAllDiscrepancies, setShowAllDiscrepancies] = useState(false)
+  const [expandedSuggestionMonths, setExpandedSuggestionMonths] = useState<Set<string>>(new Set())
 
-  const visibleSuggestions = showAllSuggestions ? suggestions : suggestions.slice(0, MAX_VISIBLE)
+  const suggestionGroups = useMemo(() => {
+    const groups = new Map<string, { key: string; label: string; suggestions: SuggestedDay[] }>()
+
+    suggestions.forEach((suggestion) => {
+      const date = parseLocalDate(suggestion.date)
+      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+      const label = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+      const existing = groups.get(key)
+
+      if (existing) {
+        existing.suggestions.push(suggestion)
+      } else {
+        groups.set(key, { key, label, suggestions: [suggestion] })
+      }
+    })
+
+    return Array.from(groups.values())
+      .map(group => ({
+        ...group,
+        suggestions: group.suggestions.sort((a, b) => b.date.localeCompare(a.date)),
+      }))
+      .sort((a, b) => b.key.localeCompare(a.key))
+  }, [suggestions])
+
+  const visibleSuggestionGroups = showAllSuggestions ? suggestionGroups : suggestionGroups.slice(0, 2)
   const visibleDiscrepancies = showAllDiscrepancies ? discrepancies : discrepancies.slice(0, MAX_VISIBLE)
 
   function toggleDate(date: string) {
@@ -90,6 +115,26 @@ export default function ReconciliationPanel({
 
   function selectAll() { setSelectedDates(new Set(suggestions.map(s => s.date))) }
   function deselectAll() { setSelectedDates(new Set()) }
+
+  function selectMonth(suggestionsForMonth: SuggestedDay[]) {
+    setSelectedDates(prev => {
+      const next = new Set(prev)
+      suggestionsForMonth.forEach(s => next.add(s.date))
+      return next
+    })
+  }
+
+  function toggleSuggestionMonth(key: string) {
+    setExpandedSuggestionMonths(prev => {
+      const next = new Set(prev)
+      next.has(key) ? next.delete(key) : next.add(key)
+      return next
+    })
+  }
+
+  function isSuggestionMonthExpanded(key: string, index: number) {
+    return expandedSuggestionMonths.size === 0 ? index === 0 : expandedSuggestionMonths.has(key)
+  }
 
   async function handleBulkConfirm() {
     if (selectedDates.size === 0) return
@@ -169,65 +214,102 @@ export default function ReconciliationPanel({
             )}
           </div>
 
-          {/* Suggestions list — capped at MAX_VISIBLE */}
-          <div className="space-y-2">
-            {visibleSuggestions.map((s) => (
-              <div
-                key={s.date}
-                onClick={() => toggleDate(s.date)}
-                onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && toggleDate(s.date)}
-                role="checkbox"
-                aria-checked={selectedDates.has(s.date)}
-                tabIndex={0}
-                style={{
-                  background: selectedDates.has(s.date) ? '#eff6ff' : '#ffffff',
-                  borderRadius: 8, padding: 12, cursor: 'pointer', transition: 'all 0.15s',
-                  border: selectedDates.has(s.date) ? '2px solid #3b82f6' : '2px solid #e5e7eb',
-                }}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="checkbox"
-                      checked={selectedDates.has(s.date)}
-                      onChange={() => toggleDate(s.date)}
-                      onClick={(e) => e.stopPropagation()}
-                      className="w-4 h-4 text-blue-600 rounded cursor-pointer"
-                    />
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span style={{ fontWeight: 600, color: '#111827', fontSize: 14 }}>
-                          {new Date(s.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
-                        </span>
-                        <span style={{ padding: '2px 8px', fontSize: 12, fontWeight: 500, borderRadius: 4, background: '#dbeafe', color: '#1e40af' }}>
-                          {s.suggestedStatus === 'full_day' ? 'Full Day' : 'Half Day'}
-                        </span>
-                      </div>
-                      <p style={{ fontSize: 12, color: '#6b7280', marginTop: 2, marginBottom: 0 }}>
-                        {s.lessonCount} lesson{s.lessonCount !== 1 ? 's' : ''} · {s.lessonHours.toFixed(1)}h · Suggested: {s.suggestedHours}h
-                      </p>
-                    </div>
+          {/* Suggestions grouped by month for easier review */}
+          <div className="space-y-3">
+            {visibleSuggestionGroups.map((group, groupIndex) => {
+              const expanded = isSuggestionMonthExpanded(group.key, groupIndex)
+              const selectedInGroup = group.suggestions.filter(s => selectedDates.has(s.date)).length
+
+              return (
+                <div key={group.key} className="overflow-hidden rounded-lg border border-blue-200 bg-white">
+                  <div className="flex items-center justify-between gap-3 bg-blue-50 px-3 py-2">
+                    <button
+                      type="button"
+                      onClick={() => toggleSuggestionMonth(group.key)}
+                      className="flex items-center gap-2 text-left text-sm font-bold text-blue-950"
+                    >
+                      <span>{expanded ? '▼' : '▶'}</span>
+                      <span>{group.label}</span>
+                      <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-semibold text-blue-700">
+                        {group.suggestions.length}
+                      </span>
+                      {selectedInGroup > 0 && (
+                        <span className="text-xs font-medium text-blue-600">{selectedInGroup} selected</span>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => selectMonth(group.suggestions)}
+                      className="text-xs font-semibold text-blue-600 hover:text-blue-800"
+                    >
+                      Select month
+                    </button>
                   </div>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); onDismissSuggestion(s.date) }}
-                    className="text-xs text-gray-500 hover:text-gray-700 ml-2"
-                  >
-                    Dismiss
-                  </button>
+
+                  {expanded && (
+                    <div className="space-y-2 p-2">
+                      {group.suggestions.map((s) => (
+                        <div
+                          key={s.date}
+                          onClick={() => toggleDate(s.date)}
+                          onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && toggleDate(s.date)}
+                          role="checkbox"
+                          aria-checked={selectedDates.has(s.date)}
+                          tabIndex={0}
+                          style={{
+                            background: selectedDates.has(s.date) ? '#eff6ff' : '#ffffff',
+                            borderRadius: 8, padding: 12, cursor: 'pointer', transition: 'all 0.15s',
+                            border: selectedDates.has(s.date) ? '2px solid #3b82f6' : '2px solid #e5e7eb',
+                          }}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <input
+                                type="checkbox"
+                                checked={selectedDates.has(s.date)}
+                                onChange={() => toggleDate(s.date)}
+                                onClick={(e) => e.stopPropagation()}
+                                className="w-4 h-4 text-blue-600 rounded cursor-pointer"
+                              />
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <span style={{ fontWeight: 600, color: '#111827', fontSize: 14 }}>
+                                    {parseLocalDate(s.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+                                  </span>
+                                  <span style={{ padding: '2px 8px', fontSize: 12, fontWeight: 500, borderRadius: 4, background: '#dbeafe', color: '#1e40af' }}>
+                                    {s.suggestedStatus === 'full_day' ? 'Full Day' : 'Half Day'}
+                                  </span>
+                                </div>
+                                <p style={{ fontSize: 12, color: '#6b7280', marginTop: 2, marginBottom: 0 }}>
+                                  {s.lessonCount} lesson{s.lessonCount !== 1 ? 's' : ''} · {s.lessonHours.toFixed(1)}h · Suggested: {s.suggestedHours}h
+                                </p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); onDismissSuggestion(s.date) }}
+                              className="text-xs text-gray-500 hover:text-gray-700 ml-2"
+                            >
+                              Dismiss
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
 
           {/* Show more / less toggle */}
-          {suggestions.length > MAX_VISIBLE && (
+          {suggestionGroups.length > 2 && (
             <button
               onClick={() => setShowAllSuggestions(v => !v)}
               style={{ marginTop: 12, width: '100%', fontSize: 14, color: '#2563eb', fontWeight: 500, padding: '4px 0', border: '1px solid #bfdbfe', borderRadius: 8, background: '#ffffff', cursor: 'pointer' }}
             >
               {showAllSuggestions
-                ? `Show less ▲`
-                : `Show ${suggestions.length - MAX_VISIBLE} more ▼`}
+                ? `Show fewer months ▲`
+                : `Show ${suggestionGroups.length - 2} more month${suggestionGroups.length - 2 !== 1 ? 's' : ''} ▼`}
             </button>
           )}
 

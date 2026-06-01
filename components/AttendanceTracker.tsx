@@ -533,6 +533,10 @@ useEffect(() => {
       const hasManual = manualAttendance.some(a => a.attendance_date === date)
       if (hasManual) return
 
+      // Future planned lessons should not create attendance review suggestions yet.
+      // Parents should only see catch-up prompts for days that have happened.
+      if (date > todayDate) return
+
       if (dismissedSuggestions.has(date)) return
 
       let dateLessons = lessons.filter(l => l.lesson_date === date)
@@ -558,7 +562,7 @@ useEffect(() => {
     })
 
     return suggested.sort((a, b) => b.date.localeCompare(a.date))
-  }, [lessons, manualAttendance, selectedKid, dismissedSuggestions])
+  }, [lessons, manualAttendance, selectedKid, dismissedSuggestions, todayDate])
 
   // Get calendar days for current view
   const calendarDays = useMemo(() => {
@@ -1434,9 +1438,9 @@ function MarkAttendanceModal({ date, kids, selectedKid, existingAttendance, defa
   }
 
   return (
-    <div role="dialog" aria-modal="true" aria-labelledby="mark-attendance-title" className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4 pt-4 pb-24">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] flex flex-col">
-        <div className="p-6 overflow-y-auto flex-1">
+    <div role="dialog" aria-modal="true" aria-labelledby="mark-attendance-title" className="fixed inset-0 z-[10000] overflow-y-auto bg-black bg-opacity-50 px-4 py-4 sm:py-6">
+      <div className="relative mx-auto flex max-h-[calc(100vh-2rem)] w-full max-w-md flex-col rounded-lg bg-white shadow-xl sm:max-h-[calc(100vh-3rem)]">
+        <div className="flex-1 overflow-y-auto p-6">
           <h3 id="mark-attendance-title" className="text-xl font-bold text-gray-900 mb-4">
             Mark Attendance for {parseLocalDate(date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
           </h3>
