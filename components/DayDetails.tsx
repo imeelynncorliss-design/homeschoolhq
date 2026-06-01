@@ -133,15 +133,39 @@ export default function DayDetails({ date, onClose, userId, organizationId, onEd
       .eq('trip_date', date)
 
     if (fieldTrips) {
-      result.push(...fieldTrips.map((trip: any) => ({
-        id: trip.id,
-        type: 'field_trip' as const,
-        title: trip.title,
-        location: trip.location,
-        description: trip.description,
-        sourceLabel: 'Field trip / activity',
-        details: trip
-      })))
+      const groupedTrips = new Map<string, any>()
+      fieldTrips.forEach((trip: any) => {
+        const key = [
+          trip.trip_date,
+          trip.title?.trim().toLowerCase() || '',
+          trip.location?.trim().toLowerCase() || '',
+          trip.subject || '',
+          trip.hours ?? '',
+          trip.description?.trim().toLowerCase() || '',
+        ].join('|')
+        const existing = groupedTrips.get(key)
+        if (existing) {
+          existing.childIds.push(trip.kid_id)
+          existing.tripIds.push(trip.id)
+        } else {
+          groupedTrips.set(key, { ...trip, childIds: [trip.kid_id], tripIds: [trip.id] })
+        }
+      })
+
+      result.push(...Array.from(groupedTrips.values()).map((trip: any) => {
+        const childCount = new Set(trip.childIds.filter(Boolean)).size
+        const allChildren = dayKids.length > 0 && childCount >= dayKids.length
+        const childLabel = allChildren ? 'All children' : `${childCount} ${childCount === 1 ? 'child' : 'children'}`
+        return {
+          id: trip.tripIds.join('-'),
+          type: 'field_trip' as const,
+          title: trip.title,
+          location: trip.location,
+          description: trip.description,
+          sourceLabel: `Field trip / activity · ${childLabel}`,
+          details: trip
+        }
+      }))
     }
 
     // Load co-op classes for this day — fixed: use UTC date to get correct day name
