@@ -18,7 +18,7 @@ HomeschoolReady helps homeschooling families plan, track, and manage their child
 - **Learning Profiles** — learning style assessments (VARK) and Multiple Intelligences (MI) profiles per child
 - **Progress & Records** — compliance reports, transcripts, progress reports, reading logs, field trip logs, and portfolio
 - **Supply Scout** — automatic materials list compiled from upcoming lessons
-- **Standards Tracking** — import and tag Common Core State Standards to lessons
+- **Learning Goals & Coverage** — optionally connect lessons and evidence to standards or family-defined learning goals
 - **Vacation & Schedule Planning** — bulk scheduling, vacation/holiday blocking, and Google Calendar sync
 - **Co-Teacher Access** — invite spouses, grandparents, or tutors with their own login
 

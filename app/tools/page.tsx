@@ -116,7 +116,7 @@ function ToolsContent() {
             <div style={{ width: 52, height: 52, borderRadius: 16, background: 'linear-gradient(135deg, #ede9fe, #dbeafe)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, marginBottom: 4 }}>🌴</div>
             <div style={{ fontSize: 16, fontWeight: 800, color: '#1a1a2e', marginBottom: 3 }}>Vacation Planner</div>
             <div style={{ fontSize: 13, color: '#4b5563', fontWeight: 600, lineHeight: 1.4, flex: 1 }}>
-              Add holidays, breaks, and family trips to your school calendar. Scout won't schedule lessons on days you mark as off.
+              Add holidays, breaks, and family trips to your school calendar. Scout will not schedule lessons on days you mark as off.
             </div>
             <button style={btnStyle} onClick={() => router.push('/vacation')}>🌴 Manage Vacations</button>
           </div>
@@ -129,20 +129,20 @@ function ToolsContent() {
               Invite a spouse, grandparent, or tutor to teach alongside you. They get their own login and can view lessons, log attendance, and add notes — without seeing your account settings.
               <div style={{ marginTop: 8, padding: '8px 10px', background: '#f5f3ff', borderRadius: 8, fontSize: 12, color: '#6b7280', lineHeight: 1.5 }}>
                 <strong style={{ color: '#7c3aed' }}>What co-teachers can do:</strong> view the calendar, log lessons &amp; attendance, add daily notes.<br />
-                <strong style={{ color: '#7c3aed' }}>What they can't do:</strong> change school settings, manage billing, or invite others.
+                <strong style={{ color: '#7c3aed' }}>What they cannot do:</strong> change school settings, manage billing, or invite others.
               </div>
             </div>
             <button style={btnStyle} onClick={() => router.push('/co-teachers')}>👩‍🏫 Manage Co-Teachers</button>
           </div>
 
-          {/* Standards Setup */}
+          {/* Learning Goals Setup */}
           <div className="hr-card tool-card" style={{ padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 8 }}>
             <div style={{ width: 52, height: 52, borderRadius: 16, background: 'linear-gradient(135deg, #ede9fe, #dbeafe)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, marginBottom: 4 }}>📌</div>
-            <div style={{ fontSize: 16, fontWeight: 800, color: '#1a1a2e', marginBottom: 3 }}>Standards Setup</div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: '#1a1a2e', marginBottom: 3 }}>Learning Goals</div>
             <div style={{ fontSize: 13, color: '#4b5563', fontWeight: 600, lineHeight: 1.4, flex: 1 }}>
-              Import Common Core standards for your kids' grade levels. Once imported, you can tag standards to lessons and track coverage automatically.
+              Optional: connect lessons and work samples to standards or family-defined goals when you want coverage notes for records, portfolios, or reviews.
             </div>
-            <button style={btnStyle} onClick={() => router.push('/standards-setup')}>📥 Import Standards</button>
+            <button style={btnStyle} onClick={() => router.push('/standards-setup')}>📥 Set Up Learning Goals</button>
           </div>
 
           {/* Google Calendar Sync — hidden until feature is complete

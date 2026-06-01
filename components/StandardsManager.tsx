@@ -142,8 +142,8 @@ export default function StandardsManager({ organizationId, onClose }: StandardsM
         <div className="p-8 border-b border-slate-100">
           <div className="flex justify-between items-start mb-6">
             <div>
-              <h2 className="text-3xl font-black text-slate-900 tracking-tight">Manage Standards</h2>
-              <p className="text-slate-500 font-bold mt-1">Review verified core standards and your custom imports.</p>
+              <h2 className="text-3xl font-black text-slate-900 tracking-tight">Manage Learning Goals</h2>
+              <p className="text-slate-500 font-bold mt-1">Review optional standards and custom goals for coverage notes.</p>
             </div>
             <button onClick={onClose} className="text-slate-400 hover:text-slate-900 text-3xl font-bold transition-colors">×</button>
           </div>
@@ -209,11 +209,11 @@ export default function StandardsManager({ organizationId, onClose }: StandardsM
                     </span>
                     {standard.is_official ? (
                     <span className="px-2 py-1 rounded-lg bg-indigo-100 text-indigo-700 text-[10px] font-black uppercase tracking-wider border border-indigo-200">
-                      Official Core
+                      Optional Core
                     </span>
                   ) : (
                     <span className="px-2 py-1 rounded-lg bg-amber-100 text-amber-700 text-[10px] font-black uppercase tracking-wider border border-amber-200">
-                      User Uploaded
+                      Custom Goal
                     </span>
                   )}
                     <span className="px-2 py-1 rounded-lg bg-green-50 text-green-700 text-[10px] font-black uppercase tracking-wider border border-green-100">

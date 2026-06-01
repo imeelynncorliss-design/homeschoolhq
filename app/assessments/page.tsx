@@ -255,7 +255,7 @@ function AssessmentsContent() {
 
       {/* ── Main ─────────────────────────────────────────────────────────────── */}
       <main style={css.main}>
-        <div className="hr-section-label" style={{ marginBottom: 14, marginTop: 8 }}>TRACK ASSESSMENTS & MANAGE STANDARDS</div>
+        <div className="hr-section-label" style={{ marginBottom: 14, marginTop: 8 }}>TRACK PROGRESS EVIDENCE & LEARNING GOALS</div>
 
         <div className="max-w-7xl mx-auto" style={{ paddingBottom: 80 }}>
 
@@ -267,14 +267,14 @@ function AssessmentsContent() {
                   className={`hr-pill${currentView === 'results' ? ' active' : ''}`}
                   style={{ fontFamily: "'Nunito', sans-serif" }}
                 >
-                  📊 Assessment Results
+                  📊 Progress Evidence
                 </button>
                 <button
                   onClick={() => setCurrentView('standards')}
                   className={`hr-pill${currentView === 'standards' ? ' active' : ''}`}
                   style={{ fontFamily: "'Nunito', sans-serif" }}
                 >
-                  📚 Standards Tracking
+                  📚 Learning Goals
                 </button>
               </div>
             </div>
@@ -289,7 +289,7 @@ function AssessmentsContent() {
                   <div>
                     <h3 className="font-black text-purple-900 mb-1">Track Learning Progress</h3>
                     <p className="text-purple-700 text-sm">
-                      Click <strong>+ Add Standards</strong> on any assessment to link it to specific learning goals.
+                      Save progress notes, optional scores, and learning-goal links when you need proof for records, portfolios, or reviews.
                     </p>
                   </div>
                 </div>
@@ -303,9 +303,9 @@ function AssessmentsContent() {
                     <Lightbulb className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <h3 className="font-black mb-1" style={{ color: '#c4b5fd' }}>Your Standards Library</h3>
+                    <h3 className="font-black mb-1" style={{ color: '#c4b5fd' }}>Your Learning Goals Library</h3>
                     <p className="text-sm" style={{ color: 'rgba(255,255,255,0.75)' }}>
-                      You have <strong>{standards.length} standards</strong> in your library. Click <strong>+ Import Standards</strong> to add more.
+                      You have <strong>{standards.length} goals or standards</strong> in your library. Add more only if you want coverage notes.
                     </p>
                   </div>
                 </div>
@@ -345,16 +345,16 @@ function AssessmentsContent() {
                   {loading || !organizationId ? (
                     <div className="bg-white rounded-3xl p-12 text-center">
                       <div className="animate-spin h-8 w-8 border-4 border-purple-600 border-t-transparent rounded-full mx-auto mb-4"></div>
-                      <div className="text-slate-400 font-bold">Loading assessments...</div>
+                      <div className="text-slate-400 font-bold">Loading progress evidence...</div>
                     </div>
                   ) : filteredAssessments.length === 0 ? (
                     <div className="bg-white rounded-3xl p-12 text-center">
                       <div className="text-6xl mb-4">📝</div>
                       <h3 className="text-xl font-black text-slate-900 mb-2">
-                        {assessments.length === 0 ? 'No Assessments Yet' : 'No Matching Assessments'}
+                        {assessments.length === 0 ? 'No Progress Evidence Yet' : 'No Matching Progress Evidence'}
                       </h3>
                       <p className="text-slate-500">
-                        {assessments.length === 0 ? 'Create your first assessment to get started!' : 'Try adjusting your filters.'}
+                        {assessments.length === 0 ? 'Add notes, artifacts, or an optional score when you want a record of learning.' : 'Try adjusting your filters.'}
                       </p>
                     </div>
                   ) : (
@@ -369,7 +369,7 @@ function AssessmentsContent() {
                                 {isCollapsed ? <ChevronRight className="w-5 h-5 text-slate-400" /> : <ChevronDown className="w-5 h-5 text-slate-400" />}
                                 <h3 className="font-black text-slate-900 text-lg">{group.month}</h3>
                                 <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-bold">
-                                  {group.assessments.length} assessment{group.assessments.length !== 1 ? 's' : ''}
+                                  {group.assessments.length} evidence item{group.assessments.length !== 1 ? 's' : ''}
                                 </span>
                               </div>
                               <div className="text-sm text-slate-500 font-medium">
@@ -386,7 +386,7 @@ function AssessmentsContent() {
                                         <p className="text-slate-500 font-medium text-sm">{assessment.kid_name} • {assessment.type}</p>
                                         <div className="flex gap-3 mt-3">
                                           <button onClick={() => setManagingStandards(assessment)} className="bg-slate-100 text-slate-600 px-4 py-2 rounded-xl text-xs font-bold hover:bg-purple-50 hover:text-purple-600 transition-all">
-                                            {assessment.standards_count > 0 ? `📚 ${assessment.standards_count} Standards` : '+ Add Standards'}
+                                            {assessment.standards_count > 0 ? `📚 ${assessment.standards_count} Goals` : '+ Link Learning Goals'}
                                           </button>
                                         </div>
                                       </div>
@@ -395,7 +395,7 @@ function AssessmentsContent() {
                                           {assessment.result ? `${assessment.result.auto_score}%` : '--'}
                                         </div>
                                         <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">
-                                          {assessment.result ? 'Score' : 'Pending'}
+                                          {assessment.result ? 'Optional Score' : 'Pending'}
                                         </p>
                                         <button onClick={() => handleDelete(assessment.id)} className="text-rose-500 font-bold text-xs hover:bg-rose-50 px-3 py-1 rounded-lg mt-2">
                                           Delete
@@ -427,7 +427,7 @@ function AssessmentsContent() {
                       </div>
                       {filteredAssessments.filter(a => a.result?.auto_score !== null).length > 0 && (
                         <div className="flex justify-between items-center p-4 rounded-2xl" style={{ background: 'rgba(124,58,237,0.08)' }}>
-                          <span className="font-bold text-sm uppercase" style={{ color: '#7c3aed' }}>Avg Score</span>
+                          <span className="font-bold text-sm uppercase" style={{ color: '#7c3aed' }}>Avg Optional Score</span>
                           <span className="text-2xl font-black" style={{ color: '#7c3aed' }}>
                             {Math.round(filteredAssessments.filter(a => a.result?.auto_score !== null).reduce((sum, a) => sum + (a.result?.auto_score || 0), 0) / filteredAssessments.filter(a => a.result?.auto_score !== null).length)}%
                           </span>
@@ -444,10 +444,10 @@ function AssessmentsContent() {
               <div className="space-y-6">
                 <div className="flex justify-end gap-3">
                   <button onClick={() => setShowStandardsManager(true)} className="px-6 py-3 bg-slate-600 text-white rounded-xl font-bold hover:bg-slate-700 transition-all">
-                    Manage Standards
+                    Manage Goals
                   </button>
                   <button onClick={() => setShowImporter(true)} className="px-6 py-3 bg-purple-600 text-white rounded-xl font-bold hover:bg-purple-700 transition-all">
-                    + Import Standards
+                    + Import Goals
                   </button>
                 </div>
                 <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm">
@@ -468,7 +468,7 @@ function AssessmentsContent() {
                     </div>
                     <div>
                       <label className="block text-xs font-bold text-slate-600 mb-2 uppercase">Search</label>
-                      <input type="text" value={filters.search} onChange={(e) => setFilters({ ...filters, search: e.target.value })} placeholder="Search standards..." className="w-full px-4 py-3 rounded-xl border border-slate-200 font-medium text-slate-900 outline-none focus:border-purple-600" />
+                      <input type="text" value={filters.search} onChange={(e) => setFilters({ ...filters, search: e.target.value })} placeholder="Search goals or standards..." className="w-full px-4 py-3 rounded-xl border border-slate-200 font-medium text-slate-900 outline-none focus:border-purple-600" />
                     </div>
                   </div>
                 </div>
@@ -476,7 +476,7 @@ function AssessmentsContent() {
                   <div className="bg-white rounded-3xl p-12 text-center text-slate-400 font-bold">Loading...</div>
                 ) : (
                   <div className="space-y-3">
-                    <h3 className="font-black text-slate-900">{standards.length} Standards</h3>
+                    <h3 className="font-black text-slate-900">{standards.length} Goals or Standards</h3>
                     {standards.map((standard) => (
                       <div key={standard.id} className="bg-white rounded-3xl p-6 border border-slate-200 flex gap-6">
                         <div className="flex-shrink-0">
