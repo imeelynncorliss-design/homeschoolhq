@@ -2,21 +2,32 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-function getSupabaseClient() {
+function getSupabaseConfig() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseKey) {
-    throw new Error('Missing Supabase environment variables');
+    return null;
   }
 
-  return createClient(supabaseUrl, supabaseKey);
+  return { supabaseUrl, supabaseKey };
+}
+
+function createServerConfigError() {
+  console.error('Assessments API missing required Supabase environment variables');
+  return NextResponse.json(
+    { error: 'Server configuration error' },
+    { status: 500 }
+  );
 }
 
 // GET - Fetch all assessments with standards count
 export async function GET(request: NextRequest) {
   try {
-    const supabase = getSupabaseClient();
+    const config = getSupabaseConfig();
+    if (!config) return createServerConfigError();
+
+    const supabase = createClient(config.supabaseUrl, config.supabaseKey);
     console.log('Fetching assessments...');
 
     // First, get all assessments
@@ -73,7 +84,10 @@ export async function GET(request: NextRequest) {
 // POST - Create a new assessment (optional, but useful)
 export async function POST(request: NextRequest) {
   try {
-    const supabase = getSupabaseClient();
+    const config = getSupabaseConfig();
+    if (!config) return createServerConfigError();
+
+    const supabase = createClient(config.supabaseUrl, config.supabaseKey);
     const body = await request.json();
     const { title, description, assessment_type, subject, grade_level, teacher_id } = body;
 

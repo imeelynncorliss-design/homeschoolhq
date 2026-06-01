@@ -280,15 +280,15 @@ export default function FieldTripLog({ organizationId, kids }: FieldTripLogProps
 
       {/* Add/Edit Modal */}
       {showForm && (
-        <div role="dialog" aria-modal="true" aria-labelledby="field-trip-form-title" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', zIndex: 50, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '18px 16px 88px', overflowY: 'auto' }}>
-          <div ref={trapRef} style={{ background: '#fff', borderRadius: 24, width: '100%', maxWidth: 480, maxHeight: 'calc(100dvh - 112px)', overflowY: 'auto', padding: 24, boxShadow: '0 24px 64px rgba(0,0,0,0.18)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+        <div role="dialog" aria-modal="true" aria-labelledby="field-trip-form-title" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', zIndex: 50, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '18px 16px max(88px, env(safe-area-inset-bottom))', overflowY: 'auto' }}>
+          <div ref={trapRef} style={{ background: '#fff', borderRadius: 24, width: '100%', maxWidth: 480, maxHeight: 'calc(100dvh - 112px)', overflow: 'hidden', padding: 0, boxShadow: '0 24px 64px rgba(0,0,0,0.18)', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 0, padding: '24px 24px 18px', flexShrink: 0, borderBottom: '1px solid #f3f4f6' }}>
               <h3 id="field-trip-form-title" style={{ fontSize: 18, fontWeight: 800, color: '#111827', margin: 0 }}>
                 {editingTrip ? 'Edit Trip' : 'Add Field Trip'}
               </h3>
               <button onClick={() => { setShowForm(false); resetForm() }} aria-label="Close form" style={{ background: '#f3f4f6', border: 'none', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, color: '#6b7280', cursor: 'pointer', fontWeight: 700, flexShrink: 0 }}>✕</button>
             </div>
-            <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: 14, overflowY: 'auto', padding: '18px 24px 24px', minHeight: 0 }}>
               {!editingTrip && kids.length > 1 && (
                 <div>
                   <label style={labelStyle}>Students *</label>
@@ -336,7 +336,7 @@ export default function FieldTripLog({ organizationId, kids }: FieldTripLogProps
                 <label style={labelStyle}>Description / Notes</label>
                 <textarea value={fDescription} onChange={e => setFDescription(e.target.value)} placeholder="What did they learn or experience?" rows={3} style={{ ...inputStyle, resize: 'vertical' }} />
               </div>
-              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4, position: 'sticky', bottom: -24, background: '#fff', padding: '14px 0 0', borderTop: '1px solid #f3f4f6' }}>
                 <button type="button" onClick={() => { setShowForm(false); resetForm() }} style={btn.ghost}>Cancel</button>
                 <button type="submit" disabled={saving || (!editingTrip && formKidIds.length === 0)} style={btn.primary}>{saving ? 'Saving...' : editingTrip ? 'Save Changes' : `Add Trip${formKidIds.length > 1 ? ` for ${formKidIds.length} kids` : ''}`}</button>
               </div>
