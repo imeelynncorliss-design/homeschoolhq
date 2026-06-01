@@ -35,6 +35,7 @@ export default function FieldTripLog({ organizationId, kids }: FieldTripLogProps
   const [showForm, setShowForm]     = useState(false)
   const [editingTrip, setEditingTrip] = useState<FieldTrip | null>(null)
   const [saving, setSaving]         = useState(false)
+  const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set())
   const trapRef = useFocusTrap(showForm)
 
   // Form state
@@ -184,6 +185,19 @@ export default function FieldTripLog({ organizationId, kids }: FieldTripLogProps
     ;(acc[key] = acc[key] || []).push(t)
     return acc
   }, {})
+  const groupedEntries = Object.entries(grouped)
+  const visibleExpandedMonths = expandedMonths.size === 0 && groupedEntries[0]
+    ? new Set([groupedEntries[0][0]])
+    : expandedMonths
+
+  function toggleMonth(month: string) {
+    setExpandedMonths(prev => {
+      const next = new Set(prev)
+      if (next.has(month)) next.delete(month)
+      else next.add(month)
+      return next
+    })
+  }
 
   const SUBJECT_COLORS: Record<string, string> = {
     Science: '#059669', History: '#d97706', Art: '#ec4899',
@@ -247,9 +261,21 @@ export default function FieldTripLog({ organizationId, kids }: FieldTripLogProps
           <button onClick={openAdd} style={btn.primary} className="no-print">+ Add First Trip</button>
         </div>
       ) : (
-        Object.entries(grouped).map(([month, monthTrips]) => (
-          <div key={month} style={{ marginBottom: 24 }}>
-            <div style={{ fontSize: 11, fontWeight: 800, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>{month}</div>
+        groupedEntries.map(([month, monthTrips]) => {
+          const isExpanded = visibleExpandedMonths.has(month)
+          return (
+          <div key={month} style={{ marginBottom: 12 }}>
+            <button
+              type="button"
+              onClick={() => toggleMonth(month)}
+              className="no-print"
+              style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid #e9d5ff', background: '#faf5ff', borderRadius: 12, padding: '10px 12px', marginBottom: isExpanded ? 10 : 0, cursor: 'pointer' }}
+            >
+              <span style={{ fontSize: 11, fontWeight: 800, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{month}</span>
+              <span style={{ fontSize: 12, fontWeight: 800, color: '#6b7280' }}>{monthTrips.length} {monthTrips.length === 1 ? 'activity' : 'activities'} {isExpanded ? '▴' : '▾'}</span>
+            </button>
+            <div className="print-only" style={{ fontSize: 11, fontWeight: 800, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>{month}</div>
+            {isExpanded && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {monthTrips.map(trip => {
                 const subjectColor = trip.subject ? (SUBJECT_COLORS[trip.subject] ?? '#6b7280') : '#6b7280'
@@ -274,21 +300,24 @@ export default function FieldTripLog({ organizationId, kids }: FieldTripLogProps
                 )
               })}
             </div>
+            )}
           </div>
-        ))
+          )
+        })
       )}
 
       {/* Add/Edit Modal */}
       {showForm && (
-        <div role="dialog" aria-modal="true" aria-labelledby="field-trip-form-title" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', zIndex: 50, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '18px 16px 88px', overflowY: 'auto' }}>
-          <div ref={trapRef} style={{ background: '#fff', borderRadius: 24, width: '100%', maxWidth: 480, maxHeight: 'calc(100dvh - 112px)', overflowY: 'auto', padding: 24, boxShadow: '0 24px 64px rgba(0,0,0,0.18)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+        <div role="dialog" aria-modal="true" aria-labelledby="field-trip-form-title" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 12, overflow: 'hidden' }}>
+          <div ref={trapRef} style={{ background: '#fff', borderRadius: 20, width: '100%', maxWidth: 480, height: 'calc(100vh - 24px)', maxHeight: 620, overflow: 'hidden', padding: 0, boxShadow: '0 24px 64px rgba(0,0,0,0.18)', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 0, padding: '14px 18px 12px', flexShrink: 0, borderBottom: '1px solid #f3f4f6' }}>
               <h3 id="field-trip-form-title" style={{ fontSize: 18, fontWeight: 800, color: '#111827', margin: 0 }}>
                 {editingTrip ? 'Edit Trip' : 'Add Field Trip'}
               </h3>
               <button onClick={() => { setShowForm(false); resetForm() }} aria-label="Close form" style={{ background: '#f3f4f6', border: 'none', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, color: '#6b7280', cursor: 'pointer', fontWeight: 700, flexShrink: 0 }}>✕</button>
             </div>
-            <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, overflowY: 'auto', padding: '12px 18px 14px', minHeight: 0, flex: 1 }}>
               {!editingTrip && kids.length > 1 && (
                 <div>
                   <label style={labelStyle}>Students *</label>
@@ -334,9 +363,10 @@ export default function FieldTripLog({ organizationId, kids }: FieldTripLogProps
               </div>
               <div>
                 <label style={labelStyle}>Description / Notes</label>
-                <textarea value={fDescription} onChange={e => setFDescription(e.target.value)} placeholder="What did they learn or experience?" rows={3} style={{ ...inputStyle, resize: 'vertical' }} />
+                <textarea value={fDescription} onChange={e => setFDescription(e.target.value)} placeholder="What did they learn or experience?" rows={2} style={{ ...inputStyle, resize: 'vertical' }} />
               </div>
-              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
+              </div>
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', flexShrink: 0, background: '#fff', padding: '10px 18px 12px', borderTop: '1px solid #f3f4f6', boxShadow: '0 -8px 18px rgba(15, 23, 42, 0.04)' }}>
                 <button type="button" onClick={() => { setShowForm(false); resetForm() }} style={btn.ghost}>Cancel</button>
                 <button type="submit" disabled={saving || (!editingTrip && formKidIds.length === 0)} style={btn.primary}>{saving ? 'Saving...' : editingTrip ? 'Save Changes' : `Add Trip${formKidIds.length > 1 ? ` for ${formKidIds.length} kids` : ''}`}</button>
               </div>

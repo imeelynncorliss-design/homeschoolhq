@@ -62,7 +62,7 @@ const QUICK_ACTION_CONFIG: Record<string, {
 }> = {
   attendance:  { emoji: '✅', label: 'Attendance',      sub: 'Mark school days and hours',          bg: 'linear-gradient(135deg,#d1fae5,#a7f3d0)', iconBg: '#059669', color: '#064e3b', subColor: '#059669', action: 'route',    href: '/attendance' },
   reading_log: { emoji: '📚', label: 'Reading Log',     sub: 'Track books and reading',             bg: 'linear-gradient(135deg,#ede9fe,#ddd6fe)', iconBg: '#7c3aed', color: '#4c1d95', subColor: '#7c3aed', action: 'route',    href: '/reading-log' },
-  field_trips: { emoji: '🚌', label: 'Activities',      sub: 'Log or generate activities',          bg: 'linear-gradient(135deg,#ccfbf1,#99f6e4)', iconBg: '#0d9488', color: '#134e4a', subColor: '#0d9488', action: 'activity_choice' },
+  field_trips: { emoji: '🚌', label: 'Log / View Activities', sub: 'Trips, co-op, projects, and activity history', bg: 'linear-gradient(135deg,#ccfbf1,#99f6e4)', iconBg: '#0d9488', color: '#134e4a', subColor: '#0d9488', action: 'activity_choice' },
   ai_lessons:  { emoji: '📚', label: 'Add Lesson',      sub: 'Generate, write, or use curriculum',  bg: 'linear-gradient(135deg,#ede9fe,#ddd6fe)', iconBg: '#7c3aed', color: '#4c1d95', subColor: '#7c3aed', action: 'lesson_choice' },
   materials:   { emoji: '🧰', label: 'Materials',       sub: 'Supplies and resources',              bg: 'linear-gradient(135deg,#fffbeb,#fef3c7)', iconBg: '#d97706', color: '#78350f', subColor: '#d97706', action: 'route',    href: '/materials' },
   portfolio:   { emoji: '🗂️', label: 'Portfolio',       sub: 'Work samples and highlights',         bg: 'linear-gradient(135deg,#fdf4ff,#fae8ff)', iconBg: '#9333ea', color: '#4a044e', subColor: '#a855f7', action: 'route',    href: '/portfolio' },
@@ -1919,7 +1919,7 @@ function DashboardContent() {
                   { key: 'today',      emoji: '📝', label: "Today's Learning",  sub: "View today's agenda",          bg: 'linear-gradient(135deg,#ede9fe,#ddd6fe)', iconBg: '#7c3aed', color: '#4c1d95', subColor: '#7c3aed', onClick: () => setShowToday(true) },
                   { key: 'attendance', emoji: '✅', label: 'Log Attendance',     sub: "Mark today's school day",       bg: 'linear-gradient(135deg,#d1fae5,#a7f3d0)', iconBg: '#059669', color: '#064e3b', subColor: '#059669', onClick: () => router.push('/attendance') },
                   { key: 'reading',    emoji: '📚', label: 'Log a Book',         sub: 'Add to reading log',            bg: 'linear-gradient(135deg,#ede9fe,#ddd6fe)', iconBg: '#7c3aed', color: '#4c1d95', subColor: '#7c3aed', onClick: () => router.push('/reading-log') },
-                  { key: 'activity',   emoji: '🚌', label: 'Log an Activity',    sub: 'Field trip, project, co-op',    bg: 'linear-gradient(135deg,#ccfbf1,#99f6e4)', iconBg: '#0d9488', color: '#134e4a', subColor: '#0d9488', onClick: () => router.push('/field-trips') },
+                  { key: 'activity',   emoji: '🚌', label: 'Log / View Activities', sub: 'Trips, projects, co-op, history', bg: 'linear-gradient(135deg,#ccfbf1,#99f6e4)', iconBg: '#0d9488', color: '#134e4a', subColor: '#0d9488', onClick: () => router.push('/field-trips') },
                   { key: 'scout',      emoji: null as null, imgSrc: '/Cardinal_Mascot.png', label: 'Ask Scout', sub: 'Ask me anything, anytime', bg: 'linear-gradient(135deg,#fef3c7,#fde68a)', iconBg: '#f59e0b', color: '#78350f', subColor: '#d97706', onClick: () => window.dispatchEvent(new CustomEvent('open-scout-copilot')) },
                 ].map(btn => (
                   <button key={btn.key} className="quick-btn"
@@ -2286,7 +2286,7 @@ function DashboardContent() {
         )}
         {showActivityChoice && (
           <ChoiceSheet
-            title="Activities"
+            title="Log / View Activities"
             subtitle="What would you like to do?"
             onClose={() => setShowActivityChoice(false)}
             options={[

@@ -37,7 +37,7 @@ interface LessonActivity {
 
 interface OtherActivity {
   id: string
-  type: 'social_event' | 'coop_class'
+  type: 'social_event' | 'coop_class' | 'field_trip'
   title: string
   time?: string
   endTime?: string
@@ -123,6 +123,49 @@ export default function DayDetails({ date, onClose, userId, organizationId, onEd
         sourceLabel: 'Social activity',
         details: event
       })))
+    }
+
+    // Load field trips / logged activities for this day
+    const { data: fieldTrips } = await supabase
+      .from('field_trips')
+      .select('*')
+      .eq('organization_id', organizationId)
+      .eq('trip_date', date)
+
+    if (fieldTrips) {
+      const groupedTrips = new Map<string, any>()
+      fieldTrips.forEach((trip: any) => {
+        const key = [
+          trip.trip_date,
+          trip.title?.trim().toLowerCase() || '',
+          trip.location?.trim().toLowerCase() || '',
+          trip.subject || '',
+          trip.hours ?? '',
+          trip.description?.trim().toLowerCase() || '',
+        ].join('|')
+        const existing = groupedTrips.get(key)
+        if (existing) {
+          existing.childIds.push(trip.kid_id)
+          existing.tripIds.push(trip.id)
+        } else {
+          groupedTrips.set(key, { ...trip, childIds: [trip.kid_id], tripIds: [trip.id] })
+        }
+      })
+
+      result.push(...Array.from(groupedTrips.values()).map((trip: any) => {
+        const childCount = new Set(trip.childIds.filter(Boolean)).size
+        const allChildren = dayKids.length > 0 && childCount >= dayKids.length
+        const childLabel = allChildren ? 'All children' : `${childCount} ${childCount === 1 ? 'child' : 'children'}`
+        return {
+          id: trip.tripIds.join('-'),
+          type: 'field_trip' as const,
+          title: trip.title,
+          location: trip.location,
+          description: trip.description,
+          sourceLabel: `Field trip / activity · ${childLabel}`,
+          details: trip
+        }
+      }))
     }
 
     // Load co-op classes for this day — fixed: use UTC date to get correct day name
@@ -402,18 +445,22 @@ export default function DayDetails({ date, onClose, userId, organizationId, onEd
                         className={`rounded-lg border p-3 ${
                           activity.type === 'social_event'
                             ? 'bg-purple-50 border-purple-200'
+                            : activity.type === 'field_trip'
+                            ? 'bg-teal-50 border-teal-200'
                             : 'bg-green-50 border-green-200'
                         }`}
                       >
                         <div className="flex items-start gap-2">
                           <span className="text-lg flex-shrink-0">
-                            {activity.type === 'social_event' ? '🎉' : '🏫'}
+                            {activity.type === 'social_event' ? '🎉' : activity.type === 'field_trip' ? '🚌' : '🏫'}
                           </span>
                           <div className="flex-1 min-w-0">
                             <div className="flex flex-wrap items-center gap-1.5">
                               <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${
                                 activity.type === 'social_event'
                                   ? 'bg-purple-100 text-purple-700'
+                                  : activity.type === 'field_trip'
+                                  ? 'bg-teal-100 text-teal-700'
                                   : 'bg-green-100 text-green-700'
                               }`}>
                                 {activity.sourceLabel}
@@ -436,7 +483,7 @@ export default function DayDetails({ date, onClose, userId, organizationId, onEd
                               </p>
                             )}
                             <p className="mt-2 text-[11px] text-gray-500">
-                              This item is shown for schedule context. Edit it from the {activity.type === 'social_event' ? 'Social' : 'Co-op'} area, not from attendance.
+                              This item is shown for schedule context. Edit it from the {activity.type === 'social_event' ? 'Social' : activity.type === 'field_trip' ? 'Field Trips & Activities' : 'Co-op'} area, not from attendance.
                             </p>
                           </div>
                         </div>

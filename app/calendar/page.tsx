@@ -21,6 +21,7 @@ function CalendarContent() {
   const [kids, setKids] = useState<any[]>([])
   const [lessonsByKid, setLessonsByKid] = useState<{ [kidId: string]: any[] }>({})
   const [manualAttendance, setManualAttendance] = useState<any[]>([])
+  const [activityEvents, setActivityEvents] = useState<any[]>([])
   const [organizationId, setOrganizationId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [selectedLesson, setSelectedLesson] = useState<LessonViewModalLesson | null>(null)
@@ -52,9 +53,10 @@ function CalendarContent() {
         .order('created_at', { ascending: false })
 
       if (kidsData && kidsData.length > 0) {
-        const [lessonsResult, attendResult] = await Promise.all([
+        const [lessonsResult, attendResult, tripsResult] = await Promise.all([
           supabase.from('lessons').select('*').eq('organization_id', orgId).order('lesson_date', { ascending: false }),
           supabase.from('daily_attendance').select('*').eq('organization_id', orgId).order('attendance_date', { ascending: false }),
+          supabase.from('field_trips').select('*').eq('organization_id', orgId).order('trip_date', { ascending: false }),
         ])
 
         if (lessonsResult.data && mounted) {
@@ -66,6 +68,46 @@ function CalendarContent() {
           setLessonsByKid(grouped)
         }
         if (attendResult.data && mounted) setManualAttendance(attendResult.data)
+        if (tripsResult.data && mounted) {
+          const groupedTrips = new Map<string, any>()
+          ;(tripsResult.data || []).forEach((trip: any) => {
+            const key = [
+              trip.trip_date,
+              trip.title?.trim().toLowerCase() || '',
+              trip.location?.trim().toLowerCase() || '',
+              trip.subject || '',
+              trip.hours ?? '',
+              trip.description?.trim().toLowerCase() || '',
+            ].join('|')
+            const existing = groupedTrips.get(key)
+            if (existing) {
+              existing.childIds.push(trip.kid_id)
+              existing.tripIds.push(trip.id)
+            } else {
+              groupedTrips.set(key, { ...trip, childIds: [trip.kid_id], tripIds: [trip.id] })
+            }
+          })
+
+          setActivityEvents(Array.from(groupedTrips.values()).map((trip: any) => {
+            const childCount = new Set(trip.childIds.filter(Boolean)).size
+            const allChildren = kidsData.length > 0 && childCount >= kidsData.length
+            const childLabel = allChildren ? 'All children' : `${childCount} ${childCount === 1 ? 'child' : 'children'}`
+            return {
+              id: `field-trip-${trip.tripIds.join('-')}`,
+              title: `${trip.title}${childCount > 1 ? ` (${childLabel})` : ''}`,
+              event_date: trip.trip_date,
+              start_time: null,
+              end_time: null,
+              location: trip.location,
+              description: trip.description,
+              event_type: 'field_trip',
+              source: 'field_trip',
+              childLabel,
+              childCount,
+              details: trip,
+            }
+          }))
+        }
       }
 
       if (mounted) {
@@ -104,10 +146,10 @@ function CalendarContent() {
           <LessonCalendar
             kids={kids}
             lessonsByKid={lessonsByKid}
-            socialEvents={[]}
+            socialEvents={activityEvents}
             coopEnrollments={[]}
             manualAttendance={manualAttendance}
-            filters={{ showLessons: true, showManualAttendance: false }}
+            filters={{ showLessons: true, showSocialEvents: true, showCoopClasses: false, showManualAttendance: false }}
             onLessonClick={(lesson, child) => {
               setSelectedLesson(lesson as LessonViewModalLesson)
               setSelectedKidName(child.displayname ?? '')
