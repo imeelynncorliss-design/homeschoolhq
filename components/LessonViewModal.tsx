@@ -1479,6 +1479,7 @@ ${overviewHtml}${objectivesHtml}${materialsHtml}${activitiesHtml}${assessmentHtm
               </>
             ) : (
               <>
+                <button style={vw.btnSecondary} onClick={onClose}>Done</button>
                 <button style={vw.btnPrimary} onClick={() => setEditing(true)}>✏️ Edit</button>
               </>
             )}
