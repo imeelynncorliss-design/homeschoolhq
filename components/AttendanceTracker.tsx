@@ -1017,6 +1017,7 @@ useEffect(() => {
                       openMarkAttendance(date, suggestion?.suggestedHours)
                     }
                   }}
+                  onViewDate={(date) => setSelectedDate(date)}
                 />
               )}
 

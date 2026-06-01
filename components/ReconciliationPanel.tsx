@@ -39,6 +39,7 @@ interface ReconciliationPanelProps {
   onDismissSuggestion: (date: string) => void
   onDismissAll: () => void
   onFixDate: (date: string) => void
+  onViewDate?: (date: string) => void
   onDismissDiscrepancy: (date: string, type: string) => void
 }
 
@@ -82,6 +83,7 @@ export default function ReconciliationPanel({
   onDismissSuggestion,
   onDismissAll,
   onFixDate,
+  onViewDate,
   onDismissDiscrepancy,
 }: ReconciliationPanelProps) {
   const [selectedDates, setSelectedDates] = useState<Set<string>>(new Set())
@@ -437,7 +439,18 @@ export default function ReconciliationPanel({
                                     <ul className="space-y-1">
                                       {visibleLessons.map((lesson) => (
                                         <li key={lesson.id} className="text-xs text-amber-900">
-                                          <span className="font-semibold">{lesson.title}</span>
+                                          {onViewDate ? (
+                                            <button
+                                              type="button"
+                                              onClick={() => onViewDate(d.date)}
+                                              className="font-semibold text-amber-950 underline decoration-amber-400 underline-offset-2 hover:text-amber-700"
+                                              title="Open day details to review this lesson"
+                                            >
+                                              {lesson.title}
+                                            </button>
+                                          ) : (
+                                            <span className="font-semibold">{lesson.title}</span>
+                                          )}
                                           {lesson.subject && <span> · {lesson.subject}</span>}
                                           <span> · {lesson.kidName}</span>
                                           {lesson.durationMinutes > 0 && <span> · {(lesson.durationMinutes / 60).toFixed(1)}h</span>}
