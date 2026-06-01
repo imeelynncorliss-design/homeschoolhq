@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { supabase } from '@/src/lib/supabase'
+import LessonViewModal from './LessonViewModal'
 
 interface DayDetailsProps {
   date: string
@@ -50,6 +51,8 @@ export default function DayDetails({ date, onClose, userId, organizationId, onEd
   const [loading, setLoading] = useState(true)
   const [updatingLesson, setUpdatingLesson] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
+  const [dayKids, setDayKids] = useState<any[]>([])
+  const [selectedLesson, setSelectedLesson] = useState<LessonActivity | null>(null)
 
   useEffect(() => {
     setMounted(true)
@@ -81,6 +84,7 @@ export default function DayDetails({ date, onClose, userId, organizationId, onEd
 
       const kidMap: Record<string, any> = {}
       if (kids) kids.forEach((k: any) => { kidMap[k.id] = k })
+      setDayKids(kids || [])
 
     if (lessons) {
       result.push(...lessons.map((lesson: any) => ({
@@ -91,8 +95,8 @@ export default function DayDetails({ date, onClose, userId, organizationId, onEd
         description: lesson.description,
         duration_minutes: lesson.duration_minutes,
         status: lesson.status,
-        kid_name: lesson.kid?.displayname || 'Unknown',
-        kid_photo: lesson.kid?.photo_url,
+        kid_name: kidMap[lesson.kid_id]?.displayname || lesson.kid?.displayname || 'Unknown child',
+        kid_photo: kidMap[lesson.kid_id]?.photo_url || lesson.kid?.photo_url,
         details: lesson
       })))
     }
@@ -161,6 +165,7 @@ export default function DayDetails({ date, onClose, userId, organizationId, onEd
           ? { ...a, status: newStatus } as LessonActivity
           : a
       ))
+      setSelectedLesson(prev => prev && prev.id === lessonId ? { ...prev, status: newStatus } : prev)
     }
     setUpdatingLesson(null)
   }
@@ -170,6 +175,26 @@ export default function DayDetails({ date, onClose, userId, organizationId, onEd
       : lesson.status === 'in_progress' ? 'completed'
       : 'not_started'
     handleStatusChange(lesson.id, next)
+  }
+
+  async function deleteLesson(lessonId: string) {
+    const { error } = await supabase.from('lessons').delete().eq('id', lessonId)
+    if (!error) {
+      setActivities(prev => prev.filter(a => a.id !== lessonId))
+      setSelectedLesson(null)
+    }
+  }
+
+  function saveLessonUpdates(lessonId: string, updates: any) {
+    setActivities(prev => prev.map(a =>
+      a.id === lessonId && a.type === 'lesson'
+        ? { ...a, ...updates, details: { ...a.details, ...updates } } as LessonActivity
+        : a
+    ))
+    setSelectedLesson(prev => prev && prev.id === lessonId
+      ? { ...prev, ...updates, details: { ...prev.details, ...updates } } as LessonActivity
+      : prev
+    )
   }
 
   const getStatusStyle = (status: string) => {
@@ -201,6 +226,7 @@ export default function DayDetails({ date, onClose, userId, organizationId, onEd
   if (!mounted) return null
 
   const modal = (
+    <>
     <div className="fixed inset-0 z-[9999] overflow-y-auto bg-black bg-opacity-50 px-4 py-4 sm:py-6">
       <div className="relative mx-auto flex max-h-[calc(100vh-2rem)] w-[min(calc(100vw-2rem),42rem)] flex-col rounded-xl bg-white shadow-2xl sm:max-h-[calc(100vh-3rem)]">
 
@@ -313,9 +339,14 @@ export default function DayDetails({ date, onClose, userId, organizationId, onEd
                                     <span className="text-xs text-gray-300">·</span>
                                     <span className="text-xs font-semibold text-purple-600">{lesson.subject}</span>
                                   </div>
-                                  <p className={`text-sm font-semibold mt-0.5 ${lesson.status === 'completed' ? 'line-through text-gray-400' : 'text-gray-900'}`}>
+                                  <button
+                                    type="button"
+                                    onClick={() => setSelectedLesson(lesson)}
+                                    className={`text-left text-sm font-semibold mt-0.5 underline-offset-2 hover:underline ${lesson.status === 'completed' ? 'line-through text-gray-400' : 'text-gray-900 hover:text-purple-700'}`}
+                                    title="Open lesson details"
+                                  >
                                     {lesson.title}
-                                  </p>
+                                  </button>
                                   {lesson.duration_minutes && (
                                     <p className="text-xs text-gray-400 mt-0.5">⏱ {lesson.duration_minutes} min</p>
                                   )}
@@ -332,10 +363,11 @@ export default function DayDetails({ date, onClose, userId, organizationId, onEd
                                   <span className="hidden sm:inline">{statusStyle.label}</span>
                                 </button>
                                 <button
-                                  onClick={() => onEditLesson && onEditLesson(lesson.details)}
-                                  className="flex-shrink-0 px-2 py-1 rounded-full border border-gray-200 text-xs font-semibold text-gray-400 hover:text-gray-600 hover:border-gray-300 transition-all"
+                                  onClick={() => setSelectedLesson(lesson)}
+                                  className="flex-shrink-0 px-2 py-1 rounded-full border border-gray-200 text-xs font-semibold text-gray-500 hover:text-purple-700 hover:border-purple-300 transition-all"
+                                  title="Open lesson details / add notes"
                                 >
-                                  ✏️
+                                  Details
                                 </button>
                               </div>
                             </div>
@@ -398,6 +430,37 @@ export default function DayDetails({ date, onClose, userId, organizationId, onEd
         </div>
       </div>
     </div>
+
+    {selectedLesson && (
+      <LessonViewModal
+        lesson={{
+          ...selectedLesson.details,
+          id: selectedLesson.id,
+          kid_id: selectedLesson.details?.kid_id || '',
+          title: selectedLesson.title,
+          subject: selectedLesson.subject,
+          description: selectedLesson.description,
+          lesson_date: selectedLesson.details?.lesson_date || date,
+          duration_minutes: selectedLesson.duration_minutes ?? null,
+          status: selectedLesson.status,
+        }}
+        kidName={selectedLesson.kid_name}
+        organizationId={organizationId}
+        allKids={dayKids.map((kid: any) => ({ id: kid.id, displayname: kid.displayname }))}
+        onClose={() => setSelectedLesson(null)}
+        onEdit={() => onEditLesson?.(selectedLesson.details)}
+        onDelete={() => deleteLesson(selectedLesson.id)}
+        onCycleStatus={(lessonId, currentStatus) => {
+          const next = currentStatus === 'not_started' ? 'in_progress'
+            : currentStatus === 'in_progress' ? 'completed'
+            : 'not_started'
+          handleStatusChange(lessonId, next)
+        }}
+        onSetStatus={(lessonId, status) => handleStatusChange(lessonId, status)}
+        onSave={saveLessonUpdates}
+      />
+    )}
+    </>
   )
 
   return createPortal(modal, document.body)
