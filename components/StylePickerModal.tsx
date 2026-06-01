@@ -10,7 +10,7 @@ import { getRegLevel, REG_LABEL, REG_DESC } from '@/lib/stateRegulation'
 export const STYLE_FEATURES = [
   { id: 'attendance',  emoji: '✅', label: 'Attendance Tracking',      desc: 'Log school days and hours' },
   { id: 'reading_log', emoji: '📚', label: 'Reading Log',              desc: 'Track books read this year' },
-  { id: 'field_trips', emoji: '🚌', label: 'Activities',               desc: 'Log trips or generate activity ideas' },
+  { id: 'field_trips', emoji: '🚌', label: 'Log / View Activities',    desc: 'Trips, co-op, projects, and activity history' },
   { id: 'ai_lessons',  emoji: '📚', label: 'Add Lesson',               desc: 'Generate, write, or use curriculum' },
   { id: 'materials',   emoji: '🧰', label: 'Materials',                desc: 'Supplies and teaching resources' },
   { id: 'portfolio',   emoji: '🗂️', label: 'Portfolio',                desc: 'Work samples & highlights' },

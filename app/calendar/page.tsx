@@ -21,6 +21,7 @@ function CalendarContent() {
   const [kids, setKids] = useState<any[]>([])
   const [lessonsByKid, setLessonsByKid] = useState<{ [kidId: string]: any[] }>({})
   const [manualAttendance, setManualAttendance] = useState<any[]>([])
+  const [activityEvents, setActivityEvents] = useState<any[]>([])
   const [organizationId, setOrganizationId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [selectedLesson, setSelectedLesson] = useState<LessonViewModalLesson | null>(null)
@@ -52,9 +53,10 @@ function CalendarContent() {
         .order('created_at', { ascending: false })
 
       if (kidsData && kidsData.length > 0) {
-        const [lessonsResult, attendResult] = await Promise.all([
+        const [lessonsResult, attendResult, tripsResult] = await Promise.all([
           supabase.from('lessons').select('*').eq('organization_id', orgId).order('lesson_date', { ascending: false }),
           supabase.from('daily_attendance').select('*').eq('organization_id', orgId).order('attendance_date', { ascending: false }),
+          supabase.from('field_trips').select('*').eq('organization_id', orgId).order('trip_date', { ascending: false }),
         ])
 
         if (lessonsResult.data && mounted) {
@@ -66,6 +68,20 @@ function CalendarContent() {
           setLessonsByKid(grouped)
         }
         if (attendResult.data && mounted) setManualAttendance(attendResult.data)
+        if (tripsResult.data && mounted) {
+          setActivityEvents(tripsResult.data.map((trip: any) => ({
+            id: `field-trip-${trip.id}`,
+            title: trip.title,
+            event_date: trip.trip_date,
+            start_time: null,
+            end_time: null,
+            location: trip.location,
+            description: trip.description,
+            event_type: 'field_trip',
+            source: 'field_trip',
+            details: trip,
+          })))
+        }
       }
 
       if (mounted) {
@@ -104,10 +120,10 @@ function CalendarContent() {
           <LessonCalendar
             kids={kids}
             lessonsByKid={lessonsByKid}
-            socialEvents={[]}
+            socialEvents={activityEvents}
             coopEnrollments={[]}
             manualAttendance={manualAttendance}
-            filters={{ showLessons: true, showManualAttendance: false }}
+            filters={{ showLessons: true, showSocialEvents: true, showCoopClasses: false, showManualAttendance: false }}
             onLessonClick={(lesson, child) => {
               setSelectedLesson(lesson as LessonViewModalLesson)
               setSelectedKidName(child.displayname ?? '')

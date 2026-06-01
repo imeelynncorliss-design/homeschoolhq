@@ -35,6 +35,7 @@ export default function FieldTripLog({ organizationId, kids }: FieldTripLogProps
   const [showForm, setShowForm]     = useState(false)
   const [editingTrip, setEditingTrip] = useState<FieldTrip | null>(null)
   const [saving, setSaving]         = useState(false)
+  const [expandedMonths, setExpandedMonths] = useState<Set<string>>(new Set())
   const trapRef = useFocusTrap(showForm)
 
   // Form state
@@ -184,6 +185,19 @@ export default function FieldTripLog({ organizationId, kids }: FieldTripLogProps
     ;(acc[key] = acc[key] || []).push(t)
     return acc
   }, {})
+  const groupedEntries = Object.entries(grouped)
+  const visibleExpandedMonths = expandedMonths.size === 0 && groupedEntries[0]
+    ? new Set([groupedEntries[0][0]])
+    : expandedMonths
+
+  function toggleMonth(month: string) {
+    setExpandedMonths(prev => {
+      const next = new Set(prev)
+      if (next.has(month)) next.delete(month)
+      else next.add(month)
+      return next
+    })
+  }
 
   const SUBJECT_COLORS: Record<string, string> = {
     Science: '#059669', History: '#d97706', Art: '#ec4899',
@@ -247,9 +261,21 @@ export default function FieldTripLog({ organizationId, kids }: FieldTripLogProps
           <button onClick={openAdd} style={btn.primary} className="no-print">+ Add First Trip</button>
         </div>
       ) : (
-        Object.entries(grouped).map(([month, monthTrips]) => (
-          <div key={month} style={{ marginBottom: 24 }}>
-            <div style={{ fontSize: 11, fontWeight: 800, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>{month}</div>
+        groupedEntries.map(([month, monthTrips]) => {
+          const isExpanded = visibleExpandedMonths.has(month)
+          return (
+          <div key={month} style={{ marginBottom: 12 }}>
+            <button
+              type="button"
+              onClick={() => toggleMonth(month)}
+              className="no-print"
+              style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid #e9d5ff', background: '#faf5ff', borderRadius: 12, padding: '10px 12px', marginBottom: isExpanded ? 10 : 0, cursor: 'pointer' }}
+            >
+              <span style={{ fontSize: 11, fontWeight: 800, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{month}</span>
+              <span style={{ fontSize: 12, fontWeight: 800, color: '#6b7280' }}>{monthTrips.length} {monthTrips.length === 1 ? 'activity' : 'activities'} {isExpanded ? '▴' : '▾'}</span>
+            </button>
+            <div className="print-only" style={{ fontSize: 11, fontWeight: 800, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>{month}</div>
+            {isExpanded && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {monthTrips.map(trip => {
                 const subjectColor = trip.subject ? (SUBJECT_COLORS[trip.subject] ?? '#6b7280') : '#6b7280'
@@ -274,8 +300,10 @@ export default function FieldTripLog({ organizationId, kids }: FieldTripLogProps
                 )
               })}
             </div>
+            )}
           </div>
-        ))
+          )
+        })
       )}
 
       {/* Add/Edit Modal */}

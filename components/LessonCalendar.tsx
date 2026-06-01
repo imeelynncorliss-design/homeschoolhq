@@ -69,6 +69,7 @@ const CHILD_COLORS = [
 const ACTIVITY_COLORS = {
   lesson: '#3b82f6',
   socialEvent: '#a855f7',
+  fieldTrip: '#0d9488',
   coopClass: '#10b981',
   attendance: '#6b7280'
 }
@@ -197,7 +198,7 @@ export default function LessonCalendar({
     const child = event.activityType === 'lesson' ? kids.find(k => k.id === event.kidId) : null
     const getIcon = () => {
       switch (event.activityType) {
-        case 'socialEvent': return '🎉'
+        case 'socialEvent': return event.source === 'field_trip' ? '🚌' : '🎉'
         case 'coopClass': return '🏫'
         case 'attendance': return '✓'
         default: return null
@@ -265,10 +266,11 @@ export default function LessonCalendar({
       }
       return {
         id: `social-${event.id}`,
-        title: `🎉 ${event.title}`,
+        title: `${event.source === 'field_trip' ? '🚌' : '🎉'} ${event.title}`,
         start: startDate,
         end: endDate,
         resource: { event },
+        source: event.source,
         activityType: 'socialEvent'
       }
     })
@@ -318,7 +320,7 @@ export default function LessonCalendar({
     let backgroundColor = ACTIVITY_COLORS.lesson
     const isHighlighted = highlightedDate && moment(event.start).format('YYYY-MM-DD') === highlightedDate
     if (event.activityType === 'lesson') backgroundColor = kidColors[event.kidId] || ACTIVITY_COLORS.lesson
-    else if (event.activityType === 'socialEvent') backgroundColor = ACTIVITY_COLORS.socialEvent
+    else if (event.activityType === 'socialEvent') backgroundColor = event.source === 'field_trip' ? ACTIVITY_COLORS.fieldTrip : ACTIVITY_COLORS.socialEvent
     else if (event.activityType === 'coopClass') backgroundColor = ACTIVITY_COLORS.coopClass
     return {
       style: {
@@ -367,7 +369,7 @@ export default function LessonCalendar({
           {filters.showSocialEvents && (
             <div className="print-legend-item flex items-center gap-1.5 bg-white border border-gray-200 px-2 py-1 rounded-full shadow-sm">
               <span className="text-sm">🎉</span>
-              <span className="text-sm text-gray-700 font-medium">Social Events</span>
+              <span className="text-sm text-gray-700 font-medium">Activities / Events</span>
               <div className="print-legend-color w-4 h-4 rounded-full" style={{ backgroundColor: ACTIVITY_COLORS.socialEvent }} />
             </div>
           )}
