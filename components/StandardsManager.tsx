@@ -135,14 +135,14 @@ export default function StandardsManager({ organizationId, onClose }: StandardsM
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 p-3 sm:p-6 overflow-y-auto">
-      <div className="bg-white rounded-3xl max-w-6xl w-full my-3 sm:my-0 mx-auto min-h-0 overflow-visible flex flex-col shadow-2xl border border-slate-200">
+    <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 p-2 sm:p-4 flex items-center justify-center">
+      <div className="bg-white rounded-3xl max-w-6xl w-full h-[calc(100dvh-1rem)] sm:h-[calc(100dvh-2rem)] min-h-0 overflow-hidden flex flex-col shadow-2xl border border-slate-200">
         
         {/* Header */}
         <div className="p-4 sm:p-6 border-b border-slate-100 flex-shrink-0">
-          <div className="flex justify-between items-start mb-6">
+          <div className="flex justify-between items-start mb-3 sm:mb-4">
             <div>
-              <h2 className="text-3xl font-black text-slate-900 tracking-tight">Manage Learning Goals</h2>
+              <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">Manage Learning Goals</h2>
               <p className="text-slate-500 font-bold mt-1">Review optional standards and custom goals for coverage notes.</p>
             </div>
             <button onClick={onClose} className="text-slate-400 hover:text-slate-900 text-3xl font-bold transition-colors">×</button>
@@ -182,7 +182,7 @@ export default function StandardsManager({ organizationId, onClose }: StandardsM
         </div>
 
         {/* List Content */}
-        <div className="p-4 sm:p-6 bg-white min-h-0">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-white min-h-0">
           {error && <div className="bg-red-50 border-2 border-red-100 rounded-xl p-4 mb-6 text-red-700 font-bold text-sm">{error}</div>}
           
           {loading ? (
@@ -193,7 +193,7 @@ export default function StandardsManager({ organizationId, onClose }: StandardsM
           ) : (
             <div className="space-y-4">
              {filteredStandards.map(standard => (
-              <div key={standard.id} className={`border-2 rounded-2xl p-6 transition-all flex gap-6 ${standard.is_official ? 'border-slate-100' : 'border-amber-100 bg-amber-50/20'}`}>                
+              <div key={standard.id} className={`border-2 rounded-2xl p-4 sm:p-6 transition-all flex gap-4 sm:gap-6 ${standard.is_official ? 'border-slate-100' : 'border-amber-100 bg-amber-50/20'}`}>                
                 <div className="flex-shrink-0">
                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-lg border ${standard.is_official ? 'bg-slate-900 border-slate-700' : 'bg-amber-600 border-amber-500'}`}>
                     <span className="text-white font-black text-xl">
@@ -261,9 +261,9 @@ export default function StandardsManager({ organizationId, onClose }: StandardsM
         </div>
 
         {/* Footer */}
-        <div className="p-4 sm:p-6 border-t border-slate-100 flex justify-between items-center bg-slate-50 flex-shrink-0 sticky bottom-0 rounded-b-3xl">
+        <div className="p-3 sm:p-4 border-t border-slate-100 flex justify-between items-center bg-slate-50 flex-shrink-0 rounded-b-3xl">
           <p className="text-sm text-slate-500 font-bold italic">Showing {filteredStandards.length} learning goals</p>
-          <button onClick={onClose} className="px-10 py-4 bg-slate-900 text-white rounded-2xl font-black hover:bg-black transition-all shadow-lg active:scale-95">
+          <button onClick={onClose} className="px-6 sm:px-10 py-3 sm:py-4 bg-slate-900 text-white rounded-2xl font-black hover:bg-black transition-all shadow-lg active:scale-95">
             Close Manager
           </button>
         </div>
