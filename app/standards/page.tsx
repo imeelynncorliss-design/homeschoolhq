@@ -100,9 +100,9 @@ function StandardsBrowser({ organizationId }: { organizationId: string }) {
       textAlign: 'center', fontFamily: "'Nunito', sans-serif",
     }}>
       <div style={{ fontSize: 48, marginBottom: 12 }}>📌</div>
-      <div style={{ fontSize: 16, fontWeight: 800, color: '#1e1b4b', marginBottom: 8 }}>No standards imported yet</div>
+      <div style={{ fontSize: 16, fontWeight: 800, color: '#1e1b4b', marginBottom: 8 }}>No learning goals imported yet</div>
       <div style={{ fontSize: 14, color: '#6b7280', fontWeight: 600, lineHeight: 1.6, marginBottom: 20 }}>
-        Import Common Core standards to browse them here.
+        Import optional standards or learning goals to browse them here.
       </div>
       <a href="/standards-setup" style={{
         display: 'inline-block', padding: '12px 24px',
@@ -110,7 +110,7 @@ function StandardsBrowser({ organizationId }: { organizationId: string }) {
         color: '#fff', borderRadius: 12, fontSize: 14, fontWeight: 800,
         fontFamily: "'Nunito', sans-serif", textDecoration: 'none',
       }}>
-        📥 Go to Standards Setup
+        📥 Go to Learning Goals Setup
       </a>
     </div>
   )
@@ -239,7 +239,7 @@ function StandardsBrowser({ organizationId }: { organizationId: string }) {
         border: '1px solid rgba(196,181,253,0.2)',
         fontSize: 14, color: 'rgba(255,255,255,0.8)', fontWeight: 600, lineHeight: 1.6,
       }}>
-        💡 Standards are shared across all your kids — each child tracks their own coverage independently through lesson tagging.
+        💡 Learning goals are shared across all your kids — each child tracks their own coverage independently through lesson tagging.
       </div>
     </div>
   )
@@ -247,7 +247,7 @@ function StandardsBrowser({ organizationId }: { organizationId: string }) {
 
 function StandardsContent() {
   const router = useRouter()
-  useAppHeader({ title: '📌 Standards', backHref: '/reports' })
+  useAppHeader({ title: '📌 Learning Goals', backHref: '/reports' })
 
   const [organizationId, setOrganizationId] = useState<string>('')
   const [loading, setLoading]               = useState(true)
@@ -281,17 +281,17 @@ function StandardsContent() {
         {/* ── Page header ── */}
         <div style={{ marginBottom: 20 }}>
           <h2 style={{ fontSize: 22, fontWeight: 900, color: '#c4b5fd', margin: '0 0 6px', fontFamily: "'Nunito', sans-serif" }}>
-            📌 Standards
+            📌 Learning Goals
           </h2>
           <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.75)', fontWeight: 600, margin: 0, lineHeight: 1.5 }}>
-            Browse your imported standards or track lesson coverage.
+            Browse optional goals or standards and track lesson coverage.
           </p>
         </div>
 
         {/* ── Tab bar ── */}
         <div style={{ display: 'flex', gap: 4, marginBottom: 24, background: 'rgba(255,255,255,0.7)', borderRadius: 12, padding: 4, border: '1.5px solid rgba(124,58,237,0.1)' }}>
           {([
-            { key: 'browse',   label: '📖 Browse Standards' },
+            { key: 'browse',   label: '📖 Goal Library' },
             { key: 'coverage', label: '📊 Coverage' },
           ] as { key: Tab; label: string }[]).map(tab => (
             <button
@@ -341,7 +341,7 @@ function StandardsContent() {
                     💡
                   </div>
                   <div style={{ textAlign: 'left' as const }}>
-                    <div style={{ fontSize: 15, fontWeight: 800, color: '#1e1b4b' }}>Why standards matter — and how to use this</div>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: '#1e1b4b' }}>Why learning goals matter — and how to use this</div>
                     <div style={{ fontSize: 12, color: '#6b7280', fontWeight: 600 }}>
                       {guideOpen ? 'Tap to collapse' : 'Tap to expand'}
                     </div>
@@ -355,10 +355,10 @@ function StandardsContent() {
                   <div style={{ marginTop: 16, marginBottom: 20, padding: '14px 16px', background: '#f5f3ff', borderRadius: 12 }}>
                     <div style={{ fontSize: 13, fontWeight: 800, color: '#7c3aed', marginBottom: 6 }}>Why this matters</div>
                     <p style={{ fontSize: 13, color: '#374151', fontWeight: 600, margin: 0, lineHeight: 1.7 }}>
-                      Most states require homeschool families to teach to grade-level standards — but tracking that manually is a nightmare.
-                      This page does it automatically. As you tag lessons and log check-ins, you'll always know which standards your child
-                      has demonstrated mastery of, which need more practice, and which haven't been covered yet.
-                      It's also great evidence to have on hand if your state ever asks for documentation.
+                      Some families want or need to show how lessons connect to grade-level expectations.
+                      This page helps you track that coverage automatically. As you tag lessons and log check-ins, you can see which goals your child
+                      has demonstrated, which need more practice, and which have not been covered yet.
+                      It is also useful evidence to have on hand if your state, evaluator, or portfolio review asks for documentation.
                     </p>
                   </div>
                   <div style={{ marginTop: 16 }}>

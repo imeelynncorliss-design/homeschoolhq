@@ -1352,7 +1352,7 @@ ${overviewHtml}${objectivesHtml}${materialsHtml}${activitiesHtml}${assessmentHtm
             {/* ── Section 2: Add a standard ── */}
             {availableStandards.length === 0 && !loadingStandards ? (
               <div style={{ padding: '0 22px 20px', fontSize: 13, color: '#6b7280', fontFamily: 'system-ui, sans-serif', lineHeight: 1.6 }}>
-                💡 No standards imported yet. Go to <strong>Records → Standards</strong> to import your state's standards.
+                💡 No learning goals imported yet. Go to <strong>Tools → Learning Goals</strong> to import optional standards or goals.
               </div>
             ) : (
               <div style={{ padding: '0 22px 20px' }}>

@@ -101,7 +101,7 @@ export default function StandardsImporter({ onClose, onImport}: StandardsImporte
           <div className="p-5 bg-green-50 border-2 border-green-100 rounded-2xl text-center">
             <div className="text-2xl mb-1">🎉</div>
             <div className="text-green-700 font-black text-lg">{successCount} standards imported!</div>
-            <div className="text-green-600 text-sm font-medium mt-1">Head to Records → Standards to see your library.</div>
+            <div className="text-green-600 text-sm font-medium mt-1">Head to Records → Learning Goals to see your library.</div>
             <button onClick={onClose} className="mt-4 px-6 py-2 bg-green-600 text-white rounded-xl font-bold text-sm hover:bg-green-700 transition-colors">Done</button>
           </div>
         )}

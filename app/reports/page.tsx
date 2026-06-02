@@ -39,6 +39,13 @@ function ReportsContent() {
       comingSoon: false,
     },
     {
+      icon: '📝',
+      label: 'Progress Evidence',
+      desc: 'Review optional assessments, scores, notes, and linked goals',
+      href: '/assessments',
+      comingSoon: false,
+    },
+    {
       icon: '🗂️',
       label: 'Portfolio',
       desc: 'Work samples & uploaded documents',
@@ -47,8 +54,8 @@ function ReportsContent() {
     },
     {
       icon: '📌',
-      label: 'Standards',
-      desc: 'Track which standards your lessons cover and where the gaps are',
+      label: 'Learning Goals',
+      desc: 'Review goal coverage and optional standards evidence',
       href: '/standards',
       comingSoon: false,
     },
