@@ -135,11 +135,11 @@ export default function StandardsManager({ organizationId, onClose }: StandardsM
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 sm:p-6">
-      <div className="bg-white rounded-3xl max-w-6xl w-full max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-3rem)] overflow-hidden flex flex-col shadow-2xl border border-slate-200">
+    <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 p-3 sm:p-6 overflow-y-auto">
+      <div className="bg-white rounded-3xl max-w-6xl w-full my-3 sm:my-0 mx-auto min-h-0 overflow-visible flex flex-col shadow-2xl border border-slate-200">
         
         {/* Header */}
-        <div className="p-5 sm:p-8 border-b border-slate-100 flex-shrink-0">
+        <div className="p-4 sm:p-6 border-b border-slate-100 flex-shrink-0">
           <div className="flex justify-between items-start mb-6">
             <div>
               <h2 className="text-3xl font-black text-slate-900 tracking-tight">Manage Learning Goals</h2>
@@ -148,12 +148,12 @@ export default function StandardsManager({ organizationId, onClose }: StandardsM
             <button onClick={onClose} className="text-slate-400 hover:text-slate-900 text-3xl font-bold transition-colors">×</button>
           </div>
 
-          <div className="grid grid-cols-2 gap-6">
-            <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-4">
+          <div className="grid grid-cols-2 gap-3 sm:gap-6">
+            <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-3 sm:p-4">
               <p className="text-[10px] text-indigo-600 font-black uppercase tracking-widest">Verified Core</p>
              <p className="text-3xl font-black text-indigo-900">{allStandards.filter(s => s.is_official).length}</p>
             </div>
-            <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4">
+            <div className="bg-amber-50 border border-amber-100 rounded-2xl p-3 sm:p-4">
               <p className="text-[10px] text-amber-600 font-black uppercase tracking-widest">Your Imports</p>
               <p className="text-3xl font-black text-amber-900">{allStandards.filter(s => !s.is_official).length}</p>
             </div>
@@ -161,7 +161,7 @@ export default function StandardsManager({ organizationId, onClose }: StandardsM
         </div>
 
         {/* Filters */}
-        <div className="px-5 sm:px-8 py-4 sm:py-6 bg-slate-50 border-b border-slate-200 flex-shrink-0">
+        <div className="px-4 sm:px-6 py-4 bg-slate-50 border-b border-slate-200 flex-shrink-0">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <input
               type="text"
@@ -182,7 +182,7 @@ export default function StandardsManager({ organizationId, onClose }: StandardsM
         </div>
 
         {/* List Content */}
-        <div className="flex-1 overflow-y-auto p-5 sm:p-8 bg-white min-h-0">
+        <div className="p-4 sm:p-6 bg-white min-h-0">
           {error && <div className="bg-red-50 border-2 border-red-100 rounded-xl p-4 mb-6 text-red-700 font-bold text-sm">{error}</div>}
           
           {loading ? (
@@ -261,7 +261,7 @@ export default function StandardsManager({ organizationId, onClose }: StandardsM
         </div>
 
         {/* Footer */}
-        <div className="p-5 sm:p-8 border-t border-slate-100 flex justify-between items-center bg-slate-50 flex-shrink-0">
+        <div className="p-4 sm:p-6 border-t border-slate-100 flex justify-between items-center bg-slate-50 flex-shrink-0 sticky bottom-0 rounded-b-3xl">
           <p className="text-sm text-slate-500 font-bold italic">Showing {filteredStandards.length} learning goals</p>
           <button onClick={onClose} className="px-10 py-4 bg-slate-900 text-white rounded-2xl font-black hover:bg-black transition-all shadow-lg active:scale-95">
             Close Manager
