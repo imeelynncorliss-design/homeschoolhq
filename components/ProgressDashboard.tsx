@@ -291,7 +291,7 @@ export default function ProgressDashboard({ userId, organizationId }: ProgressDa
           <div style={{ background: 'linear-gradient(135deg, #7c3aed, #a855f7)', borderRadius: 16, padding: '24px 20px', color: '#fff' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
               <div>
-                <div style={{ fontSize: 26, fontWeight: 900, fontFamily: "'Nunito', sans-serif" }}>{completed} / {goal} Learning Days</div>
+                <div style={{ fontSize: 26, fontWeight: 900, fontFamily: "'Nunito', sans-serif" }}>{completed} / {goal} Learning Days Logged</div>
                 <div style={{ fontSize: 13, opacity: 0.85, marginTop: 2 }}>{attendanceStats.confirmedDays} attendance-confirmed · {attendanceStats.lessonInferredDays} lesson-only</div>
               </div>
               <div style={{ textAlign: 'right' }}>
@@ -314,7 +314,7 @@ export default function ProgressDashboard({ userId, organizationId }: ProgressDa
               <div style={{ fontSize: 40 }}>{progressStatus === 'ahead' ? '🚀' : progressStatus === 'needs-attention' ? '⚠️' : '✅'}</div>
               <div>
                 <div style={{ fontSize: 17, fontWeight: 900, color: progressStatus === 'ahead' ? '#059669' : progressStatus === 'needs-attention' ? '#d97706' : '#7c3aed', fontFamily: "'Nunito', sans-serif", marginBottom: 4 }}>
-                  {progressStatus === 'ahead' ? 'Ahead of pace' : progressStatus === 'needs-attention' ? 'Needs attention' : 'On pace'}
+                  {progressStatus === 'ahead' ? 'Ahead of pace' : progressStatus === 'needs-attention' ? 'Review your school-year pace' : 'On pace'}
                 </div>
                 <div style={{ fontSize: 13, color: '#4b5563', fontWeight: 600 }}>
                   {progressStatus === 'ahead'
@@ -328,6 +328,9 @@ export default function ProgressDashboard({ userId, organizationId }: ProgressDa
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, fontWeight: 700, marginBottom: 6 }}>
               <span style={{ background: 'rgba(255,255,255,0.8)', padding: '2px 8px', borderRadius: 6, color: '#374151' }}>Expected by today: {expectedDays} days</span>
               <span style={{ background: 'rgba(255,255,255,0.8)', padding: '2px 8px', borderRadius: 6, color: '#374151' }}>Logged: {completed} days</span>
+            </div>
+            <div style={{ fontSize: 11, color: '#6b7280', fontWeight: 600, marginBottom: 8 }}>
+              Based on your school-year dates and selected homeschool days.
             </div>
             <div style={{ position: 'relative', height: 24, background: '#fff', borderRadius: 8, overflow: 'hidden' }}>
               <div style={{ position: 'absolute', top: 0, height: '100%', width: 2, background: '#1a1a2e', zIndex: 10, left: `${expectedProgress}%` }} />
