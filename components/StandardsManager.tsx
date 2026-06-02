@@ -136,7 +136,7 @@ export default function StandardsManager({ organizationId, onClose }: StandardsM
 
   return (
     <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 p-2 sm:p-4 flex items-center justify-center">
-      <div className="bg-white rounded-3xl max-w-6xl w-full h-[calc(100dvh-1rem)] sm:h-[calc(100dvh-2rem)] min-h-0 overflow-hidden flex flex-col shadow-2xl border border-slate-200">
+      <div className="bg-white rounded-3xl max-w-6xl w-full h-[calc(100dvh-4.5rem)] sm:h-[calc(100dvh-5rem)] min-h-0 overflow-hidden flex flex-col shadow-2xl border border-slate-200">
         
         {/* Header */}
         <div className="p-4 sm:p-6 border-b border-slate-100 flex-shrink-0">
@@ -268,6 +268,12 @@ export default function StandardsManager({ organizationId, onClose }: StandardsM
           </button>
         </div>
       </div>
+      <button
+        onClick={onClose}
+        className="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 px-6 py-3 bg-slate-900 text-white rounded-2xl font-black hover:bg-black transition-all shadow-2xl active:scale-95 border border-white/20"
+      >
+        Close Manager
+      </button>
     </div>
   );
 }
