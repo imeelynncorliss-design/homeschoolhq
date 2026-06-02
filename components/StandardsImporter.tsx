@@ -1,11 +1,23 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Upload, Link as LinkIcon, FileText, X, ChevronDown, Loader2 } from 'lucide-react';
+import { FileText, X, ChevronDown, Loader2 } from 'lucide-react';
+
+type ImportResult = {
+  data: { count: number };
+  error?: string;
+};
+
+type ImportPayload = {
+  type: string;
+  url?: string;
+  file?: unknown;
+  mediaType?: string;
+};
 
 type StandardsImporterProps = {
   onClose: () => void;
-  onImport?: (data: any) => void;
+  onImport?: (data: { count: number }) => void;
 };
 
 export default function StandardsImporter({ onClose, onImport}: StandardsImporterProps) {
@@ -22,7 +34,7 @@ export default function StandardsImporter({ onClose, onImport}: StandardsImporte
     setSuccessCount(null);
 
     try {
-      let payload: any = { type: activeTab };
+      const payload: ImportPayload = { type: activeTab };
 
       if (activeTab === 'url') {
         payload.url = importUrl;
@@ -44,29 +56,29 @@ export default function StandardsImporter({ onClose, onImport}: StandardsImporte
         body: JSON.stringify(payload),
       });
 
-      const result = await response.json();
+      const result = await response.json() as ImportResult;
       if (!response.ok) throw new Error(result.error || 'AI could not read this content');
 
       if (onImport) onImport(result.data);
       setSuccessCount(result.data.count);
 
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'AI could not read this content');
     } finally {
       setIsProcessing(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4 pt-4 pb-24">
-    <div className="max-w-4xl w-full bg-white rounded-[2.5rem] shadow-2xl overflow-hidden relative border border-slate-100">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 sm:p-6">
+    <div className="max-w-4xl w-full max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-3rem)] bg-white rounded-[2.5rem] shadow-2xl overflow-y-auto relative border border-slate-100">
       
       {/* 1. LOADING OVERLAY */}
       {isProcessing && (
         <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm">
           <div className="bg-white p-10 rounded-[2.5rem] shadow-2xl flex flex-col items-center border border-indigo-50">
             <Loader2 className="w-14 h-14 text-indigo-600 animate-spin" />
-            <h3 className="mt-6 text-2xl font-black text-slate-800 tracking-tight">AI is Reading...</h3>
+            <h3 className="mt-6 text-2xl font-black text-slate-800 tracking-tight">Scout is Reading...</h3>
           </div>
         </div>
       )}
@@ -74,7 +86,7 @@ export default function StandardsImporter({ onClose, onImport}: StandardsImporte
       {/* 2. HEADER */}
       <div className="p-8 pb-4 flex justify-between items-start">
         <div className={isProcessing ? "opacity-20 transition-opacity" : ""}>
-          <h2 className="text-3xl font-black text-slate-800 tracking-tight">Add Standards</h2>
+          <h2 className="text-3xl font-black text-slate-800 tracking-tight">Import Learning Goals</h2>
           <p className="text-slate-500 mt-1 font-medium italic underline decoration-indigo-200">Powered by Scout</p>
         </div>
         <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
@@ -100,7 +112,7 @@ export default function StandardsImporter({ onClose, onImport}: StandardsImporte
         {successCount !== null && (
           <div className="p-5 bg-green-50 border-2 border-green-100 rounded-2xl text-center">
             <div className="text-2xl mb-1">🎉</div>
-            <div className="text-green-700 font-black text-lg">{successCount} standards imported!</div>
+            <div className="text-green-700 font-black text-lg">{successCount} learning goals imported!</div>
             <div className="text-green-600 text-sm font-medium mt-1">Head to Records → Learning Goals to see your library.</div>
             <button onClick={onClose} className="mt-4 px-6 py-2 bg-green-600 text-white rounded-xl font-bold text-sm hover:bg-green-700 transition-colors">Done</button>
           </div>
@@ -141,7 +153,7 @@ export default function StandardsImporter({ onClose, onImport}: StandardsImporte
                   <div className="flex gap-2 p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs font-medium leading-relaxed">
                     <span className="shrink-0">⚠️</span>
                     <span>
-                      <strong>Heads up:</strong> Most state education websites load their content with JavaScript, which our importer can't read. If this doesn't work, take a screenshot of the standards page and use the <strong>Screenshot / PDF</strong> tab instead — that's the more reliable option.
+                      <strong>Heads up:</strong> Some education websites load their content with JavaScript, which our importer cannot read. If this does not work, take a screenshot of the learning goals or standards page and use the <strong>Screenshot / PDF</strong> tab instead — that is the more reliable option.
                     </span>
                   </div>
                 </div>
@@ -172,7 +184,7 @@ export default function StandardsImporter({ onClose, onImport}: StandardsImporte
                     <p className="text-slate-400 text-sm mt-1">PNG, JPG, or WebP</p>
                   </div>
                   <p className="text-xs text-slate-400 font-medium text-center mt-3">
-                    💡 Go to your state's education standards page, take a screenshot, and upload it here. Scout will extract the standards automatically.
+                    💡 Go to your learning goals or standards page, take a screenshot, and upload it here. Scout will extract the goals automatically.
                   </p>
                 </div>
               )}
@@ -183,14 +195,14 @@ export default function StandardsImporter({ onClose, onImport}: StandardsImporte
               disabled={isProcessing || (activeTab === 'url' ? !importUrl : !selectedFile)}
               className="w-full py-6 bg-indigo-600 hover:bg-indigo-700 text-white rounded-[2.5rem] font-black text-xl shadow-xl shadow-indigo-100 transition-all active:scale-[0.98] disabled:opacity-30 disabled:grayscale"
             >
-              {isProcessing ? 'Scout is reading…' : 'Extract Standards with Scout'}
+              {isProcessing ? 'Scout is reading…' : 'Extract Goals with Scout'}
             </button>
           </>
         )}
       </div>
 
       <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-between items-center px-10 font-bold tracking-widest text-[10px] text-slate-400 uppercase">
-        Curriculum AI Assistant
+        Learning Goals Assistant
         <ChevronDown className="w-5 h-5 text-slate-300" />
       </div>
     </div>
