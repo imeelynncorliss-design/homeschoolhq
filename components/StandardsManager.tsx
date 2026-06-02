@@ -269,11 +269,8 @@ export default function StandardsManager({ organizationId, onClose }: StandardsM
         </div>
 
         {/* Footer */}
-        <div className="p-3 sm:p-4 border-t border-slate-100 flex justify-between items-center bg-slate-50 flex-shrink-0 rounded-b-3xl">
+        <div className="p-3 sm:p-4 border-t border-slate-100 flex justify-end items-center bg-slate-50 flex-shrink-0 rounded-b-3xl">
           <p className="text-sm text-slate-500 font-bold italic">Showing {filteredStandards.length} learning goals</p>
-          <button onClick={onClose} className="px-6 sm:px-10 py-3 sm:py-4 bg-slate-900 text-white rounded-2xl font-black hover:bg-black transition-all shadow-lg active:scale-95">
-            Close Manager
-          </button>
         </div>
       </div>
     </div>
