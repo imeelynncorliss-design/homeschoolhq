@@ -65,9 +65,9 @@ export default function StandardsManager({ organizationId, onClose }: StandardsM
       const loadedData = data || [];
       setAllStandards(loadedData);
       setFilteredStandards(loadedData); // Initialize filtered list too
-    } catch (err: any) {
-      console.error('Error loading standards:', err);
-      setError('Failed to load standards');
+    } catch (err: unknown) {
+      console.error('Error loading learning goals:', err);
+      setError('Failed to load learning goals');
     } finally {
       setLoading(false);
     }
@@ -106,11 +106,11 @@ export default function StandardsManager({ organizationId, onClose }: StandardsM
   };
 
   const handleDelete = async (standardId: string) => {
-    if (!confirm('Are you sure you want to delete this standard?')) return;
+    if (!confirm('Are you sure you want to delete this learning goal?')) return;
     
     const standardToDelete = allStandards.find(s => s.id === standardId);
     if (standardToDelete?.is_official) {  // ✅ Changed from is_verified
-      alert("Official HHQ standards cannot be deleted.");
+      alert("Official HHQ learning goals cannot be deleted.");
       return;
     }
 
@@ -127,19 +127,19 @@ export default function StandardsManager({ organizationId, onClose }: StandardsM
       
       // Update the master list so the UI refreshes
       setAllStandards(prev => prev.filter(s => s.id !== standardId));
-    } catch (err: any) {
-      setError(err.message || 'Error deleting standard');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Error deleting learning goal');
     } finally {
       setDeleting(null);
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center z-50 px-4 pt-4 pb-24">
-      <div className="bg-white rounded-3xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col shadow-2xl border border-slate-200">
+    <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 sm:p-6">
+      <div className="bg-white rounded-3xl max-w-6xl w-full max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-3rem)] overflow-hidden flex flex-col shadow-2xl border border-slate-200">
         
         {/* Header */}
-        <div className="p-8 border-b border-slate-100">
+        <div className="p-5 sm:p-8 border-b border-slate-100 flex-shrink-0">
           <div className="flex justify-between items-start mb-6">
             <div>
               <h2 className="text-3xl font-black text-slate-900 tracking-tight">Manage Learning Goals</h2>
@@ -161,7 +161,7 @@ export default function StandardsManager({ organizationId, onClose }: StandardsM
         </div>
 
         {/* Filters */}
-        <div className="px-8 py-6 bg-slate-50 border-b border-slate-200">
+        <div className="px-5 sm:px-8 py-4 sm:py-6 bg-slate-50 border-b border-slate-200 flex-shrink-0">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <input
               type="text"
@@ -182,13 +182,13 @@ export default function StandardsManager({ organizationId, onClose }: StandardsM
         </div>
 
         {/* List Content */}
-        <div className="flex-1 overflow-y-auto p-8 bg-white min-h-[400px]">
+        <div className="flex-1 overflow-y-auto p-5 sm:p-8 bg-white min-h-0">
           {error && <div className="bg-red-50 border-2 border-red-100 rounded-xl p-4 mb-6 text-red-700 font-bold text-sm">{error}</div>}
           
           {loading ? (
             <div className="flex flex-col items-center justify-center py-20 gap-4">
               <div className="animate-spin h-10 w-10 border-4 border-indigo-600 border-t-transparent rounded-full"></div>
-              <p className="text-slate-500 font-black uppercase tracking-widest text-xs">Loading Standards...</p>
+              <p className="text-slate-500 font-black uppercase tracking-widest text-xs">Loading learning goals...</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -261,8 +261,8 @@ export default function StandardsManager({ organizationId, onClose }: StandardsM
         </div>
 
         {/* Footer */}
-        <div className="p-8 border-t border-slate-100 flex justify-between items-center bg-slate-50">
-          <p className="text-sm text-slate-500 font-bold italic">Showing {filteredStandards.length} standards</p>
+        <div className="p-5 sm:p-8 border-t border-slate-100 flex justify-between items-center bg-slate-50 flex-shrink-0">
+          <p className="text-sm text-slate-500 font-bold italic">Showing {filteredStandards.length} learning goals</p>
           <button onClick={onClose} className="px-10 py-4 bg-slate-900 text-white rounded-2xl font-black hover:bg-black transition-all shadow-lg active:scale-95">
             Close Manager
           </button>
