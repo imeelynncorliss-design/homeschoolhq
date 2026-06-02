@@ -204,8 +204,8 @@ export default function ProgressDashboard({ userId, organizationId }: ProgressDa
     percentComplete < expectedProgress - 10 ? 'behind' : 'on-track'
 
   const TABS: { id: Tab; icon: string; label: string }[] = [
-    { id: 'overview',   icon: '📋', label: 'Overview'   },
-    { id: 'insights',   icon: '📊', label: 'Insights'   },
+    { id: 'overview',   icon: '📋', label: 'Year Pace'   },
+    { id: 'insights',   icon: '📊', label: 'Activity Mix'   },
     { id: 'goals',      icon: '🎯', label: 'Goals'      },
   ]
 
@@ -230,8 +230,8 @@ export default function ProgressDashboard({ userId, organizationId }: ProgressDa
 
       {/* Header */}
       <div>
-        <h2 style={{ fontSize: 20, fontWeight: 900, color: '#1a1a2e', margin: '0 0 4px', fontFamily: "'Nunito', sans-serif" }}>Progress Tracking</h2>
-        <p style={{ fontSize: 13, color: '#6b7280', fontWeight: 600, margin: 0 }}>Monitor your annual learning goals and stay on track</p>
+        <h2 style={{ fontSize: 20, fontWeight: 900, color: '#1a1a2e', margin: '0 0 4px', fontFamily: "'Nunito', sans-serif" }}>School Year Progress</h2>
+        <p style={{ fontSize: 13, color: '#6b7280', fontWeight: 600, margin: 0 }}>Track your school-year pace, attendance, hours, and lesson completion.</p>
       </div>
 
       {/* Kid filter pills — Overview + Insights */}
@@ -289,7 +289,7 @@ export default function ProgressDashboard({ userId, organizationId }: ProgressDa
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
               <div>
                 <div style={{ fontSize: 26, fontWeight: 900, fontFamily: "'Nunito', sans-serif" }}>{completed} / {goal} Days</div>
-                <div style={{ fontSize: 13, opacity: 0.85, marginTop: 2 }}>Annual Compliance Progress</div>
+                <div style={{ fontSize: 13, opacity: 0.85, marginTop: 2 }}>School Year Pace</div>
               </div>
               <div style={{ textAlign: 'right' }}>
                 <div style={{ fontSize: 40, fontWeight: 900, fontFamily: "'Nunito', sans-serif", lineHeight: 1 }}>{percentComplete}%</div>
@@ -351,7 +351,7 @@ export default function ProgressDashboard({ userId, organizationId }: ProgressDa
       {activeTab === 'insights' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div style={{ background: '#f5f3ff', border: '1.5px solid rgba(124,58,237,0.12)', borderRadius: 14, padding: '20px' }}>
-            <div style={{ fontSize: 15, fontWeight: 900, color: '#1a1a2e', marginBottom: 16, fontFamily: "'Nunito', sans-serif" }}>📊 Subject Breakdown</div>
+            <div style={{ fontSize: 15, fontWeight: 900, color: '#1a1a2e', marginBottom: 16, fontFamily: "'Nunito', sans-serif" }}>📊 Lesson Activity by Subject</div>
             {getSubjectBreakdown().length === 0 ? (
               <p style={{ fontSize: 13, color: '#6b7280', fontWeight: 600, margin: 0 }}>No lesson data yet. Start adding lessons to see subject insights.</p>
             ) : (

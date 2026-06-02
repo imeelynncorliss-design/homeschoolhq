@@ -32,9 +32,9 @@ function ReportsContent() {
       comingSoon: false,
     },
     {
-      icon: '📊',
-      label: 'Progress Reports',
-      desc: 'Learning analytics & summaries',
+      icon: '📈',
+      label: 'School Year Progress',
+      desc: 'Pace, attendance, hours, and year-to-date progress',
       href: '/progress',
       comingSoon: false,
     },

@@ -13,7 +13,7 @@ import { useAppHeader } from '@/components/layout/AppHeader'
 
 function ProgressContent() {
   const router = useRouter()
-  useAppHeader({ title: '📊 Progress Reports', backHref: '/reports' })
+  useAppHeader({ title: '📈 School Year Progress', backHref: '/reports' })
 
   const [user, setUser]                     = useState<any>(null)
   const [organizationId, setOrganizationId] = useState<string>('')
