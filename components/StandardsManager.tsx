@@ -145,7 +145,15 @@ export default function StandardsManager({ organizationId, onClose }: StandardsM
               <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">Manage Learning Goals</h2>
               <p className="text-slate-500 font-bold mt-1">Review optional standards and custom goals for coverage notes.</p>
             </div>
-            <button onClick={onClose} className="text-slate-400 hover:text-slate-900 text-3xl font-bold transition-colors">×</button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={onClose}
+                className="px-5 py-3 bg-slate-900 text-white rounded-2xl font-black hover:bg-black transition-all shadow-lg active:scale-95"
+              >
+                Close Manager
+              </button>
+              <button onClick={onClose} className="text-slate-400 hover:text-slate-900 text-3xl font-bold transition-colors" aria-label="Close manager">×</button>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3 sm:gap-6">
@@ -268,12 +276,6 @@ export default function StandardsManager({ organizationId, onClose }: StandardsM
           </button>
         </div>
       </div>
-      <button
-        onClick={onClose}
-        className="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 px-6 py-3 bg-slate-900 text-white rounded-2xl font-black hover:bg-black transition-all shadow-2xl active:scale-95 border border-white/20"
-      >
-        Close Manager
-      </button>
     </div>
   );
 }
