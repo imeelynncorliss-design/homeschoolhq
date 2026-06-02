@@ -1479,7 +1479,18 @@ ${overviewHtml}${objectivesHtml}${materialsHtml}${activitiesHtml}${assessmentHtm
               </>
             ) : (
               <>
-                <button style={vw.btnSecondary} onClick={onClose}>Done</button>
+                <button
+                  style={{
+                    ...vw.btnSecondary,
+                    opacity: activeTab === 'checkin' && !checkInSaved ? 0.45 : 1,
+                    cursor: activeTab === 'checkin' && !checkInSaved ? 'not-allowed' : 'pointer',
+                  }}
+                  disabled={activeTab === 'checkin' && !checkInSaved}
+                  onClick={onClose}
+                  title={activeTab === 'checkin' && !checkInSaved ? 'Save the check-in first' : undefined}
+                >
+                  {activeTab === 'checkin' ? 'Done' : 'Close'}
+                </button>
                 <button style={vw.btnPrimary} onClick={() => setEditing(true)}>✏️ Edit</button>
               </>
             )}

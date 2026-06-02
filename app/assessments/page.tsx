@@ -95,9 +95,19 @@ type DailyLogEvidence = {
   created_at: string | null
 }
 
+type LessonCheckInEvidence = {
+  id: string
+  kid_id: string
+  lesson_id: string
+  proficiency: 'needs_support' | 'progressing' | 'got_it'
+  notes: string | null
+  checked_in_at: string
+  lessons: { title: string; subject: string } | { title: string; subject: string }[] | null
+}
+
 type EvidenceItem = {
   id: string
-  source: 'assessment' | 'daily_log'
+  source: 'assessment' | 'daily_log' | 'lesson_checkin'
   created_at: string
   evidence_date: string
   kid_id: string
@@ -126,6 +136,7 @@ function AssessmentsContent() {
   const [currentView, setCurrentView] = useState<'results' | 'standards'>('results')
   const [assessments, setAssessments] = useState<AssessmentWithDetails[]>([])
   const [dailyLogs, setDailyLogs] = useState<DailyLogEvidence[]>([])
+  const [lessonCheckIns, setLessonCheckIns] = useState<LessonCheckInEvidence[]>([])
   const [kids, setKids] = useState<KidOption[]>([])
   const [loading, setLoading] = useState(true)
   const [managingStandards, setManagingStandards] = useState<AssessmentWithDetails | null>(null)
@@ -173,6 +184,7 @@ function AssessmentsContent() {
     if (organizationId) {
       loadAssessments()
       loadDailyLogs()
+      loadLessonCheckIns()
     }
   }, [organizationId])
 
@@ -255,6 +267,22 @@ function AssessmentsContent() {
     }
   }
 
+  const loadLessonCheckIns = async () => {
+    if (!organizationId) return
+    try {
+      const { data, error } = await supabase
+        .from('lesson_checkins')
+        .select('id, kid_id, lesson_id, proficiency, notes, checked_in_at, lessons(title, subject)')
+        .eq('organization_id', organizationId)
+        .order('checked_in_at', { ascending: false })
+        .limit(100)
+      if (error) throw error
+      setLessonCheckIns((data || []) as LessonCheckInEvidence[])
+    } catch (error) {
+      console.error('Error loading lesson check-ins:', error)
+    }
+  }
+
   const loadStandards = async () => {
     if (!organizationId) return
     setStandardsLoading(true)
@@ -285,6 +313,13 @@ function AssessmentsContent() {
     const { error } = await supabase.from('daily_subject_logs').delete().eq('id', id)
     if (error) alert('Error deleting progress evidence')
     else loadDailyLogs()
+  }
+
+  const handleDeleteLessonCheckIn = async (id: string) => {
+    if (!confirm('Delete this lesson check-in from progress evidence?')) return
+    const { error } = await supabase.from('lesson_checkins').delete().eq('id', id)
+    if (error) alert('Error deleting lesson check-in')
+    else loadLessonCheckIns()
   }
 
   const handleLogEvidence = async (e: React.FormEvent) => {
@@ -365,8 +400,29 @@ function AssessmentsContent() {
       hours: log.hours,
     }))
 
-    return [...assessmentItems, ...logItems].sort((a, b) => new Date(b.evidence_date).getTime() - new Date(a.evidence_date).getTime())
-  }, [assessments, dailyLogs, kidNameById])
+    const checkInItems: EvidenceItem[] = lessonCheckIns.map(checkIn => {
+      const lesson = Array.isArray(checkIn.lessons) ? checkIn.lessons[0] : checkIn.lessons
+      const proficiencyLabel = checkIn.proficiency === 'got_it'
+        ? 'Got it'
+        : checkIn.proficiency === 'progressing'
+          ? 'Progressing'
+          : 'Needs support'
+      return {
+        id: `lesson-checkin-${checkIn.id}`,
+        source: 'lesson_checkin',
+        created_at: checkIn.checked_in_at,
+        evidence_date: checkIn.checked_in_at,
+        kid_id: checkIn.kid_id,
+        kid_name: kidNameById.get(checkIn.kid_id) || 'Unknown Student',
+        subject: lesson?.subject || 'Lesson check-in',
+        title: lesson?.title ? `${lesson.title} check-in` : 'Lesson check-in',
+        type: `Check-In: ${proficiencyLabel}`,
+        note: checkIn.notes,
+      }
+    })
+
+    return [...assessmentItems, ...logItems, ...checkInItems].sort((a, b) => new Date(b.evidence_date).getTime() - new Date(a.evidence_date).getTime())
+  }, [assessments, dailyLogs, lessonCheckIns, kidNameById])
 
   const availableKids = useMemo(() => [...new Set(evidenceItems.map(a => a.kid_name))].sort(), [evidenceItems])
   const availableSubjectsForAssessments = useMemo(() => [...new Set(evidenceItems.map(a => a.subject))].filter(Boolean).sort(), [evidenceItems])
@@ -590,7 +646,14 @@ function AssessmentsContent() {
                                         <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">
                                           {item.assessment?.result ? 'Optional Score' : item.source === 'daily_log' ? 'Progress Note' : 'Pending'}
                                         </p>
-                                        <button onClick={() => item.assessment ? handleDelete(item.assessment.id) : handleDeleteDailyLog(item.id.replace('daily-log-', ''))} className="text-rose-500 font-bold text-xs hover:bg-rose-50 px-3 py-1 rounded-lg mt-2">
+                                        <button
+                                          onClick={() => {
+                                            if (item.assessment) handleDelete(item.assessment.id)
+                                            else if (item.source === 'lesson_checkin') handleDeleteLessonCheckIn(item.id.replace('lesson-checkin-', ''))
+                                            else handleDeleteDailyLog(item.id.replace('daily-log-', ''))
+                                          }}
+                                          className="text-rose-500 font-bold text-xs hover:bg-rose-50 px-3 py-1 rounded-lg mt-2"
+                                        >
                                           Delete
                                         </button>
                                       </div>
