@@ -41,9 +41,19 @@ ALTER TABLE public.standard_templates         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.available_templates        ENABLE ROW LEVEL SECURITY;
 
 -- Assessments
-ALTER TABLE public.assessments                ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.assessment_results         ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.assessment_standards       ENABLE ROW LEVEL SECURITY;
+-- Some environments were missing these tables before the create-assessment-tables migration was added.
+-- Guard these statements so fresh migration runs do not fail before the tables are created.
+DO $$ BEGIN
+  IF to_regclass('public.assessments') IS NOT NULL THEN
+    ALTER TABLE public.assessments ENABLE ROW LEVEL SECURITY;
+  END IF;
+  IF to_regclass('public.assessment_results') IS NOT NULL THEN
+    ALTER TABLE public.assessment_results ENABLE ROW LEVEL SECURITY;
+  END IF;
+  IF to_regclass('public.assessment_standards') IS NOT NULL THEN
+    ALTER TABLE public.assessment_standards ENABLE ROW LEVEL SECURITY;
+  END IF;
+END $$;
 
 -- Collaboration + calendar
 ALTER TABLE public.collaborator_invites       ENABLE ROW LEVEL SECURITY;
