@@ -525,9 +525,15 @@ function AssessmentsContent() {
                   </div>
                   <div>
                     <h3 className="font-black text-purple-900 mb-1">Track Learning Progress</h3>
-                    <p className="text-purple-700 text-sm">
+                    <p className="text-purple-700 text-sm mb-3">
                       Save progress notes, optional scores, and learning-goal links when you need proof for records, portfolios, or reviews.
                     </p>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-2 text-xs text-purple-800">
+                      <div className="bg-white/70 rounded-xl px-3 py-2"><strong>Lessons:</strong> check-ins + notes</div>
+                      <div className="bg-white/70 rounded-xl px-3 py-2"><strong>Projects:</strong> review + optional score</div>
+                      <div className="bg-white/70 rounded-xl px-3 py-2"><strong>Assessments:</strong> optional score</div>
+                      <div className="bg-white/70 rounded-xl px-3 py-2"><strong>Courses:</strong> final grade</div>
+                    </div>
                   </div>
                 </div>
               </div>

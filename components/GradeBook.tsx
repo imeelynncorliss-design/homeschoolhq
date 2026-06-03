@@ -165,7 +165,17 @@ export default function GradeBook({ kidId, userId }: GradeBookProps) {
       <div className="flex justify-between items-end px-2">
         <div>
           <h2 className="text-3xl font-black text-slate-900 tracking-tight">Grade Book</h2>
-          <p className="text-slate-500 font-medium">Finalize course grades based on performance</p>
+          <p className="text-slate-500 font-medium">Set final course grades for transcripts. Assessment averages can help, but you stay in control.</p>
+        </div>
+      </div>
+
+      <div className="bg-indigo-50 border-2 border-indigo-100 rounded-3xl p-5">
+        <h3 className="font-black text-indigo-900 mb-2">How grading works</h3>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-sm">
+          <div><strong className="text-indigo-900">Lessons:</strong> check-ins and notes, not required grades.</div>
+          <div><strong className="text-indigo-900">Projects:</strong> parent review, with an optional score.</div>
+          <div><strong className="text-indigo-900">Assessments:</strong> optional score or manual review.</div>
+          <div><strong className="text-indigo-900">Courses:</strong> final transcript grade.</div>
         </div>
       </div>
 
@@ -187,7 +197,7 @@ export default function GradeBook({ kidId, userId }: GradeBookProps) {
           <thead className="bg-slate-50 border-b-2 border-slate-100">
             <tr>
               <th className="px-6 py-4 text-[10px] font-black text-slate-600 uppercase tracking-widest">Course</th>
-              <th className="px-6 py-4 text-[10px] font-black text-slate-600 uppercase tracking-widest text-center">Avg</th>
+              <th className="px-6 py-4 text-[10px] font-black text-slate-600 uppercase tracking-widest text-center">Assessment Avg</th>
               <th className="px-6 py-4 text-[10px] font-black text-slate-600 uppercase tracking-widest text-center">Status</th>
               <th className="px-6 py-4 text-[10px] font-black text-slate-600 uppercase tracking-widest">Final Grade</th>
             </tr>
@@ -260,7 +270,7 @@ export default function GradeBook({ kidId, userId }: GradeBookProps) {
                 <div key={item.id} className="p-4 bg-slate-50 rounded-2xl border-2 border-transparent hover:border-indigo-100 flex justify-between items-center transition-all group">
                 <div className="flex flex-col">
                   <div className="font-bold text-slate-700 text-sm">{item.assessments.lessons.title}</div>
-                  <div className="text-[10px] font-black text-amber-600 uppercase">Auto-Score: {item.auto_score}%</div>
+                  <div className="text-[10px] font-black text-amber-600 uppercase">Current Score: {item.auto_score}%</div>
                 </div>
                 
                 <button 
@@ -274,11 +284,11 @@ export default function GradeBook({ kidId, userId }: GradeBookProps) {
                   }}
                   className="opacity-0 group-hover:opacity-100 bg-indigo-600 text-white text-[10px] font-black px-4 py-2 rounded-xl transition-all shadow-lg shadow-indigo-200 uppercase tracking-widest"
                 >
-                  Grade Now
+                  Review Now
                 </button>
               </div>
               ))}
-              <p className="text-[10px] text-center text-slate-400 font-bold uppercase py-2">Head to History to finalize these grades</p>
+              <p className="text-[10px] text-center text-slate-400 font-bold uppercase py-2">Review these items before setting final course grades</p>
             </div>
           </div>
         </div>
