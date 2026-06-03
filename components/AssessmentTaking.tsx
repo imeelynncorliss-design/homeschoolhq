@@ -190,7 +190,10 @@ export default function AssessmentTaking({
     const showPendingState = isPendingReview || (!isViewOnly && isAllShortAnswer);
 
     return (
-      <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[9999] flex items-start justify-center px-4 pt-6 pb-24 overflow-y-auto">
+      <div
+        className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[9999] flex items-start justify-center px-4 pt-6 pb-24 overflow-y-auto"
+        onClick={(event) => event.stopPropagation()}
+      >
         <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[calc(100vh-7rem)] overflow-hidden flex flex-col border border-slate-200 text-slate-900">
           <Header title="Parent Assessment Record" subTitle={`${childName} • ${lessonTitle}`} />
           
@@ -495,7 +498,10 @@ export default function AssessmentTaking({
   }
 
   return (
-    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[9999] flex items-start justify-center px-4 pt-6 pb-24 overflow-y-auto">
+    <div
+      className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[9999] flex items-start justify-center px-4 pt-6 pb-24 overflow-y-auto"
+      onClick={(event) => event.stopPropagation()}
+    >
       <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[calc(100vh-7rem)] overflow-hidden flex flex-col border border-slate-200 text-slate-900">
         <Header title={assessmentData.title} subTitle={`${childName} • ${lessonTitle}`} />
         <div className="p-8 overflow-y-auto space-y-8 bg-slate-50/30">
@@ -604,6 +610,8 @@ export default function AssessmentTaking({
                     rows={4}
                     placeholder="Parent-entered response, oral answer notes, or observation..."
                     value={answers[q.id] || ''}
+                    onClick={(event) => event.stopPropagation()}
+                    onFocus={(event) => event.stopPropagation()}
                     onChange={(e) => handleAnswerChange(q.id, e.target.value)}
                   />
                 ) : (

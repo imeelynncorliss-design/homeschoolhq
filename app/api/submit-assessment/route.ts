@@ -17,16 +17,38 @@ export async function POST(request: Request) {
     console.log('Needs Manual Grading:', needsManualGrading);
     console.log('Answers count:', answers?.length);
 
-    // Insert the assessment result
+    const { data: assessment, error: assessmentError } = await supabase
+      .from('assessments')
+      .select('id, organization_id, kid_id')
+      .eq('id', assessmentId)
+      .single();
+
+    if (assessmentError || !assessment) {
+      console.error('Error loading assessment before saving result:', assessmentError);
+      return NextResponse.json({
+        error: 'Assessment record was not found',
+        details: assessmentError?.message || 'No assessment returned for this id'
+      }, { status: 404 });
+    }
+
+    const submittedAt = new Date().toISOString();
+
+    // Insert or update the parent assessment result
     const { data: result, error: insertError } = await supabase
       .from('assessment_results')
-      .insert({
+      .upsert({
         assessment_id: assessmentId,
+        organization_id: assessment.organization_id,
+        kid_id: assessment.kid_id,
         answers: answers,
-        auto_score: autoScore, // Can be null for all short-answer assessments
+        auto_score: autoScore, // Can be null for short-answer/project assessments
         needs_manual_grading: needsManualGrading,
-        submitted_at: new Date().toISOString()
-      })
+        status: needsManualGrading ? 'needs_review' : 'completed',
+        completed: true,
+        completed_at: submittedAt,
+        submitted_at: submittedAt,
+        updated_at: submittedAt
+      }, { onConflict: 'assessment_id' })
       .select()
       .single();
 
@@ -37,6 +59,17 @@ export async function POST(request: Request) {
         details: insertError.message 
       }, { status: 500 });
     }
+
+    await supabase
+      .from('assessments')
+      .update({
+        completed: true,
+        completed_at: submittedAt,
+        status: needsManualGrading ? 'needs_review' : 'completed',
+        score: autoScore,
+        updated_at: submittedAt
+      })
+      .eq('id', assessmentId);
 
     console.log('Assessment result saved successfully:', result);
 
