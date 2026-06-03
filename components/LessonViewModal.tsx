@@ -847,7 +847,8 @@ ${overviewHtml}${objectivesHtml}${materialsHtml}${activitiesHtml}${assessmentHtm
                 style={{ ...vw.tab, ...(activeTab === tab.key ? vw.tabActive : {}) }}
                 onClick={() => setActiveTab(tab.key)}
               >
-                {tab.emoji} {tab.label}
+                <span style={vw.tabIcon}>{tab.emoji}</span>
+                <span style={vw.tabLabel}>{tab.label}</span>
               </button>
             ))}
           </div>
@@ -1642,11 +1643,14 @@ const vw: Record<string, CSSProperties> = {
     background: '#fafafa', flexShrink: 0,
   },
   tab: {
-    flex: 1, padding: '10px 8px', border: 'none', background: 'none',
+    flex: 1, minHeight: 58, padding: '8px 4px', border: 'none', background: 'none',
     cursor: 'pointer', fontSize: 12, fontWeight: 600, color: '#9ca3af',
     fontFamily: 'system-ui, sans-serif', borderBottom: '2px solid transparent',
-    transition: 'all 0.15s',
+    transition: 'all 0.15s', display: 'flex', flexDirection: 'column',
+    alignItems: 'center', justifyContent: 'center', gap: 3, lineHeight: 1.15,
   },
+  tabIcon: { fontSize: 18, lineHeight: 1, display: 'block' },
+  tabLabel: { display: 'block', whiteSpace: 'nowrap', textAlign: 'center' },
   tabActive: { color: '#4f46e5', borderBottom: '2px solid #4f46e5', background: '#fff' },
   body: { flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' },
   row: {
