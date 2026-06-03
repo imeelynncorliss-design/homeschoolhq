@@ -534,8 +534,8 @@ function HighSchoolTab() {
   const [expanded, setExpanded] = useState<string | null>('credits')
   const startSteps = [
     { label: '1. Plan credits', helper: 'Review typical high school credits and hours.', target: 'credits' },
-    { label: '2. Set up courses', helper: 'Create courses before building transcripts.', route: '/courses' },
-    { label: '3. Build transcript', helper: 'Enter grades, GPA settings, and generate records.', route: '/transcript' },
+    { label: '2. Set up courses', helper: 'Create courses before building transcripts.', route: '/courses?from=resources-highschool' },
+    { label: '3. Build transcript', helper: 'Enter grades, GPA settings, and generate records.', route: '/transcript?from=resources-highschool' },
   ]
   return (
     <div>
@@ -555,11 +555,6 @@ function HighSchoolTab() {
               <div style={{ fontSize: 12, fontWeight: 600, color: '#6b7280', lineHeight: 1.5 }}>{step.helper}</div>
             </button>
           ))}
-        </div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
-          <button onClick={() => router.push('/courses')} style={{ background: G.purple, color: '#fff', border: 'none', borderRadius: 10, padding: '9px 14px', fontSize: 12, fontWeight: 800, cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}>Manage Courses →</button>
-          <button onClick={() => router.push('/transcript')} style={{ background: '#fff', color: '#7c3aed', border: '1.5px solid #ddd6fe', borderRadius: 10, padding: '9px 14px', fontSize: 12, fontWeight: 800, cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}>Build Transcript →</button>
-          <button onClick={() => setExpanded('testing')} style={{ background: '#fff', color: '#7c3aed', border: '1.5px solid #ddd6fe', borderRadius: 10, padding: '9px 14px', fontSize: 12, fontWeight: 800, cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}>Testing timeline →</button>
         </div>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>

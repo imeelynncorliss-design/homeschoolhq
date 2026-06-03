@@ -649,10 +649,11 @@ function CopilotPanel({ onClose, initialInput, organizationId, userId, userName,
 // ─── Back-button label map ────────────────────────────────────────────────────
 
 const BACK_LABELS: Record<string, string> = {
-  '/reports':   'Records',
+  '/reports': 'Records',
   '/resources': 'Resources',
-  '/tools':     'Tools',
-  '/profile':   'Profile',
+  '/resources?tab=highschool': 'High School',
+  '/tools': 'Tools',
+  '/profile': 'Profile',
 }
 
 // ─── Main Header ──────────────────────────────────────────────────────────────

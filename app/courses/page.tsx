@@ -11,7 +11,8 @@ import { pageShell, colors } from '@/src/lib/designTokens'
 
 function CoursesContent() {
   const router = useRouter()
-  useAppHeader({ title: '📚 Courses', backHref: '/reports' })
+  const [backHref, setBackHref] = useState('/reports')
+  useAppHeader({ title: '📚 Courses', backHref })
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [kids, setKids] = useState<any[]>([])
@@ -42,6 +43,11 @@ function CoursesContent() {
     await loadKids(user.id)
     setLoading(false)
   }
+
+  useEffect(() => {
+    const from = new URLSearchParams(window.location.search).get('from')
+    if (from === 'resources-highschool') setBackHref('/resources?tab=highschool')
+  }, [])
 
   useEffect(() => { checkUser() }, [])
 
