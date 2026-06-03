@@ -1,80 +1,73 @@
--- Enable RLS on all tables that have policies defined but RLS not yet enabled.
--- Tables already enabled (skipped here):
---   user_agreements, portfolio_uploads, ai_usage, state_compliance,
---   school_day_logs, co_teacher_tasks, daily_subject_logs
+-- Enable RLS only on tables that already have policies.
 --
--- Run this migration to resolve the 42 "Policy Exists RLS Disabled" errors
--- in the Supabase Security Advisor.
+-- Supabase Security Advisor warning addressed:
+--   "Policy Exists RLS Disabled"
 --
--- All existing app-layer queries are already scoped by user_id / organization_id
--- so enabling RLS here should not break any existing functionality, but test
--- against staging before applying to production.
+-- Important: enabling RLS on a table with no policies can make app data invisible
+-- to authenticated users. This migration intentionally avoids that failure mode by
+-- checking pg_policies first instead of blanket-enabling every public table.
+--
+-- Follow-up hardening should be staged table-by-table:
+--   1. add/verify SELECT/INSERT/UPDATE/DELETE policies for the table
+--   2. test owner + co-teacher flows in sandbox
+--   3. enable RLS for that table
 
--- Core user + org tables
-ALTER TABLE public.organizations              ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.user_organizations         ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.user_profiles              ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.user_subscriptions         ENABLE ROW LEVEL SECURITY;
-
--- Students
-ALTER TABLE public.kids                       ENABLE ROW LEVEL SECURITY;
-
--- Planning
-ALTER TABLE public.lessons                    ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.subjects                   ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.materials                  ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.planning_tasks             ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.planning_periods           ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.blocked_time_slots         ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.vacation_periods           ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.school_year_config         ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.school_year_settings       ENABLE ROW LEVEL SECURITY;
-
--- Compliance + attendance
-ALTER TABLE public.daily_attendance           ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.user_compliance_settings   ENABLE ROW LEVEL SECURITY;
-
--- Standards
-ALTER TABLE public.user_standards             ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.lesson_standards           ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.standard_templates         ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.available_templates        ENABLE ROW LEVEL SECURITY;
-
--- Assessments
--- Some environments were missing these tables before the create-assessment-tables migration was added.
--- Guard these statements so fresh migration runs do not fail before the tables are created.
-DO $$ BEGIN
-  IF to_regclass('public.assessments') IS NOT NULL THEN
-    ALTER TABLE public.assessments ENABLE ROW LEVEL SECURITY;
-  END IF;
-  IF to_regclass('public.assessment_results') IS NOT NULL THEN
-    ALTER TABLE public.assessment_results ENABLE ROW LEVEL SECURITY;
-  END IF;
-  IF to_regclass('public.assessment_standards') IS NOT NULL THEN
-    ALTER TABLE public.assessment_standards ENABLE ROW LEVEL SECURITY;
-  END IF;
+DO $$
+DECLARE
+  table_name text;
+  tables_to_check text[] := ARRAY[
+    'organizations',
+    'user_organizations',
+    'user_profiles',
+    'user_subscriptions',
+    'kids',
+    'lessons',
+    'subjects',
+    'materials',
+    'planning_tasks',
+    'planning_periods',
+    'blocked_time_slots',
+    'vacation_periods',
+    'school_year_config',
+    'school_year_settings',
+    'daily_attendance',
+    'user_compliance_settings',
+    'user_standards',
+    'lesson_standards',
+    'standard_templates',
+    'available_templates',
+    'assessments',
+    'assessment_results',
+    'assessment_standards',
+    'collaborator_invites',
+    'family_collaborators',
+    'calendar_connections',
+    'calendar_sync_log',
+    'calendar_conflict_resolutions',
+    'synced_work_events',
+    'class_enrollments',
+    'coop_members',
+    'community_profiles',
+    'connection_requests',
+    'field_trips',
+    'curriculum_imports',
+    'organization_settings',
+    'avatars'
+  ];
+BEGIN
+  FOREACH table_name IN ARRAY tables_to_check LOOP
+    IF to_regclass(format('public.%I', table_name)) IS NOT NULL
+      AND EXISTS (
+        SELECT 1
+        FROM pg_policies
+        WHERE schemaname = 'public'
+          AND tablename = table_name
+      )
+    THEN
+      EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', table_name);
+      RAISE NOTICE 'Enabled RLS on public.%', table_name;
+    ELSE
+      RAISE NOTICE 'Skipped public.% because table is missing or has no policies', table_name;
+    END IF;
+  END LOOP;
 END $$;
-
--- Collaboration + calendar
-ALTER TABLE public.collaborator_invites       ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.family_collaborators       ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.calendar_connections       ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.calendar_sync_log          ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.calendar_conflict_resolutions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.synced_work_events         ENABLE ROW LEVEL SECURITY;
-
--- Co-op
-ALTER TABLE public.class_enrollments          ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.coop_members               ENABLE ROW LEVEL SECURITY;
-
--- Community + profiles
-ALTER TABLE public.community_profiles         ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.connection_requests        ENABLE ROW LEVEL SECURITY;
-
--- Records
-ALTER TABLE public.field_trips                ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.curriculum_imports         ENABLE ROW LEVEL SECURITY;
-
--- Org settings + avatars
-ALTER TABLE public.organization_settings      ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.avatars                    ENABLE ROW LEVEL SECURITY;
