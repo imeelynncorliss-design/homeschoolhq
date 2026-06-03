@@ -215,7 +215,8 @@ export default function ProgressDashboard({ userId, organizationId }: ProgressDa
   const TABS: { id: Tab; icon: string; label: string }[] = [
     { id: 'overview',   icon: '📋', label: 'Year Pace'   },
     { id: 'insights',   icon: '📊', label: 'Activity Mix'   },
-    { id: 'goals',      icon: '🎯', label: 'Year Goals'      },
+    // Year Goals is intentionally hidden for MVP because it duplicated Year Pace.
+    // Keep the tab content below so we can bring it back if parents need a goals/setup view later.
   ]
 
   const KID_COLORS = ['#7c3aed', '#0d9488', '#ec4899', '#f59e0b', '#3b82f6']
