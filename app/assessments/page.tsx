@@ -9,6 +9,7 @@ import AssessmentStandardsManager from '@/components/AssessmentStandardsManager'
 import StandardsImporter from '@/components/StandardsImporter'
 import StandardsManager from '@/components/StandardsManager'
 import AssessmentsHelpModal from '@/components/AssessmentsHelpModal'
+import AssessmentTaking from '@/components/AssessmentTaking'
 import { Lightbulb, ChevronDown, ChevronRight } from 'lucide-react'
 import { getOrganizationId } from '@/src/lib/getOrganizationId'
 import { pageShell } from '@/src/lib/designTokens'
@@ -25,8 +26,8 @@ const supabase = new Proxy({} as ReturnType<typeof createClient>, {
 
 type AssessmentWithDetails = {
   id: string
-  lesson_id: string
-  kid_id: string
+  lesson_id: string | null
+  kid_id: string | null
   type: string
   difficulty: string
   created_at: string
@@ -37,30 +38,34 @@ type AssessmentWithDetails = {
   standards_count: number
   result?: {
     id: string
+    answers: unknown
     auto_score: number | null
     submitted_at: string
     needs_manual_grading: boolean
+    parent_comments?: string | null
   }
 }
 
 type AssessmentRow = {
   id: string
-  lesson_id: string
-  kid_id: string
+  lesson_id: string | null
+  kid_id: string | null
   type: string
   difficulty: string
   created_at: string
   content: unknown
-  lessons: { id: string; title: string; subject: string } | { id: string; title: string; subject: string }[] | null
-  kids: { id: string; displayname: string } | { id: string; displayname: string }[] | null
+  title?: string | null
+  subject?: string | null
 }
 
 type AssessmentResultRow = {
   id: string
   assessment_id: string
+  answers: unknown
   auto_score: number | null
   submitted_at: string
   needs_manual_grading: boolean
+  parent_comments?: string | null
 }
 
 type AssessmentStandardRow = {
@@ -140,6 +145,7 @@ function AssessmentsContent() {
   const [kids, setKids] = useState<KidOption[]>([])
   const [loading, setLoading] = useState(true)
   const [managingStandards, setManagingStandards] = useState<AssessmentWithDetails | null>(null)
+  const [reviewingAssessment, setReviewingAssessment] = useState<AssessmentWithDetails | null>(null)
   const [showImporter, setShowImporter] = useState(false)
   const [showStandardsManager, setShowStandardsManager] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
@@ -200,7 +206,7 @@ function AssessmentsContent() {
     try {
       const { data: assessmentsData, error: assessmentsError } = await supabase
         .from('assessments')
-        .select(`*, lessons!inner(id, title, subject), kids!inner(id, displayname)`)
+        .select('id, lesson_id, kid_id, type, difficulty, created_at, content, title, subject')
         .eq('organization_id', organizationId)
         .order('created_at', { ascending: false })
 
@@ -209,10 +215,32 @@ function AssessmentsContent() {
 
       const typedAssessments = assessmentsData as AssessmentRow[]
       const assessmentIds = typedAssessments.map(a => a.id)
-      const { data: results } = await supabase.from('assessment_results').select('*').in('assessment_id', assessmentIds)
-      const { data: standardsCounts } = await supabase.from('assessment_standards').select('assessment_id').in('assessment_id', assessmentIds)
-      const typedResults = (results || []) as AssessmentResultRow[]
-      const typedStandardsCounts = (standardsCounts || []) as AssessmentStandardRow[]
+      if (assessmentIds.length === 0) { setAssessments([]); return }
+
+      const lessonIds = [...new Set(typedAssessments.map(a => a.lesson_id).filter(Boolean))] as string[]
+      const kidIds = [...new Set(typedAssessments.map(a => a.kid_id).filter(Boolean))] as string[]
+
+      const [resultsResponse, standardsResponse, lessonsResponse, kidsResponse] = await Promise.all([
+        supabase.from('assessment_results').select('id, assessment_id, answers, auto_score, submitted_at, needs_manual_grading, parent_comments').in('assessment_id', assessmentIds),
+        supabase.from('assessment_standards').select('assessment_id').in('assessment_id', assessmentIds),
+        lessonIds.length > 0
+          ? supabase.from('lessons').select('id, title, subject').in('id', lessonIds)
+          : Promise.resolve({ data: [], error: null }),
+        kidIds.length > 0
+          ? supabase.from('kids').select('id, displayname').in('id', kidIds)
+          : Promise.resolve({ data: [], error: null }),
+      ])
+
+      if (resultsResponse.error) throw resultsResponse.error
+      if (standardsResponse.error) throw standardsResponse.error
+      // Lesson/kid details are helpful context, but assessment records should still show if RLS blocks a joined lookup.
+      if (lessonsResponse.error) console.warn('Could not load lesson details for assessment evidence:', lessonsResponse.error)
+      if (kidsResponse.error) console.warn('Could not load kid details for assessment evidence:', kidsResponse.error)
+
+      const typedResults = (resultsResponse.data || []) as AssessmentResultRow[]
+      const typedStandardsCounts = (standardsResponse.data || []) as AssessmentStandardRow[]
+      const lessonMap = new Map((lessonsResponse.data || []).map((lesson: any) => [lesson.id, lesson]))
+      const kidMap = new Map((kidsResponse.data || []).map((kid: any) => [kid.id, kid]))
 
       const standardsMap = new Map<string, number>()
       typedStandardsCounts.forEach((s) => {
@@ -220,8 +248,8 @@ function AssessmentsContent() {
       })
 
       const combined = typedAssessments.map((assessment) => {
-        const lessonData = Array.isArray(assessment.lessons) ? assessment.lessons[0] : assessment.lessons
-        const kidData = Array.isArray(assessment.kids) ? assessment.kids[0] : assessment.kids
+        const lessonData = assessment.lesson_id ? lessonMap.get(assessment.lesson_id) : null
+        const kidData = assessment.kid_id ? kidMap.get(assessment.kid_id) : null
         const result = typedResults.find((r) => r.assessment_id === assessment.id)
         return {
           id: assessment.id,
@@ -231,15 +259,17 @@ function AssessmentsContent() {
           difficulty: assessment.difficulty,
           created_at: assessment.created_at,
           content: assessment.content,
-          lesson_title: lessonData?.title || 'Unknown Lesson',
-          lesson_subject: lessonData?.subject || 'Unknown Subject',
+          lesson_title: lessonData?.title || assessment.title || 'Assessment record',
+          lesson_subject: lessonData?.subject || assessment.subject || 'Assessment',
           kid_name: kidData?.displayname || 'Unknown Student',
           standards_count: standardsMap.get(assessment.id) || 0,
           result: result ? {
             id: result.id,
+            answers: result.answers,
             auto_score: result.auto_score,
             submitted_at: result.submitted_at,
-            needs_manual_grading: result.needs_manual_grading
+            needs_manual_grading: result.needs_manual_grading,
+            parent_comments: result.parent_comments
           } : undefined
         }
       })
@@ -639,7 +669,12 @@ function AssessmentsContent() {
                                         <h4 className="text-lg font-black text-slate-900">{item.title}</h4>
                                         <p className="text-slate-500 font-medium text-sm">{item.kid_name} • {item.type}{item.hours ? ` • ${item.hours} hr${item.hours === 1 ? '' : 's'}` : ''}</p>
                                         {item.note && <p className="text-slate-600 text-sm mt-2 max-w-xl">{item.note}</p>}
-                                        <div className="flex gap-3 mt-3">
+                                        <div className="flex gap-3 mt-3 flex-wrap">
+                                          {item.assessment?.result && (
+                                            <button onClick={() => setReviewingAssessment(item.assessment!)} className="bg-purple-50 text-purple-700 px-4 py-2 rounded-xl text-xs font-bold transition-all hover:bg-purple-100">
+                                              {item.assessment.result.needs_manual_grading ? 'Review / Add Score' : 'View Record'}
+                                            </button>
+                                          )}
                                           <button onClick={() => item.assessment && setManagingStandards(item.assessment)} className={`bg-slate-100 text-slate-600 px-4 py-2 rounded-xl text-xs font-bold transition-all ${item.assessment ? 'hover:bg-purple-50 hover:text-purple-600' : 'cursor-default'}`}>
                                             {item.assessment ? (item.standards_count && item.standards_count > 0 ? `📚 ${item.standards_count} Goals` : '+ Link Learning Goals') : 'Logged Note'}
                                           </button>
@@ -837,6 +872,27 @@ function AssessmentsContent() {
       )}
       {showStandardsManager && organizationId && (
         <StandardsManager organizationId={organizationId} onClose={() => { setShowStandardsManager(false); loadStandards() }} />
+      )}
+      {reviewingAssessment?.result && (
+        <AssessmentTaking
+          assessmentData={reviewingAssessment.content as any}
+          assessmentId={reviewingAssessment.id}
+          childName={reviewingAssessment.kid_name}
+          lessonTitle={reviewingAssessment.lesson_title}
+          isViewOnly
+          existingResults={{
+            id: reviewingAssessment.result.id,
+            answers: reviewingAssessment.result.answers,
+            auto_score: reviewingAssessment.result.auto_score,
+            needs_manual_grading: reviewingAssessment.result.needs_manual_grading,
+            parent_comments: reviewingAssessment.result.parent_comments || undefined,
+          }}
+          onClose={() => setReviewingAssessment(null)}
+          onSubmit={() => {
+            setReviewingAssessment(null)
+            loadAssessments()
+          }}
+        />
       )}
       {showHelp && <AssessmentsHelpModal onClose={() => setShowHelp(false)} />}
     </div>
