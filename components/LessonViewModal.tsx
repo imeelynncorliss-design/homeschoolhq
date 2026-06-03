@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import type { CSSProperties } from 'react'
 import { supabase } from '@/src/lib/supabase'
 import { printHeader, printHeaderCSS } from '@/lib/printHeader'
+import GenerateAssessmentModal from '@/components/GenerateAssessmentModal'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -254,7 +255,8 @@ export default function LessonViewModal({
   const [deletingUploadId, setDeletingUploadId] = useState<string | null>(null)
 
   // Tabs
-  const [activeTab, setActiveTab] = useState<'details' | 'checkin' | 'standards' | 'materials'>('details')
+  const [activeTab, setActiveTab] = useState<'details' | 'checkin' | 'assessment' | 'standards' | 'materials'>('details')
+  const [showAssessmentGenerator, setShowAssessmentGenerator] = useState(false)
 
   // Copy to child
   const [copyTargetId, setCopyTargetId] = useState('')
@@ -731,6 +733,7 @@ ${overviewHtml}${objectivesHtml}${materialsHtml}${activitiesHtml}${assessmentHtm
   const tabs = [
     { key: 'details'   as const, label: 'Details',   emoji: '📋' },
     { key: 'checkin'   as const, label: 'Check-In',  emoji: '🎯' },
+    { key: 'assessment' as const, label: 'Assessment', emoji: '📝' },
     { key: 'materials' as const, label: 'Materials',  emoji: '📦' },
     { key: 'standards' as const, label: 'Standards',  emoji: '📌' },
   ]
@@ -1231,6 +1234,52 @@ ${overviewHtml}${objectivesHtml}${materialsHtml}${activitiesHtml}${assessmentHtm
         )}
 
 
+        {/* ── Assessment Tab ── */}
+        {activeTab === 'assessment' && (
+          <div style={vw.body}>
+            <div style={{ padding: '18px 22px', display: 'flex', flexDirection: 'column' as const, gap: 14 }}>
+              <div style={{ background: '#f5f3ff', border: '1.5px solid #ddd6fe', borderRadius: 16, padding: 16 }}>
+                <div style={{ fontSize: 11, fontWeight: 900, color: '#7c3aed', letterSpacing: 0.6, textTransform: 'uppercase' as const, fontFamily: 'system-ui, sans-serif', marginBottom: 6 }}>
+                  Assess this lesson
+                </div>
+                <h3 style={{ fontSize: 17, fontWeight: 900, color: '#1f2937', margin: '0 0 8px', fontFamily: 'system-ui, sans-serif' }}>
+                  Create a quiz, worksheet, or project review
+                </h3>
+                <p style={{ fontSize: 13, color: '#4b5563', lineHeight: 1.55, margin: 0, fontFamily: 'system-ui, sans-serif' }}>
+                  Use this when you want a more formal check for understanding. Lessons can still use simple check-ins; assessments are optional and can save a score or parent review note.
+                </p>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 10 }}>
+                {[
+                  { icon: '📝', title: 'Quiz', desc: 'Multiple-choice or true/false questions with an optional score.' },
+                  { icon: '📋', title: 'Worksheet', desc: 'Short-answer practice that a parent can review.' },
+                  { icon: '🎨', title: 'Project', desc: 'Hands-on project options with a parent review/rating.' },
+                ].map(item => (
+                  <div key={item.title} style={{ display: 'flex', gap: 10, background: '#fff', border: '1.5px solid #e5e7eb', borderRadius: 14, padding: 12 }}>
+                    <span style={{ fontSize: 22 }}>{item.icon}</span>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 900, color: '#111827', fontFamily: 'system-ui, sans-serif' }}>{item.title}</div>
+                      <div style={{ fontSize: 12, color: '#6b7280', lineHeight: 1.45, fontFamily: 'system-ui, sans-serif' }}>{item.desc}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <button
+                onClick={() => setShowAssessmentGenerator(true)}
+                style={{ ...vw.btnPrimary, justifyContent: 'center' }}
+              >
+                ✨ Create Assessment / Test
+              </button>
+              <p style={{ fontSize: 12, color: '#6b7280', lineHeight: 1.5, margin: 0, fontFamily: 'system-ui, sans-serif' }}>
+                Completed assessments appear in Records → Progress Evidence & Assessments.
+              </p>
+            </div>
+          </div>
+        )}
+
+
         {/* ── Materials Tab ── */}
         {activeTab === 'materials' && (
           <div style={vw.body}>
@@ -1528,6 +1577,14 @@ ${overviewHtml}${objectivesHtml}${materialsHtml}${activitiesHtml}${assessmentHtm
         </div>
 
       </div>
+
+      {showAssessmentGenerator && (
+        <GenerateAssessmentModal
+          lesson={lesson}
+          kids={allKids || [{ id: lesson.kid_id, displayname: kidName || 'Student' }]}
+          onClose={() => setShowAssessmentGenerator(false)}
+        />
+      )}
     </div>
   )
 }
