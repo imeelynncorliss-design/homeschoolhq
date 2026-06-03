@@ -180,7 +180,7 @@ export default function AssessmentTaking({
                 <>
                   <div className="text-4xl font-black text-amber-500 uppercase tracking-tight">Pending Review</div>
                   <p className="text-slate-500 font-bold uppercase tracking-widest text-xs mt-3">
-                    Waiting for Parent to Grade
+                    Waiting for Parent Review
                   </p>
                 </>
               ) : (
@@ -202,14 +202,14 @@ export default function AssessmentTaking({
             {showPendingState && isViewOnly && (
               <div className="bg-amber-50 border border-amber-100 p-6 rounded-2xl shadow-sm">
                 <h3 className="font-bold text-amber-900 mb-2 uppercase tracking-wide text-sm text-center">
-                  Grade This {isProjectAssessment(assessmentData) ? 'Project' : 'Assessment'}
+                  Review This {isProjectAssessment(assessmentData) ? 'Project' : 'Assessment'}
                 </h3>
                 
                 {isProjectAssessment(assessmentData) ? (
                   // PROJECT-SPECIFIC GRADING
                   <>
                     <p className="text-amber-800 text-xs mb-4 text-center">
-                      {isUpdating ? 'Updating grade...' : 'Observe the completed project and select a grade based on effort, creativity, and understanding demonstrated.'}
+                      {isUpdating ? 'Saving review...' : 'Use a quick project rating, or enter a score if you need one for records.'}
                     </p>
                     {!isUpdating ? (
                       <div className="space-y-4">
@@ -242,7 +242,7 @@ export default function AssessmentTaking({
                             onClick={() => handleManualGrading(70)} 
                             className="bg-yellow-500 text-white py-4 rounded-xl font-bold hover:bg-yellow-600 transition-all shadow-md"
                           >
-                            ⚠️ Needs Work
+                            ⚠️ Needs More Work
                             <span className="block text-xs opacity-80">70%</span>
                           </button>
                           <button 
@@ -257,19 +257,19 @@ export default function AssessmentTaking({
                         {/* Parent Comments Field */}
                         <div className="bg-white p-4 rounded-xl border border-amber-200">
                           <label className="block text-sm font-semibold text-amber-900 mb-2">
-                            Add Notes (Optional):
+                            Parent Notes (Optional):
                           </label>
                           <textarea
                             value={parentComment}
                             onChange={(e) => setParentComment(e.target.value)}
-                            placeholder="Note areas of excellence or improvement..."
+                            placeholder="What did they understand, create, or need more practice with?"
                             className="w-full px-3 py-2 border-2 border-amber-300 rounded-lg text-amber-900 focus:border-amber-500 focus:outline-none resize-none"
                             rows={3}
                           />
                         </div>
                         
                         <div className="bg-white p-4 rounded-xl border border-amber-200">
-                          <label className="block text-sm font-semibold text-amber-900 mb-2">Or enter custom grade:</label>
+                          <label className="block text-sm font-semibold text-amber-900 mb-2">Optional score for records:</label>
                           <div className="flex gap-2">
                             <input
                               type="number"
@@ -304,7 +304,7 @@ export default function AssessmentTaking({
                   // REGULAR GRADING (for quizzes/worksheets)
                   <>
                     <p className="text-amber-800 text-xs mb-4 text-center">
-                      {isUpdating ? 'Updating grade...' : "Review the student's answers below, then select the final grade."}
+                      {isUpdating ? 'Saving review...' : "Review the student's answers below, then choose an optional final score."}
                     </p>
                     {!isUpdating ? (
                       <div className="space-y-4">
@@ -338,19 +338,19 @@ export default function AssessmentTaking({
                         {/* Parent Comments Field */}
                         <div className="bg-white p-4 rounded-xl border border-amber-200">
                           <label className="block text-sm font-semibold text-amber-900 mb-2">
-                            Add Notes (Optional):
+                            Parent Notes (Optional):
                           </label>
                           <textarea
                             value={parentComment}
                             onChange={(e) => setParentComment(e.target.value)}
-                            placeholder="Note areas of excellence or improvement..."
+                            placeholder="What did they understand, create, or need more practice with?"
                             className="w-full px-3 py-2 border-2 border-amber-300 rounded-lg text-amber-900 focus:border-amber-500 focus:outline-none resize-none"
                             rows={3}
                           />
                         </div>
                         
                         <div className="bg-white p-4 rounded-xl border border-amber-200">
-                          <label className="block text-sm font-semibold text-amber-900 mb-2">Custom Grade:</label>
+                          <label className="block text-sm font-semibold text-amber-900 mb-2">Optional Score:</label>
                           <div className="flex gap-2">
                             <input
                               type="number"
@@ -396,7 +396,7 @@ export default function AssessmentTaking({
               <div className="bg-blue-50 border border-blue-100 p-6 rounded-2xl shadow-sm text-center">
                 <h3 className="font-bold text-blue-900 mb-2 uppercase tracking-wide text-sm">✅ Submitted Successfully</h3>
                 <p className="text-blue-800 text-sm">
-                  This assessment has been submitted and is waiting for parent review. Check the "Needs Review" tab in the Assessments & Reviews section  to grade it.
+                  This assessment has been submitted and is waiting for parent review. Check the "Needs Review" area to add notes or an optional score.
                 </p>
               </div>
             )}
