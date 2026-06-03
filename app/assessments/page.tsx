@@ -132,7 +132,7 @@ type MonthGroup = {
 
 function AssessmentsContent() {
   const router = useRouter()
-  useAppHeader({ title: 'Progress Evidence', backHref: '/reports' })
+  useAppHeader({ title: 'Progress Evidence & Assessments', backHref: '/reports' })
   const [currentView, setCurrentView] = useState<'results' | 'standards'>('results')
   const [assessments, setAssessments] = useState<AssessmentWithDetails[]>([])
   const [dailyLogs, setDailyLogs] = useState<DailyLogEvidence[]>([])
@@ -531,7 +531,7 @@ function AssessmentsContent() {
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-2 text-xs text-purple-800">
                       <div className="bg-white/70 rounded-xl px-3 py-2"><strong>Lessons:</strong> check-ins + notes</div>
                       <div className="bg-white/70 rounded-xl px-3 py-2"><strong>Projects:</strong> review + optional score</div>
-                      <div className="bg-white/70 rounded-xl px-3 py-2"><strong>Assessments:</strong> optional score</div>
+                      <div className="bg-white/70 rounded-xl px-3 py-2"><strong>Assessments & tests:</strong> optional score or parent review</div>
                       <div className="bg-white/70 rounded-xl px-3 py-2"><strong>Courses:</strong> final grade</div>
                     </div>
                   </div>

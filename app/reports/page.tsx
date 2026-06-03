@@ -40,8 +40,8 @@ function ReportsContent() {
     },
     {
       icon: '📝',
-      label: 'Progress Evidence',
-      desc: 'Review optional assessments, scores, notes, and linked goals',
+      label: 'Progress Evidence & Assessments',
+      desc: 'Assessments, project reviews, scores, notes, and linked goals',
       href: '/assessments',
       comingSoon: false,
     },
