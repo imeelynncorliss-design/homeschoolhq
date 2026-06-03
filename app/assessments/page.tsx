@@ -739,7 +739,7 @@ function AssessmentsContent() {
                   <div className="bg-white rounded-3xl p-12 text-center text-slate-400 font-bold">Loading...</div>
                 ) : (
                   <div className="space-y-3">
-                    <h3 className="font-black text-slate-900">{standards.length} Goals or Standards</h3>
+                    <h3 className="font-black text-white drop-shadow-sm">{standards.length} Goals or Standards</h3>
                     {standards.map((standard) => (
                       <div key={standard.id} className="bg-white rounded-3xl p-6 border border-slate-200 flex gap-6">
                         <div className="flex-shrink-0">
