@@ -82,8 +82,13 @@ export default function GenerateAssessmentModal({ lesson, kids, onClose }: Gener
         return;
       }
 
+      if (!data.assessmentId) {
+        setError('The assessment was generated, but the record could not be saved. Please try again before administering it.');
+        return;
+      }
+
       setGeneratedAssessment(data.assessment);
-      setGeneratedAssessmentId(data.assessmentId || '');
+      setGeneratedAssessmentId(data.assessmentId);
       setGeneratedKidName(data.kidName || selectedKid?.displayname || '');
     } catch (err) {
       setError('Something went wrong. Please try again.');

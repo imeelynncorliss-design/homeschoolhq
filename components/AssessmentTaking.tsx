@@ -64,6 +64,8 @@ export default function AssessmentTaking({
   const [isSubmitted, setIsSubmitted] = useState(isViewOnly);
   const [showResults, setShowResults] = useState(isViewOnly);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [savedScore, setSavedScore] = useState<number | null>(existingResults?.auto_score ?? null);
   const [customGrade, setCustomGrade] = useState('');
   const [parentComment, setParentComment] = useState(existingResults?.parent_comments || '');
 
@@ -99,6 +101,12 @@ export default function AssessmentTaking({
   };
 
   const handleSubmit = async () => {
+    if (!assessmentId) {
+      setSaveError('This assessment could not be saved because the assessment record was not created. Please close and generate it again.');
+      return;
+    }
+
+    setSaveError(null);
     setIsSubmitted(true);
     
     const results = assessmentData.questions.map(q => {
@@ -135,12 +143,20 @@ export default function AssessmentTaking({
         })
       });
 
-      if (response.ok) {
-        setShowResults(true);
-        if (onSubmit) onSubmit(results);
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        setSaveError(data?.error || data?.details || 'Assessment record could not be saved. Please try again.');
+        setIsSubmitted(false);
+        return;
       }
+
+      setSavedScore(calculatedScore);
+      setShowResults(true);
+      if (onSubmit) onSubmit(results);
     } catch (error) {
       console.error("Submission failed:", error);
+      setSaveError('Assessment record could not be saved. Please check your connection and try again.');
       setIsSubmitted(false);
     }
   };
@@ -189,8 +205,17 @@ export default function AssessmentTaking({
                 </>
               ) : (
                 <>
-                  <div className="text-7xl font-black text-[#9333ea]">{existingResults?.auto_score ?? 0}%</div>
-                  <p className="text-slate-500 font-bold uppercase tracking-widest text-xs mt-3">Final Score</p>
+                  {savedScore !== null ? (
+                    <>
+                      <div className="text-7xl font-black text-[#9333ea]">{savedScore}%</div>
+                      <p className="text-slate-500 font-bold uppercase tracking-widest text-xs mt-3">Optional Score</p>
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-4xl font-black text-amber-500 uppercase tracking-tight">Saved</div>
+                      <p className="text-slate-500 font-bold uppercase tracking-widest text-xs mt-3">Ready for Parent Review</p>
+                    </>
+                  )}
                 </>
               )}
             </div>
@@ -586,7 +611,12 @@ export default function AssessmentTaking({
                     {(q.options || ['True', 'False']).map((opt) => (
                       <button
                         key={opt}
-                        onClick={() => handleAnswerChange(q.id, opt)}
+                        type="button"
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          handleAnswerChange(q.id, opt);
+                        }}
                         className={`p-5 text-left rounded-xl border-2 font-bold text-lg transition-all ${
                           answers[q.id] === opt
                             ? 'border-[#9333ea] bg-purple-50 text-[#9333ea] shadow-md'
@@ -601,7 +631,14 @@ export default function AssessmentTaking({
               </div>
             );
           })}
+          {saveError && (
+            <div className="bg-rose-50 border border-rose-200 text-rose-700 rounded-2xl p-4 font-semibold">
+              {saveError}
+            </div>
+          )}
+
           <button
+            type="button"
             onClick={handleSubmit}
             disabled={isSubmitted || assessmentData.questions.length !== Object.keys(answers).length}
             className="w-full py-6 bg-gradient-to-r from-[#9333ea] to-[#4f46e5] text-white rounded-2xl font-black text-2xl shadow-xl disabled:opacity-30 disabled:grayscale transition-all hover:scale-[1.01] active:scale-[0.98]"
