@@ -78,7 +78,8 @@ export default function GenerateAssessmentModal({ lesson, kids, onClose }: Gener
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || 'Failed to generate assessment.');
+        const detail = data.details ? ` Details: ${data.details}` : '';
+        setError(`${data.error || 'Failed to generate assessment.'}${detail}`);
         return;
       }
 
@@ -113,11 +114,11 @@ export default function GenerateAssessmentModal({ lesson, kids, onClose }: Gener
 
   return (
     <div
-      className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 px-4 pt-4 pb-24"
+      className="fixed inset-0 bg-black bg-opacity-60 flex items-start justify-center z-50 px-4 pt-6 pb-24 overflow-y-auto"
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden"
+        className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[calc(100vh-7rem)] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
