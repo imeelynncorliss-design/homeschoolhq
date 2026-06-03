@@ -190,8 +190,8 @@ export default function AssessmentTaking({
     const showPendingState = isPendingReview || (!isViewOnly && isAllShortAnswer);
 
     return (
-      <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
-        <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col border border-slate-200 text-slate-900">
+      <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[9999] flex items-start justify-center px-4 pt-6 pb-24 overflow-y-auto">
+        <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[calc(100vh-7rem)] overflow-hidden flex flex-col border border-slate-200 text-slate-900">
           <Header title="Parent Assessment Record" subTitle={`${childName} • ${lessonTitle}`} />
           
           <div className="p-8 overflow-y-auto space-y-8 bg-slate-50/30">
@@ -495,8 +495,8 @@ export default function AssessmentTaking({
   }
 
   return (
-    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col border border-slate-200 text-slate-900">
+    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[9999] flex items-start justify-center px-4 pt-6 pb-24 overflow-y-auto">
+      <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[calc(100vh-7rem)] overflow-hidden flex flex-col border border-slate-200 text-slate-900">
         <Header title={assessmentData.title} subTitle={`${childName} • ${lessonTitle}`} />
         <div className="p-8 overflow-y-auto space-y-8 bg-slate-50/30">
           <div className="bg-purple-50 border border-purple-200 rounded-2xl p-5 text-purple-900 text-sm leading-relaxed">

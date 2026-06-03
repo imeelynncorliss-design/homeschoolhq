@@ -195,24 +195,36 @@ CRITICAL: Return ONLY the JSON object. No markdown, no backticks, no explanatory
       console.error('Some questions have no text:', emptyQuestions);
     }
 
+    const now = new Date().toISOString();
     const { data: savedAssessment, error: saveError } = await supabase
       .from('assessments')
       .insert({
         title: assessmentData.title || `${lesson.title} Assessment`,
+        description: assessmentData.instructions || null,
         lesson_id: lessonId,
         kid_id: kidId,
         organization_id: lesson.organization_id,
+        subject: lesson.subject || null,
+        question_count: assessmentData.questions.length,
+        status: 'generated',
         type: assessmentType,
         assessment_type: assessmentType,
         difficulty: difficulty,
         content: assessmentData,
-        created_at: new Date().toISOString()
+        created_at: now,
+        updated_at: now
       })
-      .select()
+      .select('id')
       .single();
 
-    if (saveError) {
+    if (saveError || !savedAssessment?.id) {
       console.error('Failed to save assessment:', saveError);
+      return NextResponse.json({
+        error: 'Assessment was generated, but the record could not be saved.',
+        details: saveError?.message || 'No assessment id returned from database.',
+        code: saveError?.code,
+        hint: saveError?.hint
+      }, { status: 500 });
     }
 
     return NextResponse.json({ 
