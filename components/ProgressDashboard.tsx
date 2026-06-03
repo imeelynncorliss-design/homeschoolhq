@@ -201,6 +201,12 @@ export default function ProgressDashboard({ userId, organizationId }: ProgressDa
   const expectedDays = Math.min(goal, Math.round((expectedProgress / 100) * goal))
   const paceGapDays = completed - expectedDays
   const needsAttendanceConfirmation = attendanceStats.lessonInferredDays > 0
+  const activityMixItems = [
+    { label: 'Lessons marked done', value: completedLessons, detail: `${totalLessons} planned lessons`, color: '#7c3aed', icon: '✅' },
+    { label: 'Books read', value: booksRead, detail: 'Reading log entries', color: '#2563eb', icon: '📚' },
+    { label: 'Field trip/activity hours', value: fieldTripHours, detail: 'Logged outside lessons', color: '#059669', icon: '🚌' },
+  ]
+  const maxActivityMixValue = Math.max(...activityMixItems.map(item => Number(item.value) || 0), 1)
 
   const progressStatus =
     paceGapDays >= 10 ? 'ahead' :
@@ -365,19 +371,19 @@ export default function ProgressDashboard({ userId, organizationId }: ProgressDa
       {activeTab === 'insights' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div style={{ background: '#f5f3ff', border: '1.5px solid rgba(124,58,237,0.12)', borderRadius: 14, padding: '20px' }}>
-            <div style={{ fontSize: 15, fontWeight: 900, color: '#1a1a2e', marginBottom: 4, fontFamily: "'Nunito', sans-serif" }}>📊 Activity Mix by Subject</div>
-            <p style={{ fontSize: 12, color: '#6b7280', fontWeight: 600, margin: '0 0 16px' }}>A quick look at where your homeschool activity is showing up this year.</p>
+            <div style={{ fontSize: 15, fontWeight: 900, color: '#1a1a2e', marginBottom: 4, fontFamily: "'Nunito', sans-serif" }}>📚 Subject Progress</div>
+            <p style={{ fontSize: 12, color: '#6b7280', fontWeight: 600, margin: '0 0 16px' }}>Bars show the percent of planned lessons completed in each subject.</p>
             {getSubjectBreakdown().length === 0 ? (
-              <p style={{ fontSize: 13, color: '#6b7280', fontWeight: 600, margin: 0 }}>No lesson data yet. Start adding lessons to see subject insights.</p>
+              <p style={{ fontSize: 13, color: '#6b7280', fontWeight: 600, margin: 0 }}>No lesson data yet. Start adding lessons to see subject progress.</p>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {getSubjectBreakdown().map(({ subject, total, completed: subDone }) => {
                   const pct = total > 0 ? Math.round((subDone / total) * 100) : 0
                   return (
                     <div key={subject}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 4 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 13, marginBottom: 4 }}>
                         <span style={{ fontWeight: 700, color: '#1a1a2e' }}>{subject}</span>
-                        <span style={{ color: '#6b7280', fontWeight: 600 }}>{subDone} done · {total} planned</span>
+                        <span style={{ color: '#6b7280', fontWeight: 600, textAlign: 'right' }}>{subDone} of {total} lessons done · {pct}%</span>
                       </div>
                       <div style={{ background: 'rgba(124,58,237,0.1)', borderRadius: 99, height: 8, overflow: 'hidden' }}>
                         <div style={{ background: 'linear-gradient(90deg, #7c3aed, #a855f7)', height: '100%', borderRadius: 99, width: `${pct}%` }} />
@@ -385,12 +391,35 @@ export default function ProgressDashboard({ userId, organizationId }: ProgressDa
                     </div>
                   )
                 })}
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, paddingTop: 12, borderTop: '1px solid rgba(124,58,237,0.1)', marginTop: 4 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 13, paddingTop: 12, borderTop: '1px solid rgba(124,58,237,0.1)', marginTop: 4 }}>
                   <span style={{ fontWeight: 800, color: '#1a1a2e' }}>Total</span>
-                  <span style={{ fontWeight: 700, color: '#7c3aed' }}>{completedLessons} marked done · {totalLessons} total lessons</span>
+                  <span style={{ fontWeight: 700, color: '#7c3aed', textAlign: 'right' }}>{completedLessons} of {totalLessons} lessons marked done</span>
                 </div>
               </div>
             )}
+          </div>
+
+          <div style={{ background: '#fff', border: '1.5px solid rgba(124,58,237,0.12)', borderRadius: 14, padding: '20px' }}>
+            <div style={{ fontSize: 15, fontWeight: 900, color: '#1a1a2e', marginBottom: 4, fontFamily: "'Nunito', sans-serif" }}>📊 Activity Mix</div>
+            <p style={{ fontSize: 12, color: '#6b7280', fontWeight: 600, margin: '0 0 16px' }}>A snapshot of the different learning evidence logged so far.</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {activityMixItems.map(item => {
+                const numericValue = Number(item.value) || 0
+                const width = Math.max(4, Math.round((numericValue / maxActivityMixValue) * 100))
+                return (
+                  <div key={item.label} style={{ background: '#f9fafb', border: '1px solid #eef2ff', borderRadius: 12, padding: '12px 14px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'baseline', marginBottom: 8 }}>
+                      <span style={{ fontSize: 13, fontWeight: 800, color: '#1a1a2e' }}>{item.icon} {item.label}</span>
+                      <span style={{ fontSize: 14, fontWeight: 900, color: item.color, fontFamily: "'Nunito', sans-serif" }}>{item.value}{item.label.includes('hours') ? 'h' : ''}</span>
+                    </div>
+                    <div style={{ background: `${item.color}18`, borderRadius: 99, height: 8, overflow: 'hidden', marginBottom: 5 }}>
+                      <div style={{ background: item.color, height: '100%', borderRadius: 99, width: `${width}%` }} />
+                    </div>
+                    <div style={{ fontSize: 11, color: '#6b7280', fontWeight: 600 }}>{item.detail}</div>
+                  </div>
+                )
+              })}
+            </div>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
