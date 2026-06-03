@@ -150,7 +150,7 @@ export default function AssessmentTaking({
             className="flex items-center gap-2 text-white/90 hover:text-white font-semibold transition-colors group"
           >
             <span className="text-xl group-hover:-translate-x-1 transition-transform">←</span> 
-            Back to Admin
+            Back to lesson
           </button>
           <div className="h-8 w-[1px] bg-white/20" />
           <div>
@@ -172,7 +172,7 @@ export default function AssessmentTaking({
     return (
       <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
         <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col border border-slate-200 text-slate-900">
-          <Header title="Assessment Review" subTitle={`${childName} • ${lessonTitle}`} />
+          <Header title="Parent Assessment Record" subTitle={`${childName} • ${lessonTitle}`} />
           
           <div className="p-8 overflow-y-auto space-y-8 bg-slate-50/30">
             <div className="bg-white rounded-2xl p-10 text-center border border-slate-200 shadow-sm">
@@ -202,7 +202,7 @@ export default function AssessmentTaking({
             {showPendingState && isViewOnly && (
               <div className="bg-amber-50 border border-amber-100 p-6 rounded-2xl shadow-sm">
                 <h3 className="font-bold text-amber-900 mb-2 uppercase tracking-wide text-sm text-center">
-                  Review This {isProjectAssessment(assessmentData) ? 'Project' : 'Assessment'}
+                  Review This Parent-Administered {isProjectAssessment(assessmentData) ? 'Project' : 'Assessment'}
                 </h3>
                 
                 {isProjectAssessment(assessmentData) ? (
@@ -304,7 +304,7 @@ export default function AssessmentTaking({
                   // REGULAR GRADING (for quizzes/worksheets)
                   <>
                     <p className="text-amber-800 text-xs mb-4 text-center">
-                      {isUpdating ? 'Saving review...' : "Review the student's answers below, then choose an optional final score."}
+                      {isUpdating ? 'Saving review...' : "Review the parent-entered responses below, then choose an optional final score."}
                     </p>
                     {!isUpdating ? (
                       <div className="space-y-4">
@@ -396,14 +396,14 @@ export default function AssessmentTaking({
               <div className="bg-blue-50 border border-blue-100 p-6 rounded-2xl shadow-sm text-center">
                 <h3 className="font-bold text-blue-900 mb-2 uppercase tracking-wide text-sm">✅ Submitted Successfully</h3>
                 <p className="text-blue-800 text-sm">
-                  This assessment has been submitted and is waiting for parent review. Check the "Needs Review" area to add notes or an optional score.
+                  This parent-administered assessment record has been saved and is ready for parent review. Add notes or an optional score when useful for records.
                 </p>
               </div>
             )}
 
             <div className="space-y-4">
               <h3 className="font-bold text-lg">
-                {isProjectAssessment(assessmentData) ? 'Project Selection' : 'Question Review'}
+                {isProjectAssessment(assessmentData) ? 'Parent Project Review' : 'Parent-Entered Response Review'}
               </h3>
               
               {isProjectAssessment(assessmentData) ? (
@@ -436,8 +436,8 @@ export default function AssessmentTaking({
                 </div>
               ) : (
                 assessmentData.questions.map((q, i) => {
-                  const studentAnswer = answers[q.id] || "No answer provided";
-                  const studentAnsLower = studentAnswer.trim().toLowerCase();
+                  const recordedAnswer = answers[q.id] || "No response recorded";
+                  const studentAnsLower = recordedAnswer.trim().toLowerCase();
                   const correctAnsLower = (q.correct_answer || "").trim().toLowerCase();
                   const isCorrect = q.type === 'short_answer' ? null : (studentAnsLower.includes(correctAnsLower) || correctAnsLower.includes(studentAnsLower));
 
@@ -450,8 +450,8 @@ export default function AssessmentTaking({
                         {isCorrect === null && <span className="text-amber-600 font-bold italic">📝 Short Answer</span>}
                       </div>
                       <div className="p-4 bg-white/50 rounded-xl border border-slate-100">
-                        <span className="text-[10px] font-black text-slate-400 uppercase">Student's Response</span>
-                        <p className={`font-semibold mt-1 ${isCorrect === false ? 'text-rose-700' : 'text-slate-800'}`}>{studentAnswer}</p>
+                        <span className="text-[10px] font-black text-slate-400 uppercase">Parent-Entered Response</span>
+                        <p className={`font-semibold mt-1 ${isCorrect === false ? 'text-rose-700' : 'text-slate-800'}`}>{recordedAnswer}</p>
                       </div>
                     </div>
                   );
@@ -470,12 +470,15 @@ export default function AssessmentTaking({
       <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col border border-slate-200 text-slate-900">
         <Header title={assessmentData.title} subTitle={`${childName} • ${lessonTitle}`} />
         <div className="p-8 overflow-y-auto space-y-8 bg-slate-50/30">
+          <div className="bg-purple-50 border border-purple-200 rounded-2xl p-5 text-purple-900 text-sm leading-relaxed">
+            <strong>Parent-administered assessment:</strong> Your child does not need a HomeschoolReady login. Read, print, or use these prompts side-by-side, then record the response, observation, or selected project here for your adult recordkeeping.
+          </div>
           {assessmentData.questions.map((q, idx) => {
             if (q.type === 'project_selection' && assessmentData.projects) {
               return (
                 <div key={q.id} className="space-y-6">
                   <h3 className="text-2xl font-bold text-center mb-6">
-                    Choose ONE project to complete:
+                    Choose or record ONE project for parent review:
                   </h3>
                   
                   <div className="grid gap-6">
@@ -551,7 +554,7 @@ export default function AssessmentTaking({
                   <textarea
                     className="w-full p-5 rounded-xl border-2 border-slate-100 focus:border-[#9333ea] focus:ring-4 focus:ring-purple-50 outline-none transition-all text-slate-800 text-lg"
                     rows={4}
-                    placeholder="Type your answer here..."
+                    placeholder="Parent-entered response, oral answer notes, or observation..."
                     value={answers[q.id] || ''}
                     onChange={(e) => handleAnswerChange(q.id, e.target.value)}
                   />
@@ -580,7 +583,7 @@ export default function AssessmentTaking({
             disabled={isSubmitted || assessmentData.questions.length !== Object.keys(answers).length}
             className="w-full py-6 bg-gradient-to-r from-[#9333ea] to-[#4f46e5] text-white rounded-2xl font-black text-2xl shadow-xl disabled:opacity-30 disabled:grayscale transition-all hover:scale-[1.01] active:scale-[0.98]"
           >
-            {isSubmitted ? 'SUBMITTING...' : 'SUBMIT ASSESSMENT'}
+            {isSubmitted ? 'SAVING...' : 'SAVE PARENT ASSESSMENT RECORD'}
           </button>
         </div>
       </div>

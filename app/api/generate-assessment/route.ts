@@ -38,7 +38,7 @@ export async function POST(request: Request) {
     }
 
     const typeInstructions: { [key: string]: string } = {
-      quiz: `Create an interactive quiz with ${questionCount} questions based on: ${lesson.title}.
+      quiz: `Create a parent-administered quiz with ${questionCount} questions based on: ${lesson.title}.
 
 For each question, include:
 - question: The actual question text (REQUIRED - must not be empty)
@@ -49,8 +49,8 @@ For each question, include:
 
 Return ONLY valid JSON:
 {
-  "title": "Quiz: ${lesson.title}",
-  "instructions": "Complete all questions",
+  "title": "Parent-Administered Quiz: ${lesson.title}",
+  "instructions": "Parent administers these questions offline, printed, orally, or side-by-side, then records the learner's responses or score in HomeschoolReady.",
   "questions": [
     {
       "id": 1,
@@ -63,20 +63,20 @@ Return ONLY valid JSON:
   ]
 }`,
       
-      worksheet: `Create ${questionCount} practice problems for: ${lesson.title} (${lesson.subject}).
+      worksheet: `Create ${questionCount} parent-administered practice problems for: ${lesson.title} (${lesson.subject}).
 
-CRITICAL: Each "problem" field must contain the FULL QUESTION TEXT that students will read and answer.
+CRITICAL: Each "problem" field must contain the FULL QUESTION TEXT that a parent can read, print, or give to the learner offline.
 
 ${lesson.description ? `Lesson content: ${lesson.description}` : ''}
 
 Return ONLY valid JSON:
 {
-  "title": "Practice Worksheet: ${lesson.title}",
-  "instructions": "Complete all practice problems below",
+  "title": "Parent-Administered Worksheet: ${lesson.title}",
+  "instructions": "Parent administers these practice problems offline, printed, orally, or side-by-side, then records responses, notes, or an optional score in HomeschoolReady.",
   "problems": [
     {
       "id": 1,
-      "problem": "WRITE THE COMPLETE QUESTION HERE - This is what the student will see. Example: 'Find the area of a rectangle with length 5cm and width 3cm.'",
+      "problem": "WRITE THE COMPLETE QUESTION HERE - This is what the parent can read, print, or give offline. Example: 'Find the area of a rectangle with length 5cm and width 3cm.'",
       "type": "short_answer",
       "hint": "Optional hint to help solve",
       "sample_answer": "Example correct answer"
@@ -99,13 +99,13 @@ ${lesson.description ? `Lesson content: ${lesson.description}` : ''}
 
 Return ONLY valid JSON:
 {
-  "title": "Project Options: ${lesson.title}",
-  "instructions": "Choose ONE project to complete",
+  "title": "Parent-Reviewed Project Options: ${lesson.title}",
+  "instructions": "Parent chooses or assigns one project, then records review notes or an optional score in HomeschoolReady.",
   "projects": [
     {
       "id": 1,
       "title": "Project title",
-      "objective": "What student will learn",
+      "objective": "What the learner will practice or demonstrate",
       "description": "What to create",
       "materials": ["item 1", "item 2"],
       "estimated_time": "X minutes",
@@ -115,14 +115,16 @@ Return ONLY valid JSON:
 }`
     };
 
-    const prompt = `You are creating a personalized ${assessmentType} for: ${lesson.title} (${lesson.subject}).
+    const prompt = `You are creating a parent-administered ${assessmentType} for: ${lesson.title} (${lesson.subject}).
 
 **LESSON:**
 ${lesson.description || 'No description provided'}
 
-**STUDENT:**
+**LEARNER PROFILE:**
 Name: ${kid.displayname}
 Learning Style: ${kid.learning_style || 'Not specified'}
+
+This assessment must not assume the child logs into HomeschoolReady. Write it so a parent can administer it offline, orally, printed, or side-by-side, then record the result in the adult account.
 
 ${typeInstructions[assessmentType]}
 
