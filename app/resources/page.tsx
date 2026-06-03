@@ -530,11 +530,37 @@ The options listed below are external providers where you can obtain materials t
 // ─── High School Tab ──────────────────────────────────────────────────────────
 
 function HighSchoolTab() {
+  const router = useRouter()
   const [expanded, setExpanded] = useState<string | null>('credits')
+  const startSteps = [
+    { label: '1. Plan credits', helper: 'Review typical high school credits and hours.', target: 'credits' },
+    { label: '2. Set up courses', helper: 'Create courses before building transcripts.', route: '/courses' },
+    { label: '3. Build transcript', helper: 'Enter grades, GPA settings, and generate records.', route: '/transcript' },
+  ]
   return (
     <div>
       <div style={css.infoBanner}>
-        🎓 Homeschool high school is completely legal and well-recognized. Colleges, employers, and the military all accept homeschool transcripts and diplomas — here is everything you need to know.
+        🎓 Homeschool high school is completely legal and well-recognized. Requirements still vary by state, college, umbrella school, and program, so use this as planning guidance and verify official rules for your family.
+      </div>
+      <div style={{ background: '#fff', borderRadius: 14, padding: '16px 18px', border: '1px solid #e5e7eb', marginBottom: 14 }}>
+        <div style={{ fontSize: 15, fontWeight: 800, color: '#111827', marginBottom: 10 }}>Start here</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 10 }}>
+          {startSteps.map(step => (
+            <button
+              key={step.label}
+              onClick={() => step.route ? router.push(step.route) : setExpanded(step.target!)}
+              style={{ textAlign: 'left' as const, background: '#f9fafb', border: '1.5px solid #ede9fe', borderRadius: 12, padding: '12px 14px', cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}
+            >
+              <div style={{ fontSize: 13, fontWeight: 900, color: '#7c3aed', marginBottom: 4 }}>{step.label}</div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: '#6b7280', lineHeight: 1.5 }}>{step.helper}</div>
+            </button>
+          ))}
+        </div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
+          <button onClick={() => router.push('/courses')} style={{ background: G.purple, color: '#fff', border: 'none', borderRadius: 10, padding: '9px 14px', fontSize: 12, fontWeight: 800, cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}>Manage Courses →</button>
+          <button onClick={() => router.push('/transcript')} style={{ background: '#fff', color: '#7c3aed', border: '1.5px solid #ddd6fe', borderRadius: 10, padding: '9px 14px', fontSize: 12, fontWeight: 800, cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}>Build Transcript →</button>
+          <button onClick={() => setExpanded('testing')} style={{ background: '#fff', color: '#7c3aed', border: '1.5px solid #ddd6fe', borderRadius: 10, padding: '9px 14px', fontSize: 12, fontWeight: 800, cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}>Testing timeline →</button>
+        </div>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {HS_SECTIONS.map(section => {
@@ -581,6 +607,9 @@ function HighSchoolTab() {
             )
           ))}
         </div>
+      </div>
+      <div style={{ marginTop: 14, padding: '12px 16px', background: '#f5f3ff', borderRadius: 12, border: '1px solid #ede9fe', fontSize: 12, color: '#6b7280', lineHeight: 1.6, fontWeight: 600 }}>
+        HomeschoolReady helps organize your records, but it does not provide legal, accreditation, college admissions, or compliance advice. Confirm current requirements with your state, umbrella school, college, or qualified advisor.
       </div>
     </div>
   )
@@ -843,8 +872,8 @@ function MaterialsTab({ organizationId }: { organizationId: string }) {
     <div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <h2 style={{ fontSize: 18, fontWeight: 800, color: '#c4b5fd', margin: 0 }}>Materials & Resources</h2>
-          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', margin: '4px 0 0' }}>Track your curriculum, logins, and supplies</p>
+          <h2 style={{ fontSize: 18, fontWeight: 800, color: '#c4b5fd', margin: 0 }}>My Materials</h2>
+          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', margin: '4px 0 0' }}>Inventory the curriculum, subscriptions, supplies, and digital resources your family uses for lessons and activities.</p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button onClick={() => setShowHelpModal(true)} style={{ background: '#fff', border: '2px solid #e5e7eb', color: '#6b7280', padding: '8px 14px', borderRadius: 10, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}>💡 How this works</button>
@@ -918,7 +947,7 @@ function MaterialsTab({ organizationId }: { organizationId: string }) {
           <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e5e7eb', padding: '48px 24px', textAlign: 'center' as const }}>
             <div style={{ fontSize: 48, marginBottom: 12 }}>📦</div>
             <div style={{ fontSize: 16, fontWeight: 800, color: '#111827', marginBottom: 8 }}>No Materials Yet</div>
-            <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 16 }}>Start building your resource library by adding your first material.</p>
+            <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 16 }}>Start building your family materials inventory by adding your first curriculum, subscription, supply, or digital resource.</p>
             <button onClick={() => { resetForm(); setShowAddForm(true) }} style={{ background: '#4f46e5', color: '#fff', border: 'none', padding: '10px 24px', borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}>+ Add Your First Material</button>
           </div>
         )}
@@ -1055,11 +1084,11 @@ function ResourcesContent() {
   }, [])
 
   const TABS = [
-    { id: 'styles' as const,      icon: '🎨', label: 'Teaching Styles & Curriculum' },
+    { id: 'styles' as const,      icon: '🎨', label: 'Teaching Styles'              },
     { id: 'statelaws' as const,   icon: '⚖️', label: 'State Laws'                   },
-    { id: 'dictionary' as const,  icon: '📖', label: 'Data Dictionary'              },
+    { id: 'dictionary' as const,  icon: '📖', label: 'Dictionary'                   },
     { id: 'materials' as const,   icon: '🗂️', label: 'My Materials'                 },
-    { id: 'highschool' as const,  icon: '🎓', label: 'High School Planning'         },
+    { id: 'highschool' as const,  icon: '🎓', label: 'High School'                  },
   ]
 
   const handleViewCurriculum = (styleId: string) => {
@@ -1082,10 +1111,15 @@ function ResourcesContent() {
 
       <div style={{ maxWidth: (activeTab === 'statelaws' || activeTab === 'materials') ? 1060 : 860, margin: '0 auto', padding: '24px 24px 48px' }}>
 
-        <div className="hr-section-label" style={{ marginBottom: 14 }}>TEACHING STYLES · STATE LAWS · DATA DICTIONARY · MY MATERIALS · HIGH SCHOOL</div>
+        <div style={{ background: 'rgba(255,255,255,0.72)', border: '1.5px solid rgba(124,58,237,0.12)', borderRadius: 16, padding: '16px 18px', marginBottom: 16 }}>
+          <div style={{ fontSize: 20, fontWeight: 900, color: '#1e1b4b', marginBottom: 4, fontFamily: "'Nunito', sans-serif" }}>Resources</div>
+          <p style={{ fontSize: 13, color: '#6b7280', fontWeight: 600, lineHeight: 1.6, margin: 0 }}>
+            Reference guides and planning tools for homeschool decisions. For child-specific teaching tips, use Parent&apos;s Corner.
+          </p>
+        </div>
 
         {/* Tab pills */}
-        <div className="hr-pill-row" style={{ marginBottom: 24, flexWrap: 'wrap' }}>
+        <div className="hr-pill-row" style={{ marginBottom: 24, flexWrap: 'wrap', gap: 6 }}>
           {TABS.map(tab => (
             <button
               key={tab.id}
