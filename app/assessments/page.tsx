@@ -647,10 +647,18 @@ function AssessmentsContent() {
                                       </div>
                                       <div className="text-right">
                                         <div className={`text-2xl font-black ${item.assessment?.result ? 'text-emerald-600' : item.source === 'daily_log' ? 'text-purple-600' : 'text-slate-300'}`}>
-                                          {item.assessment?.result ? `${item.assessment.result.auto_score}%` : item.source === 'daily_log' ? '📝' : '--'}
+                                          {item.assessment?.result
+                                            ? item.assessment.result.auto_score !== null && item.assessment.result.auto_score !== undefined
+                                              ? `${item.assessment.result.auto_score}%`
+                                              : '✓'
+                                            : item.source === 'daily_log' ? '📝' : '--'}
                                         </div>
                                         <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">
-                                          {item.assessment?.result ? 'Optional Score' : item.source === 'daily_log' ? 'Progress Note' : 'Pending'}
+                                          {item.assessment?.result
+                                            ? item.assessment.result.auto_score !== null && item.assessment.result.auto_score !== undefined
+                                              ? 'Optional Score'
+                                              : 'Saved Review'
+                                            : item.source === 'daily_log' ? 'Progress Note' : 'Pending'}
                                         </p>
                                         <button
                                           onClick={() => {
