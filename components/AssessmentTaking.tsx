@@ -71,6 +71,10 @@ export default function AssessmentTaking({
     setAnswers(prev => ({ ...prev, [questionId]: value }));
   };
 
+  const handleProjectSelect = (questionId: number, projectId: string) => {
+    setAnswers(prev => ({ ...prev, [questionId]: projectId }));
+  };
+
   const handleManualGrading = async (score: number) => {
     if (!existingResults?.id) return;
     setIsUpdating(true);
@@ -477,28 +481,47 @@ export default function AssessmentTaking({
             if (q.type === 'project_selection' && assessmentData.projects) {
               return (
                 <div key={q.id} className="space-y-6">
-                  <h3 className="text-2xl font-bold text-center mb-6">
+                  <h3 className="text-2xl font-bold text-center mb-2">
                     Choose or record ONE project for parent review:
                   </h3>
+                  <p className="text-center text-sm text-slate-500 font-semibold mb-6">
+                    Select a project option, then use Save Parent Assessment Record below to log it.
+                  </p>
                   
                   <div className="grid gap-6">
-                    {assessmentData.projects.map((project: any) => (
-                      <button
+                    {assessmentData.projects.map((project: any) => {
+                      const projectId = project.id.toString();
+                      const selected = answers[q.id] === projectId;
+
+                      return (
+                      <div
                         key={project.id}
-                        onClick={() => handleAnswerChange(q.id, project.id.toString())}
-                        className={`p-6 text-left rounded-2xl border-2 transition-all ${
-                          answers[q.id] === project.id.toString()
+                        role="button"
+                        tabIndex={0}
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          handleProjectSelect(q.id, projectId);
+                        }}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            handleProjectSelect(q.id, projectId);
+                          }
+                        }}
+                        className={`p-6 text-left rounded-2xl border-2 transition-all cursor-pointer ${
+                          selected
                             ? 'border-[#9333ea] bg-purple-50 shadow-xl scale-[1.02]'
                             : 'border-slate-200 bg-white hover:border-purple-300 hover:shadow-lg'
                         }`}
                       >
                         <div className="flex items-start gap-4">
                           <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0 ${
-                            answers[q.id] === project.id.toString()
+                            selected
                               ? 'bg-purple-600 text-white'
                               : 'bg-slate-100 text-slate-600'
                           }`}>
-                            {answers[q.id] === project.id.toString() ? '✓' : project.id}
+                            {selected ? '✓' : project.id}
                           </div>
                           
                           <div className="flex-1">
@@ -526,7 +549,7 @@ export default function AssessmentTaking({
                               </div>
                               
                               {project.steps && project.steps.length > 0 && (
-                                <details className="mt-2">
+                                <details className="mt-2" onClick={(event) => event.stopPropagation()}>
                                   <summary className="font-semibold text-purple-700 cursor-pointer hover:text-purple-800">
                                     📋 View Steps
                                   </summary>
@@ -540,8 +563,8 @@ export default function AssessmentTaking({
                             </div>
                           </div>
                         </div>
-                      </button>
-                    ))}
+                      </div>
+                    )})}
                   </div>
                 </div>
               );
