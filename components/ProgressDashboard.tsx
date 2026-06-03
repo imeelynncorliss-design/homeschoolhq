@@ -198,15 +198,25 @@ export default function ProgressDashboard({ userId, organizationId }: ProgressDa
   const completedLessons = filteredLessons.filter(l => l.status === 'completed').length
   const totalLessons = filteredLessons.length
   const completedHours = attendanceStats.totalHours
+  const expectedDays = Math.min(goal, Math.round((expectedProgress / 100) * goal))
+  const paceGapDays = completed - expectedDays
+  const needsAttendanceConfirmation = attendanceStats.lessonInferredDays > 0
+  const activityMixItems = [
+    { label: 'Lessons marked done', value: completedLessons, detail: `${totalLessons} planned lessons`, color: '#7c3aed', icon: '✅' },
+    { label: 'Books read', value: booksRead, detail: 'Reading log entries', color: '#2563eb', icon: '📚' },
+    { label: 'Field trip/activity hours', value: fieldTripHours, detail: 'Logged outside lessons', color: '#059669', icon: '🚌' },
+  ]
+  const maxActivityMixValue = Math.max(...activityMixItems.map(item => Number(item.value) || 0), 1)
 
   const progressStatus =
-    percentComplete >= expectedProgress + 10 ? 'ahead' :
-    percentComplete < expectedProgress - 10 ? 'behind' : 'on-track'
+    paceGapDays >= 10 ? 'ahead' :
+    paceGapDays <= -10 ? 'needs-attention' : 'on-track'
 
   const TABS: { id: Tab; icon: string; label: string }[] = [
-    { id: 'overview',   icon: '📋', label: 'Overview'   },
-    { id: 'insights',   icon: '📊', label: 'Insights'   },
-    { id: 'goals',      icon: '🎯', label: 'Goals'      },
+    { id: 'overview',   icon: '📋', label: 'Year Pace'   },
+    { id: 'insights',   icon: '📊', label: 'Activity Mix'   },
+    // Year Goals is intentionally hidden for MVP because it duplicated Year Pace.
+    // Keep the tab content below so we can bring it back if parents need a goals/setup view later.
   ]
 
   const KID_COLORS = ['#7c3aed', '#0d9488', '#ec4899', '#f59e0b', '#3b82f6']
@@ -230,8 +240,8 @@ export default function ProgressDashboard({ userId, organizationId }: ProgressDa
 
       {/* Header */}
       <div>
-        <h2 style={{ fontSize: 20, fontWeight: 900, color: '#1a1a2e', margin: '0 0 4px', fontFamily: "'Nunito', sans-serif" }}>Progress Tracking</h2>
-        <p style={{ fontSize: 13, color: '#6b7280', fontWeight: 600, margin: 0 }}>Monitor your annual learning goals and stay on track</p>
+        <h2 style={{ fontSize: 20, fontWeight: 900, color: '#1a1a2e', margin: '0 0 4px', fontFamily: "'Nunito', sans-serif" }}>School Year Progress</h2>
+        <p style={{ fontSize: 13, color: '#6b7280', fontWeight: 600, margin: 0 }}>Track your school-year pace, attendance, hours, and lesson completion.</p>
       </div>
 
       {/* Kid filter pills — Overview + Insights */}
@@ -257,18 +267,18 @@ export default function ProgressDashboard({ userId, organizationId }: ProgressDa
 
       {/* Inferred days notice */}
       {attendanceStats.lessonInferredDays > 0 && infoBox(
-        <><span>⚠️ </span><strong>{attendanceStats.lessonInferredDays} school days</strong> have lessons logged but no attendance record. These count toward your total but aren't officially confirmed.{' '}<a href="/attendance" style={{ color: '#7c3aed', fontWeight: 700 }}>Go to Attendance Tracker →</a></>,
+        <><span>⚠️ </span><strong>{attendanceStats.lessonInferredDays} lesson-only day{attendanceStats.lessonInferredDays !== 1 ? 's' : ''}</strong> need attendance confirmation. They are included as learning days here, but attendance-confirmed days are the cleaner compliance record.{' '}<a href="/attendance" style={{ color: '#7c3aed', fontWeight: 700 }}>Confirm in Attendance →</a></>,
         '#fffbeb', '#fde68a'
       )}
 
       {/* Top progress bar */}
       <div style={{ background: '#f5f3ff', border: '1.5px solid rgba(124,58,237,0.15)', borderRadius: 14, padding: '14px 18px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 700, color: '#1a1a2e', marginBottom: 8 }}>
-          <span>Progress to {goal} days</span>
-          <span style={{ color: '#7c3aed' }}>{completed} days completed</span>
+          <span>Progress to {goal} required days</span>
+          <span style={{ color: '#7c3aed' }}>{completed} learning days logged</span>
         </div>
         <div style={{ background: 'rgba(124,58,237,0.1)', borderRadius: 99, height: 10, overflow: 'hidden' }}>
-          <div style={{ height: '100%', borderRadius: 99, transition: 'all 0.5s', width: `${Math.min(percentComplete, 100)}%`, background: progressStatus === 'ahead' ? '#10b981' : progressStatus === 'behind' ? '#ef4444' : 'linear-gradient(90deg, #7c3aed, #a855f7)' }} />
+          <div style={{ height: '100%', borderRadius: 99, transition: 'all 0.5s', width: `${Math.min(percentComplete, 100)}%`, background: progressStatus === 'ahead' ? '#10b981' : progressStatus === 'needs-attention' ? '#f59e0b' : 'linear-gradient(90deg, #7c3aed, #a855f7)' }} />
         </div>
       </div>
 
@@ -288,8 +298,8 @@ export default function ProgressDashboard({ userId, organizationId }: ProgressDa
           <div style={{ background: 'linear-gradient(135deg, #7c3aed, #a855f7)', borderRadius: 16, padding: '24px 20px', color: '#fff' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
               <div>
-                <div style={{ fontSize: 26, fontWeight: 900, fontFamily: "'Nunito', sans-serif" }}>{completed} / {goal} Days</div>
-                <div style={{ fontSize: 13, opacity: 0.85, marginTop: 2 }}>Annual Compliance Progress</div>
+                <div style={{ fontSize: 26, fontWeight: 900, fontFamily: "'Nunito', sans-serif" }}>{completed} / {goal} Learning Days Logged</div>
+                <div style={{ fontSize: 13, opacity: 0.85, marginTop: 2 }}>{attendanceStats.confirmedDays} confirmed attendance days · {attendanceStats.lessonInferredDays} lesson-only</div>
               </div>
               <div style={{ textAlign: 'right' }}>
                 <div style={{ fontSize: 40, fontWeight: 900, fontFamily: "'Nunito', sans-serif", lineHeight: 1 }}>{percentComplete}%</div>
@@ -306,25 +316,36 @@ export default function ProgressDashboard({ userId, organizationId }: ProgressDa
           </div>
 
           {/* Status card */}
-          <div style={{ background: progressStatus === 'ahead' ? '#ecfdf5' : progressStatus === 'behind' ? '#fef2f2' : '#f5f3ff', border: `2px solid ${progressStatus === 'ahead' ? '#a7f3d0' : progressStatus === 'behind' ? '#fca5a5' : 'rgba(124,58,237,0.25)'}`, borderRadius: 14, padding: '20px' }}>
+          <div style={{ background: progressStatus === 'ahead' ? '#ecfdf5' : progressStatus === 'needs-attention' ? '#fffbeb' : '#f5f3ff', border: `2px solid ${progressStatus === 'ahead' ? '#a7f3d0' : progressStatus === 'needs-attention' ? '#fde68a' : 'rgba(124,58,237,0.25)'}`, borderRadius: 14, padding: '20px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16 }}>
-              <div style={{ fontSize: 40 }}>{progressStatus === 'ahead' ? '🚀' : progressStatus === 'behind' ? '⚠️' : '✅'}</div>
+              <div style={{ fontSize: 40 }}>{progressStatus === 'ahead' ? '🚀' : progressStatus === 'needs-attention' ? '⚠️' : '✅'}</div>
               <div>
-                <div style={{ fontSize: 17, fontWeight: 900, color: progressStatus === 'ahead' ? '#059669' : progressStatus === 'behind' ? '#dc2626' : '#7c3aed', fontFamily: "'Nunito', sans-serif", marginBottom: 4 }}>
-                  {progressStatus === 'ahead' ? 'Ahead of Schedule!' : progressStatus === 'behind' ? 'Behind Schedule' : 'Right on Track!'}
+                <div style={{ fontSize: 17, fontWeight: 900, color: progressStatus === 'ahead' ? '#059669' : progressStatus === 'needs-attention' ? '#d97706' : '#7c3aed', fontFamily: "'Nunito', sans-serif", marginBottom: 4 }}>
+                  {progressStatus === 'ahead' ? 'Ahead of pace' : progressStatus === 'needs-attention' ? 'Review your school-year pace' : 'On pace'}
                 </div>
                 <div style={{ fontSize: 13, color: '#4b5563', fontWeight: 600 }}>
-                  {progressStatus === 'ahead' ? `You're ${percentComplete - expectedProgress}% ahead of where you should be. Great work!` : progressStatus === 'behind' ? `You're ${expectedProgress - percentComplete}% behind. Consider adjusting your schedule.` : `You're progressing exactly as planned for this time of year.`}
+                  {progressStatus === 'ahead'
+                    ? `You have ${Math.abs(paceGapDays)} more learning days logged than expected by today.`
+                    : progressStatus === 'needs-attention'
+                      ? `By today, the expected pace is about ${expectedDays} days. You have ${completed} learning days logged.`
+                      : `Your logged learning days are close to the expected pace for this point in the school year.`}
                 </div>
               </div>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, fontWeight: 700, marginBottom: 6 }}>
-              <span style={{ background: 'rgba(255,255,255,0.8)', padding: '2px 8px', borderRadius: 6, color: '#374151' }}>Expected: {expectedProgress}%</span>
-              <span style={{ background: 'rgba(255,255,255,0.8)', padding: '2px 8px', borderRadius: 6, color: '#374151' }}>Actual: {percentComplete}%</span>
+              <span style={{ background: 'rgba(255,255,255,0.8)', padding: '2px 8px', borderRadius: 6, color: '#374151' }}>Expected by today: {expectedDays} days</span>
+              <span style={{ background: 'rgba(255,255,255,0.8)', padding: '2px 8px', borderRadius: 6, color: '#374151' }}>Logged: {completed} days</span>
+            </div>
+            <div style={{ fontSize: 11, color: '#6b7280', fontWeight: 600, marginBottom: 8 }}>
+              Based on your school-year dates and selected homeschool days.
             </div>
             <div style={{ position: 'relative', height: 24, background: '#fff', borderRadius: 8, overflow: 'hidden' }}>
               <div style={{ position: 'absolute', top: 0, height: '100%', width: 2, background: '#1a1a2e', zIndex: 10, left: `${expectedProgress}%` }} />
-              <div style={{ position: 'absolute', top: 0, left: 0, height: '100%', transition: 'all 0.5s', borderRadius: 8, width: `${Math.min(percentComplete, 100)}%`, background: progressStatus === 'ahead' ? '#10b981' : progressStatus === 'behind' ? '#ef4444' : 'linear-gradient(90deg, #7c3aed, #a855f7)' }} />
+              <div style={{ position: 'absolute', top: 0, left: 0, height: '100%', transition: 'all 0.5s', borderRadius: 8, width: `${Math.min(percentComplete, 100)}%`, background: progressStatus === 'ahead' ? '#10b981' : progressStatus === 'needs-attention' ? '#f59e0b' : 'linear-gradient(90deg, #7c3aed, #a855f7)' }} />
+            </div>
+            <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', fontSize: 11, color: '#6b7280', fontWeight: 700, marginTop: 8 }}>
+              <span><span style={{ display: 'inline-block', width: 16, height: 6, borderRadius: 99, background: progressStatus === 'ahead' ? '#10b981' : progressStatus === 'needs-attention' ? '#f59e0b' : '#7c3aed', marginRight: 5, verticalAlign: 'middle' }} />Logged days</span>
+              <span><span style={{ display: 'inline-block', width: 2, height: 12, background: '#1a1a2e', marginRight: 6, verticalAlign: 'middle' }} />Expected pace</span>
             </div>
           </div>
 
@@ -336,8 +357,8 @@ export default function ProgressDashboard({ userId, organizationId }: ProgressDa
             {statCard('⏰', `${completedHours.toFixed(1)}h`, 'Hours Logged', '#7c3aed')}
           </div>
 
-          {progressStatus === 'behind' && infoBox(
-            <><p style={{ fontWeight: 800, color: '#1a1a2e', marginBottom: 8 }}>💡 Recommendations to Get Back on Track:</p><ul style={{ paddingLeft: 20, margin: 0, lineHeight: 2 }}><li>Add an extra study session each week</li><li>Extend daily lessons by 15–30 minutes</li><li>Review and adjust vacation plans if possible</li><li>Focus on completing scheduled lessons before adding new ones</li></ul></>,
+          {(progressStatus === 'needs-attention' || needsAttendanceConfirmation) && infoBox(
+            <><p style={{ fontWeight: 800, color: '#1a1a2e', marginBottom: 8 }}>💡 Suggested next steps:</p><ul style={{ paddingLeft: 20, margin: 0, lineHeight: 2 }}>{needsAttendanceConfirmation && <li>Confirm attendance for {attendanceStats.lessonInferredDays} lesson-only day{attendanceStats.lessonInferredDays !== 1 ? 's' : ''}.</li>}<li>{daysRemaining} learning day{daysRemaining !== 1 ? 's' : ''} remaining to reach {goal}.</li>{progressStatus === 'needs-attention' && <li>Review your calendar and decide whether to add school days, adjust the school-year plan, or update attendance records.</li>}<li>Use Attendance for official day records; use Progress Evidence for learning notes and work samples.</li></ul></>,
             '#fffbeb', '#fde68a'
           )}
 
@@ -351,18 +372,19 @@ export default function ProgressDashboard({ userId, organizationId }: ProgressDa
       {activeTab === 'insights' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div style={{ background: '#f5f3ff', border: '1.5px solid rgba(124,58,237,0.12)', borderRadius: 14, padding: '20px' }}>
-            <div style={{ fontSize: 15, fontWeight: 900, color: '#1a1a2e', marginBottom: 16, fontFamily: "'Nunito', sans-serif" }}>📊 Subject Breakdown</div>
+            <div style={{ fontSize: 15, fontWeight: 900, color: '#1a1a2e', marginBottom: 4, fontFamily: "'Nunito', sans-serif" }}>📚 Subject Progress</div>
+            <p style={{ fontSize: 12, color: '#6b7280', fontWeight: 600, margin: '0 0 16px' }}>Bars show the percent of planned lessons completed in each subject.</p>
             {getSubjectBreakdown().length === 0 ? (
-              <p style={{ fontSize: 13, color: '#6b7280', fontWeight: 600, margin: 0 }}>No lesson data yet. Start adding lessons to see subject insights.</p>
+              <p style={{ fontSize: 13, color: '#6b7280', fontWeight: 600, margin: 0 }}>No lesson data yet. Start adding lessons to see subject progress.</p>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {getSubjectBreakdown().map(({ subject, total, completed: subDone }) => {
                   const pct = total > 0 ? Math.round((subDone / total) * 100) : 0
                   return (
                     <div key={subject}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 4 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 13, marginBottom: 4 }}>
                         <span style={{ fontWeight: 700, color: '#1a1a2e' }}>{subject}</span>
-                        <span style={{ color: '#6b7280', fontWeight: 600 }}>{subDone}/{total} · {pct}%</span>
+                        <span style={{ color: '#6b7280', fontWeight: 600, textAlign: 'right' }}>{subDone} of {total} lessons done · {pct}%</span>
                       </div>
                       <div style={{ background: 'rgba(124,58,237,0.1)', borderRadius: 99, height: 8, overflow: 'hidden' }}>
                         <div style={{ background: 'linear-gradient(90deg, #7c3aed, #a855f7)', height: '100%', borderRadius: 99, width: `${pct}%` }} />
@@ -370,16 +392,39 @@ export default function ProgressDashboard({ userId, organizationId }: ProgressDa
                     </div>
                   )
                 })}
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, paddingTop: 12, borderTop: '1px solid rgba(124,58,237,0.1)', marginTop: 4 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 13, paddingTop: 12, borderTop: '1px solid rgba(124,58,237,0.1)', marginTop: 4 }}>
                   <span style={{ fontWeight: 800, color: '#1a1a2e' }}>Total</span>
-                  <span style={{ fontWeight: 700, color: '#7c3aed' }}>{completedLessons} of {totalLessons} lessons completed</span>
+                  <span style={{ fontWeight: 700, color: '#7c3aed', textAlign: 'right' }}>{completedLessons} of {totalLessons} lessons marked done</span>
                 </div>
               </div>
             )}
           </div>
 
+          <div style={{ background: '#fff', border: '1.5px solid rgba(124,58,237,0.12)', borderRadius: 14, padding: '20px' }}>
+            <div style={{ fontSize: 15, fontWeight: 900, color: '#1a1a2e', marginBottom: 4, fontFamily: "'Nunito', sans-serif" }}>📊 Activity Mix</div>
+            <p style={{ fontSize: 12, color: '#6b7280', fontWeight: 600, margin: '0 0 16px' }}>A snapshot of the different learning evidence logged so far.</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {activityMixItems.map(item => {
+                const numericValue = Number(item.value) || 0
+                const width = Math.max(4, Math.round((numericValue / maxActivityMixValue) * 100))
+                return (
+                  <div key={item.label} style={{ background: '#f9fafb', border: '1px solid #eef2ff', borderRadius: 12, padding: '12px 14px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'baseline', marginBottom: 8 }}>
+                      <span style={{ fontSize: 13, fontWeight: 800, color: '#1a1a2e' }}>{item.icon} {item.label}</span>
+                      <span style={{ fontSize: 14, fontWeight: 900, color: item.color, fontFamily: "'Nunito', sans-serif" }}>{item.value}{item.label.includes('hours') ? 'h' : ''}</span>
+                    </div>
+                    <div style={{ background: `${item.color}18`, borderRadius: 99, height: 8, overflow: 'hidden', marginBottom: 5 }}>
+                      <div style={{ background: item.color, height: '100%', borderRadius: 99, width: `${width}%` }} />
+                    </div>
+                    <div style={{ fontSize: 11, color: '#6b7280', fontWeight: 600 }}>{item.detail}</div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
-            {statCard('📈', `${totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0}%`, 'Completion Rate')}
+            {statCard('📈', `${totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0}%`, 'Lessons Marked Done')}
             {statCard('⏱️', `${attendanceStats.totalDays > 0 ? (attendanceStats.totalHours / attendanceStats.totalDays).toFixed(1) : '0'}h`, 'Avg. Hours / Day', '#2563eb')}
             {statCard('📅', daysRemaining, 'Days Remaining', '#f59e0b')}
             {statCard('📚', booksRead, 'Books Read')}
@@ -388,22 +433,22 @@ export default function ProgressDashboard({ userId, organizationId }: ProgressDa
         </div>
       )}
 
-      {/* ── Goals ── */}
+      {/* ── Year Goals ── */}
       {activeTab === 'goals' && (
         <div style={{ background: '#f5f3ff', border: '1.5px solid rgba(124,58,237,0.12)', borderRadius: 14, padding: '20px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
             <div>
-              <div style={{ fontSize: 15, fontWeight: 900, color: '#1a1a2e', fontFamily: "'Nunito', sans-serif" }}>Attendance Goals</div>
-              <div style={{ fontSize: 12, color: '#6b7280', fontWeight: 600, marginTop: 2 }}>Set targets and track your progress</div>
+              <div style={{ fontSize: 15, fontWeight: 900, color: '#1a1a2e', fontFamily: "'Nunito', sans-serif" }}>Year Goals</div>
+              <div style={{ fontSize: 12, color: '#6b7280', fontWeight: 600, marginTop: 2 }}>Review your school-year targets for days, hours, and pacing.</div>
             </div>
             <button onClick={() => router.push('/school-year')} style={{ padding: '8px 16px', background: 'rgba(255,255,255,0.7)', border: '2px solid rgba(124,58,237,0.3)', borderRadius: 10, fontSize: 13, fontWeight: 700, color: '#7c3aed', cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}>
-              Edit Goals
+              Edit Year Setup
             </button>
           </div>
 
           <div style={{ marginBottom: 20 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 700, color: '#1a1a2e', marginBottom: 6 }}>
-              <span>School Days Goal</span>
+              <span>Required Days Goal</span>
               <span style={{ color: '#7c3aed' }}>{completed} / {goal} days</span>
             </div>
             <div style={{ background: 'rgba(124,58,237,0.1)', borderRadius: 99, height: 10, overflow: 'hidden', marginBottom: 4 }}>
@@ -423,7 +468,7 @@ export default function ProgressDashboard({ userId, organizationId }: ProgressDa
             <div style={{ background: 'rgba(124,58,237,0.1)', borderRadius: 99, height: 10, overflow: 'hidden' }}>
               <div style={{ background: 'linear-gradient(90deg, #a855f7, #ec4899)', height: '100%', borderRadius: 99, width: `${Math.min((attendanceStats.totalHours / (goal * 4)) * 100, 100)}%`, transition: 'all 0.5s' }} />
             </div>
-            <div style={{ fontSize: 11, color: '#6b7280', fontWeight: 600, marginTop: 4 }}>Based on 4 hrs/day target</div>
+            <div style={{ fontSize: 11, color: '#6b7280', fontWeight: 600, marginTop: 4 }}>Planning estimate based on 4 hrs/day.</div>
           </div>
 
           <div style={{ background: 'rgba(255,255,255,0.6)', borderRadius: 10, padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

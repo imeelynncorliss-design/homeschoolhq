@@ -259,7 +259,7 @@ export default function CommonCoreImporter({ organizationId, onImported }: Commo
               {importedCount} standard{importedCount !== 1 ? 's' : ''} imported!
             </div>
             <div style={{ fontSize: 13, color: '#374151', fontWeight: 600 }}>
-              Head to <strong>Records → Standards</strong> to see your coverage.
+              Head to <strong>Records → Learning Goals</strong> to see your coverage.
             </div>
           </div>
         </div>

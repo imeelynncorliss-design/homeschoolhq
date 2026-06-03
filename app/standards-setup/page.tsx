@@ -14,7 +14,7 @@ type Section = 'ccss' | 'state'
 
 function StandardsSetupContent() {
   const router = useRouter()
-  useAppHeader({ title: '📥 Standards Setup', backHref: '/tools' })
+  useAppHeader({ title: '📥 Learning Goals Setup', backHref: '/tools' })
 
   const [organizationId, setOrganizationId] = useState<string>('')
   const [loading, setLoading]               = useState(true)
@@ -93,10 +93,10 @@ function StandardsSetupContent() {
         {/* Header */}
         <div style={{ marginBottom: 24 }}>
           <h2 style={{ fontSize: 22, fontWeight: 900, color: '#c4b5fd', margin: '0 0 6px', fontFamily: "'Nunito', sans-serif" }}>
-            📥 Standards Setup
+            📥 Learning Goals Setup
           </h2>
           <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.75)', fontWeight: 600, margin: 0, lineHeight: 1.5 }}>
-            Import standards once — then tag them to lessons to track coverage over time.
+            Optional: add standards or family-defined goals when you want coverage notes for records, portfolios, or reviews.
           </p>
         </div>
 
@@ -104,8 +104,8 @@ function StandardsSetupContent() {
         {sectionCard(
           'ccss',
           '🇺🇸',
-          'Common Core Standards',
-          'Math & ELA · Grades K–12 · Used across most US states',
+          'Common Core Learning Goals',
+          'Optional Math & ELA coverage notes · Grades K–12',
           <CommonCoreImporter
             organizationId={organizationId}
             onImported={() => setTimeout(() => router.push('/standards'), 2500)}
@@ -116,8 +116,8 @@ function StandardsSetupContent() {
         {sectionCard(
           'state',
           '🗺️',
-          'Your State\'s Standards',
-          'Upload a screenshot of your state education website or paste a URL',
+          'Your State\'s Learning Goals',
+          'Optional: upload a screenshot of your state education website or paste a URL',
           <div>
             {/* Beta badge */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
@@ -136,8 +136,8 @@ function StandardsSetupContent() {
             </div>
 
             <p style={{ fontSize: 13, color: '#4b5563', fontWeight: 600, lineHeight: 1.6, margin: '0 0 16px' }}>
-              Every state publishes their own academic standards. Use Scout to extract them directly
-              from a screenshot of your state's education website — no manual entry needed.
+              If you want state-specific coverage notes, Scout can extract academic standards directly
+              from a screenshot of your state education website — no manual entry needed.
             </p>
             <button
               onClick={() => setShowStateImporter(true)}
@@ -149,7 +149,7 @@ function StandardsSetupContent() {
                 fontFamily: "'Nunito', sans-serif",
               }}
             >
-              🗺️ Import State Standards with Scout
+              🗺️ Import State Goals with Scout
             </button>
           </div>
         )}
@@ -165,7 +165,7 @@ function StandardsSetupContent() {
               fontFamily: "'Nunito', sans-serif",
             }}
           >
-            View Standards Coverage →
+            View Learning Goal Coverage →
           </button>
         </div>
 

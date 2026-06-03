@@ -1,5 +1,5 @@
 // components/AssessmentStandardsManager.tsx
-// Add, edit, and manage educational standards for an assessment
+// Add, edit, and manage optional learning-goal coverage for progress evidence
 
 'use client';
 
@@ -234,7 +234,7 @@ export default function AssessmentStandardsManager({
         <div className="sticky top-0 bg-gradient-to-r from-indigo-500 to-purple-600 text-white p-6 rounded-t-lg z-10">
           <div className="flex justify-between items-start">
             <div>
-              <h2 className="text-2xl font-bold mb-2">📚 Manage Educational Standards</h2>
+              <h2 className="text-2xl font-bold mb-2">📚 Link Learning Goals</h2>
               <p className="text-indigo-100">{assessmentTitle}</p>
             </div>
             <button
@@ -250,21 +250,21 @@ export default function AssessmentStandardsManager({
           {loading ? (
             <div className="text-center py-12">
               <div className="text-4xl mb-4">⏳</div>
-              <p>Loading standards...</p>
+              <p>Loading learning goals...</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Left: Current Standards */}
+              {/* Left: Current Learning Goals */}
               <div>
                 <h3 className="text-xl font-bold text-gray-900 mb-4">
-                  Aligned Standards ({currentStandards.length})
+                  Linked Learning Goals ({currentStandards.length})
                 </h3>
 
                 {currentStandards.length === 0 ? (
                   <div className="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
                     <div className="text-4xl mb-2">📚</div>
-                    <p className="text-gray-600">No standards aligned yet</p>
-                    <p className="text-sm text-gray-500 mt-1">Add standards from the right panel</p>
+                    <p className="text-gray-600">No learning goals linked yet</p>
+                    <p className="text-sm text-gray-500 mt-1">Add goals from the right panel if you want coverage notes</p>
                   </div>
                 ) : (
                   <div className="space-y-3">
@@ -325,17 +325,17 @@ export default function AssessmentStandardsManager({
                 )}
               </div>
 
-              {/* Right: Available Standards */}
+              {/* Right: Available Learning Goals */}
               <div>
                 <h3 className="text-xl font-bold text-gray-900 mb-4">
-                  Available Standards ({filteredStandards.length})
+                  Available Goals or Standards ({filteredStandards.length})
                 </h3>
 
                 {/* Filters */}
                 <div className="text-gray-900 space-y-3 mb-4">
                   <input
                     type="text"
-                    placeholder="Search by code or description..."
+                    placeholder="Search goals, codes, or descriptions..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
@@ -366,12 +366,12 @@ export default function AssessmentStandardsManager({
                   </div>
                 </div>
 
-                {/* Standards List */}
+                {/* Learning Goals List */}
                 <div className="space-y-2 max-h-[500px] overflow-y-auto">
                   {filteredStandards.length === 0 ? (
                     <div className="text-center py-8 text-gray-500">
                       <div className="text-4xl mb-2">🔍</div>
-                      <p>No standards found</p>
+                      <p>No goals or standards found</p>
                       <p className="text-sm mt-1">Try adjusting your filters</p>
                     </div>
                   ) : (
@@ -402,7 +402,7 @@ export default function AssessmentStandardsManager({
                             className="flex-shrink-0 px-3 py-1 bg-indigo-600 text-white rounded hover:bg-indigo-700 text-xs font-medium disabled:opacity-50"
                             disabled={saving}
                           >
-                            + Add
+                            + Link
                           </button>
                         </div>
                       </div>
@@ -416,7 +416,7 @@ export default function AssessmentStandardsManager({
           {/* Footer */}
           <div className="mt-6 pt-4 border-t flex justify-between items-center">
             <div className="text-sm text-gray-600">
-              {currentStandards.length} standard{currentStandards.length !== 1 ? 's' : ''} aligned to this assessment
+              {currentStandards.length} learning goal{currentStandards.length !== 1 ? 's' : ''} linked to this evidence
             </div>
             <button
               onClick={onClose}

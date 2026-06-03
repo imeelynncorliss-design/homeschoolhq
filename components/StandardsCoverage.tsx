@@ -214,7 +214,7 @@ export default function StandardsCoverage({ organizationId }: StandardsCoverageP
           fontFamily: "'Nunito', sans-serif", textDecoration: 'none',
         }}
       >
-        📥 Go to Standards Setup
+        📥 Go to Learning Goals Setup
       </a>
     </div>
   )
@@ -393,7 +393,7 @@ export default function StandardsCoverage({ organizationId }: StandardsCoverageP
                     </div>
                     {std.lessonCount === 0 && (
                       <div style={{ marginTop: 10, fontSize: 13, color: '#9ca3af', fontStyle: 'italic' }}>
-                        No lessons tagged to this standard yet. Open a lesson and use the Standards tab to link it.
+                        No lessons tagged to this goal yet. Open a lesson and use the Standards tab to link it.
                       </div>
                     )}
                   </div>
@@ -410,7 +410,7 @@ export default function StandardsCoverage({ organizationId }: StandardsCoverageP
         background: 'rgba(124,58,237,0.06)', borderRadius: 14,
         fontSize: 13, color: '#6b7280', fontWeight: 600, lineHeight: 1.6,
       }}>
-        💡 Tag standards to lessons using the <strong>Standards tab</strong> inside any lesson. Check-ins on those lessons automatically update the mastery status here.
+        💡 Tag learning goals to lessons using the <strong>Standards tab</strong> inside any lesson. Check-ins on those lessons automatically update the coverage status here.
       </div>
     </div>
   )

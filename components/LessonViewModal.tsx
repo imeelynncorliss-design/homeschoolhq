@@ -195,8 +195,42 @@ export default function LessonViewModal({
   onSetStatus,
   onSave,
 }: LessonViewModalProps) {
-  const status = STATUS_CONFIG[lesson.status] ?? STATUS_CONFIG.not_started
+  const [localStatus, setLocalStatus] = useState<LessonViewModalLesson['status']>(lesson.status)
+  const [statusSaving, setStatusSaving] = useState(false)
+  const [statusError, setStatusError] = useState<string | null>(null)
+  const status = STATUS_CONFIG[localStatus] ?? STATUS_CONFIG.not_started
   const subjectColors = SUBJECT_COLORS[lesson.subject] || { bg: '#f3f4f6', color: '#374151' }
+
+  useEffect(() => {
+    setLocalStatus(lesson.status)
+  }, [lesson.status])
+
+  const handleStatusChange = async (newStatus: LessonViewModalLesson['status']) => {
+    if (localStatus === newStatus || statusSaving) return
+    const previousStatus = localStatus
+    setLocalStatus(newStatus)
+    setStatusSaving(true)
+    setStatusError(null)
+
+    try {
+      if (onSetStatus) {
+        onSetStatus(lesson.id, newStatus)
+      } else {
+        const { error } = await supabase
+          .from('lessons')
+          .update({ status: newStatus })
+          .eq('id', lesson.id)
+        if (error) throw error
+        onSave?.(lesson.id, { status: newStatus })
+      }
+    } catch (error) {
+      console.error('Error updating lesson status:', error)
+      setLocalStatus(previousStatus)
+      setStatusError('Could not update lesson status. Please try again.')
+    } finally {
+      setStatusSaving(false)
+    }
+  }
 
   // Detect Scout (AI-generated) lesson plan stored as JSON in description
   const lessonPlan = parseScoutPlan(lesson)
@@ -858,20 +892,14 @@ ${overviewHtml}${objectivesHtml}${materialsHtml}${activitiesHtml}${assessmentHtm
               <div style={{ display: 'flex', gap: 8, width: '100%' }}>
                 {(['not_started', 'in_progress', 'completed'] as const).map(s => {
                   const cfg = STATUS_CONFIG[s]
-                  const isActive = lesson.status === s
+                  const isActive = localStatus === s
                   return (
                     <button
                       key={s}
-                      onClick={() => {
-                        if (lesson.status === s) return
-                        if (onSetStatus) {
-                          onSetStatus(lesson.id, s)
-                        } else {
-                          onCycleStatus(lesson.id, lesson.status)
-                        }
-                      }}
+                      onClick={() => handleStatusChange(s)}
+                      disabled={statusSaving}
                       style={{
-                        flex: 1, padding: '8px 4px', borderRadius: 10, cursor: 'pointer',
+                        flex: 1, padding: '8px 4px', borderRadius: 10, cursor: statusSaving ? 'wait' : 'pointer',
                         border: isActive ? `2px solid ${cfg.color}` : '2px solid #e5e7eb',
                         background: isActive ? cfg.bg : '#fff',
                         color: isActive ? cfg.color : '#9ca3af',
@@ -887,6 +915,8 @@ ${overviewHtml}${objectivesHtml}${materialsHtml}${activitiesHtml}${assessmentHtm
                   )
                 })}
               </div>
+              {statusSaving && <div style={{ fontSize: 11, color: '#7c3aed', fontWeight: 700, fontFamily: 'system-ui, sans-serif' }}>Saving status…</div>}
+              {statusError && <div style={{ fontSize: 11, color: '#ef4444', fontWeight: 700, fontFamily: 'system-ui, sans-serif' }}>{statusError}</div>}
             </div>
 
             {lessonPlan ? (
@@ -1352,7 +1382,7 @@ ${overviewHtml}${objectivesHtml}${materialsHtml}${activitiesHtml}${assessmentHtm
             {/* ── Section 2: Add a standard ── */}
             {availableStandards.length === 0 && !loadingStandards ? (
               <div style={{ padding: '0 22px 20px', fontSize: 13, color: '#6b7280', fontFamily: 'system-ui, sans-serif', lineHeight: 1.6 }}>
-                💡 No standards imported yet. Go to <strong>Records → Standards</strong> to import your state's standards.
+                💡 No learning goals imported yet. Go to <strong>Tools → Learning Goals</strong> to import optional standards or goals.
               </div>
             ) : (
               <div style={{ padding: '0 22px 20px' }}>
@@ -1479,7 +1509,18 @@ ${overviewHtml}${objectivesHtml}${materialsHtml}${activitiesHtml}${assessmentHtm
               </>
             ) : (
               <>
-                <button style={vw.btnSecondary} onClick={onClose}>Done</button>
+                <button
+                  style={{
+                    ...vw.btnSecondary,
+                    opacity: activeTab === 'checkin' && !checkInSaved ? 0.45 : 1,
+                    cursor: activeTab === 'checkin' && !checkInSaved ? 'not-allowed' : 'pointer',
+                  }}
+                  disabled={activeTab === 'checkin' && !checkInSaved}
+                  onClick={onClose}
+                  title={activeTab === 'checkin' && !checkInSaved ? 'Save the check-in first' : undefined}
+                >
+                  {activeTab === 'checkin' ? 'Done' : 'Close'}
+                </button>
                 <button style={vw.btnPrimary} onClick={() => setEditing(true)}>✏️ Edit</button>
               </>
             )}

@@ -32,10 +32,17 @@ function ReportsContent() {
       comingSoon: false,
     },
     {
-      icon: '📊',
-      label: 'Progress Reports',
-      desc: 'Learning analytics & summaries',
+      icon: '📈',
+      label: 'School Year Progress',
+      desc: 'Pace, attendance, hours, and year-to-date progress',
       href: '/progress',
+      comingSoon: false,
+    },
+    {
+      icon: '📝',
+      label: 'Progress Evidence',
+      desc: 'Review optional assessments, scores, notes, and linked goals',
+      href: '/assessments',
       comingSoon: false,
     },
     {
@@ -47,8 +54,8 @@ function ReportsContent() {
     },
     {
       icon: '📌',
-      label: 'Standards',
-      desc: 'Track which standards your lessons cover and where the gaps are',
+      label: 'Learning Goals',
+      desc: 'Review goal coverage and optional standards evidence',
       href: '/standards',
       comingSoon: false,
     },
