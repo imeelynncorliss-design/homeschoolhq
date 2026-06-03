@@ -1240,21 +1240,21 @@ ${overviewHtml}${objectivesHtml}${materialsHtml}${activitiesHtml}${assessmentHtm
             <div style={{ padding: '18px 22px', display: 'flex', flexDirection: 'column' as const, gap: 14 }}>
               <div style={{ background: '#f5f3ff', border: '1.5px solid #ddd6fe', borderRadius: 16, padding: 16 }}>
                 <div style={{ fontSize: 11, fontWeight: 900, color: '#7c3aed', letterSpacing: 0.6, textTransform: 'uppercase' as const, fontFamily: 'system-ui, sans-serif', marginBottom: 6 }}>
-                  Assess this lesson
+                  Parent-administered assessment
                 </div>
                 <h3 style={{ fontSize: 17, fontWeight: 900, color: '#1f2937', margin: '0 0 8px', fontFamily: 'system-ui, sans-serif' }}>
-                  Create a quiz, worksheet, or project review
+                  Create a parent-administered quiz, worksheet, or project review
                 </h3>
                 <p style={{ fontSize: 13, color: '#4b5563', lineHeight: 1.55, margin: 0, fontFamily: 'system-ui, sans-serif' }}>
-                  Use this when you want a more formal check for understanding. Lessons can still use simple check-ins; assessments are optional and can save a score or parent review note.
+                  Use this when you want a more formal check for understanding. Your child does not need a HomeschoolReady login — administer it offline, printed, orally, or side-by-side, then record notes or an optional score here.
                 </p>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 10 }}>
                 {[
-                  { icon: '📝', title: 'Quiz', desc: 'Multiple-choice or true/false questions with an optional score.' },
-                  { icon: '📋', title: 'Worksheet', desc: 'Short-answer practice that a parent can review.' },
-                  { icon: '🎨', title: 'Project', desc: 'Hands-on project options with a parent review/rating.' },
+                  { icon: '📝', title: 'Parent-administered quiz', desc: 'Multiple-choice or true/false questions you can read, print, or use side-by-side.' },
+                  { icon: '📋', title: 'Parent-administered worksheet', desc: 'Short-answer practice you can give offline and record here.' },
+                  { icon: '🎨', title: 'Parent-reviewed project', desc: 'Hands-on project options with a parent review/rating.' },
                 ].map(item => (
                   <div key={item.title} style={{ display: 'flex', gap: 10, background: '#fff', border: '1.5px solid #e5e7eb', borderRadius: 14, padding: 12 }}>
                     <span style={{ fontSize: 22 }}>{item.icon}</span>
@@ -1270,10 +1270,10 @@ ${overviewHtml}${objectivesHtml}${materialsHtml}${activitiesHtml}${assessmentHtm
                 onClick={() => setShowAssessmentGenerator(true)}
                 style={{ ...vw.btnPrimary, justifyContent: 'center' }}
               >
-                ✨ Create Assessment / Test
+                ✨ Create Parent-Administered Assessment / Test
               </button>
               <p style={{ fontSize: 12, color: '#6b7280', lineHeight: 1.5, margin: 0, fontFamily: 'system-ui, sans-serif' }}>
-                Completed assessments appear in Records → Progress Evidence & Assessments.
+                Saved assessment records appear in Records → Progress Evidence & Assessments.
               </p>
             </div>
           </div>

@@ -31,9 +31,9 @@ type AssessmentType = 'quiz' | 'worksheet' | 'project';
 type Difficulty = 'easy' | 'medium' | 'hard';
 
 const ASSESSMENT_TYPES: { value: AssessmentType; label: string; emoji: string; desc: string }[] = [
-  { value: 'quiz',      label: 'Quiz',      emoji: '📝', desc: 'Multiple choice & true/false questions' },
-  { value: 'worksheet', label: 'Worksheet', emoji: '📋', desc: 'Short answer practice problems' },
-  { value: 'project',   label: 'Project',   emoji: '🎨', desc: 'Hands-on project options to choose from' },
+  { value: 'quiz',      label: 'Parent-administered quiz',      emoji: '📝', desc: 'Multiple choice or true/false questions you can read, print, or use side-by-side' },
+  { value: 'worksheet', label: 'Parent-administered worksheet', emoji: '📋', desc: 'Short-answer practice you can give offline and record here' },
+  { value: 'project',   label: 'Parent-reviewed project',       emoji: '🎨', desc: 'Hands-on project options with parent review notes or optional score' },
 ];
 
 const DIFFICULTIES: { value: Difficulty; label: string; color: string }[] = [
@@ -92,7 +92,7 @@ export default function GenerateAssessmentModal({ lesson, kids, onClose }: Gener
     }
   };
 
-  // Show the assessment-taking UI once generated
+  // Show the parent-administered assessment record once generated
   if (generatedAssessment) {
     return (
       <AssessmentTaking
@@ -119,14 +119,18 @@ export default function GenerateAssessmentModal({ lesson, kids, onClose }: Gener
         <div className="bg-gradient-to-r from-purple-600 to-indigo-600 px-6 py-5">
           <div className="flex justify-between items-start">
             <div>
-              <h2 className="text-white font-bold text-xl">✨ Generate Assessment</h2>
-              <p className="text-purple-200 text-sm mt-1 line-clamp-1">{lesson.title}</p>
+              <h2 className="text-white font-bold text-xl">✨ Create Parent-Administered Assessment</h2>
+              <p className="text-purple-200 text-sm mt-1 line-clamp-1">No child login needed • {lesson.title}</p>
             </div>
             <button onClick={onClose} className="text-white text-2xl leading-none font-light hover:text-purple-200">×</button>
           </div>
         </div>
 
         <div className="p-6 space-y-5">
+
+          <div className="bg-purple-50 border border-purple-200 rounded-xl px-4 py-3 text-sm text-purple-900 leading-relaxed">
+            <strong>Parent-administered:</strong> Your child does not need a HomeschoolReady login. Use this offline, printed, or side-by-side, then record responses, notes, or an optional score here.
+          </div>
 
           {/* Child selector — only show if multiple kids */}
           {kids.length > 1 && (
@@ -155,7 +159,7 @@ export default function GenerateAssessmentModal({ lesson, kids, onClose }: Gener
 
           {/* Assessment type */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Assessment type</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Parent-administered format</label>
             <div className="space-y-2">
               {ASSESSMENT_TYPES.map(type => (
                 <button
@@ -203,7 +207,7 @@ export default function GenerateAssessmentModal({ lesson, kids, onClose }: Gener
           {/* Question count */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Number of {assessmentType === 'project' ? 'project options' : 'questions'}: <span className="text-purple-600">{questionCount}</span>
+              Number of {assessmentType === 'project' ? 'project options' : 'prompts/questions'}: <span className="text-purple-600">{questionCount}</span>
             </label>
             <div className="flex gap-2">
               {(assessmentType === 'project' ? [1, 2, 3] : [3, 5, 8, 10]).map(n => (
@@ -241,7 +245,7 @@ export default function GenerateAssessmentModal({ lesson, kids, onClose }: Gener
                 Generating...
               </>
             ) : (
-              <>✨ Generate {assessmentType.charAt(0).toUpperCase() + assessmentType.slice(1)}</>
+              <>✨ Create Parent-Administered {assessmentType.charAt(0).toUpperCase() + assessmentType.slice(1)}</>
             )}
           </button>
         </div>
