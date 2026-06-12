@@ -97,9 +97,11 @@ function ProfileContent() {
   const [kids,           setKids]           = useState<Kid[]>([])
   const [tier,           setTier]           = useState<UserTier>('FREE')
   const [renewDate,      setRenewDate]      = useState<string | null>(null)
-  const [weatherEnabled, setWeatherEnabled] = useState(() => {
-    try { return localStorage.getItem(WEATHER_PREF_KEY) !== 'off' } catch { return true }
-  })
+  const [weatherEnabled, setWeatherEnabled] = useState(true)
+
+  useEffect(() => {
+    try { setWeatherEnabled(localStorage.getItem(WEATHER_PREF_KEY) !== 'off') } catch { setWeatherEnabled(true) }
+  }, [])
   const [editingKid,     setEditingKid]     = useState<any | null>(null)
   const [addingKid,      setAddingKid]      = useState(false)
   const [orgId,          setOrgId]          = useState<string | null>(null)

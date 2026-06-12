@@ -98,9 +98,15 @@ function SupplyScoutContent() {
   const [nextWeekLabel, setNextWeekLabel] = useState('')
   const [activeTab, setActiveTab]     = useState<'next' | 'this'>('this')
   const [checked, setChecked]         = useState<Set<string>>(new Set())
+  const [checklistStorageKey, setChecklistStorageKey] = useState<string | null>(null)
 
   const dayGroups  = activeTab === 'next' ? nextWeek : thisWeek
   const weekLabel  = activeTab === 'next' ? nextWeekLabel : thisWeekLabel
+  const activeMaterialKeys = dayGroups.flatMap(group =>
+    group.lessons.flatMap(({ lesson, materials }) =>
+      materials.map((_, idx) => `${lesson.id}::${idx}`)
+    )
+  )
 
   useEffect(() => {
     const load = async () => {
@@ -114,6 +120,17 @@ function SupplyScoutContent() {
       const nextW = getWeekDates(1)
       setThisWeekLabel(thisW.label)
       setNextWeekLabel(nextW.label)
+
+      const storageKey = `supply-scout-checklist:${orgId}:${thisW.dateStrs[0]}:${nextW.dateStrs[4]}`
+      setChecklistStorageKey(storageKey)
+      try {
+        const saved = JSON.parse(window.localStorage.getItem(storageKey) || '[]')
+        if (Array.isArray(saved)) {
+          setChecked(new Set(saved.filter((key): key is string => typeof key === 'string')))
+        }
+      } catch {
+        setChecked(new Set())
+      }
 
       const [kidsResult, lessonsResult] = await Promise.all([
         supabase.from('kids').select('id, displayname').eq('organization_id', orgId).order('created_at', { ascending: true }),
@@ -150,6 +167,11 @@ function SupplyScoutContent() {
     load()
   }, [])
 
+  useEffect(() => {
+    if (!checklistStorageKey) return
+    window.localStorage.setItem(checklistStorageKey, JSON.stringify(Array.from(checked)))
+  }, [checked, checklistStorageKey])
+
   const toggleCheck = (key: string) => {
     setChecked(prev => {
       const next = new Set(prev)
@@ -158,10 +180,8 @@ function SupplyScoutContent() {
     })
   }
 
-  const totalMaterials = dayGroups.reduce((sum, d) =>
-    sum + d.lessons.reduce((s, l) => s + l.materials.length, 0), 0)
-
-  const checkedCount = checked.size
+  const totalMaterials = activeMaterialKeys.length
+  const checkedCount = activeMaterialKeys.filter(key => checked.has(key)).length
 
   if (loading) {
     return (
@@ -214,6 +234,17 @@ function SupplyScoutContent() {
             <p style={{ fontSize: 12, color: '#6b7280', fontWeight: 600, margin: '0 0 4px' }}>
               {weekLabel}
             </p>
+            <button
+              type="button"
+              onClick={() => router.push('/dashboard')}
+              style={{
+                marginTop: 8, border: '1.5px solid rgba(124,58,237,0.25)', borderRadius: 999,
+                background: 'rgba(255,255,255,0.82)', color: '#5b21b6', cursor: 'pointer',
+                fontFamily: "'Nunito', sans-serif", fontSize: 12, fontWeight: 800, padding: '7px 12px',
+              }}
+            >
+              ← Back to Dashboard
+            </button>
           </div>
           {/* Progress pill */}
           {totalMaterials > 0 && (
