@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import AssessmentTaking from './AssessmentTaking';
 
 interface Lesson {
@@ -21,13 +21,15 @@ interface Kid {
   photo_url?: string;
 }
 
+type AssessmentType = 'quiz' | 'worksheet' | 'project';
+
 interface GenerateAssessmentModalProps {
   lesson: Lesson;
   kids: Kid[];
   onClose: () => void;
+  initialAssessmentType?: AssessmentType;
+  autoGenerate?: boolean;
 }
-
-type AssessmentType = 'quiz' | 'worksheet' | 'project';
 type Difficulty = 'easy' | 'medium' | 'hard';
 
 const ASSESSMENT_TYPES: { value: AssessmentType; label: string; emoji: string; desc: string }[] = [
@@ -42,9 +44,9 @@ const DIFFICULTIES: { value: Difficulty; label: string; color: string }[] = [
   { value: 'hard',   label: 'Hard',   color: 'bg-red-100 text-red-800 border-red-300' },
 ];
 
-export default function GenerateAssessmentModal({ lesson, kids, onClose }: GenerateAssessmentModalProps) {
+export default function GenerateAssessmentModal({ lesson, kids, onClose, initialAssessmentType = 'quiz', autoGenerate = false }: GenerateAssessmentModalProps) {
   const [selectedKidId, setSelectedKidId] = useState<string>(lesson.kid_id || kids[0]?.id || '');
-  const [assessmentType, setAssessmentType] = useState<AssessmentType>('quiz');
+  const [assessmentType, setAssessmentType] = useState<AssessmentType>(initialAssessmentType);
   const [difficulty, setDifficulty] = useState<Difficulty>('medium');
   const [questionCount, setQuestionCount] = useState(5);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -56,6 +58,7 @@ export default function GenerateAssessmentModal({ lesson, kids, onClose }: Gener
   const [generatedKidName, setGeneratedKidName] = useState<string>('');
 
   const selectedKid = kids.find(k => k.id === selectedKidId);
+  const autoGenerateStarted = useRef(false);
 
   const normalizeQuestionCount = (type: AssessmentType) => {
     if (type === 'project') return [1, 2, 3].includes(questionCount) ? questionCount : 3;
@@ -112,6 +115,13 @@ export default function GenerateAssessmentModal({ lesson, kids, onClose }: Gener
       setIsGenerating(false);
     }
   };
+
+  useEffect(() => {
+    if (!autoGenerate || autoGenerateStarted.current || !selectedKidId) return;
+    autoGenerateStarted.current = true;
+    handleGenerate(initialAssessmentType);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoGenerate, initialAssessmentType, selectedKidId]);
 
   // Show the parent-administered assessment record once generated
   if (generatedAssessment) {

@@ -257,6 +257,8 @@ export default function LessonViewModal({
   // Tabs
   const [activeTab, setActiveTab] = useState<'details' | 'checkin' | 'assessment' | 'standards' | 'materials'>('details')
   const [showAssessmentGenerator, setShowAssessmentGenerator] = useState(false)
+  const [assessmentGeneratorType, setAssessmentGeneratorType] = useState<'quiz' | 'worksheet' | 'project'>('quiz')
+  const [autoGenerateAssessment, setAutoGenerateAssessment] = useState(false)
 
   // Copy to child
   const [copyTargetId, setCopyTargetId] = useState('')
@@ -1253,22 +1255,37 @@ ${overviewHtml}${objectivesHtml}${materialsHtml}${activitiesHtml}${assessmentHtm
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 10 }}>
                 {[
-                  { icon: '📝', title: 'Parent-administered quiz', desc: 'Multiple-choice or true/false questions you can read, print, or use side-by-side.' },
-                  { icon: '📋', title: 'Parent-administered worksheet', desc: 'Short-answer practice you can give offline and record here.' },
-                  { icon: '🎨', title: 'Parent-reviewed project', desc: 'Hands-on project options with a parent review/rating.' },
+                  { type: 'quiz' as const, icon: '📝', title: 'Parent-administered quiz', desc: 'Multiple-choice or true/false questions you can read, print, or use side-by-side.' },
+                  { type: 'worksheet' as const, icon: '📋', title: 'Parent-administered worksheet', desc: 'Short-answer practice you can give offline and record here.' },
+                  { type: 'project' as const, icon: '🎨', title: 'Parent-reviewed project', desc: 'Hands-on project options with a parent review/rating.' },
                 ].map(item => (
-                  <div key={item.title} style={{ display: 'flex', gap: 10, background: '#fff', border: '1.5px solid #e5e7eb', borderRadius: 14, padding: 12 }}>
+                  <button
+                    key={item.title}
+                    onClick={() => {
+                      setAssessmentGeneratorType(item.type)
+                      setAutoGenerateAssessment(true)
+                      setShowAssessmentGenerator(true)
+                    }}
+                    style={{ display: 'flex', gap: 10, width: '100%', background: '#fff', border: '1.5px solid #e5e7eb', borderRadius: 14, padding: 12, textAlign: 'left' as const, cursor: 'pointer', alignItems: 'flex-start' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#a78bfa'; e.currentTarget.style.background = '#faf5ff' }}
+                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#e5e7eb'; e.currentTarget.style.background = '#fff' }}
+                  >
                     <span style={{ fontSize: 22 }}>{item.icon}</span>
-                    <div>
+                    <div style={{ flex: 1 }}>
                       <div style={{ fontSize: 13, fontWeight: 900, color: '#111827', fontFamily: 'system-ui, sans-serif' }}>{item.title}</div>
                       <div style={{ fontSize: 12, color: '#6b7280', lineHeight: 1.45, fontFamily: 'system-ui, sans-serif' }}>{item.desc}</div>
                     </div>
-                  </div>
+                    <span style={{ fontSize: 11, fontWeight: 900, color: '#7c3aed', fontFamily: 'system-ui, sans-serif', alignSelf: 'center' }}>Create</span>
+                  </button>
                 ))}
               </div>
 
               <button
-                onClick={() => setShowAssessmentGenerator(true)}
+                onClick={() => {
+                  setAssessmentGeneratorType('quiz')
+                  setAutoGenerateAssessment(false)
+                  setShowAssessmentGenerator(true)
+                }}
                 style={{ ...vw.btnPrimary, justifyContent: 'center' }}
               >
                 ✨ Create Parent-Administered Assessment / Test
@@ -1583,7 +1600,12 @@ ${overviewHtml}${objectivesHtml}${materialsHtml}${activitiesHtml}${assessmentHtm
         <GenerateAssessmentModal
           lesson={lesson}
           kids={allKids || [{ id: lesson.kid_id, displayname: kidName || 'Student' }]}
-          onClose={() => setShowAssessmentGenerator(false)}
+          initialAssessmentType={assessmentGeneratorType}
+          autoGenerate={autoGenerateAssessment}
+          onClose={() => {
+            setShowAssessmentGenerator(false)
+            setAutoGenerateAssessment(false)
+          }}
         />
       )}
     </div>
