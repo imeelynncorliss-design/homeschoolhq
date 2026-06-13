@@ -16,12 +16,18 @@ import { useAppHeader } from '@/components/layout/AppHeader'
 
 function TranscriptsContent() {
   const router = useRouter()
-  useAppHeader({ title: '📄 Transcripts', backHref: '/reports' })
+  const [backHref, setBackHref] = useState('/reports')
+  useAppHeader({ title: '📄 Transcripts', backHref })
   const [user, setUser]           = useState<any>(null)
   const [loading, setLoading]     = useState(true)
   const [activeTab, setActiveTab] = useState('gradebook')
   const [kids, setKids]           = useState<any[]>([])
   const [selectedKid, setSelectedKid] = useState<string | null>(null)
+
+  useEffect(() => {
+    const from = new URLSearchParams(window.location.search).get('from')
+    if (from === 'resources-highschool') setBackHref('/resources?tab=highschool')
+  }, [])
 
   useEffect(() => {
     const init = async () => {
@@ -67,7 +73,7 @@ function TranscriptsContent() {
   )
   return (
     <div style={css.root}>
-      <button onClick={() => router.push('/reports')} style={{
+      <button onClick={() => router.push(backHref)} style={{
         display: 'flex', alignItems: 'center', gap: 6,
         background: 'rgba(255,255,255,0.72)', border: '1.5px solid rgba(124,58,237,0.15)',
         borderRadius: 20, padding: '7px 16px 7px 12px',
@@ -75,7 +81,7 @@ function TranscriptsContent() {
         cursor: 'pointer', fontFamily: "'Nunito', sans-serif",
         margin: '16px 20px 0',
       }}>
-        ‹ Records
+        ‹ {backHref.includes('resources') ? 'High School' : 'Records'}
       </button>
 
       {/* ── Main ─────────────────────────────────────────────────────────────── */}
@@ -90,7 +96,7 @@ function TranscriptsContent() {
               <strong>Need to add or manage courses?</strong> Courses now have their own dedicated section.
             </p>
           </div>
-          <button style={css.bannerBtn} onClick={() => router.push('/courses')}>
+          <button style={css.bannerBtn} onClick={() => router.push(backHref.includes('resources') ? '/courses?from=resources-highschool' : '/courses')}>
             Go to Courses →
           </button>
         </div>
