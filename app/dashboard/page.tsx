@@ -131,6 +131,42 @@ function localDateString(date = new Date()): string {
   ].join('-')
 }
 
+function getSupplyScoutStorageKey(orgId: string, today = new Date()): string {
+  const dow = today.getDay()
+  const daysToThisMon = dow === 0 ? -6 : 1 - dow
+  const daysToNextMon = dow === 0 ? 1 : 8 - dow
+  const thisMonday = new Date(today)
+  thisMonday.setDate(today.getDate() + daysToThisMon)
+  thisMonday.setHours(12, 0, 0, 0)
+  const nextFriday = new Date(today)
+  nextFriday.setDate(today.getDate() + daysToNextMon + 4)
+  nextFriday.setHours(12, 0, 0, 0)
+  return `supply-scout-checklist:${orgId}:${localDateString(thisMonday)}:${localDateString(nextFriday)}`
+}
+
+function getSupplyScoutMaterials(lesson: any): string[] {
+  const results: string[] = []
+  if (Array.isArray(lesson.materials_needed)) {
+    lesson.materials_needed.forEach((m: unknown) => {
+      if (typeof m === 'string' && m.trim()) results.push(m.trim())
+    })
+  }
+  if (lesson.description) {
+    const trimmed = lesson.description.trim()
+    if (lesson.lesson_source === 'scout' || trimmed.startsWith('{')) {
+      try {
+        const parsed = JSON.parse(trimmed)
+        if (Array.isArray(parsed?.materials)) {
+          parsed.materials.forEach((m: unknown) => {
+            if (typeof m === 'string' && m.trim() && !results.includes(m.trim())) results.push(m.trim())
+          })
+        }
+      } catch { /* not JSON */ }
+    }
+  }
+  return results
+}
+
 // ─── Pulse Ring ───────────────────────────────────────────────────────────────
 
 function PulseRing({ pct, color, size = 120 }: { pct: number; color: string; size?: number }) {
@@ -1503,7 +1539,14 @@ function DashboardContent() {
             .order('start_time', { ascending: true })
           const byDate: Record<string, { lesson: any; kid: Kid }[]> = {}
           for (const d of weekDays) byDate[d] = []
-          let matCount = 0
+          const checkedMaterialKeys = new Set<string>()
+          try {
+            const saved = JSON.parse(window.localStorage.getItem(getSupplyScoutStorageKey(orgId, now)) || '[]')
+            if (Array.isArray(saved)) {
+              saved.forEach((key: unknown) => { if (typeof key === 'string') checkedMaterialKeys.add(key) })
+            }
+          } catch { /* ignore invalid local checklist state */ }
+          const materialKeys: string[] = []
           for (const lesson of weekData ?? []) {
             if (!lesson.lesson_date) continue
             const kid = kidsData.find((k: any) => k.id === lesson.kid_id)
@@ -1513,18 +1556,12 @@ function DashboardContent() {
                 kid: { id: kid.id, displayname: kid.displayname, grade: kid.grade, learning_style: kid.learning_style, mi_profile: kid.mi_profile, avatar_index: kid.avatar_index, color_index: kid.color_index, current_hook: kid.current_hook },
               })
             }
-            // Count materials_needed items
-            if (Array.isArray(lesson.materials_needed)) matCount += lesson.materials_needed.length
-            // Count Scout JSON materials
-            if (lesson.description) {
-              try {
-                const parsed = JSON.parse(lesson.description.trim())
-                if (Array.isArray(parsed?.materials)) matCount += parsed.materials.length
-              } catch { /* not JSON */ }
-            }
+            getSupplyScoutMaterials(lesson).forEach((_, idx) => {
+              materialKeys.push(`${lesson.id}::${idx}`)
+            })
           }
           setWeekLessons(byDate)
-          setWeeklyMaterialsCount(matCount)
+          setWeeklyMaterialsCount(materialKeys.filter(key => !checkedMaterialKeys.has(key)).length)
         }
 
         // Fetch today's attendance
