@@ -559,7 +559,7 @@ function ProfileContent() {
                 }}>
                 <div
                   style={{ display: 'flex', alignItems: 'center', gap: 14, flex: 1, cursor: 'pointer' }}
-                  onClick={() => router.push(`/subjects?kid=${kid.id}`)}>
+                  onClick={() => openEditKid(kid.id)}>
                   <div style={{
                     width: 42, height: 42, borderRadius: '50%', flexShrink: 0,
                     background: color,
