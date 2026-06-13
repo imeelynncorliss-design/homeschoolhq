@@ -17,6 +17,17 @@ const LEARNING_STYLES = [
   { value: 'kinesthetic', label: '🤲 Kinesthetic',  desc: 'Learns through doing, building, and moving' },
 ]
 
+const DEFAULT_SCOUT_CONTEXT_FIELDS = ['age', 'grade']
+
+const SCOUT_CONTEXT_OPTIONS = [
+  { value: 'displayname',    label: 'Display name',              desc: 'Lets Scout refer to this learner by the name you chose.' },
+  { value: 'age',            label: 'Age',                       desc: 'Helps Scout keep suggestions developmentally appropriate.' },
+  { value: 'grade',          label: 'Grade',                     desc: 'Helps Scout match reading level and scope.' },
+  { value: 'learning_style', label: 'Learning style',            desc: 'Lets Scout adapt format: visual, hands-on, discussion, etc.' },
+  { value: 'current_hook',   label: 'Current interests',         desc: 'Lets Scout weave in interests like Minecraft, space, animals, art.' },
+  { value: 'mi_profile',     label: 'Teaching Blueprint strengths', desc: 'Lets Scout use selected multiple-intelligence strengths.' },
+]
+
 // Readable cluster header colors for white/light backgrounds
 const CLUSTER_TEXT: Record<string, string> = {
   analytical:    '#5b21b6',
@@ -38,6 +49,7 @@ interface KidData {
   mi_profile?: string[] | null
   current_hook?: string | null
   curriculum?: string | null
+  scout_context_fields?: string[] | null
   photoFile?: File
 }
 
@@ -51,7 +63,7 @@ interface KidProfileFormProps {
 
 export default function KidProfileForm({ kid, onSave, onCancel }: KidProfileFormProps) {
   const isEditing = !!kid?.id
-  const [activeTab, setActiveTab] = useState<'core' | 'learning' | 'interests'>('core')
+  const [activeTab, setActiveTab] = useState<'core' | 'learning' | 'interests' | 'scout'>('core')
   const [saving, setSaving] = useState(false)
 
   // Core Info
@@ -74,6 +86,11 @@ export default function KidProfileForm({ kid, onSave, onCancel }: KidProfileForm
   const [currentHook, setCurrentHook] = useState(kid?.current_hook || '')
   const [curriculum, setCurriculum]   = useState(kid?.curriculum || '')
 
+  // Scout data-sharing preferences. Default is intentionally minimal.
+  const [scoutContextFields, setScoutContextFields] = useState<string[]>(
+    kid?.scout_context_fields?.length ? kid.scout_context_fields : DEFAULT_SCOUT_CONTEXT_FIELDS
+  )
+
   const toggleStyle = (value: string) => {
     setLearningStyles(prev =>
       prev.includes(value) ? prev.filter(s => s !== value) : [...prev, value]
@@ -83,6 +100,12 @@ export default function KidProfileForm({ kid, onSave, onCancel }: KidProfileForm
   const toggleMi = (id: string) => {
     setMiProfile(prev =>
       prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    )
+  }
+
+  const toggleScoutContextField = (value: string) => {
+    setScoutContextFields(prev =>
+      prev.includes(value) ? prev.filter(field => field !== value) : [...prev, value]
     )
   }
 
@@ -117,6 +140,7 @@ export default function KidProfileForm({ kid, onSave, onCancel }: KidProfileForm
         mi_profile: miProfile.length > 0 ? miProfile : null,
         current_hook: currentHook.trim() || null,
         curriculum: curriculum || null,
+        scout_context_fields: scoutContextFields,
         photoFile: photoFile || undefined,
       })
     } finally {
@@ -137,6 +161,7 @@ export default function KidProfileForm({ kid, onSave, onCancel }: KidProfileForm
     { id: 'core' as const,      label: 'Core Info',      done: coreComplete },
     { id: 'learning' as const,  label: 'How They Learn', done: learningComplete },
     { id: 'interests' as const, label: 'Interests',      done: !!(currentHook || curriculum) },
+    { id: 'scout' as const,     label: 'Scout Sharing',  done: scoutContextFields.length > 0 },
   ]
 
   return (
@@ -528,6 +553,76 @@ export default function KidProfileForm({ kid, onSave, onCancel }: KidProfileForm
                     <option value="Custom">Custom / Not Listed</option>
                   </optgroup>
                 </select>
+              </div>
+
+              <button
+                onClick={() => setActiveTab('scout')}
+                style={{ width: '100%', padding: '12px', background: headerGradient, color: '#fff', border: 'none', borderRadius: 12, fontWeight: 800, fontSize: 13, cursor: 'pointer', fontFamily: "'Nunito', sans-serif" }}
+              >
+                Next: Scout Sharing →
+              </button>
+            </>
+          )}
+
+          {/* ── SCOUT SHARING TAB ─────────────────────────────────────────── */}
+          {activeTab === 'scout' && (
+            <>
+              <div style={{ background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: 12, padding: '10px 14px', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                <span style={{ fontSize: 16, flexShrink: 0 }}>🛡️</span>
+                <p style={{ fontSize: 12, color: '#065f46', lineHeight: 1.5, margin: 0, fontWeight: 600 }}>
+                  You choose what Scout may use as context. Default is minimal: age + grade. Add more only if you want more personalized help.
+                </p>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 800, color: '#374151', marginBottom: 4 }}>
+                  Scout can use these fields for {displayname || firstname || 'this child'}
+                </label>
+                <p style={{ fontSize: 11, color: '#6b7280', marginBottom: 12 }}>
+                  These settings are sticky. You can change them anytime from this profile.
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {SCOUT_CONTEXT_OPTIONS.map(option => {
+                    const selected = scoutContextFields.includes(option.value)
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => toggleScoutContextField(option.value)}
+                        style={{
+                          display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 14px',
+                          borderRadius: 12, border: `2px solid ${selected ? '#10b981' : '#e5e7eb'}`,
+                          background: selected ? '#ecfdf5' : '#fff', cursor: 'pointer',
+                          textAlign: 'left', width: '100%', fontFamily: "'Nunito', sans-serif", transition: 'all 0.15s',
+                        }}
+                      >
+                        <div style={{
+                          width: 20, height: 20, borderRadius: 6, flexShrink: 0, marginTop: 1,
+                          background: selected ? '#10b981' : '#fff',
+                          border: `2px solid ${selected ? '#10b981' : '#d1d5db'}`,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}>
+                          {selected && <span style={{ color: '#fff', fontSize: 11, fontWeight: 900 }}>✓</span>}
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <p style={{ fontSize: 13, fontWeight: 800, color: selected ? '#065f46' : '#1f2937', margin: 0 }}>{option.label}</p>
+                          <p style={{ fontSize: 11, color: '#6b7280', margin: '2px 0 0', lineHeight: 1.4 }}>{option.desc}</p>
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              <div style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 12, padding: '12px 14px' }}>
+                <div style={{ fontSize: 11, fontWeight: 900, color: '#6b7280', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 6 }}>
+                  Scout sees
+                </div>
+                <div style={{ fontSize: 13, color: '#374151', fontWeight: 700, lineHeight: 1.5 }}>
+                  {scoutContextFields.length === 0
+                    ? 'No child profile details. Scout will ask you for details when needed.'
+                    : scoutContextFields.map(value => SCOUT_CONTEXT_OPTIONS.find(option => option.value === value)?.label ?? value).join(', ')}
+                </div>
               </div>
             </>
           )}

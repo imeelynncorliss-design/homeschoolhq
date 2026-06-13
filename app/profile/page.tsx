@@ -52,6 +52,7 @@ interface Kid {
   subjects: string[]
   learning_style?: string | null   // comma-separated e.g. "visual, aural"
   mi_profile?: string[] | null
+  scout_context_fields?: string[] | null
   archived?: boolean
 }
 
@@ -141,7 +142,7 @@ function ProfileContent() {
           .eq('organization_id', orgId)
           .maybeSingle(),
         supabase.from('kids')
-          .select('id, displayname, grade, learning_style, mi_profile, archived')
+          .select('id, displayname, grade, learning_style, mi_profile, scout_context_fields, archived')
           .eq('organization_id', orgId)
           .order('displayname'),
         supabase.from('family_collaborators')
@@ -199,7 +200,7 @@ function ProfileContent() {
           subsByKid[row.kid_id].add(row.subject)
         }
 
-        setKids(kidsData.map((k: { id: string; displayname: string; grade?: string; learning_style?: string | null; mi_profile?: string[]; archived?: boolean }) => ({
+        setKids(kidsData.map((k: { id: string; displayname: string; grade?: string; learning_style?: string | null; mi_profile?: string[]; scout_context_fields?: string[] | null; archived?: boolean }) => ({
           ...k,
           subjects: subsByKid[k.id] ? Array.from(subsByKid[k.id]).slice(0, 5) : [],
         })))
@@ -249,7 +250,7 @@ function ProfileContent() {
     }
     await supabase.from('kids').update(fields).eq('id', data.id)
     // Update local state so name/grade reflects immediately
-    setKids(prev => prev.map(k => k.id === data.id ? { ...k, displayname: fields.displayname, grade: fields.grade, learning_style: fields.learning_style, mi_profile: fields.mi_profile } : k))
+    setKids(prev => prev.map(k => k.id === data.id ? { ...k, displayname: fields.displayname, grade: fields.grade, learning_style: fields.learning_style, mi_profile: fields.mi_profile, scout_context_fields: fields.scout_context_fields } : k))
     setEditingKid(null)
     // Invalidate the router cache so pages like Resources re-fetch fresh data on next visit
     router.refresh()
@@ -263,7 +264,7 @@ function ProfileContent() {
       const { data: newKid } = await supabase
         .from('kids')
         .insert({ ...fields, organization_id: orgId })
-        .select('id, displayname, grade')
+        .select('id, displayname, grade, scout_context_fields')
         .single()
       if (newKid && photoFile) {
         const ext  = photoFile.name.split('.').pop()
@@ -273,7 +274,7 @@ function ProfileContent() {
         await supabase.from('kids').update({ photo_url: publicUrl }).eq('id', newKid.id)
       }
       if (newKid) {
-        setKids(prev => [...prev, { id: newKid.id, displayname: newKid.displayname, grade: newKid.grade, subjects: [] }])
+        setKids(prev => [...prev, { id: newKid.id, displayname: newKid.displayname, grade: newKid.grade, scout_context_fields: newKid.scout_context_fields, subjects: [] }])
       }
       setAddingKid(false)
     } finally {

@@ -29,6 +29,16 @@ interface Kid {
   id: string
   displayname: string
   avatar_url: string | null
+  scout_context_fields?: string[] | null
+}
+
+const SCOUT_CONTEXT_LABELS: Record<string, string> = {
+  displayname: 'display name',
+  age: 'age',
+  grade: 'grade',
+  learning_style: 'learning style',
+  current_hook: 'interests',
+  mi_profile: 'strengths',
 }
 
 interface StarRatingProps {
@@ -78,6 +88,7 @@ interface CopilotPanelProps {
   onNewChat: () => void
   loadHistory: () => Promise<SavedConversation[]>
   onStarConversation: (id: string, currentlyStarred: boolean) => void
+  kids: Kid[]
 }
 
 type Phase = 'form' | 'submitting' | 'success' | 'error'
@@ -346,7 +357,7 @@ function KidAvatar({ kid, size = 30 }: KidAvatarProps) {
 
 // ─── Copilot Panel ────────────────────────────────────────────────────────────
 
-function CopilotPanel({ onClose, initialInput, organizationId, userId, userName, userState, homeschoolStyle, messages, setMessages, isStarred, onStar, onNewChat, loadHistory, onStarConversation }: CopilotPanelProps) {
+function CopilotPanel({ onClose, initialInput, organizationId, userId, userName, userState, homeschoolStyle, messages, setMessages, isStarred, onStar, onNewChat, loadHistory, onStarConversation, kids }: CopilotPanelProps) {
   const [input, setInput] = useState(initialInput ?? '')
   const [loading, setLoading] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
@@ -437,6 +448,12 @@ function CopilotPanel({ onClose, initialInput, organizationId, userId, userName,
   }
 
   const formatDate = (iso: string) => new Date(iso).toLocaleDateString([], { month: 'short', day: 'numeric' })
+
+  const scoutSees = Array.from(new Set(
+    kids.flatMap(kid => (kid.scout_context_fields?.length ? kid.scout_context_fields : ['age', 'grade']))
+  ))
+    .map(field => SCOUT_CONTEXT_LABELS[field] ?? field)
+    .join(', ')
 
   const displayedHistory = filterStarred ? historyList.filter(c => c.starred) : historyList
 
@@ -585,6 +602,19 @@ function CopilotPanel({ onClose, initialInput, organizationId, userId, userName,
               )}
               <div ref={bottomRef} />
             </div>
+
+            {/* Scout context disclosure */}
+            {!showHistory && (
+              <div style={{ padding: '8px 14px 0' }}>
+                <div style={{
+                  border: '1px solid #bbf7d0', background: '#ecfdf5', color: '#065f46',
+                  borderRadius: 10, padding: '8px 10px', fontSize: 11.5, lineHeight: 1.4,
+                  fontFamily: 'system-ui, sans-serif', fontWeight: 600,
+                }}>
+                  Scout sees: {scoutSees || 'no child profile details'} · Change this in Profile → Child Profile → Scout Sharing.
+                </div>
+              </div>
+            )}
 
             {/* Quick-action prompt chips — shown when chat is empty */}
             {messages.length === 0 && !loading && (
@@ -762,7 +792,7 @@ export default function AppHeader() {
         if (ownedOrg.state) setUserState(ownedOrg.state)
         const { data: kidsData } = await supabase
           .from('kids')
-          .select('id, displayname, avatar_url')
+          .select('id, displayname, avatar_url, scout_context_fields')
           .eq('organization_id', ownedOrg.id)
           .order('displayname')
         setKids((kidsData as Kid[]) || [])
@@ -786,7 +816,7 @@ export default function AppHeader() {
         if (orgInfo?.state) setUserState(orgInfo.state)
         const { data: kidsData } = await supabase
           .from('kids')
-          .select('id, displayname, avatar_url')
+          .select('id, displayname, avatar_url, scout_context_fields')
           .eq('organization_id', orgData.organization_id)
           .order('displayname')
         setKids((kidsData as Kid[]) || [])
@@ -1063,6 +1093,7 @@ export default function AppHeader() {
           onNewChat={handleNewChat}
           loadHistory={handleLoadHistory}
           onStarConversation={handleStarConversation}
+          kids={kids}
         />
       )}
     </>

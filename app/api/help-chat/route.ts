@@ -143,19 +143,38 @@ export async function POST(request: NextRequest) {
       systemPrompt += `\n\n## Family Teaching Style\nThis family's homeschool style is **${styleLabel}**. ${styleDesc}`
     }
 
-    // Inject all children's profiles so Scout can personalise by child
+    // Inject only parent-approved child profile context for Scout.
+    // Data minimization rule: default is age + grade; parents can opt into more per child.
     if (organizationId) {
       const { data: kids } = await supabase
         .from('kids')
-        .select('displayname, age, grade, learning_style, current_hook, mi_profile')
+        .select('displayname, age, grade, learning_style, current_hook, mi_profile, scout_context_fields')
         .eq('organization_id', organizationId)
         .neq('archived', true)
 
       if (kids && kids.length > 0) {
-        const kidsContext = kids.map((k: { displayname: string; age: number | null; grade: string | null; learning_style: string | null; current_hook: string | null; mi_profile: string[] | null }) =>
-          `- **${k.displayname}** — Grade: ${k.grade || 'unknown'}, Age: ${k.age || 'unknown'}, Learning style: ${k.learning_style || 'not set'}, Current interests: ${k.current_hook || 'not set'}${k.mi_profile?.length ? `, Multiple intelligences: ${k.mi_profile.join(', ')}` : ''}`
-        ).join('\n')
-        systemPrompt += `\n\n## Children in this family\nYou have full access to these learner profiles. Use them whenever the parent asks about a specific child or requests activities, lessons, or advice tailored to their kids — do NOT ask for information you already have here.\n\n${kidsContext}`
+        const labelFor = (index: number, displayname: string, allowed: string[]) =>
+          allowed.includes('displayname') ? displayname : `Learner ${index + 1}`
+
+        const kidsContext = kids.map((k: {
+          displayname: string
+          age: number | null
+          grade: string | null
+          learning_style: string | null
+          current_hook: string | null
+          mi_profile: string[] | null
+          scout_context_fields: string[] | null
+        }, index: number) => {
+          const allowed = k.scout_context_fields?.length ? k.scout_context_fields : ['age', 'grade']
+          const details: string[] = []
+          if (allowed.includes('grade')) details.push(`Grade: ${k.grade || 'unknown'}`)
+          if (allowed.includes('age')) details.push(`Age: ${k.age || 'unknown'}`)
+          if (allowed.includes('learning_style')) details.push(`Learning style: ${k.learning_style || 'not set'}`)
+          if (allowed.includes('current_hook')) details.push(`Current interests: ${k.current_hook || 'not set'}`)
+          if (allowed.includes('mi_profile') && k.mi_profile?.length) details.push(`Multiple intelligences: ${k.mi_profile.join(', ')}`)
+          return `- **${labelFor(index, k.displayname, allowed)}** — ${details.length ? details.join(', ') : 'No child profile details shared with Scout'}`
+        }).join('\n')
+        systemPrompt += `\n\n## Parent-approved child context\nUse only the child profile details below. The parent controls these Scout-sharing settings per child. Do not imply you can see unlisted child details; ask the parent if more context would help.\n\n${kidsContext}`
       }
     }
 
