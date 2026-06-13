@@ -57,10 +57,25 @@ export default function GenerateAssessmentModal({ lesson, kids, onClose }: Gener
 
   const selectedKid = kids.find(k => k.id === selectedKidId);
 
-  const handleGenerate = async () => {
+  const normalizeQuestionCount = (type: AssessmentType) => {
+    if (type === 'project') return [1, 2, 3].includes(questionCount) ? questionCount : 3;
+    return [3, 5, 8, 10].includes(questionCount) ? questionCount : 5;
+  };
+
+  const selectAssessmentType = (type: AssessmentType) => {
+    setAssessmentType(type);
+    setQuestionCount(prev => {
+      if (type === 'project') return [1, 2, 3].includes(prev) ? prev : 3;
+      return [3, 5, 8, 10].includes(prev) ? prev : 5;
+    });
+  };
+
+  const handleGenerate = async (typeOverride?: AssessmentType) => {
+    const typeToGenerate = typeOverride || assessmentType;
     if (!selectedKidId) { setError('Please select a child.'); return; }
     setError(null);
     setIsGenerating(true);
+    setAssessmentType(typeToGenerate);
 
     try {
       const res = await fetch('/api/generate-assessment', {
@@ -69,9 +84,9 @@ export default function GenerateAssessmentModal({ lesson, kids, onClose }: Gener
         body: JSON.stringify({
           lessonId: lesson.id,
           kidId: selectedKidId,
-          assessmentType,
+          assessmentType: typeToGenerate,
           difficulty,
-          questionCount,
+          questionCount: normalizeQuestionCount(typeToGenerate),
         }),
       });
 
@@ -165,30 +180,37 @@ export default function GenerateAssessmentModal({ lesson, kids, onClose }: Gener
 
           {/* Assessment type */}
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Parent-administered format</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">Click a format to create it</label>
+            <p className="text-xs text-gray-500 mb-2">These cards start creation directly. Adjust difficulty or count first if you want to customize.</p>
             <div className="space-y-2">
-              {ASSESSMENT_TYPES.map(type => (
-                <button
-                  key={type.value}
-                  onClick={() => setAssessmentType(type.value)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border-2 text-left transition-all ${
-                    assessmentType === type.value
-                      ? 'border-purple-500 bg-purple-50'
-                      : 'border-gray-200 bg-white hover:border-gray-300'
-                  }`}
-                >
-                  <span className="text-2xl">{type.emoji}</span>
-                  <div>
-                    <div className={`font-semibold text-sm ${assessmentType === type.value ? 'text-purple-800' : 'text-gray-800'}`}>
-                      {type.label}
+              {ASSESSMENT_TYPES.map(type => {
+                const selected = assessmentType === type.value;
+                return (
+                  <button
+                    key={type.value}
+                    onClick={() => handleGenerate(type.value)}
+                    onMouseEnter={() => selectAssessmentType(type.value)}
+                    onFocus={() => selectAssessmentType(type.value)}
+                    disabled={isGenerating || !selectedKidId}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border-2 text-left transition-all disabled:opacity-60 disabled:cursor-not-allowed ${
+                      selected
+                        ? 'border-purple-500 bg-purple-50'
+                        : 'border-gray-200 bg-white hover:border-purple-300 hover:bg-purple-50'
+                    }`}
+                  >
+                    <span className="text-2xl">{isGenerating && selected ? '⏳' : type.emoji}</span>
+                    <div>
+                      <div className={`font-semibold text-sm ${selected ? 'text-purple-800' : 'text-gray-800'}`}>
+                        {type.label}
+                      </div>
+                      <div className="text-xs text-gray-500">{type.desc}</div>
                     </div>
-                    <div className="text-xs text-gray-500">{type.desc}</div>
-                  </div>
-                  {assessmentType === type.value && (
-                    <span className="ml-auto text-purple-600">✓</span>
-                  )}
-                </button>
-              ))}
+                    <span className="ml-auto text-purple-600 text-xs font-bold">
+                      {isGenerating && selected ? 'Creating…' : 'Create'}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -241,7 +263,7 @@ export default function GenerateAssessmentModal({ lesson, kids, onClose }: Gener
 
           {/* Generate button */}
           <button
-            onClick={handleGenerate}
+            onClick={() => handleGenerate()}
             disabled={isGenerating || !selectedKidId}
             className="w-full py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl font-bold text-base hover:from-purple-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
           >
