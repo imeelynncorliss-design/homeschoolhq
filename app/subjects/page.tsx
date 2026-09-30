@@ -1247,7 +1247,7 @@ function SubjectsContent() {
               <button
                 onClick={() => {
                   setShowLessonChoiceSheet(false)
-                  router.push('/lessons')
+                  router.push(`/lessons?kidId=${activeKidId}&openImporter=1`)
                 }}
                 style={{
                   width: '100%', padding: '16px', borderRadius: 14, border: '1.5px solid rgba(255,255,255,0.15)',

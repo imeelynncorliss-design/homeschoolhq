@@ -2,7 +2,7 @@
 
 import { useEffect, useState, Suspense } from 'react'
 import { supabase } from '@/src/lib/supabase'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import AuthGuard from '@/components/AuthGuard'
 import AllChildrenList from '@/components/AllChildrenList'
 import PastAssessmentsViewer from '@/components/PastAssessmentsViewer'
@@ -58,6 +58,7 @@ const KID_COLORS = ['#7c3aed', '#0d9488', '#ec4899', '#f59e0b', '#3b82f6']
 
 function LessonsContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   useAppHeader({ title: '📚 Lessons' })
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
@@ -150,10 +151,20 @@ function LessonsContent() {
 
     if (kidsData) {
       setKids(kidsData)
+      const requestedKidId = searchParams.get('kidId')
+      const requestedKid = requestedKidId ? kidsData.find((k: any) => k.id === requestedKidId) : null
       if (kidsData.length > 0 && !selectedKidForLesson) {
-        setSelectedKidForLesson(kidsData[0].id)
+        setSelectedKidForLesson(requestedKid?.id ?? kidsData[0].id)
       }
-      setActiveKidId(prev => prev ?? kidsData[0]?.id ?? null)
+      setActiveKidId(prev => prev ?? requestedKid?.id ?? kidsData[0]?.id ?? null)
+
+      if (requestedKid && searchParams.get('openImporter') === '1') {
+        setSelectedKidForImport(requestedKid)
+        setShowImporter(true)
+        // Clear the deep-link params so a later loadData() call (e.g. after the
+        // import finishes) doesn't reopen the importer.
+        router.replace('/lessons')
+      }
     }
 
     const { data: lessonsData } = await supabase
