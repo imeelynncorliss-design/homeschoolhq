@@ -18,6 +18,26 @@ Entry format:
 
 ---
 
+## [2026-09-30] Browser-testing round 2 — CurriculumImporter parity, Scout overlays, size summary, a11y
+**Status:** Done, pending browser re-test
+**What changed:**
+1. **2.1/2.4 parity gap found during browser testing:** `components/CurriculumImporter.tsx` — the modal used by Subjects → Add Lesson → From Curriculum — still had the old lessons-only subject query and a single-file input with no HEIC support, no compression, and no PDF/image mutual exclusion. It's a separate component from `app/curriculum/import/page.tsx`, so the earlier 2.1 and 2.4 fixes never reached it. Brought it to parity: same subjects-table + lessons-table merge (trimmed, case-insensitive dedupe), same multi-image upload with reorderable/removable thumbnails, one-PDF-XOR-images rule, 10-image cap, 4 MB total-size gate, and HEIC/1600px-longest-edge/0.8-quality compression via the shared `src/utils/compressImage.ts`, with upload over `XMLHttpRequest` for a real progress bar.
+2. **Subject preselection:** Added an `initialSubject` prop to `CurriculumImporter`. `app/subjects/page.tsx`'s "From curriculum" button now carries the subject that was already on screen (`addLessonSubject`, set whenever the sheet opens from a subject's card) as a `subject` query param through `/lessons`, which threads it into `<CurriculumImporter initialSubject=.../>`. The in-page "From curriculum" button on `/lessons` itself resets this to `undefined` so a stale subject from an earlier deep link can't leak into an unrelated open.
+3. **2.3: Scout over modals/sheets.** Scout had no way to know a modal or bottom sheet was open, so it floated above the Add Subject URL field and the "Generate with Scout" choice-sheet option. Added `useScoutOverlay(active)` in `components/layout/AppHeader.tsx` — a shared counter (not a boolean) so multiple overlays can be open at once without one closing prematurely revealing Scout. The FAB now hides entirely (rather than just dropping z-index) while `overlayCount > 0`. Wired into `app/subjects/page.tsx`'s Add Subject sheet and lesson-choice sheet, and into `CurriculumImporter` itself (always active while mounted).
+4. **2.3: gap above bottom nav.** The bottom nav is 113px tall including its copyright line, and Scout's mobile clearance (112px) meant it was touching it. Raised to 113 + 10px gap = **123px**, and recalculated `AppShell.tsx`'s content padding (179px mobile) and the nudge bubble's offset (191px) to match.
+5. **2.4: stale size summary.** The "X MB → Y MB" compression summary used a running accumulator that only ever grew, so removing a photo didn't reduce it — same bug existed in both `app/curriculum/import/page.tsx` and the newly-fixed `CurriculumImporter.tsx`. Replaced with an `imageSourceSizes` array kept in lockstep with `images` (add/remove/reorder all touch both arrays in the same operation), so the summary and the 4 MB upload gate both recompute live from current state in every case.
+6. **Minor:** added `aria-label`s to the up/down/remove buttons on image thumbnails in both files.
+**Why:** Found during browser testing — Scout covering the Add Subject field and the Generate-with-Scout option, the FAB touching the bottom nav, the stale MB summary after removing a photo, and (found while investigating) that the From-Curriculum modal reached from Subjects never got the 2.1/2.4 fixes because it's a different component than the standalone import page.
+**Source:** Imee (browser testing)
+**Files:** components/CurriculumImporter.tsx, components/layout/AppHeader.tsx, components/AppShell.tsx, app/subjects/page.tsx, app/lessons/page.tsx, app/curriculum/import/page.tsx
+**DB migrations:** none
+**Testing:** `tsc --noEmit` still shows the same 17 pre-existing errors (none new). `next build` completes clean (exit 0). Smoke-tested `/subjects`, `/lessons`, `/curriculum/import` (200) against the running local dev server. Not yet re-verified in a real browser — stopping here per Imee's request so it can be browser-tested again.
+**Follow-ups:**
+- `useScoutOverlay` is now a reusable hook but is only wired into the specific overlays reported (Add Subject sheet, lesson-choice sheet, CurriculumImporter). Other modals/sheets across the app (e.g., Material modal, LessonViewModal, various ChoiceSheets) don't call it yet and could still sit under/behind Scout. Not swept broadly — out of scope for this pass; worth revisiting if Scout is reported covering something else.
+- The desktop Scout clearance (32px, from the existing `@media (min-width: 768px)` override) and the bottom-nav overlap on desktop noted in the 2.3 entry are still unaddressed — this pass only touched mobile clearance values.
+
+---
+
 ## [2026-09-30] Hotfix — Replaced retired claude-sonnet-4-20250514 model ID
 **Status:** Done, merged to main
 **What changed:** Replaced the hardcoded model ID `claude-sonnet-4-20250514` with `claude-sonnet-4-6` in three API routes, and added a `CLAUDE_SONNET_MODEL` named constant in `lib/ai.ts` for routes that call the `@anthropic-ai/sdk` client directly, so a future model swap is a one-line change instead of a hunt through each route.
