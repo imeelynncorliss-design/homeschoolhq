@@ -18,6 +18,31 @@ Entry format:
 
 ---
 
+## [2026-09-30] Roadmap item 2.5 — Verify: Item 2 Done
+**Status:** Done
+**What changed:** No code. Final verification pass for roadmap item 2 (quick fixes from Courtney's testing).
+**Why:** Step 2.5 of the quick-fixes prompt calls for re-testing each bug against its repro steps before closing out the item. Imee browser-tested all four fixes in the `CurriculumImporter` pop-up at 390px, including 2.1's subject list, 2.2's correct-student behavior, 2.3's Scout positioning/overlay behavior, and 2.4's multi-photo upload — size-limit and PDF-vs-images checks included — and confirmed all pass.
+**Source:** Imee (browser testing, 390px, CurriculumImporter pop-up)
+**Result:** All four bugs fixed and verified:
+- **2.1** — New subjects appear immediately in both curriculum-import surfaces (`app/curriculum/import/page.tsx` and `components/CurriculumImporter.tsx`), merged from the `subjects` and `lessons` tables, trimmed and deduped case-insensitively.
+- **2.2** — "From Curriculum" opens for the student the parent was actually viewing, with the subject preselected when opened from a subject's card, confirmed across both entry points (`/lessons` direct, and via the Subjects page deep link).
+- **2.3** — Scout defaults to bottom-right on mobile, clear of the bottom nav and the device safe area, resized to 56px (Material FAB standard) on mobile, and now hides entirely whenever a modal or bottom sheet (Add Subject, lesson-choice sheet, CurriculumImporter) is open instead of floating above it.
+- **2.4** — Multiple photos upload in one pass with reorder/remove, HEIC conversion, 1600px/0.8-quality compression, a 10-image cap, and a 4 MB total-size gate for Vercel's request limit — verified working correctly including the size-limit and PDF-vs-images exclusivity checks, and the live MB summary correctly updates after removing a photo.
+**Build/type-check:** `tsc --noEmit` holds at the same 17 pre-existing errors throughout all of item 2 (none introduced by this work). `next build` completes clean.
+**Files touched across item 2 (2.0–2.5):** app/curriculum/import/page.tsx, app/api/import-curriculum/route.ts, app/subjects/page.tsx, app/lessons/page.tsx, components/CurriculumImporter.tsx, components/layout/AppHeader.tsx, components/AppShell.tsx, src/utils/compressImage.ts (new), docs/CHANGELOG.md
+**DB migrations:** none
+**Follow-ups carried forward (not fixed, logged for later):**
+- `components/LessonViewModal.tsx` uploads photos via `heic2any` directly with no compression — should switch to the shared `compressImage` utility.
+- `app/curriculum/import/page.tsx`'s full-page kid selector and the Dashboard's "Use curriculum" entry point don't carry kid context the way the Subjects → Lessons deep link now does.
+- The Scout desktop clearance (32px override) likely still overlaps the always-rendered bottom nav on desktop widths — only mobile clearance was fixed in this item.
+- The "© 2026 HomeschoolReady, LLC" footer text in `components/BottomNav.tsx` renders on top of the nav bar itself on mobile.
+- `useScoutOverlay` is wired into the specific overlays reported (Add Subject, lesson-choice sheet, CurriculumImporter) but not swept across every modal in the app.
+- `next.config.ts` has `typescript.ignoreBuildErrors: true`; 17 pre-existing `tsc` errors remain in the repo, unrelated to item 2, not fixed.
+
+**Roadmap item 2 (Quick fixes from Courtney's testing): Done.**
+
+---
+
 ## [2026-09-30] Browser-testing round 2 — CurriculumImporter parity, Scout overlays, size summary, a11y
 **Status:** Done, pending browser re-test
 **What changed:**
