@@ -18,6 +18,28 @@ Entry format:
 
 ---
 
+## [2026-09-30] Roadmap item 2.4 — Multiple photo uploads for Add Curriculum
+**Status:** Done (pending manual verification per Step 2.5)
+**What changed:**
+- The curriculum upload input now accepts multiple images at once (`multiple` on the file input), or one PDF — not both together. Camera capture (`capture="environment"`) is still available on mobile; tapping "Add More Photos" again lets a parent take several photos one at a time, each appended to the set.
+- Selected images show as reorderable thumbnails (up/down buttons, since drag-and-drop reordering isn't reliable across touch devices and adding a drag library wasn't worth a new dependency for this) with a remove button per image. A caption reminds the parent that page order matters.
+- New shared utility `src/utils/compressImage.ts`: converts HEIC/HEIF to JPEG via the already-installed `heic2any`, then resizes so the **longest edge** is capped at 1600px (not just width) and re-encodes as JPEG at 0.8 quality, using the browser's canvas — no new npm dependency. Exports `compressImage` and `isHeicFile`. Written generically so the portfolio work-samples feature (roadmap item 11, which has the same 1600px/75-80% compression requirement) can reuse it later.
+- A hard cap of 10 images, with a clear message if the parent goes over it.
+- A blocking banner if the total selected/compressed file size exceeds **4 MB**, since Vercel's request body limit is 4.5 MB — the parent must remove an image before extracting.
+- Upload now runs over `XMLHttpRequest` instead of `fetch` so a real progress bar can be shown (`upload.onprogress`), since `fetch` has no native upload-progress event.
+- `app/api/import-curriculum/route.ts` now reads a `files` field that can carry one or more entries (a `file` singular field is still accepted for backward compatibility). Multiple images are sent to Claude together, in the exact order selected, as a single table-of-contents extraction request — the prompt explicitly tells the model they're one continuous ToC and not to duplicate lessons across page boundaries. PDFs are unchanged and still capped at one per request.
+**Why:** A table of contents spanning 3-4 pages previously forced parents to run the whole import flow once per page, which is tedious and easy to abandon partway through. Compression keeps both the upload under Vercel's request limit and long-term storage costs down (this is also a standing roadmap requirement, item 11).
+**Source:** Courtney review; docs/prompts/prompt-02-quick-fixes.md; Imee (compression approach, size-limit adjustments)
+**Files:** app/curriculum/import/page.tsx, app/api/import-curriculum/route.ts, src/utils/compressImage.ts (new)
+**DB migrations:** none
+**Dependencies:** none added — compression is done in-house with canvas + the existing `heic2any`, per Imee's direction.
+**Testing:** Type-checked clean, app builds, and `/curriculum/import` returns 200 against the running local dev server. Did **not** get a live browser walkthrough (upload 4 photos, reorder, remove one, confirm order/compression, before/after sizes) — this environment has no browser-automation tool and the page requires an authenticated session. This is the core verification Step 2.5 calls for; flagging it to do by hand before treating 2.4 as fully confirmed.
+**Follow-ups:**
+- `components/LessonViewModal.tsx` also uploads photos and converts HEIC via `heic2any` directly, with no compression. Not changed now (out of scope for this step) — logged to switch it to the shared `compressImage` utility later, so lesson-attached photos get the same size benefits.
+- Reordering uses up/down buttons, not drag-and-drop, to avoid adding a drag library and to stay reliable on touch. If this feels clunky with many pages, consider a drag reorder in a later pass.
+
+---
+
 ## [2026-09-30] Roadmap item 2.3 — Scout FAB moved to bottom-right on mobile
 **Status:** Done
 **What changed:** The Scout floating button's default position changed from top-right (`top: 64, right: 12`) to bottom-right, using `bottom: calc(env(safe-area-inset-bottom, 0px) + 112px)`. The nudge bubble that appears next to the FAB is repositioned the same way (`+204px` clearance) so it still anchors above the button instead of floating near the top of the screen. Drag-to-reposition is untouched — once a user drags the FAB, it switches to the existing top/right coordinate system computed from the drag gesture, same as before.
