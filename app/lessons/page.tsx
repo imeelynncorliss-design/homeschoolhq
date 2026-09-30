@@ -90,6 +90,7 @@ function LessonsContent() {
   const [lessonAssignedTo, setLessonAssignedTo] = useState('')
   const [showImporter, setShowImporter] = useState(false)
   const [selectedKidForImport, setSelectedKidForImport] = useState<any>(null)
+  const [importerInitialSubject, setImporterInitialSubject] = useState<string | undefined>(undefined)
 
   // Edit Lesson modal state
   const [showLessonEditModal, setShowLessonEditModal] = useState(false)
@@ -160,6 +161,7 @@ function LessonsContent() {
 
       if (requestedKid && searchParams.get('openImporter') === '1') {
         setSelectedKidForImport(requestedKid)
+        setImporterInitialSubject(searchParams.get('subject') || undefined)
         setShowImporter(true)
         // Clear the deep-link params so a later loadData() call (e.g. after the
         // import finishes) doesn't reopen the importer.
@@ -714,6 +716,7 @@ function LessonsContent() {
                   <button
                     onClick={() => {
                       setSelectedKidForImport(choiceKid || null)
+                      setImporterInitialSubject(undefined)
                       setShowAddLessonSheet(false)
                       setShowImporter(true)
                     }}
@@ -1310,6 +1313,7 @@ function LessonsContent() {
           <CurriculumImporter
             childId={importKid.id}
             childName={importKid.displayname}
+            initialSubject={importerInitialSubject}
             onClose={() => setShowImporter(false)}
             onImportComplete={() => {
               setShowImporter(false)

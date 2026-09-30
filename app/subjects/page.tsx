@@ -6,6 +6,7 @@ import { createClient } from '@/src/lib/supabase/client'
 import AuthGuard from '@/components/AuthGuard'
 import LessonViewModal, { type LessonViewModalLesson } from '@/components/LessonViewModal'
 import LessonGenerator from '@/components/LessonGenerator'
+import { useScoutOverlay } from '@/components/layout/AppHeader'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -246,6 +247,11 @@ function SubjectsContent() {
   const [addMatType, setAddMatType]       = useState<'textbook' | 'subscription' | 'physical' | 'digital'>('textbook')
   const [addMatUrl, setAddMatUrl]         = useState('')
   const [showSuggestions, setShowSuggestions] = useState(false)
+
+  // Hide the Scout FAB while either of these overlays covers the screen —
+  // it was floating above the Add Subject URL field and the lesson-choice
+  // sheet's "Generate with Scout" option.
+  useScoutOverlay(showAddSubject || showLessonChoiceSheet)
 
   // Subject autocomplete: org library first, then COMMON_SUBJECTS as fallback
   const subjectSuggestions = useMemo(() => {
@@ -1247,7 +1253,10 @@ function SubjectsContent() {
               <button
                 onClick={() => {
                   setShowLessonChoiceSheet(false)
-                  router.push(activeKidId ? `/lessons?kidId=${activeKidId}&openImporter=1` : '/lessons')
+                  if (!activeKidId) { router.push('/lessons'); return }
+                  const params = new URLSearchParams({ kidId: activeKidId, openImporter: '1' })
+                  if (addLessonSubject) params.set('subject', addLessonSubject)
+                  router.push(`/lessons?${params.toString()}`)
                 }}
                 style={{
                   width: '100%', padding: '16px', borderRadius: 14, border: '1.5px solid rgba(255,255,255,0.15)',

@@ -18,6 +18,8 @@ interface HeaderContextValue {
   backHref: string | null
   setTitle: (t: string | null) => void
   setBackHref: (h: string | null) => void
+  overlayCount: number
+  setOverlayCount: Dispatch<SetStateAction<number>>
 }
 
 interface UseAppHeaderOptions {
@@ -100,13 +102,16 @@ const HeaderCtx = createContext<HeaderContextValue>({
   backHref: null,
   setTitle: () => {},
   setBackHref: () => {},
+  overlayCount: 0,
+  setOverlayCount: () => {},
 })
 
 export function AppHeaderProvider({ children }: { children: ReactNode }) {
   const [title, setTitle] = useState<string | null>(null)
   const [backHref, setBackHref] = useState<string | null>(null)
+  const [overlayCount, setOverlayCount] = useState(0)
   return (
-    <HeaderCtx.Provider value={{ title, backHref, setTitle, setBackHref }}>
+    <HeaderCtx.Provider value={{ title, backHref, setTitle, setBackHref, overlayCount, setOverlayCount }}>
       {children}
     </HeaderCtx.Provider>
   )
@@ -119,6 +124,21 @@ export function useAppHeader({ title, backHref }: UseAppHeaderOptions = {}) {
     if (backHref !== undefined) setBackHref(backHref)
     return () => { setTitle(null); setBackHref(null) }
   }, [title, backHref, setTitle, setBackHref])
+}
+
+/**
+ * Call with `true` for as long as a modal or bottom sheet is open, so the
+ * Scout FAB hides instead of floating above it. Safe to call from multiple
+ * overlays at once — a shared counter, not a boolean, so one overlay closing
+ * doesn't reveal Scout while another is still open.
+ */
+export function useScoutOverlay(active: boolean) {
+  const { setOverlayCount } = useContext(HeaderCtx)
+  useEffect(() => {
+    if (!active) return
+    setOverlayCount(c => c + 1)
+    return () => setOverlayCount(c => c - 1)
+  }, [active, setOverlayCount])
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -689,7 +709,7 @@ const BACK_LABELS: Record<string, string> = {
 
 
 export default function AppHeader() {
-  const { title, backHref } = useContext(HeaderCtx)
+  const { title, backHref, overlayCount } = useContext(HeaderCtx)
   const router = useRouter()
 
   const [userId, setUserId] = useState<string | null>(null)
@@ -985,14 +1005,16 @@ export default function AppHeader() {
       </header>
 
       {/* ── Floating Scout FAB (draggable) ── */}
-      {userId && (
+      {/* Hidden entirely (not just lowered) while any modal/sheet is open via
+          useScoutOverlay, so it can never float above an open overlay. */}
+      {userId && overlayCount === 0 && (
         <>
           {/* Nudge bubble — follows FAB position */}
           {scoutNudge && showScoutBubble && (
             <div style={{
               position: 'fixed',
               top: fabPos ? fabPos.top + 88 : 'auto',
-              bottom: fabPos ? 'auto' : 'calc(env(safe-area-inset-bottom, 0px) + 204px)',
+              bottom: fabPos ? 'auto' : 'calc(env(safe-area-inset-bottom, 0px) + 191px)',
               right: fabPos?.right ?? 12,
               zIndex: 9995,
               width: 290, fontFamily: "'Nunito', sans-serif",
@@ -1046,7 +1068,7 @@ export default function AppHeader() {
             style={{
               position: 'fixed',
               top: fabPos ? fabPos.top : 'auto',
-              bottom: fabPos ? 'auto' : 'calc(env(safe-area-inset-bottom, 0px) + 112px)',
+              bottom: fabPos ? 'auto' : 'calc(env(safe-area-inset-bottom, 0px) + 123px)',
               right: fabPos?.right ?? 12,
               zIndex: 9994,
               width: 80, height: 80, borderRadius: '50%',

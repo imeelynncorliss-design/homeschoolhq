@@ -37,7 +37,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <style>{`
           /* Reserve room below page content so the Scout FAB never covers
              the last row — matches Scout's own clearance + diameter. */
-          .app-shell-content { padding-bottom: 168px; }
+          .app-shell-content { padding-bottom: 179px; }
           @media (min-width: 768px) {
             .app-shell-content { padding-bottom: 112px; }
           }

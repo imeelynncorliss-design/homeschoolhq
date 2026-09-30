@@ -218,9 +218,9 @@ function CurriculumImportContent() {
   // Import flow state
   const [step, setStep]                     = useState<Step>('upload')
   const [images, setImages]                 = useState<File[]>([])
+  const [imageSourceSizes, setImageSourceSizes] = useState<number[]>([]) // pre-compression size, parallel to images
   const [pdfFile, setPdfFile]               = useState<File | null>(null)
   const [compressing, setCompressing]       = useState(false)
-  const [sizeStats, setSizeStats]           = useState<{ before: number; after: number }>({ before: 0, after: 0 })
   const [uploadProgress, setUploadProgress] = useState<number | null>(null)
   const [previewUrls, setPreviewUrls]       = useState<string[]>([])
   const [loading, setLoading]               = useState(false)
@@ -307,7 +307,7 @@ function CurriculumImportContent() {
       }
       setPdfFile(pdfs[0])
       setImages([])
-      setSizeStats({ before: 0, after: 0 })
+      setImageSourceSizes([])
       return
     }
 
@@ -328,28 +328,33 @@ function CurriculumImportContent() {
     }
 
     setCompressing(true)
-    const beforeTotal = others.reduce((sum, f) => sum + f.size, 0)
     const compressed: File[] = []
+    const sourceSizes: number[] = []
     for (const f of others) {
       try {
         compressed.push(await compressImage(f))
+        sourceSizes.push(f.size)
       } catch {
         setError(`Could not process ${f.name}. Please try a different photo.`)
         setCompressing(false)
         return
       }
     }
-    const afterTotal = compressed.reduce((sum, f) => sum + f.size, 0)
 
-    setSizeStats(prev => ({ before: prev.before + beforeTotal, after: prev.after + afterTotal }))
     setImages(prev => [...prev, ...compressed])
+    setImageSourceSizes(prev => [...prev, ...sourceSizes])
     setCompressing(false)
   }
 
   const moveImage = (index: number, direction: -1 | 1) => {
+    const target = index + direction
+    if (target < 0 || target >= images.length) return
     setImages(prev => {
-      const target = index + direction
-      if (target < 0 || target >= prev.length) return prev
+      const next = [...prev]
+      ;[next[index], next[target]] = [next[target], next[index]]
+      return next
+    })
+    setImageSourceSizes(prev => {
       const next = [...prev]
       ;[next[index], next[target]] = [next[target], next[index]]
       return next
@@ -358,9 +363,12 @@ function CurriculumImportContent() {
 
   const removeImage = (index: number) => {
     setImages(prev => prev.filter((_, i) => i !== index))
+    setImageSourceSizes(prev => prev.filter((_, i) => i !== index))
   }
 
-  const totalUploadBytes = images.reduce((sum, f) => sum + f.size, 0) + (pdfFile?.size ?? 0)
+  const compressedTotalBytes = images.reduce((sum, f) => sum + f.size, 0)
+  const sourceTotalBytes = imageSourceSizes.reduce((sum, s) => sum + s, 0)
+  const totalUploadBytes = compressedTotalBytes + (pdfFile?.size ?? 0)
   const overUploadLimit = totalUploadBytes > MAX_TOTAL_UPLOAD_BYTES
 
   useEffect(() => {
@@ -720,15 +728,15 @@ function CurriculumImportContent() {
                             <span style={{ flex: 1, fontSize: 12, color: '#374151', fontWeight: 600 }}>
                               Page {i + 1} · {img.name}
                             </span>
-                            <button onClick={() => moveImage(i, -1)} disabled={i === 0} style={{ ...s.btnSecondary, padding: '4px 8px', opacity: i === 0 ? 0.4 : 1 }}>↑</button>
-                            <button onClick={() => moveImage(i, 1)} disabled={i === images.length - 1} style={{ ...s.btnSecondary, padding: '4px 8px', opacity: i === images.length - 1 ? 0.4 : 1 }}>↓</button>
-                            <button onClick={() => removeImage(i)} style={{ ...s.btnSecondary, padding: '4px 8px' }}>✕</button>
+                            <button onClick={() => moveImage(i, -1)} disabled={i === 0} aria-label={`Move page ${i + 1} up`} style={{ ...s.btnSecondary, padding: '4px 8px', opacity: i === 0 ? 0.4 : 1 }}>↑</button>
+                            <button onClick={() => moveImage(i, 1)} disabled={i === images.length - 1} aria-label={`Move page ${i + 1} down`} style={{ ...s.btnSecondary, padding: '4px 8px', opacity: i === images.length - 1 ? 0.4 : 1 }}>↓</button>
+                            <button onClick={() => removeImage(i)} aria-label={`Remove page ${i + 1}`} style={{ ...s.btnSecondary, padding: '4px 8px' }}>✕</button>
                           </div>
                         ))}
                       </div>
-                      {sizeStats.before > 0 && (
+                      {sourceTotalBytes > 0 && (
                         <p style={{ marginTop: 8, fontSize: 11, color: '#9ca3af' }}>
-                          Compressed {(sizeStats.before / (1024 * 1024)).toFixed(1)} MB → {(sizeStats.after / (1024 * 1024)).toFixed(1)} MB
+                          Compressed {(sourceTotalBytes / (1024 * 1024)).toFixed(1)} MB → {(compressedTotalBytes / (1024 * 1024)).toFixed(1)} MB
                         </p>
                       )}
                     </div>
@@ -904,7 +912,7 @@ function CurriculumImportContent() {
                         setStep('upload')
                         setImages([])
                         setPdfFile(null)
-                        setSizeStats({ before: 0, after: 0 })
+                        setImageSourceSizes([])
                         setExtractedLessons([])
                         setSelectedLessons(new Set())
                         setSelectedSubject('')

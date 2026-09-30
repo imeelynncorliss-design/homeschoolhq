@@ -4,6 +4,11 @@ import { useState, useEffect } from 'react';
 import { usePlanningAutoComplete } from '@/lib/usePlanningAutoComplete';
 import { CANONICAL_SUBJECTS } from '@/src/constants/subjects';
 import { getScoutFrequencyTip } from '@/lib/scoutFrequency';
+import { compressImage, isHeicFile } from '@/src/utils/compressImage';
+import { useScoutOverlay } from '@/components/layout/AppHeader';
+
+const MAX_IMAGES = 10;
+const MAX_TOTAL_UPLOAD_BYTES = 4 * 1024 * 1024; // stay under Vercel's 4.5 MB request limit
 
 interface Lesson {
   title: string;
@@ -16,6 +21,7 @@ interface Lesson {
 interface Props {
   childId: string;
   childName: string;
+  initialSubject?: string;
   onClose: () => void;
   onImportComplete: () => void;
 }
@@ -23,8 +29,15 @@ interface Props {
 const DURATION_UNITS = ['minutes', 'days', 'weeks'] as const;
 type DurationUnit = typeof DURATION_UNITS[number];
 
-export default function CurriculumImporter({ childId, childName, onClose, onImportComplete }: Props) {
-  const [file, setFile] = useState<File | null>(null);
+export default function CurriculumImporter({ childId, childName, initialSubject, onClose, onImportComplete }: Props) {
+  useScoutOverlay(true); // this importer is only ever rendered while open
+
+  const [images, setImages] = useState<File[]>([]);
+  const [imageSourceSizes, setImageSourceSizes] = useState<number[]>([]); // pre-compression size, parallel to images
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [compressing, setCompressing] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [extractedLessons, setExtractedLessons] = useState<Lesson[]>([]);
   const [selectedLessons, setSelectedLessons] = useState<Set<number>>(new Set());
   const [lessonDurations, setLessonDurations] = useState<{ [key: number]: { value: number; unit: DurationUnit } }>({});
@@ -38,7 +51,7 @@ export default function CurriculumImporter({ childId, childName, onClose, onImpo
   const [importResults, setImportResults] = useState<{ imported: number; skipped: number }>({ imported: 0, skipped: 0 });
 
   // Subject selection
-  const [selectedSubject, setSelectedSubject] = useState<string>('');
+  const [selectedSubject, setSelectedSubject] = useState<string>(initialSubject || '');
   const [customSubject, setCustomSubject] = useState<string>('');
   const [existingSubjects, setExistingSubjects] = useState<string[]>([]);
 
@@ -89,19 +102,28 @@ export default function CurriculumImporter({ childId, childName, onClose, onImpo
       const orgId = kidData?.organization_id || user.id;
       setOrganizationId(orgId);
 
-      // Load distinct subjects already in use by this org
-      const { data } = await supabase
-        .from('lessons')
-        .select('subject')
-        .eq('organization_id', orgId);
-
-      if (data) {
-        const uniqueExisting = [...new Set(data.map((d: { subject: string }) => d.subject).filter(Boolean))] as string[];
-        // Only keep subjects that are NOT already in the canonical list
-        // (canonical ones will appear via the canonical list in the dropdown)
-        const nonCanonicalExisting = uniqueExisting.filter(s => !CANONICAL_SUBJECTS.includes(s as never))
-        setExistingSubjects(nonCanonicalExisting);
+      // Load subjects already in use by this org — from the subjects table
+      // (where new subjects land immediately) merged with any subject names
+      // that only exist on older lessons (no subjects row).
+      const [{ data: subjectsTableData }, { data: lessonSubjectData }] = await Promise.all([
+        supabase.from('subjects').select('name').eq('organization_id', orgId),
+        supabase.from('lessons').select('subject').eq('organization_id', orgId),
+      ]);
+      const fromSubjects = (subjectsTableData || []).map((d: any) => d.name).filter(Boolean) as string[];
+      const fromLessons = (lessonSubjectData || []).map((d: any) => d.subject).filter(Boolean) as string[];
+      // Subjects-table entries come first so its spelling wins when the same
+      // subject (case-insensitively) also appears on a lesson.
+      const combined = [...fromSubjects, ...fromLessons].map(s => s.trim()).filter(Boolean);
+      const seen = new Map<string, string>();
+      for (const s of combined) {
+        const key = s.toLowerCase();
+        if (!seen.has(key)) seen.set(key, s);
       }
+      const uniqueExisting = [...seen.values()];
+      // Only keep subjects that are NOT already in the canonical list
+      // (canonical ones will appear via the canonical list in the dropdown)
+      const nonCanonicalExisting = uniqueExisting.filter(s => !CANONICAL_SUBJECTS.includes(s as never))
+      setExistingSubjects(nonCanonicalExisting);
 
       // Check for active planning period
       const { data: period } = await supabase
@@ -127,46 +149,139 @@ export default function CurriculumImporter({ childId, childName, onClose, onImpo
     loadSubjectsAndOrg();
   }, []);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    if (selectedFile) {
-      const validTypes = ['application/pdf', 'image/jpeg', 'image/png'];
-      if (validTypes.includes(selectedFile.type)) {
-        setFile(selectedFile);
-        setError('');
-      } else {
-        alert('Please select a PDF or image file (JPEG/PNG)');
+  const isSupportedImage = (f: File) =>
+    ['image/jpeg', 'image/png'].includes(f.type) || isHeicFile(f);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = Array.from(e.target.files || []);
+    e.target.value = ''; // allow re-selecting the same file(s) again later
+    if (selected.length === 0) return;
+    setError('');
+
+    const pdfs = selected.filter(f => f.type === 'application/pdf');
+    const others = selected.filter(f => f.type !== 'application/pdf');
+
+    if (pdfs.length > 0) {
+      if (pdfs.length > 1 || others.length > 0 || images.length > 0) {
+        setError('Choose either one PDF or multiple images — not both.');
+        return;
+      }
+      setPdfFile(pdfs[0]);
+      setImages([]);
+      setImageSourceSizes([]);
+      return;
+    }
+
+    if (pdfFile) {
+      setError('A PDF is already selected. Remove it before adding images.');
+      return;
+    }
+
+    const invalid = others.find(f => !isSupportedImage(f));
+    if (invalid) {
+      setError('Please select PDF, JPEG, PNG, or HEIC files only.');
+      return;
+    }
+
+    if (images.length + others.length > MAX_IMAGES) {
+      setError(`You can upload up to ${MAX_IMAGES} images at a time. Remove some and try again.`);
+      return;
+    }
+
+    setCompressing(true);
+    const compressed: File[] = [];
+    const sourceSizes: number[] = [];
+    for (const f of others) {
+      try {
+        compressed.push(await compressImage(f));
+        sourceSizes.push(f.size);
+      } catch {
+        setError(`Could not process ${f.name}. Please try a different photo.`);
+        setCompressing(false);
+        return;
       }
     }
+
+    setImages(prev => [...prev, ...compressed]);
+    setImageSourceSizes(prev => [...prev, ...sourceSizes]);
+    setCompressing(false);
   };
 
-  const extractLessons = async () => {
-    if (!file) return;
+  const moveImage = (index: number, direction: -1 | 1) => {
+    const target = index + direction;
+    if (target < 0 || target >= images.length) return;
+    setImages(prev => {
+      const next = [...prev];
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
+    setImageSourceSizes(prev => {
+      const next = [...prev];
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
+  };
+
+  const removeImage = (index: number) => {
+    setImages(prev => prev.filter((_, i) => i !== index));
+    setImageSourceSizes(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const compressedTotalBytes = images.reduce((sum, f) => sum + f.size, 0);
+  const sourceTotalBytes = imageSourceSizes.reduce((sum, s) => sum + s, 0);
+  const totalUploadBytes = compressedTotalBytes + (pdfFile?.size ?? 0);
+  const overUploadLimit = totalUploadBytes > MAX_TOTAL_UPLOAD_BYTES;
+
+  useEffect(() => {
+    const urls = images.map(f => URL.createObjectURL(f));
+    setPreviewUrls(urls);
+    return () => { urls.forEach(u => URL.revokeObjectURL(u)); };
+  }, [images]);
+
+  const extractLessons = () => {
+    if (images.length === 0 && !pdfFile) return;
 
     const finalSubject = selectedSubject === '__custom__' ? customSubject.trim() : selectedSubject;
     if (!finalSubject) {
       setError('Please select or enter a subject before uploading');
       return;
     }
+    if (overUploadLimit) {
+      setError(`These files total ${(totalUploadBytes / (1024 * 1024)).toFixed(1)} MB, which is over the 4 MB upload limit. Remove an image and try again.`);
+      return;
+    }
 
     setLoading(true);
     setError('');
+    setUploadProgress(0);
+
     const formData = new FormData();
-    formData.append('file', file);
+    if (pdfFile) {
+      formData.append('files', pdfFile);
+    } else {
+      images.forEach(img => formData.append('files', img));
+    }
     formData.append('childId', childId);
     formData.append('subject', finalSubject);
 
-    try {
-      const response = await fetch('/api/import-curriculum', {
-        method: 'POST',
-        body: formData,
-      });
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', '/api/import-curriculum');
+    xhr.upload.onprogress = (evt) => {
+      if (evt.lengthComputable) setUploadProgress(Math.round((evt.loaded / evt.total) * 100));
+    };
+    xhr.onload = () => {
+      setLoading(false);
+      setUploadProgress(null);
 
-      const data = await response.json();
-
-      if (!response.ok) {
+      let data: any;
+      try {
+        data = JSON.parse(xhr.responseText);
+      } catch {
+        setError('Failed to extract lessons. Please try again.');
+        return;
+      }
+      if (xhr.status < 200 || xhr.status >= 300) {
         setError(data.error || 'Failed to extract lessons');
-        setLoading(false);
         return;
       }
 
@@ -197,12 +312,13 @@ export default function CurriculumImporter({ childId, childName, onClose, onImpo
 
         setStep('midyear');
       }
-    } catch (error) {
-      console.error('Extract error:', error);
-      setError('Failed to extract lessons. Please try again.');
-    } finally {
+    };
+    xhr.onerror = () => {
       setLoading(false);
-    }
+      setUploadProgress(null);
+      setError('Failed to extract lessons. Please try again.');
+    };
+    xhr.send(formData);
   };
 
   const toggleLesson = (index: number) => {
@@ -396,9 +512,9 @@ export default function CurriculumImporter({ childId, childName, onClose, onImpo
           await supabase.from('curriculum_imports').insert({
             organization_id: organizationId,
             planning_period_id: activePlanningPeriod.id,
-            import_source: uploadMode === 'manual' ? 'manual' : file?.type.includes('pdf') ? 'pdf' : 'image',
+            import_source: uploadMode === 'manual' ? 'manual' : pdfFile ? 'pdf' : 'image',
             lessons_created: lessonsToInsert.length,
-            file_url: file?.name,
+            file_url: pdfFile?.name ?? images.map(f => f.name).join(', ') ?? undefined,
             metadata: {
               subject: lessonsToInsert[0]?.subject,
               total_lessons: lessonsToInsert.length,
@@ -750,8 +866,10 @@ export default function CurriculumImporter({ childId, childName, onClose, onImpo
                   <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
                     <input
                       type="file"
-                      accept="application/pdf,image/jpeg,image/png"
+                      accept="application/pdf,image/jpeg,image/png,image/heic,image/heif,.heic,.heif"
                       onChange={handleFileChange}
+                      multiple
+                      capture="environment"
                       className="hidden"
                       id="pdf-upload"
                     />
@@ -760,18 +878,98 @@ export default function CurriculumImporter({ childId, childName, onClose, onImpo
                       className="cursor-pointer inline-block text-white px-6 py-3 rounded-xl font-bold"
                       style={{ background: 'linear-gradient(135deg, #7c3aed, #a855f7)', fontFamily: "'Nunito', sans-serif" }}
                     >
-                      Choose File (PDF or Image)
+                      {images.length > 0 || pdfFile ? 'Add More Photos' : 'Choose Photos or a PDF'}
                     </label>
-                    {file && (
-                      <p className="mt-4 text-gray-700">
-                        Selected: <span className="font-semibold">{file.name}</span>
+                    {images.length === 0 && !pdfFile && (
+                      <p className="mt-3 text-xs text-gray-500">
+                        Multiple JPEG/PNG/HEIC photos, or one PDF · up to {MAX_IMAGES} photos
                       </p>
                     )}
+                    {compressing && (
+                      <p className="mt-3 text-sm font-semibold text-purple-600">Compressing photos…</p>
+                    )}
                   </div>
-                  {file && (
+
+                  {/* PDF selected */}
+                  {pdfFile && (
+                    <div className="flex items-center justify-between border border-gray-200 rounded-lg px-4 py-3">
+                      <span className="text-sm font-semibold text-gray-700">📄 {pdfFile.name}</span>
+                      <button
+                        onClick={() => setPdfFile(null)}
+                        aria-label="Remove PDF"
+                        className="text-xs font-semibold text-gray-600 border border-gray-300 rounded-full px-3 py-1 hover:bg-gray-50"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Image thumbnails — reorderable, removable */}
+                  {images.length > 0 && (
+                    <div>
+                      <p className="text-xs text-gray-500 mb-2">
+                        {images.length} photo{images.length !== 1 ? 's' : ''} · pages are read in this order
+                      </p>
+                      <div className="flex flex-col gap-2">
+                        {images.map((img, i) => (
+                          <div key={i} className="flex items-center gap-3 border border-gray-200 rounded-lg px-3 py-2">
+                            {previewUrls[i] && (
+                              <img
+                                src={previewUrls[i]}
+                                alt={`Page ${i + 1}`}
+                                className="w-12 h-12 object-cover rounded border border-gray-200"
+                              />
+                            )}
+                            <span className="flex-1 text-xs font-semibold text-gray-700">
+                              Page {i + 1} · {img.name}
+                            </span>
+                            <button
+                              onClick={() => moveImage(i, -1)}
+                              disabled={i === 0}
+                              aria-label={`Move page ${i + 1} up`}
+                              className="text-xs border border-gray-300 rounded px-2 py-1 disabled:opacity-40"
+                            >↑</button>
+                            <button
+                              onClick={() => moveImage(i, 1)}
+                              disabled={i === images.length - 1}
+                              aria-label={`Move page ${i + 1} down`}
+                              className="text-xs border border-gray-300 rounded px-2 py-1 disabled:opacity-40"
+                            >↓</button>
+                            <button
+                              onClick={() => removeImage(i)}
+                              aria-label={`Remove page ${i + 1}`}
+                              className="text-xs border border-gray-300 rounded px-2 py-1"
+                            >✕</button>
+                          </div>
+                        ))}
+                      </div>
+                      {sourceTotalBytes > 0 && (
+                        <p className="mt-2 text-xs text-gray-400">
+                          Compressed {(sourceTotalBytes / (1024 * 1024)).toFixed(1)} MB → {(compressedTotalBytes / (1024 * 1024)).toFixed(1)} MB
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {overUploadLimit && (
+                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded text-sm font-semibold">
+                      ⚠ These files total {(totalUploadBytes / (1024 * 1024)).toFixed(1)} MB, over the 4 MB upload limit. Remove an image and try again.
+                    </div>
+                  )}
+
+                  {uploadProgress !== null && (
+                    <div>
+                      <div className="bg-purple-100 rounded h-2 overflow-hidden">
+                        <div className="bg-purple-600 h-full transition-all" style={{ width: `${uploadProgress}%` }} />
+                      </div>
+                      <p className="mt-1.5 text-xs text-gray-500 text-center">Uploading… {uploadProgress}%</p>
+                    </div>
+                  )}
+
+                  {(images.length > 0 || pdfFile) && (
                     <button
                       onClick={extractLessons}
-                      disabled={loading || (useStartDate && scheduleDays.size === 0)}
+                      disabled={loading || compressing || overUploadLimit || (useStartDate && scheduleDays.size === 0)}
                       className="w-full text-white py-3 rounded-xl font-bold disabled:opacity-50"
                       style={{ background: 'linear-gradient(135deg, #7c3aed, #a855f7)', fontFamily: "'Nunito', sans-serif" }}
                     >
