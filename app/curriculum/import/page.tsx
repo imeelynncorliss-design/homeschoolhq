@@ -255,14 +255,14 @@ function CurriculumImportContent() {
       setKids(kidsArr)
       if (kidsArr.length > 0) setSelectedKidId(kidsArr[0].id)
 
-      const { data: subjectData } = await supabase
-        .from('lessons')
-        .select('subject')
-        .eq('organization_id', orgId)
-      if (subjectData) {
-        const unique = [...new Set(subjectData.map((d: any) => d.subject).filter(Boolean))] as string[]
-        setExistingSubjects(unique.filter(s => !(CANONICAL_SUBJECTS as readonly string[]).includes(s)))
-      }
+      const [{ data: subjectsTableData }, { data: lessonSubjectData }] = await Promise.all([
+        supabase.from('subjects').select('name').eq('organization_id', orgId),
+        supabase.from('lessons').select('subject').eq('organization_id', orgId),
+      ])
+      const fromSubjects = (subjectsTableData || []).map((d: any) => d.name).filter(Boolean) as string[]
+      const fromLessons = (lessonSubjectData || []).map((d: any) => d.subject).filter(Boolean) as string[]
+      const unique = [...new Set([...fromSubjects, ...fromLessons])]
+      setExistingSubjects(unique.filter(s => !(CANONICAL_SUBJECTS as readonly string[]).includes(s)))
 
       setPageLoading(false)
     }
