@@ -18,6 +18,45 @@ Entry format:
 
 ---
 
+## [2026-09-30] Roadmap item 1.0 — Investigation and plan for setup refactor
+**Status:** Done (investigation + plan only, no code changed). Plan approved by Imee; implementation proceeds one step at a time (1.1, then 1.2+1.3 together, then 1.4), each stopped for approval.
+**Source:** `docs/prompts/prompt-01-setup.md` Step 1.0; Imee (plan review, three rounds of revisions)
+
+**What changed:** No code. Branch `feature/setup-refactor` created from `main`. Full investigation of the current onboarding flow, plus a plan for Steps 1.1–1.4, refined through three rounds of review.
+
+**Investigation findings:**
+1. **Onboarding flow files:** `app/onboarding/page.tsx` (2,798-line monolith, steps 0–6) is the only real flow. `app/onboarding/standards/page.tsx` and `components/OnboardingTour.tsx` are orphaned — not linked from anywhere, left untouched.
+2. **Redirects to `/onboarding`:** `middleware.ts` (two places), `app/login/page.tsx:66`, `app/signup/page.tsx:127`, `src/app/auth/callback/route.ts:94`, `app/agree/page.tsx` (two places), plus **21 feature pages** that hard-redirect whenever `orgId` is missing (`app/dashboard/page.tsx`, `app/attendance/page.tsx`, `app/standards-setup/page.tsx`, `app/assessments/page.tsx`, `app/calendar/connect/page.tsx`, `app/progress/page.tsx`, `app/curriculum/import/page.tsx`, `app/mastery/page.tsx`, `app/transcript/page.tsx`, `app/daily-log/page.tsx`, `app/compliance/page.tsx`, `app/vacation/page.tsx`, `app/subjects/page.tsx`, `app/bulk-schedule/page.tsx`, `app/lessons/page.tsx`, `app/field-trips/page.tsx`, `app/supply-scout/page.tsx`, `app/teacher/assessments/page.tsx`, `app/reading-log/page.tsx`, `app/school-year/page.tsx`, `app/standards/page.tsx`, `app/tools/page.tsx`).
+3. **Org/`user_organizations` creation:** only happens in `handleStateConfirmed` (`app/onboarding/page.tsx:1055-1129`), already guarded by `if (!orgId)` — already a no-op when an org exists.
+4. **NDA:** lives entirely in `app/agree/page.tsx` (`beta_nda_confirmed` on `user_agreements`), a separate page from onboarding's own age/ToS-only step-0 gate.
+5. **Pages assuming org/kid/subject/state exist:** the real fragility is the 21-page hard-redirect pattern above, not missing null-guards — array access elsewhere is already defensively guarded (`app/parents-corner/page.tsx` already shows the right pattern: empty-state message instead of crash).
+6. **Fields onboarding collects → destination:** org name/state/compliance/school year/teaching style → `organizations` / `user_compliance_settings` / `school_year_settings`; kids info → `kids`; subjects → `subjects`; derived `homeschool_style` → `user_profiles`. Curriculum-choice step 3 is never persisted today.
+7. **Teaching style IS used elsewhere:** `user_profiles.homeschool_style` (derived from `organizations.teaching_style`) directly shapes Scout's system prompt (`app/api/help-chat/route.ts`) and lesson/activity generation (`generate-activity`, `generate-lesson`) — kept in setup per the prompt's own conditional.
+8. **`kids` age/birthdate:** today stores a plain `age` integer and `grade` string — no birthdate columns exist anywhere in the schema or migrations.
+9. **Two separate kid-edit surfaces found** (same "feature in two places" pattern as item 2): `components/KidProfileForm.tsx` (used from `app/profile/page.tsx`) and `components/EditChildModal.tsx` (used from `app/dashboard/page.tsx`) — the latter has no age field at all today.
+10. **Invite/collaboration system** (investigated after Imee's review): two separate, non-syncing membership systems. Owner/admin membership is `user_organizations`. Co-teacher/aide membership is `family_collaborators` (accepted) / `collaborator_invites` (pending, keyed by email + an 8-char code, via `src/lib/invites.ts`'s `redeemInvite()`, `app/signup/page.tsx`'s invite checkbox, and `src/app/join/page.tsx`). A user who joins via invite never gets a `user_organizations` row — critical for the org-creation design below.
+11. **`school_year_settings` / `user_compliance_settings`** (investigated after Imee's review): onboarding writes both today via `handleSchoolYearConfirmed`/`handleComplianceConfirmed`. Every current reader already degrades gracefully on a missing row (`.maybeSingle()` + defaults, mostly `?? 180` days) — no reader crashes. Two independent hardcoded fallback school-year ranges already exist (`hooks/useSubjectCoverage.ts`'s Aug 1–May 31 vs. `app/compliance/page.tsx`'s inline Aug 1–Jun 30) — worth unifying, not a new gap.
+
+**Decisions made during plan review:**
+- **`kids.birth_month`/`kids.birth_year` (new columns) replace the plan to keep the stored `age` field for new entries.** *Why:* the setup prompt calls for calculated, never-stored age; the existing `age` column can't support that. No backfill from the old `age` value — never guess a birth date. Conditions: (1) every kid create/edit surface (`KidProfileForm`, `EditChildModal`, not just the new setup step) must write the new fields; (2) rows with no birth month/year keep showing the stored `age`, with a gentle non-blocking nudge to add it — never computed or guessed.
+- **Org creation moves into a single Postgres function, `ensure_organization_for_user`,** taking a per-user `pg_advisory_xact_lock` rather than a client-side select-then-insert. *Why:* login and the OAuth callback route can fire concurrently for the same new user; select-then-insert is not race-safe. No unique constraint added to `user_organizations.user_id`, since a user can legitimately belong to more than one org.
+- **The function checks `user_organizations`, then `family_collaborators`, then pending `collaborator_invites` (by email, `status='pending' AND expires_at > now()`) before ever creating an org**, and derives identity from `auth.uid()`/`auth.jwt()` internally rather than accepting `user_id`/`email` parameters — `SECURITY DEFINER`, `SET search_path = public`, `EXECUTE` revoked from `PUBLIC` and granted only to `authenticated`. *Why:* prevents a spurious second org for an invited co-teacher/aide, and prevents a caller from ever passing someone else's identity.
+- **Pending-invite case shows two explicit choices** — "Accept invite to {org name}" and "Start my own homeschool instead" (the latter re-calls the function with a new `p_force_create` flag) — rather than silently doing either. Revoked/expired invites are already excluded by the `status`/`expires_at` filter.
+- **Migration deploy order is binding:** the `ensure_organization_for_user` migration must be applied to production and confirmed *before* any code calling the RPC is merged to `main` — merging the code first would break all login/signup. This applies to the Step 1.4 migration (`setup_dismissed_at`, `birth_month`/`birth_year`) the same way.
+- **"School year" is not a required checklist step** in 1.4 — not in the prompt's four-step completion table, and existing stateless fallbacks already cover every reader without a persisted row. Gets a low-key link in the persistent "Finish setup" area instead, alongside teaching style.
+- **`app/onboarding/page.tsx` will be replaced in place with a redirect, not copied to a new file** — recovered via git history if Step 1.4 needs to lift any of its quiz/form logic. The commit hash will be recorded when Step 1.2 ships.
+
+**Files:** none changed (investigation only)
+**DB migrations:** none yet (planned: `ensure_organization_for_user` function in 1.1; `organizations.setup_dismissed_at` + `kids.birth_month`/`birth_year` in 1.4)
+**Follow-ups (not in scope for item 1, logged for later):**
+- `app/onboarding/standards/page.tsx` and `components/OnboardingTour.tsx` are orphaned/unlinked dead code.
+- `components/SetpupBanner.tsx` and `components/SetupWizard.tsx` are unused, dead code referencing `kids` columns that don't exist (`date_of_birth`, `grade_level`, `subjects` array).
+- `app/dashboard/page.tsx:1457` queries `school_year_settings.state/required_days/required_months` — none of these columns exist; this query is already broken independent of this work.
+- No `/legal/beta-nda` route exists in-app; `/agree`'s NDA checkbox links out to it.
+- A normal sign-up with an invited email but no invite code still gets no special treatment today (falls through to ordinary org creation) — the new pending-invite screen only helps at login/signup time going forward, not a full auto-detect-and-redeem flow.
+
+---
+
 ## [2026-09-30] Roadmap item 2.5 — Verify: Item 2 Done
 **Status:** Done
 **What changed:** No code. Final verification pass for roadmap item 2 (quick fixes from Courtney's testing).
