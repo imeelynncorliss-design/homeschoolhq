@@ -18,6 +18,20 @@ Entry format:
 
 ---
 
+## [2026-09-30] Roadmap item 2.3 — Scout FAB moved to bottom-right on mobile
+**Status:** Done
+**What changed:** The Scout floating button's default position changed from top-right (`top: 64, right: 12`) to bottom-right, using `bottom: calc(env(safe-area-inset-bottom, 0px) + 112px)`. The nudge bubble that appears next to the FAB is repositioned the same way (`+204px` clearance) so it still anchors above the button instead of floating near the top of the screen. Drag-to-reposition is untouched — once a user drags the FAB, it switches to the existing top/right coordinate system computed from the drag gesture, same as before.
+**Why:** On mobile, Scout defaulted to the top-right corner and sat above the header's control cluster at a much higher z-index (9994 vs. 100), covering those controls — the reported bug. While investigating, found the app already renders a real 7-item bottom nav globally (`components/BottomNav.tsx`, via `AppShell.tsx`), not just item 4's future placeholder — its content is roughly 91-96px tall plus safe-area padding. The 112px clearance was sized to clear that real nav (not just a hypothetical 64px bar) with a comfortable margin, so Scout also won't need to move again once item 4 ships its (likely shorter, 5-item) nav.
+**Source:** Courtney review; docs/prompts/prompt-02-quick-fixes.md
+**Files:** components/layout/AppHeader.tsx
+**DB migrations:** none
+**Testing:** Verified via code/math (component heights, padding, font sizes read directly from `BottomNav.tsx`) rather than a live visual check at 375px/390px — this environment has no browser-automation tool available, and the app's pages require an authenticated session, so I couldn't screenshot the actual viewport. Confirmed the app builds and the affected routes (`/subjects`, `/lessons`) still return 200 against the already-running local dev server after the change (no runtime crash). Recommend a manual visual pass at 375px/390px before considering this fully verified — flagging for Step 2.5.
+**Follow-ups:**
+- Noticed `components/BottomNav.tsx` has no desktop-hide rule and renders at all viewport widths, but the existing desktop-only CSS override (`@media (min-width: 768px) { .scout-fab { bottom: 32px !important } }`, left untouched here since it's outside mobile scope) would put Scout only 32px above viewport bottom on desktop too — likely overlapping that same bottom nav there. Not fixed now (out of scope: mobile-only bug, "don't touch navigation").
+- `components/ProductTour.tsx` has a `bottom: 110, right: 24` welcome-tour bubble that may sit near Scout's new position during onboarding. Appears to be a separate, occasional overlay (onboarding tour, related to future item 1) rather than a persistent control, so left unchanged, but noting in case it needs coordinating with Scout's new position later.
+
+---
+
 ## [2026-09-30] Roadmap item 2.2 — "From Curriculum" opens for the correct student
 **Status:** Done
 **What changed:** Subjects page's "From curriculum" button now navigates to `/lessons?kidId=<activeKidId>&openImporter=1` instead of a bare `/lessons`. The Lessons page reads `kidId` on load, sets it as the active kid, and opens the existing `CurriculumImporter` modal directly for that kid (which already shows "Import Curriculum for {childName}" so the parent can confirm), then clears the query string via `router.replace` so a later `loadData()` call (after the import finishes) doesn't reopen the importer.
