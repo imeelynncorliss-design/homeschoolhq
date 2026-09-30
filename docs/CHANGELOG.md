@@ -25,6 +25,7 @@ Entry format:
 **Source:** Courtney review; docs/prompts/prompt-02-quick-fixes.md
 **Files:** app/subjects/page.tsx, app/lessons/page.tsx
 **DB migrations:** none
+**Tweak:** The "From curriculum" button only appends `kidId`/`openImporter` when `activeKidId` is set; if there's no active kid it falls back to the original plain `/lessons` navigation instead of building a URL with an undefined kid id.
 **Follow-ups:** Checked whether this flow ever passes through the separate full-page `app/curriculum/import/page.tsx` (which also defaults its kid selector to `kidsArr[0]`) — it does not; that page is only reached from the Dashboard's own "Add a Lesson → Use curriculum" choice (`app/dashboard/page.tsx`), which is a different, all-kids entry point with a visible kid dropdown the parent can change, and the dashboard is out of scope for item 2. Logging as a follow-up for a future item: if that dashboard flow is meant to carry kid context, apply the same query-param approach there.
 
 ---
