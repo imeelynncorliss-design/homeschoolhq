@@ -2,6 +2,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
+import { CLAUDE_SONNET_MODEL } from '@/lib/ai';
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -123,7 +124,7 @@ Important:
 
     // Call Claude API
     const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: CLAUDE_SONNET_MODEL,
       max_tokens: 8000, // ✅ INCREASED from 4096 to handle larger curricula
       messages: [
         {

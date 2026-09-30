@@ -8,9 +8,10 @@ import Anthropic from '@anthropic-ai/sdk';
 import {
   getStandardById,
   getStudentProficiency,
-  getActivitiesForStandard, 
+  getActivitiesForStandard,
   saveGeneratedActivity,
 } from '@/lib/utils-standards';
+import { CLAUDE_SONNET_MODEL } from '@/lib/ai';
 
 function getAnthropicClient() {
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -126,7 +127,7 @@ Return ONLY the JSON object, no other text.`;
     // Call Claude API
     const anthropic = getAnthropicClient();
     const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: CLAUDE_SONNET_MODEL,
       max_tokens: 2000,
       messages: [
         {

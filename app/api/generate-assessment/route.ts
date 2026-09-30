@@ -4,6 +4,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
+import { CLAUDE_SONNET_MODEL } from '@/lib/ai';
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY!,
@@ -131,7 +132,7 @@ ${typeInstructions[assessmentType]}
 CRITICAL: Return ONLY the JSON object. No markdown, no backticks, no explanatory text.`;
 
     const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: CLAUDE_SONNET_MODEL,
       max_tokens: 4000,
       messages: [{ role: 'user', content: prompt }]
     });
