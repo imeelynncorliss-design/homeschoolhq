@@ -29,6 +29,19 @@ Entry format:
 **Follow-ups:**
 - Noticed `components/BottomNav.tsx` has no desktop-hide rule and renders at all viewport widths, but the existing desktop-only CSS override (`@media (min-width: 768px) { .scout-fab { bottom: 32px !important } }`, left untouched here since it's outside mobile scope) would put Scout only 32px above viewport bottom on desktop too — likely overlapping that same bottom nav there. Not fixed now (out of scope: mobile-only bug, "don't touch navigation").
 - `components/ProductTour.tsx` has a `bottom: 110, right: 24` welcome-tour bubble that may sit near Scout's new position during onboarding. Appears to be a separate, occasional overlay (onboarding tour, related to future item 1) rather than a persistent control, so left unchanged, but noting in case it needs coordinating with Scout's new position later.
+- The "© 2026 HomeschoolReady, LLC" footer text inside `components/BottomNav.tsx` renders on top of the bottom nav bar itself on mobile (it's the nav's own internal copyright line, not a separate element, but it reads as overlapping/cramped against the nav). Noted per Imee's request — not fixed, logging only.
+
+### [2026-09-30] Roadmap item 2.3 follow-up — Bottom padding for Scout + 56px mobile FAB, from visual check at 390px
+**Status:** Done
+**What changed:**
+1. `components/AppShell.tsx` now wraps `{children}` in a `.app-shell-content` container with `padding-bottom: 168px` (mobile) / `112px` (desktop, `min-width: 768px`) — Scout's own bottom clearance plus its diameter at each breakpoint (112+56 mobile, 32+80 desktop). Applied once in the shared layout, not per page.
+2. `components/layout/AppHeader.tsx`: Scout's FAB is now 56px diameter on mobile (`max-width: 767px`, Material-standard FAB size; was 80px), with its icon scaled to 38px to match. Desktop keeps 80px. The notification dot is unchanged and stays visible at the smaller size (well within the circle at `top:4, right:4` on a 56px button).
+**Why:** Visual check at 390px (Imee) found Scout cleared the bottom nav after the first 2.3 fix, but still covered part of the last Quick Log card ("Add Lesson") at the bottom of the dashboard, since nothing reserved scroll room for Scout's own footprint. Centralizing the padding in the shared layout (rather than each page's own `paddingBottom`, which already vary — 88 in Subjects/Lessons, 20 in Dashboard) avoids having to hunt down and patch every page individually, and keeps future pages correct by default.
+**Source:** Imee (390px visual check)
+**Files:** components/AppShell.tsx, components/layout/AppHeader.tsx
+**DB migrations:** none
+**Risk note:** `AppShell.tsx` wraps every header-bearing page's content in a new `<div>` for the first time. This is low-risk (the div adds no layout behavior besides `padding-bottom`), but since it touches the shared layout for the whole app, it's worth a broader visual pass across a few different pages (not just Dashboard) before considering this fully verified — I could not do a live visual check myself (no browser-automation tool in this environment, pages require authentication). Confirmed the app still builds and `/subjects` and `/lessons` return 200 against the running local dev server after the change.
+**Follow-ups:** none new beyond the footer/desktop-overlap/ProductTour items logged above.
 
 ---
 
