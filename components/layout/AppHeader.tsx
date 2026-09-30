@@ -991,7 +991,8 @@ export default function AppHeader() {
           {scoutNudge && showScoutBubble && (
             <div style={{
               position: 'fixed',
-              top: (fabPos?.top ?? 64) + 88,
+              top: fabPos ? fabPos.top + 88 : 'auto',
+              bottom: fabPos ? 'auto' : 'calc(env(safe-area-inset-bottom, 0px) + 204px)',
               right: fabPos?.right ?? 12,
               zIndex: 9995,
               width: 290, fontFamily: "'Nunito', sans-serif",
@@ -1044,7 +1045,8 @@ export default function AppHeader() {
             title="Chat with Scout (drag to move)"
             style={{
               position: 'fixed',
-              top: fabPos?.top ?? 64,
+              top: fabPos ? fabPos.top : 'auto',
+              bottom: fabPos ? 'auto' : 'calc(env(safe-area-inset-bottom, 0px) + 112px)',
               right: fabPos?.right ?? 12,
               zIndex: 9994,
               width: 80, height: 80, borderRadius: '50%',
