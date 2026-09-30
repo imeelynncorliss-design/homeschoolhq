@@ -18,6 +18,37 @@ Entry format:
 
 ---
 
+## [2026-09-30] Roadmap item 2.1 — New subjects now appear in Add Curriculum
+**Status:** Done
+**What changed:** The Add Curriculum subject dropdown now queries the `subjects` table (organization-scoped) and merges it with the existing lesson-derived subject list, deduplicated, instead of relying on lessons alone.
+**Why:** A newly added subject has no lessons yet, so the lessons-only query never surfaced it. Merging both sources means new subjects appear immediately, and subjects that only exist on older lessons (with no `subjects` row) still show up too.
+**Source:** Courtney review; docs/prompts/prompt-02-quick-fixes.md
+**Files:** app/curriculum/import/page.tsx
+**DB migrations:** none
+**Follow-ups:** none
+
+---
+
+## [2026-09-30] Roadmap item 2.0 — Investigation of Courtney's 4 quick-fix bugs
+**Status:** Done (investigation only, no code changed)
+**Source:** Courtney's testing; docs/prompts/prompt-02-quick-fixes.md
+
+**What changed:** No code. Investigated root cause of each of the 4 bugs in item 2.
+
+**Findings:**
+1. **New subject missing from Add Curriculum list** — `app/curriculum/import/page.tsx` builds its subject dropdown from distinct `subject` values on the `lessons` table (plus a hardcoded canonical list), never from the `subjects` table where new subjects are actually inserted (`app/subjects/page.tsx`). A subject with no lessons yet is invisible. Not a caching issue — a query-source mismatch. Fix: query `subjects` table directly. Risk: low.
+2. **"From Curriculum" jumps to wrong student** — Subjects page navigates to `/lessons` with no kid identifier (no route param, no query string). `/lessons` self-initializes `activeKidId` from the first kid returned by `created_at DESC`, so it lands on whichever kid was created most recently, not the kid the parent was viewing. Fix: pass kid id via query param, read it on `/lessons` mount, show student name for confirmation. Risk: low-medium.
+3. **Scout FAB covers top-right controls on mobile** — Scout button defaults to `position: fixed; top: 64; right: 12` at `zIndex: 9994`; it's only moved to bottom-right by a `@media (min-width: 768px)` override, so mobile keeps the top-right default and sits above the header controls (`zIndex: 100`). Fix: make bottom-right (respecting `env(safe-area-inset-bottom)`) the default/mobile position. Risk: low.
+4. **Only single photo upload for curriculum import** — Single-file assumption runs end-to-end: `file` state is a single `File`, input has no `multiple`, `handleExtract` sends one file, and `app/api/import-curriculum/route.ts` reads exactly one `file` field. Fix requires converting to an array with reorderable thumbnails, client-side compression (max 1600px/75-80% quality), a 10-image cap, and an API route change to accept and forward multiple images in order. Risk: medium — highest-risk item; needs a decision on whether to add `browser-image-compression` as a new npm dependency or write an in-house canvas-based compressor.
+
+**Why:** Step 2.0 of the quick-fixes prompt requires finding root cause and proposed fix/risk for each bug before any code changes, per working rules (stay in scope, ask before adding a dependency).
+
+**Files:** none changed (investigation only)
+**DB migrations:** none
+**Follow-ups:** Need decision from Imee before Step 2.4: add `browser-image-compression` npm package, or write compression in-house?
+
+---
+
 ## [2026-09-30] Build order — Quick fixes (item 2) before setup (item 1)
 **Status:** Decided
 **Source:** Imee
