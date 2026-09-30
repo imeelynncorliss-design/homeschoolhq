@@ -11,6 +11,14 @@ function ReportsContent() {
 
   const hubCards = [
     {
+      icon: '📦',
+      label: 'Review Package',
+      desc: 'Build a reviewer-ready PDF with attendance, compliance & portfolio samples',
+      href: '/review-package',
+      comingSoon: false,
+      highlight: true,
+    },
+    {
       icon: '📝',
       label: 'Daily Subject Log',
       desc: 'Quickly log subjects covered each day — no lesson required',
