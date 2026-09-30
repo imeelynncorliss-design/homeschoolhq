@@ -18,6 +18,21 @@ Entry format:
 
 ---
 
+## [2026-09-30] Hotfix — Replaced retired claude-sonnet-4-20250514 model ID
+**Status:** Done, awaiting local verification before merge
+**What changed:** Replaced the hardcoded model ID `claude-sonnet-4-20250514` with `claude-sonnet-4-6` in three API routes, and added a `CLAUDE_SONNET_MODEL` named constant in `lib/ai.ts` for routes that call the `@anthropic-ai/sdk` client directly, so a future model swap is a one-line change instead of a hunt through each route.
+**Why:** `claude-sonnet-4-20250514` was retired 2026-06-15. Curriculum import, assessment generation, and standards activity generation were all failing in production with "model not found" as a result.
+**Source:** Imee (urgent, reported production failures)
+**Files:** lib/ai.ts, app/api/import-curriculum/route.ts, app/api/generate-assessment/route.ts, app/api/standards/[id]/generate-activity/route.ts
+**DB migrations:** none
+**Testing:** `tsc --noEmit` shows the same 17 pre-existing errors as before this change (none new) across all four touched files. Not yet verified live — Imee is testing curriculum import locally before this merges to main. Branch: `hotfix/retired-model`.
+**Follow-ups:**
+- Scout's chat features use `claude-haiku-4-5-20251001` (the default in `lib/ai.ts`'s `getModel()`, used by `/api/adapt-lesson`, `/api/help-chat`, `/api/generate-activity`, `/api/generate-lesson`), which Imee flagged may be retired as soon as 2026-10-15. Not addressed in this hotfix — worth checking on/before that date so Scout doesn't break the same way.
+- `app/api/standards/import/route.ts` already used the correct `claude-sonnet-4-6` value via its own local `modelName` const, so it wasn't broken and wasn't touched here. Could be pointed at the new shared `CLAUDE_SONNET_MODEL` constant in a later cleanup pass for consistency.
+- Only the three routes reported as broken were fixed. Other AI routes go through `lib/ai.ts`'s `getModel()` (env-var driven, not a hardcoded string), so they weren't part of this retirement issue.
+
+---
+
 ## [2026-09-30] Build order — Quick fixes (item 2) before setup (item 1)
 **Status:** Decided
 **Source:** Imee
