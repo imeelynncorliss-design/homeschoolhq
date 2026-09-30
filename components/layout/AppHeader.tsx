@@ -1062,13 +1062,14 @@ export default function AppHeader() {
             onPointerMove={onFabPointerMove}
             onPointerUp={onFabPointerUp}
           >
-            <img src="/Cardinal_Mascot.png" alt="Scout" style={{ width: 54, height: 54, objectFit: 'contain', pointerEvents: 'none' }} />
+            <img className="scout-fab-icon" src="/Cardinal_Mascot.png" alt="Scout" style={{ width: 54, height: 54, objectFit: 'contain', pointerEvents: 'none' }} />
             {scoutDot && (
               <span style={{
                 position: 'absolute', top: 4, right: 4,
                 width: 14, height: 14, borderRadius: '50%',
                 background: '#f59e0b', border: '2.5px solid #fff',
                 animation: 'scout-dot-pulse 1.8s ease-in-out infinite',
+                zIndex: 1,
               }} />
             )}
           </button>
@@ -1360,5 +1361,10 @@ const HEADER_STYLES = `
   /* On desktop, no BottomNav — drop FAB closer to the edge */
   @media (min-width: 768px) {
     .scout-fab { bottom: 32px !important; left: auto !important; right: 28px !important; transform: none !important; }
+  }
+  /* Material-standard 56px FAB on mobile (was 80px) */
+  @media (max-width: 767px) {
+    .scout-fab { width: 56px !important; height: 56px !important; }
+    .scout-fab-icon { width: 38px !important; height: 38px !important; }
   }
 `
