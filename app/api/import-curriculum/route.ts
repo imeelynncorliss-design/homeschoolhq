@@ -10,31 +10,33 @@ const anthropic = new Anthropic({
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
-    const file = formData.get('file') as File;
+    // 'files' carries one or more images, or a single PDF. Fall back to the
+    // older singular 'file' field for any caller still using it.
+    const files = formData.getAll('files').filter((f): f is File => f instanceof File);
+    const legacyFile = formData.get('file') as File | null;
+    const allFiles = files.length > 0 ? files : (legacyFile ? [legacyFile] : []);
     const subject = formData.get('subject') as string;
 
-    if (!file) {
+    if (allFiles.length === 0) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
 
-    // Check file type (PDF or image)
-    const fileType = file.type;
-    const isImage = fileType.startsWith('image/');
-    const isPDF = fileType === 'application/pdf';
+    const isPDF = allFiles[0].type === 'application/pdf';
+    const isImage = (f: File) => f.type.startsWith('image/');
 
-    if (!isImage && !isPDF) {
-      return NextResponse.json({ error: 'Invalid file type. Please upload a PDF or image.' }, { status: 400 });
+    if (isPDF && allFiles.length > 1) {
+      return NextResponse.json({ error: 'Only one PDF can be uploaded at a time.' }, { status: 400 });
     }
-
-    // Convert file to base64
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-    const base64Data = buffer.toString('base64');
+    if (!isPDF && !allFiles.every(isImage)) {
+      return NextResponse.json({ error: 'Invalid file type. Please upload a PDF or image(s).' }, { status: 400 });
+    }
 
     // Prepare content based on file type
     let content: any[];
-    
+
     if (isPDF) {
+      const bytes = await allFiles[0].arrayBuffer();
+      const base64Data = Buffer.from(bytes).toString('base64');
       content = [
         {
           type: 'document',
@@ -46,7 +48,7 @@ export async function POST(request: NextRequest) {
         },
         {
           type: 'text',
-          text: `Extract lesson information from this ${subject || ''} curriculum table of contents. 
+          text: `Extract lesson information from this ${subject || ''} curriculum table of contents.
 
 For each lesson, provide:
 - title: The lesson name/number
@@ -70,21 +72,30 @@ Important:
         },
       ];
     } else {
-      // Handle image files
-      const mediaType = fileType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp';
-      
-      content = [
-        {
+      // Handle one or more image pages, in order, as a single table of contents.
+      const imageBlocks = await Promise.all(allFiles.map(async (f) => {
+        const bytes = await f.arrayBuffer();
+        const base64Data = Buffer.from(bytes).toString('base64');
+        const mediaType = f.type as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp';
+        return {
           type: 'image',
           source: {
             type: 'base64',
             media_type: mediaType,
             data: base64Data,
           },
-        },
+        };
+      }));
+
+      const pageNote = allFiles.length > 1
+        ? `This is a set of ${allFiles.length} photos/screenshots, in order, of a single ${subject || ''} curriculum table of contents that spans multiple pages. Treat them as one continuous table of contents.`
+        : `This is a photo/screenshot of a ${subject || ''} curriculum table of contents.`;
+
+      content = [
+        ...imageBlocks,
         {
           type: 'text',
-          text: `This is a photo/screenshot of a ${subject || ''} curriculum table of contents. Extract lesson information from it.
+          text: `${pageNote} Extract lesson information from it.
 
 For each lesson, provide:
 - title: The lesson name/number
@@ -101,8 +112,8 @@ Return ONLY a valid JSON array with this structure:
 ]
 
 Important:
-- Read all text carefully from the image
-- Extract ALL lessons you find
+- Read all text carefully from every image, in the order given
+- Extract ALL lessons you find, without duplicating lessons that appear across page boundaries
 - Keep titles concise
 - Include lesson numbers if present
 - Return valid JSON only, no other text`

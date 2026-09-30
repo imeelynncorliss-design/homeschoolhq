@@ -7,6 +7,10 @@ import AuthGuard from '@/components/AuthGuard'
 import { useAppHeader } from '@/components/layout/AppHeader'
 import { getOrganizationId } from '@/src/lib/getOrganizationId'
 import { CANONICAL_SUBJECTS } from '@/src/constants/subjects'
+import { compressImage, isHeicFile } from '@/src/utils/compressImage'
+
+const MAX_IMAGES = 10
+const MAX_TOTAL_UPLOAD_BYTES = 4 * 1024 * 1024 // stay under Vercel's 4.5 MB request limit
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -213,7 +217,12 @@ function CurriculumImportContent() {
 
   // Import flow state
   const [step, setStep]                     = useState<Step>('upload')
-  const [file, setFile]                     = useState<File | null>(null)
+  const [images, setImages]                 = useState<File[]>([])
+  const [pdfFile, setPdfFile]               = useState<File | null>(null)
+  const [compressing, setCompressing]       = useState(false)
+  const [sizeStats, setSizeStats]           = useState<{ before: number; after: number }>({ before: 0, after: 0 })
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null)
+  const [previewUrls, setPreviewUrls]       = useState<string[]>([])
   const [loading, setLoading]               = useState(false)
   const [error, setError]                   = useState('')
   const [extractedLessons, setExtractedLessons] = useState<Lesson[]>([])
@@ -279,52 +288,131 @@ function CurriculumImportContent() {
 
   // ── File handling ────────────────────────────────────────────────────────────
 
+  const isSupportedImage = (f: File) =>
+    ['image/jpeg', 'image/png'].includes(f.type) || isHeicFile(f)
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0]
-    if (!f) return
+    const selected = Array.from(e.target.files || [])
+    e.target.value = '' // allow re-selecting the same file(s) again later
+    if (selected.length === 0) return
+    setError('')
 
-    const isHeic = f.type === 'image/heic' || f.type === 'image/heif' || f.name.toLowerCase().endsWith('.heic') || f.name.toLowerCase().endsWith('.heif')
+    const pdfs = selected.filter(f => f.type === 'application/pdf')
+    const others = selected.filter(f => f.type !== 'application/pdf')
 
-    if (!['application/pdf', 'image/jpeg', 'image/png'].includes(f.type) && !isHeic) {
-      setError('Please select a PDF, JPEG, PNG, or HEIC image file')
+    if (pdfs.length > 0) {
+      if (pdfs.length > 1 || others.length > 0 || images.length > 0) {
+        setError('Choose either one PDF or multiple images — not both.')
+        return
+      }
+      setPdfFile(pdfs[0])
+      setImages([])
+      setSizeStats({ before: 0, after: 0 })
       return
     }
 
-    if (isHeic) {
+    if (pdfFile) {
+      setError('A PDF is already selected. Remove it before adding images.')
+      return
+    }
+
+    const invalid = others.find(f => !isSupportedImage(f))
+    if (invalid) {
+      setError('Please select PDF, JPEG, PNG, or HEIC files only.')
+      return
+    }
+
+    if (images.length + others.length > MAX_IMAGES) {
+      setError(`You can upload up to ${MAX_IMAGES} images at a time. Remove some and try again.`)
+      return
+    }
+
+    setCompressing(true)
+    const beforeTotal = others.reduce((sum, f) => sum + f.size, 0)
+    const compressed: File[] = []
+    for (const f of others) {
       try {
-        const heic2any = (await import('heic2any')).default
-        const converted = await heic2any({ blob: f, toType: 'image/jpeg', quality: 0.9 }) as Blob
-        const convertedFile = new File([converted], f.name.replace(/\.heic$/i, '.jpg'), { type: 'image/jpeg' })
-        setFile(convertedFile)
+        compressed.push(await compressImage(f))
       } catch {
-        setError('Could not convert HEIC image. Please try exporting as JPEG from your Photos app.')
+        setError(`Could not process ${f.name}. Please try a different photo.`)
+        setCompressing(false)
         return
       }
-    } else {
-      setFile(f)
     }
-    setError('')
+    const afterTotal = compressed.reduce((sum, f) => sum + f.size, 0)
+
+    setSizeStats(prev => ({ before: prev.before + beforeTotal, after: prev.after + afterTotal }))
+    setImages(prev => [...prev, ...compressed])
+    setCompressing(false)
   }
+
+  const moveImage = (index: number, direction: -1 | 1) => {
+    setImages(prev => {
+      const target = index + direction
+      if (target < 0 || target >= prev.length) return prev
+      const next = [...prev]
+      ;[next[index], next[target]] = [next[target], next[index]]
+      return next
+    })
+  }
+
+  const removeImage = (index: number) => {
+    setImages(prev => prev.filter((_, i) => i !== index))
+  }
+
+  const totalUploadBytes = images.reduce((sum, f) => sum + f.size, 0) + (pdfFile?.size ?? 0)
+  const overUploadLimit = totalUploadBytes > MAX_TOTAL_UPLOAD_BYTES
+
+  useEffect(() => {
+    const urls = images.map(f => URL.createObjectURL(f))
+    setPreviewUrls(urls)
+    return () => { urls.forEach(u => URL.revokeObjectURL(u)) }
+  }, [images])
 
   // ── Extract ──────────────────────────────────────────────────────────────────
 
-  const handleExtract = async () => {
-    if (!file || !selectedKidId) return
+  const handleExtract = () => {
+    if ((images.length === 0 && !pdfFile) || !selectedKidId) return
     const finalSubject = selectedSubject === '__custom__' ? customSubject.trim() : selectedSubject
     if (!finalSubject) { setError('Please select or enter a subject'); return }
+    if (overUploadLimit) {
+      setError(`These files total ${(totalUploadBytes / (1024 * 1024)).toFixed(1)} MB, which is over the 4 MB upload limit. Remove an image and try again.`)
+      return
+    }
 
     setLoading(true)
     setError('')
+    setUploadProgress(0)
 
     const formData = new FormData()
-    formData.append('file', file)
+    if (pdfFile) {
+      formData.append('files', pdfFile)
+    } else {
+      images.forEach(img => formData.append('files', img))
+    }
     formData.append('childId', selectedKidId)
     formData.append('subject', finalSubject)
 
-    try {
-      const res = await fetch('/api/import-curriculum', { method: 'POST', body: formData })
-      const data = await res.json()
-      if (!res.ok) { setError(data.error || 'Failed to extract lessons'); return }
+    const xhr = new XMLHttpRequest()
+    xhr.open('POST', '/api/import-curriculum')
+    xhr.upload.onprogress = (evt) => {
+      if (evt.lengthComputable) setUploadProgress(Math.round((evt.loaded / evt.total) * 100))
+    }
+    xhr.onload = () => {
+      setLoading(false)
+      setUploadProgress(null)
+
+      let data: any
+      try {
+        data = JSON.parse(xhr.responseText)
+      } catch {
+        setError('Failed to extract lessons. Please try again.')
+        return
+      }
+      if (xhr.status < 200 || xhr.status >= 300) {
+        setError(data.error || 'Failed to extract lessons')
+        return
+      }
 
       if (data.lessons) {
         const sorted = [...data.lessons].sort((a: Lesson, b: Lesson) => {
@@ -344,11 +432,13 @@ function CurriculumImportContent() {
 
         setStep('preview')
       }
-    } catch {
-      setError('Failed to extract lessons. Please try again.')
-    } finally {
-      setLoading(false)
     }
+    xhr.onerror = () => {
+      setLoading(false)
+      setUploadProgress(null)
+      setError('Failed to extract lessons. Please try again.')
+    }
+    xhr.send(formData)
   }
 
   // ── Import ───────────────────────────────────────────────────────────────────
@@ -580,29 +670,90 @@ function CurriculumImportContent() {
                       type="file"
                       accept="application/pdf,image/jpeg,image/png,image/heic,image/heif,.heic,.heif"
                       onChange={handleFileChange}
+                      multiple
+                      capture="environment"
                       className="hidden"
                       id="file-upload"
                       style={{ display: 'none' }}
                     />
                     <label htmlFor="file-upload" style={s.fileLabel}>
-                      Choose File (PDF, JPEG, PNG, or HEIC)
+                      {images.length > 0 || pdfFile ? 'Add More Photos' : 'Choose Photos or a PDF'}
                     </label>
-                    {file ? (
-                      <p style={{ marginTop: 12, fontSize: 13, color: '#374151', fontWeight: 600 }}>
-                        ✓ {file.name}
-                      </p>
-                    ) : (
+                    {images.length === 0 && !pdfFile && (
                       <p style={{ marginTop: 10, fontSize: 12, color: '#9ca3af' }}>
-                        PDF, JPEG, PNG, or HEIC · max 15 MB
+                        Multiple JPEG/PNG/HEIC photos, or one PDF · up to {MAX_IMAGES} photos
+                      </p>
+                    )}
+                    {compressing && (
+                      <p style={{ marginTop: 10, fontSize: 13, color: '#7c3aed', fontWeight: 600 }}>
+                        Compressing photos…
                       </p>
                     )}
                   </div>
 
-                  {file && (
+                  {/* PDF selected */}
+                  {pdfFile && (
+                    <div style={{ ...s.lessonRow, justifyContent: 'space-between' }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: '#374151' }}>📄 {pdfFile.name}</span>
+                      <button onClick={() => setPdfFile(null)} style={{ ...s.btnSecondary, padding: '6px 12px', fontSize: 12 }}>
+                        Remove
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Image thumbnails — reorderable, removable */}
+                  {images.length > 0 && (
+                    <div>
+                      <p style={{ fontSize: 12, color: '#6b7280', marginBottom: 8 }}>
+                        {images.length} photo{images.length !== 1 ? 's' : ''} · pages are read in this order
+                      </p>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {images.map((img, i) => (
+                          <div key={i} style={{ ...s.lessonRow, alignItems: 'center' }}>
+                            {previewUrls[i] && (
+                              <img
+                                src={previewUrls[i]}
+                                alt={`Page ${i + 1}`}
+                                style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 6, border: '1px solid #e5e7eb' }}
+                              />
+                            )}
+                            <span style={{ flex: 1, fontSize: 12, color: '#374151', fontWeight: 600 }}>
+                              Page {i + 1} · {img.name}
+                            </span>
+                            <button onClick={() => moveImage(i, -1)} disabled={i === 0} style={{ ...s.btnSecondary, padding: '4px 8px', opacity: i === 0 ? 0.4 : 1 }}>↑</button>
+                            <button onClick={() => moveImage(i, 1)} disabled={i === images.length - 1} style={{ ...s.btnSecondary, padding: '4px 8px', opacity: i === images.length - 1 ? 0.4 : 1 }}>↓</button>
+                            <button onClick={() => removeImage(i)} style={{ ...s.btnSecondary, padding: '4px 8px' }}>✕</button>
+                          </div>
+                        ))}
+                      </div>
+                      {sizeStats.before > 0 && (
+                        <p style={{ marginTop: 8, fontSize: 11, color: '#9ca3af' }}>
+                          Compressed {(sizeStats.before / (1024 * 1024)).toFixed(1)} MB → {(sizeStats.after / (1024 * 1024)).toFixed(1)} MB
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {overUploadLimit && (
+                    <div style={s.errorBanner}>
+                      ⚠ These files total {(totalUploadBytes / (1024 * 1024)).toFixed(1)} MB, over the 4 MB upload limit. Remove an image and try again.
+                    </div>
+                  )}
+
+                  {uploadProgress !== null && (
+                    <div>
+                      <div style={{ background: '#ede9fe', borderRadius: 8, height: 8, overflow: 'hidden' }}>
+                        <div style={{ background: '#7c3aed', height: '100%', width: `${uploadProgress}%`, transition: 'width 0.15s' }} />
+                      </div>
+                      <p style={{ marginTop: 6, fontSize: 12, color: '#6b7280', textAlign: 'center' }}>Uploading… {uploadProgress}%</p>
+                    </div>
+                  )}
+
+                  {(images.length > 0 || pdfFile) && (
                     <button
                       onClick={handleExtract}
-                      disabled={loading}
-                      style={{ ...s.btnPrimary, opacity: loading ? 0.6 : 1 }}
+                      disabled={loading || compressing || overUploadLimit}
+                      style={{ ...s.btnPrimary, opacity: (loading || compressing || overUploadLimit) ? 0.6 : 1 }}
                     >
                       {loading ? 'Extracting Lessons...' : 'Extract Lessons →'}
                     </button>
@@ -751,7 +902,9 @@ function CurriculumImportContent() {
                     <button
                       onClick={() => {
                         setStep('upload')
-                        setFile(null)
+                        setImages([])
+                        setPdfFile(null)
+                        setSizeStats({ before: 0, after: 0 })
                         setExtractedLessons([])
                         setSelectedLessons(new Set())
                         setSelectedSubject('')
