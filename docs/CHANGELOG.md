@@ -18,6 +18,17 @@ Entry format:
 
 ---
 
+## [2026-09-30] Roadmap item 2.2 — "From Curriculum" opens for the correct student
+**Status:** Done
+**What changed:** Subjects page's "From curriculum" button now navigates to `/lessons?kidId=<activeKidId>&openImporter=1` instead of a bare `/lessons`. The Lessons page reads `kidId` on load, sets it as the active kid, and opens the existing `CurriculumImporter` modal directly for that kid (which already shows "Import Curriculum for {childName}" so the parent can confirm), then clears the query string via `router.replace` so a later `loadData()` call (after the import finishes) doesn't reopen the importer.
+**Why:** Subjects → Add Lesson → From Curriculum previously dropped all kid context on navigation. `/lessons` defaulted its active kid to the first row from `kids` ordered by `created_at DESC` — i.e., whichever kid was created most recently — not the kid the parent was viewing. With 2+ kids this silently opened the wrong child's curriculum import, and logging a lesson to the wrong child would corrupt that child's records and compliance totals.
+**Source:** Courtney review; docs/prompts/prompt-02-quick-fixes.md
+**Files:** app/subjects/page.tsx, app/lessons/page.tsx
+**DB migrations:** none
+**Follow-ups:** Checked whether this flow ever passes through the separate full-page `app/curriculum/import/page.tsx` (which also defaults its kid selector to `kidsArr[0]`) — it does not; that page is only reached from the Dashboard's own "Add a Lesson → Use curriculum" choice (`app/dashboard/page.tsx`), which is a different, all-kids entry point with a visible kid dropdown the parent can change, and the dashboard is out of scope for item 2. Logging as a follow-up for a future item: if that dashboard flow is meant to carry kid context, apply the same query-param approach there.
+
+---
+
 ## [2026-09-30] Roadmap item 2.1 — New subjects now appear in Add Curriculum
 **Status:** Done
 **What changed:** The Add Curriculum subject dropdown now queries the `subjects` table (organization-scoped) and merges it with the existing lesson-derived subject list, deduplicated, instead of relying on lessons alone. Merged names are trimmed and deduped case-insensitively, keeping the first spelling found — subjects-table entries are listed first, so that spelling wins over a differently-cased match from a lesson.
