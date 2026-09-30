@@ -20,12 +20,12 @@ Entry format:
 
 ## [2026-09-30] Roadmap item 2.1 — New subjects now appear in Add Curriculum
 **Status:** Done
-**What changed:** The Add Curriculum subject dropdown now queries the `subjects` table (organization-scoped) and merges it with the existing lesson-derived subject list, deduplicated, instead of relying on lessons alone.
-**Why:** A newly added subject has no lessons yet, so the lessons-only query never surfaced it. Merging both sources means new subjects appear immediately, and subjects that only exist on older lessons (with no `subjects` row) still show up too.
+**What changed:** The Add Curriculum subject dropdown now queries the `subjects` table (organization-scoped) and merges it with the existing lesson-derived subject list, deduplicated, instead of relying on lessons alone. Merged names are trimmed and deduped case-insensitively, keeping the first spelling found — subjects-table entries are listed first, so that spelling wins over a differently-cased match from a lesson.
+**Why:** A newly added subject has no lessons yet, so the lessons-only query never surfaced it. Merging both sources means new subjects appear immediately, and subjects that only exist on older lessons (with no `subjects` row) still show up too. Trim/case-insensitive dedupe avoids showing the same subject twice (e.g., "Math" from `subjects` and "math " from an old lesson).
 **Source:** Courtney review; docs/prompts/prompt-02-quick-fixes.md
 **Files:** app/curriculum/import/page.tsx
 **DB migrations:** none
-**Follow-ups:** none
+**Follow-ups:** `next.config.ts` has `typescript.ignoreBuildErrors: true`, so `next build` passes despite existing type errors. `npx tsc --noEmit` currently reports **17 pre-existing errors** across the repo, unrelated to this change (none in `app/curriculum/import/page.tsx`). Not fixed and config not changed — logged for visibility only.
 
 ---
 
