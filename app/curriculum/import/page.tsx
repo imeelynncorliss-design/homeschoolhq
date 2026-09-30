@@ -261,7 +261,15 @@ function CurriculumImportContent() {
       ])
       const fromSubjects = (subjectsTableData || []).map((d: any) => d.name).filter(Boolean) as string[]
       const fromLessons = (lessonSubjectData || []).map((d: any) => d.subject).filter(Boolean) as string[]
-      const unique = [...new Set([...fromSubjects, ...fromLessons])]
+      // Subjects table entries come first so its spelling wins when the same
+      // subject (case-insensitively) also appears on lessons.
+      const combined = [...fromSubjects, ...fromLessons].map(s => s.trim()).filter(Boolean)
+      const seen = new Map<string, string>()
+      for (const s of combined) {
+        const key = s.toLowerCase()
+        if (!seen.has(key)) seen.set(key, s)
+      }
+      const unique = [...seen.values()]
       setExistingSubjects(unique.filter(s => !(CANONICAL_SUBJECTS as readonly string[]).includes(s)))
 
       setPageLoading(false)
