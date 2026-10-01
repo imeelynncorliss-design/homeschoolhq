@@ -19,7 +19,7 @@ Entry format:
 ---
 
 ## [2026-09-30] Roadmap item 1.1 — Create the org at first login
-**Status:** In progress — migration **not yet applied to production**. Per the binding deploy-order decision below, this code must not be merged to `main` until that migration is confirmed live.
+**Status:** In progress — code written and committed on `feature/setup-refactor`; not yet merged to `main`. **Migration applied to production on 2026-09-30** via the Supabase SQL editor and verified: `EXECUTE` on `ensure_organization_for_user` is granted only to `authenticated`, `postgres`, and `service_role` — no `anon`, no `PUBLIC`. Per the binding deploy-order decision below, the migration being live first is what now clears this code to be merged to `main`; Imee is testing 1.1 before that merge.
 **What changed:**
 1. **New migration** `supabase/migrations/20260930000000_ensure_organization_for_user.sql` adds a Postgres function `ensure_organization_for_user(p_placeholder_name, p_referral_source, p_force_create)` that idempotently creates an organization + `user_organizations` row for the calling user, or returns their existing membership, without ever creating a duplicate:
    - Checks, in order: an existing `user_organizations` row (`existing_owner`) → an existing `family_collaborators` row (`collaborator`) → a pending, unexpired `collaborator_invites` row matching the caller's **confirmed** email (`pending_invite`, unless `p_force_create` is true) → otherwise creates a new org (`created`).
@@ -48,7 +48,7 @@ Entry format:
 
 **Source:** `docs/prompts/prompt-01-setup.md` Step 1.1; Imee (plan review — invite-awareness, atomic/race-safe creation, SECURITY DEFINER identity + grants, two-choice pending-invite screen, email-confirmation requirement, anon revoke, deploy order)
 **Files:** `supabase/migrations/20260930000000_ensure_organization_for_user.sql` (new), `src/lib/ensureOrganization.ts` (new), `app/pending-invite/page.tsx` (new), `app/login/page.tsx`, `app/signup/page.tsx`, `app/auth/callback/route.ts`
-**DB migrations:** `ensure_organization_for_user` function — **not yet applied to production; must be applied and confirmed before this code is merged to `main`.**
+**DB migrations:** `ensure_organization_for_user` function — **applied to production 2026-09-30, confirmed via Supabase SQL editor (grants: `authenticated`/`postgres`/`service_role` only).**
 **Build/type-check:** `tsc --noEmit` holds at the same 17 pre-existing errors (none in files touched here). `next build` completes clean, including the new `/pending-invite` route.
 **Follow-ups:**
 - `src/app/auth/callback/route.ts` and `src/app/join/page.tsx` are dead duplicates of the live `app/` versions (same route paths, different/stale content in the callback's case) — confusing to anyone editing auth code, not fixed here since removing files needs explicit approval; flagging for a cleanup pass.
