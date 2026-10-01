@@ -18,6 +18,25 @@ Entry format:
 
 ---
 
+## [2026-10-01] Roadmap items 1.2 + 1.3 — Verified and Done
+**Status:** Done. Full browser pass complete; approved by Imee. Merging `feature/setup-1.2-1.3` into `main`.
+**What changed:** No new code — this is the verification entry closing out 1.2 (onboarding gate + NDA removed) and 1.3 (`useOrganizationId()` hook and empty states across all 22 pages from the Step 1.0 list), built across four batches above.
+**Testing (Imee, full browser pass):**
+- **Runa's World (existing, fully set-up family):** all 22 pages load, no crashes, no false "No students yet" shown for an account that actually has students.
+- **Empty account:** batches 1-3 passed with zero students — correct empty states, no blank/misleading renders.
+- **Co-teacher account:** batch 1 passed — admin-only pages redirect correctly, `family_collaborators`-based org resolution works.
+**Why:** Step 1.3's highest-risk step (per the prompt: "test every page with a brand-new account that has no data") is now verified across all three account shapes that matter — set-up owner, brand-new owner, and collaborator.
+**Source:** `docs/prompts/prompt-01-setup.md` Steps 1.2/1.3; Imee (browser testing).
+**Files:** none (verification only).
+**DB migrations:** none.
+**Follow-ups carried forward to later steps:**
+- **Double data load per page:** `useOrganizationId()` runs its own `getOrganizationId()` read independently of each page's existing one, and most pages' main effect now also depends on `orgState.status` — so the fast-path case (an org found immediately) does the org lookup twice and some effects run twice (once while `loading`, once on `ready`). Not a correctness bug (everything is idempotent), but worth a pass to short-circuit once all pages are stable, rather than during this item.
+- **Subject detail modal missing `useScoutOverlay`:** found during this browser pass — one of the modals in the subjects/lessons area doesn't call `useScoutOverlay`, so Scout's FAB can still float above it the way it did before the item-2.3 fix for the other overlays. Not fixed here (item 2 follow-up, not item 1 scope).
+- **`BulkLessonScheduler.tsx` queries `kids` by `user_id` instead of `organization_id`**, unlike every other kids query in the codebase (logged in the batch-3 entry above). Still not fixed.
+- **`organizations.state` defaults to `'NC'` and `organizations.school_year` defaults to `'2024-2025'`** at the database column level (logged in the batch-1 follow-up entry above, confirmed via the PostgREST OpenAPI schema). Needs `ALTER COLUMN ... DROP DEFAULT` on both before item 1.4 ships, so a new org's `state`/`school_year` come back `null` until the parent actually sets them — otherwise 1.4's "State" checklist step reads as done when nobody chose anything, and non-NC families silently get NC's lighter compliance rules. Also worth checking how many existing orgs have `state = 'NC'` by coincidence vs. by this default before 1.4, since there's currently no way to tell them apart.
+
+---
+
 ## [2026-10-01] Roadmap item 1.3 batch 4 — final 7 pages (field-trips, supply-scout, teacher/assessments, reading-log, school-year, standards, tools)
 **Status:** In progress. Same branch, `feature/setup-1.2-1.3`, now merged with `main` (carries the photo-library hotfix below). Not merged to `main`, not browser-tested yet. This closes out every page from the Step 1.0 list.
 
