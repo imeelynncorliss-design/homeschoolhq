@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation'
 import AuthGuard from '@/components/AuthGuard'
 import CurriculumImporter from '@/components/CurriculumImporter'
 import { getOrganizationId } from '@/src/lib/getOrganizationId'
+import { useOrganizationId } from '@/src/hooks/useOrganizationId'
+import { OrganizationLoadingScreen, OrganizationPendingInviteScreen, OrganizationErrorScreen } from '@/components/OrganizationStateScreen'
 import { useAppHeader } from '@/components/layout/AppHeader'
 import { pageShell } from '@/src/lib/designTokens'
 
@@ -16,6 +18,7 @@ interface Kid {
 
 function ToolsContent() {
   const router = useRouter()
+  const orgState = useOrganizationId()
   useAppHeader({ title: '🔧 Tools' })
   const [orgId, setOrgId] = useState<string | null>(null)
   const [kids, setKids] = useState<Kid[]>([])
@@ -28,8 +31,14 @@ function ToolsContent() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/'); return }
 
-      const { orgId: oid } = await getOrganizationId(user.id)
-      if (!oid) { router.push('/onboarding'); return }
+      let { orgId: oid } = await getOrganizationId(user.id)
+      if (!oid) {
+        // No org via the direct read — resolve via the shared hook instead
+        // of the old hard redirect to the now-removed onboarding gate.
+        if (orgState.status === 'loading') return
+        if (orgState.status !== 'ready') return
+        oid = orgState.organizationId
+      }
 
       const { data: kidsData } = await supabase
         .from('kids')
@@ -44,13 +53,14 @@ function ToolsContent() {
       setLoading(false)
     }
     init()
-  }, [])
+  }, [orgState.status])
 
-  if (loading) return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#3d3a52' }}>
-      <div style={{ color: '#7c3aed', fontWeight: 700 }}>Loading…</div>
-    </div>
-  )
+  if (orgState.status === 'pending_invite' && !orgId) return <OrganizationPendingInviteScreen />
+  if (orgState.status === 'error' && !orgId) {
+    return <OrganizationErrorScreen message={orgState.error} onRetry={orgState.retry} />
+  }
+
+  if (loading) return <OrganizationLoadingScreen />
 
   const selectedKid = kids.find(k => k.id === importKidId) ?? null
 

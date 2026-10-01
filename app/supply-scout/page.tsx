@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/src/lib/supabase/client'
 import AuthGuard from '@/components/AuthGuard'
 import { getOrganizationId } from '@/src/lib/getOrganizationId'
+import { useOrganizationId } from '@/src/hooks/useOrganizationId'
+import { OrganizationLoadingScreen, OrganizationPendingInviteScreen, OrganizationErrorScreen } from '@/components/OrganizationStateScreen'
 import { useAppHeader } from '@/components/layout/AppHeader'
 import { pageShell } from '@/src/lib/designTokens'
 
@@ -88,10 +90,12 @@ function extractMaterials(description?: string | null, lesson_source?: string | 
 
 function SupplyScoutContent() {
   const router = useRouter()
+  const orgState = useOrganizationId()
   useAppHeader({ title: '🔍 Supply Scout', backHref: '/dashboard' })
   const supabase = createClient()
 
   const [loading, setLoading]         = useState(true)
+  const [resolvedOrg, setResolvedOrg] = useState(false)
   const [thisWeek, setThisWeek]       = useState<DayGroup[]>([])
   const [nextWeek, setNextWeek]       = useState<DayGroup[]>([])
   const [thisWeekLabel, setThisWeekLabel] = useState('')
@@ -113,8 +117,15 @@ function SupplyScoutContent() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/'); return }
 
-      const { orgId } = await getOrganizationId(user.id)
-      if (!orgId) { router.push('/onboarding'); return }
+      let { orgId } = await getOrganizationId(user.id)
+      if (!orgId) {
+        // No org via the direct read — resolve via the shared hook instead
+        // of the old hard redirect to the now-removed onboarding gate.
+        if (orgState.status === 'loading') return
+        if (orgState.status !== 'ready') return
+        orgId = orgState.organizationId
+      }
+      setResolvedOrg(true)
 
       const thisW = getWeekDates(0)
       const nextW = getWeekDates(1)
@@ -165,7 +176,7 @@ function SupplyScoutContent() {
       setLoading(false)
     }
     load()
-  }, [])
+  }, [orgState.status])
 
   useEffect(() => {
     if (!checklistStorageKey) return
@@ -182,6 +193,11 @@ function SupplyScoutContent() {
 
   const totalMaterials = activeMaterialKeys.length
   const checkedCount = activeMaterialKeys.filter(key => checked.has(key)).length
+
+  if (orgState.status === 'pending_invite' && !resolvedOrg) return <OrganizationPendingInviteScreen />
+  if (orgState.status === 'error' && !resolvedOrg) {
+    return <OrganizationErrorScreen message={orgState.error} onRetry={orgState.retry} />
+  }
 
   if (loading) {
     return (

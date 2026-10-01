@@ -18,6 +18,26 @@ Entry format:
 
 ---
 
+## [2026-10-01] Roadmap item 1.3 batch 4 — final 7 pages (field-trips, supply-scout, teacher/assessments, reading-log, school-year, standards, tools)
+**Status:** In progress. Same branch, `feature/setup-1.2-1.3`, now merged with `main` (carries the photo-library hotfix below). Not merged to `main`, not browser-tested yet. This closes out every page from the Step 1.0 list.
+
+**What changed:** Wired `useOrganizationId()` into all 7 remaining pages, same fast-read-then-hook-fallback pattern as batches 1-3.
+
+**Zero-students empty state:**
+- `app/field-trips/page.tsx` and `app/reading-log/page.tsx`: each already had a plain-text "no students found" message — swapped both for the shared `NoStudentsEmptyState`.
+- `app/supply-scout/page.tsx`, `app/teacher/assessments/page.tsx`, `app/school-year/page.tsx`, `app/standards/page.tsx`: judged not to need it. `supply-scout` and `teacher/assessments` already degrade to an accurate "no lessons/standards found" message with zero kids (not a misleading number, since there's genuinely nothing to show) rather than a broken or confusing render. `school-year` and `standards` are org-wide settings, not per-student. `app/tools/page.tsx`'s curriculum-import card already disables its button when there's no kid to import for (`disabled={!importKidId}`) — a menu page, not worth a full-page empty state for one disabled card.
+**Why:** Continuing Step 1.3; applying the zero-students judgment call more selectively here since most of this batch's pages either aren't per-student or already degrade sensibly, unlike the earlier "0 of 180"-shaped bugs.
+**Source:** `docs/prompts/prompt-01-setup.md` Step 1.3.
+**Files:** `app/field-trips/page.tsx`, `app/supply-scout/page.tsx`, `app/teacher/assessments/page.tsx`, `app/reading-log/page.tsx`, `app/school-year/page.tsx`, `app/standards/page.tsx`, `app/tools/page.tsx`.
+**DB migrations:** none.
+**Testing:** `tsc --noEmit` holds at 17 pre-existing errors (none in files touched here). `next build` completes clean. All 7 routes return 200 against the running dev server. **Not yet browser-tested.**
+**Follow-ups:**
+- **Step 1.3 is now wired into every page from the Step 1.0 list.** Still needs a full browser test pass across all of it (this batch especially, since it was tested least carefully given the lower per-page risk) before considering 1.3 done and moving to 1.4.
+- `app/supply-scout/page.tsx` has no stored `organizationId` state to gate the pending-invite/error screens on (unlike every other page) — added a small `resolvedOrg` boolean instead, set once `load()` succeeds. Functionally equivalent, just a different variable name if anyone greps for the pattern later.
+- `app/teacher/assessments/page.tsx` has a `localhost`-only dev bypass (fake org id `00000000-...` and a mock student) that doesn't go through the hook at all — left untouched, it still only triggers when `supabase.auth.getUser()` finds no session on localhost.
+
+---
+
 ## [2026-10-01] Hotfix — Curriculum photo upload forced the camera on mobile
 **Status:** Merged to `main`, then merged into `feature/setup-1.2-1.3`.
 **What changed:** Removed `capture="environment"` from the two curriculum-import file inputs (`components/CurriculumImporter.tsx` ~line 872, `app/curriculum/import/page.tsx` ~line 682). Nothing else changed.

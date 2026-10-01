@@ -6,11 +6,15 @@ import { useRouter } from 'next/navigation'
 import AuthGuard from '@/components/AuthGuard'
 import FieldTripLog from '@/components/FieldTripLog'
 import { getOrganizationId } from '@/src/lib/getOrganizationId'
+import { useOrganizationId } from '@/src/hooks/useOrganizationId'
+import { OrganizationLoadingScreen, OrganizationPendingInviteScreen, OrganizationErrorScreen } from '@/components/OrganizationStateScreen'
+import { NoStudentsEmptyState } from '@/components/NoStudentsEmptyState'
 import { useAppHeader } from '@/components/layout/AppHeader'
-import { pageShell, colors } from '@/src/lib/designTokens'
+import { pageShell } from '@/src/lib/designTokens'
 
 function FieldTripsContent() {
   const router = useRouter()
+  const orgState = useOrganizationId()
   useAppHeader({ title: '🚌 Field Trips', backHref: '/reports' })
 
   const [organizationId, setOrganizationId] = useState<string | null>(null)
@@ -22,8 +26,14 @@ function FieldTripsContent() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/'); return }
 
-      const { orgId } = await getOrganizationId(user.id)
-      if (!orgId) { router.push('/onboarding'); return }
+      let { orgId } = await getOrganizationId(user.id)
+      if (!orgId) {
+        // No org via the direct read — resolve via the shared hook instead
+        // of the old hard redirect to the now-removed onboarding gate.
+        if (orgState.status === 'loading') return
+        if (orgState.status !== 'ready') return
+        orgId = orgState.organizationId
+      }
 
       const { data: kidsData } = await supabase
         .from('kids')
@@ -37,23 +47,22 @@ function FieldTripsContent() {
       setLoading(false)
     }
     init()
-  }, [])
+  }, [orgState.status])
 
-  if (loading) return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: colors.pageBackground }}>
-      <div style={{ color: colors.purple, fontWeight: 700, fontSize: 16 }}>Loading...</div>
-    </div>
-  )
+  if (orgState.status === 'pending_invite' && !organizationId) return <OrganizationPendingInviteScreen />
+  if (orgState.status === 'error' && !organizationId) {
+    return <OrganizationErrorScreen message={orgState.error} onRetry={orgState.retry} />
+  }
+
+  if (loading) return <OrganizationLoadingScreen />
 
   return (
     <div style={{ ...pageShell.root, paddingBottom: 100 }}>
       <main style={pageShell.main}>
         <div className="hr-section-label" style={{ marginBottom: 14, marginTop: 8 }}>LOG FIELD TRIPS, CO-OP CLASSES & ACTIVITIES</div>
         {kids.length === 0 ? (
-          <div className="hr-card" style={{ padding: '48px 24px', textAlign: 'center' as const }}>
-            <div style={{ fontSize: 40, marginBottom: 12 }}>🤷‍♀️</div>
-            <div style={{ fontSize: 16, fontWeight: 800, color: colors.textPrimary, marginBottom: 8 }}>No students found</div>
-            <div style={{ fontSize: 13, color: colors.textSecondary }}>Add a child to your account first.</div>
+          <div className="hr-card">
+            <NoStudentsEmptyState message="Field trips are logged per student — add your first student to start logging." />
           </div>
         ) : (
           <div className="hr-card" style={{ padding: '20px' }}>

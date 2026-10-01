@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/src/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { getOrganizationId } from '@/src/lib/getOrganizationId'
+import { useOrganizationId } from '@/src/hooks/useOrganizationId'
+import { OrganizationLoadingScreen, OrganizationPendingInviteScreen, OrganizationErrorScreen } from '@/components/OrganizationStateScreen'
 
 interface StandardProgress {
   id: string;
@@ -26,6 +28,7 @@ interface Kid {
 
 export default function TeacherAssessmentsPage() {
   const router = useRouter();
+  const orgState = useOrganizationId();
   const [loading, setLoading] = useState(true);
   const [standards, setStandards] = useState<StandardProgress[]>([]);
   const [kids, setKids] = useState<Kid[]>([]);
@@ -36,7 +39,7 @@ export default function TeacherAssessmentsPage() {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [orgState.status]);
 
   useEffect(() => {
     if (organizationId) {
@@ -58,8 +61,14 @@ export default function TeacherAssessmentsPage() {
         return; 
       }
 
-      const { orgId } = await getOrganizationId(user.id)
-      if (!orgId) { router.push('/onboarding'); return }
+      let { orgId } = await getOrganizationId(user.id)
+      if (!orgId) {
+        // No org via the direct read — resolve via the shared hook instead
+        // of the old hard redirect to the now-removed onboarding gate.
+        if (orgState.status === 'loading') return
+        if (orgState.status !== 'ready') return
+        orgId = orgState.organizationId
+      }
       setOrganizationId(orgId)
       
       const { data: kidsData } = await supabase
@@ -165,7 +174,12 @@ export default function TeacherAssessmentsPage() {
     return badges[level] || badges.not_started;
   };
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-50 text-slate-900 font-bold">Loading standards...</div>;
+  if (orgState.status === 'pending_invite' && !organizationId) return <OrganizationPendingInviteScreen />;
+  if (orgState.status === 'error' && !organizationId) {
+    return <OrganizationErrorScreen message={orgState.error} onRetry={orgState.retry} />;
+  }
+
+  if (loading) return <OrganizationLoadingScreen />;
 
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
