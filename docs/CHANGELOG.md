@@ -19,7 +19,12 @@ Entry format:
 ---
 
 ## [2026-09-30] Roadmap item 1.1 — Create the org at first login
-**Status:** In progress — code written and committed on `feature/setup-refactor`; not yet merged to `main`. **Migration applied to production on 2026-09-30** via the Supabase SQL editor and verified: `EXECUTE` on `ensure_organization_for_user` is granted only to `authenticated`, `postgres`, and `service_role` — no `anon`, no `PUBLIC`. Per the binding deploy-order decision below, the migration being live first is what now clears this code to be merged to `main`; Imee is testing 1.1 before that merge.
+**Status:** Verified by Imee. Migration live on production; code committed on `feature/setup-refactor`, not yet merged to `main`.
+**Testing (Imee, 2026-09-30):**
+- Existing account: still exactly one org, unchanged; 3 parallel `ensure_organization_for_user` RPC calls all returned `existing_owner` (confirms the advisory lock holds under concurrency, not just in theory).
+- New signup: exactly one `"My Homeschool"` placeholder org created at first sign-in, later renamed in place by onboarding's own school-name step (confirms `handleStateConfirmed`'s `if (!orgId)` guard correctly no-ops once the org already exists).
+- Anon RPC call refused, confirming the `EXECUTE` grant restriction.
+All three pass. 1.1 is considered verified; proceeding to 1.2+1.3 next, pending Imee's go-ahead.
 **What changed:**
 1. **New migration** `supabase/migrations/20260930000000_ensure_organization_for_user.sql` adds a Postgres function `ensure_organization_for_user(p_placeholder_name, p_referral_source, p_force_create)` that idempotently creates an organization + `user_organizations` row for the calling user, or returns their existing membership, without ever creating a duplicate:
    - Checks, in order: an existing `user_organizations` row (`existing_owner`) → an existing `family_collaborators` row (`collaborator`) → a pending, unexpired `collaborator_invites` row matching the caller's **confirmed** email (`pending_invite`, unless `p_force_create` is true) → otherwise creates a new org (`created`).
@@ -53,6 +58,9 @@ Entry format:
 **Follow-ups:**
 - `src/app/auth/callback/route.ts` and `src/app/join/page.tsx` are dead duplicates of the live `app/` versions (same route paths, different/stale content in the callback's case) — confusing to anyone editing auth code, not fixed here since removing files needs explicit approval; flagging for a cleanup pass.
 - An open (not email-specific) `collaborator_invites` row (`email = ''`) is never auto-detected by this change — only invites created for a specific email can match a logging-in user. This matches today's intent (an open invite isn't "for" anyone specific yet) but is worth knowing: open-code invites still only work through the existing manual `/join` or signup-checkbox code entry.
+- **Bug found during 1.1 testing (Imee):** `app/onboarding/page.tsx:826-827` hardcodes the default school-year dates to `'2025-08-01'`/`'2026-05-31'` instead of computing them from today's date. Every new signup since roughly August 2026 has gotten last year's school-year range as its starting default (parents can still edit it during onboarding, so this isn't silently permanent, but the default shown is wrong for anyone who doesn't change it). Not fixed now — this exact page is replaced by a redirect in Step 1.2 — but two things carry forward from it:
+  - **Data-fix check for Step 1.2/1.5:** before/when removing `app/onboarding/page.tsx`, query `school_year_settings` for rows with `school_year_start = '2025-08-01' AND school_year_end = '2026-05-31'` created after roughly August 2026, to see how many real accounts are carrying the stale default and whether a one-time data correction (not a silent backfill guess — confirm with Imee first) is warranted.
+  - **Step 1.3 fix:** when unifying `hooks/useSubjectCoverage.ts`'s `getFallbackSchoolYear()` and `app/compliance/page.tsx`'s inline fallback into one shared util (per the approved plan), compute the year from today's date the way `getFallbackSchoolYear()` already does — never hardcode a year, so this bug can't recur in the unified version.
 - Steps 1.2–1.4 still ahead: the gate itself, the NDA, the 21 pages' empty states, and the setup checklist card are all unchanged by this step.
 
 ---
