@@ -18,6 +18,16 @@ Entry format:
 
 ---
 
+## [2026-10-01] Hotfix — Curriculum photo upload forced the camera on mobile
+**Status:** Fixed on `hotfix/photo-library`, not yet merged.
+**What changed:** Removed `capture="environment"` from the two curriculum-import file inputs (`components/CurriculumImporter.tsx` ~line 872, `app/curriculum/import/page.tsx` ~line 682). Nothing else changed.
+**Why:** Courtney reported that on her phone, tapping to add curriculum photos opened the camera directly with no way to pick existing photos from her library. `capture="environment"` tells mobile browsers to skip the normal file chooser and launch the camera straight away. Without it, iOS and Android show their usual picker (Photo Library, Take Photo, Files), restoring the choice. This came from item 2.4's requirement to "keep the camera option" for parents photographing a table of contents on the spot — `capture` was the wrong way to keep that option, since it does so by removing every other option instead of adding to them.
+**Source:** Courtney (urgent production report).
+**Files:** `components/CurriculumImporter.tsx`, `app/curriculum/import/page.tsx`.
+**DB migrations:** none.
+
+---
+
 ## [2026-10-01] Hotfix — Invite signup: unauthenticated email-confirmation endpoint, and redeem-before-session bug
 **Status:** Browser-tested by Imee (invite-code signup → confirm → sign in → `/teaching-schedule` as `co_teacher`, no placeholder org created, invite code cleared from metadata and sessionStorage; `confirm-user` endpoint confirmed gone, returns 404). Merged `hotfix/invite-signup` into `main`.
 
