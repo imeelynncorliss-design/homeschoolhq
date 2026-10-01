@@ -6,17 +6,22 @@ import { useRouter } from 'next/navigation'
 import AuthGuard from '@/components/AuthGuard'
 import ProgressDashboard from '@/components/ProgressDashboard'
 import { getOrganizationId } from '@/src/lib/getOrganizationId'
-import { pageShell, colors } from '@/src/lib/designTokens'
+import { useOrganizationId } from '@/src/hooks/useOrganizationId'
+import { OrganizationLoadingScreen, OrganizationPendingInviteScreen, OrganizationErrorScreen } from '@/components/OrganizationStateScreen'
+import { NoStudentsEmptyState } from '@/components/NoStudentsEmptyState'
+import { pageShell } from '@/src/lib/designTokens'
 import { useAppHeader } from '@/components/layout/AppHeader'
 
 // ─── Page Content ─────────────────────────────────────────────────────────────
 
 function ProgressContent() {
   const router = useRouter()
+  const orgState = useOrganizationId()
   useAppHeader({ title: '📈 School Year Progress', backHref: '/reports' })
 
   const [user, setUser]                     = useState<any>(null)
   const [organizationId, setOrganizationId] = useState<string>('')
+  const [hasKids, setHasKids]               = useState<boolean | null>(null)
   const [loading, setLoading]               = useState(true)
 
   useEffect(() => {
@@ -24,30 +29,50 @@ function ProgressContent() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/'); return }
 
-      const { orgId, isCoTeacher } = await getOrganizationId(user.id)
-      if (!orgId) { router.push('/onboarding'); return }
+      let { orgId, isCoTeacher } = await getOrganizationId(user.id)
+      if (!orgId) {
+        // No org via the direct read — resolve via the shared hook instead
+        // of the old hard redirect to the now-removed onboarding gate.
+        if (orgState.status === 'loading') return
+        if (orgState.status !== 'ready') return
+        orgId = orgState.organizationId
+        isCoTeacher = orgState.isCoTeacher
+      }
       if (isCoTeacher) { router.push('/dashboard'); return }
+
+      const { data: kidsData } = await supabase
+        .from('kids')
+        .select('id')
+        .eq('organization_id', orgId)
+        .neq('archived', true)
+        .limit(1)
 
       setUser(user)
       setOrganizationId(orgId)
+      setHasKids((kidsData?.length ?? 0) > 0)
       setLoading(false)
     }
 
     init()
-  }, [])
+  }, [orgState.status])
 
-  if (loading) return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: colors.pageBackground }}>
-      <div style={{ color: colors.purple, fontWeight: 700, fontSize: 16 }}>Loading...</div>
-    </div>
-  )
+  if (orgState.status === 'pending_invite' && !organizationId) return <OrganizationPendingInviteScreen />
+  if (orgState.status === 'error' && !organizationId) {
+    return <OrganizationErrorScreen message={orgState.error} onRetry={orgState.retry} />
+  }
+
+  if (loading) return <OrganizationLoadingScreen />
 
   return (
     <div style={{ ...pageShell.root, paddingBottom: 100 }}>
       <main style={pageShell.main}>
         <div className="hr-section-label" style={{ marginBottom: 14, marginTop: 8 }}>LEARNING ANALYTICS & SUMMARIES</div>
         <div className="hr-card" style={{ padding: '20px' }}>
-          <ProgressDashboard userId={user.id} organizationId={organizationId} />
+          {hasKids ? (
+            <ProgressDashboard userId={user.id} organizationId={organizationId} />
+          ) : (
+            <NoStudentsEmptyState message="Progress is tracked per student — add your first student to see analytics here." />
+          )}
         </div>
       </main>
     </div>

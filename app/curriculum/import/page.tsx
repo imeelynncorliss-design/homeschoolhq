@@ -6,6 +6,9 @@ import { supabase } from '@/src/lib/supabase'
 import AuthGuard from '@/components/AuthGuard'
 import { useAppHeader } from '@/components/layout/AppHeader'
 import { getOrganizationId } from '@/src/lib/getOrganizationId'
+import { useOrganizationId } from '@/src/hooks/useOrganizationId'
+import { OrganizationLoadingScreen, OrganizationPendingInviteScreen, OrganizationErrorScreen } from '@/components/OrganizationStateScreen'
+import { NoStudentsEmptyState } from '@/components/NoStudentsEmptyState'
 import { CANONICAL_SUBJECTS } from '@/src/constants/subjects'
 import { compressImage, isHeicFile } from '@/src/utils/compressImage'
 
@@ -206,6 +209,7 @@ const s: Record<string, React.CSSProperties> = {
 
 function CurriculumImportContent() {
   const router = useRouter()
+  const orgState = useOrganizationId()
   useAppHeader({ title: '📥 Import Curriculum', backHref: '/tools' })
 
   const [pageLoading, setPageLoading]       = useState(true)
@@ -251,8 +255,14 @@ function CurriculumImportContent() {
       if (!user) { router.push('/'); return }
       setUserId(user.id)
 
-      const { orgId } = await getOrganizationId(user.id)
-      if (!orgId) { router.push('/onboarding'); return }
+      let { orgId } = await getOrganizationId(user.id)
+      if (!orgId) {
+        // No org via the direct read — resolve via the shared hook instead
+        // of the old hard redirect to the now-removed onboarding gate.
+        if (orgState.status === 'loading') return
+        if (orgState.status !== 'ready') return
+        orgId = orgState.organizationId
+      }
       setOrganizationId(orgId)
 
       const { data: kidsData } = await supabase
@@ -284,7 +294,7 @@ function CurriculumImportContent() {
       setPageLoading(false)
     }
     load()
-  }, [])
+  }, [orgState.status])
 
   // ── File handling ────────────────────────────────────────────────────────────
 
@@ -522,11 +532,12 @@ function CurriculumImportContent() {
 
   // ── Loading state ─────────────────────────────────────────────────────────
 
-  if (pageLoading) return (
-    <div style={{ minHeight: 'calc(100vh - 56px)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f5f3ff' }}>
-      <div style={{ color: '#7c3aed', fontWeight: 700 }}>Loading...</div>
-    </div>
-  )
+  if (orgState.status === 'pending_invite' && !organizationId) return <OrganizationPendingInviteScreen />
+  if (orgState.status === 'error' && !organizationId) {
+    return <OrganizationErrorScreen message={orgState.error} onRetry={orgState.retry} />
+  }
+
+  if (pageLoading) return <OrganizationLoadingScreen />
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -536,13 +547,8 @@ function CurriculumImportContent() {
 
         {/* ── No kids state ───────────────────────────────────────────── */}
         {kids.length === 0 ? (
-          <div style={{ ...s.card, padding: '48px 24px', textAlign: 'center' }}>
-            <div style={{ fontSize: 48, marginBottom: 12 }}>👧</div>
-            <h2 style={{ fontWeight: 900, fontSize: 18, color: '#111827', marginBottom: 8 }}>No children added yet</h2>
-            <p style={{ color: '#6b7280', fontSize: 14, marginBottom: 20 }}>Add a child first before importing curriculum.</p>
-            <button onClick={() => router.push('/dashboard')} style={s.btnPrimary}>
-              Go to Dashboard
-            </button>
+          <div style={s.card}>
+            <NoStudentsEmptyState message="Curriculum is imported per student — add your first student before importing." />
           </div>
         ) : (
 

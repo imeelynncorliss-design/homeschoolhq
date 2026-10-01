@@ -84,6 +84,26 @@ Entry format:
 
 ---
 
+## [2026-10-01] Roadmap item 1.3 batch 2 (5 more of 21 pages)
+**Status:** In progress. Same branch, `feature/setup-1.2-1.3`. Not merged, not browser-tested yet — stopping here per the batch-of-5 instruction.
+
+**What changed:** Wired `useOrganizationId()` + `OrganizationStateScreen` into 5 more pages — `app/progress/page.tsx`, `app/curriculum/import/page.tsx`, `app/mastery/page.tsx`, `app/transcript/page.tsx`, `app/daily-log/page.tsx` — same pattern as batch 1 (fast `getOrganizationId` read first, hook fallback only when that's empty, each page's existing admin-only/co-teacher guard left exactly as it was).
+
+Also applied the `NoStudentsEmptyState` pattern from the batch-1 follow-up to every page in this batch that's student-dependent:
+- **`app/curriculum/import/page.tsx`** and **`app/transcript/page.tsx`** already had their own "no kids" empty states — swapped both for the shared component so the action is consistent everywhere (**Add your first student**, straight to the form) instead of each page's own wording and a "Go to Dashboard" button that didn't actually get the parent to the add-student form.
+- **`app/progress/page.tsx`** and **`app/mastery/page.tsx`**: neither page nor its underlying component (`ProgressDashboard`, `MasteryTracker`) had a zero-students guard at all — with no kids, both would've rendered their stats UI with nothing behind it (the same "0 of 180 required"-shaped problem fixed on `/attendance`). Added a cheap `kids` existence check (`select('id')...limit(1)`) at the page level and swapped in the shared empty state when there are none, rather than editing either shared component (both are used in more places than just this page, and the page-level gate is lower-risk).
+- **`app/daily-log/page.tsx`**: had no empty state at all — with zero students the full log-entry form rendered anyway (date, subjects, notes, hours, a Save button) with no kid selected, which would have let a parent fill it out and tried to save a log against an empty `kid_id`. Added the same gate.
+**Why:** Same Step 1.3 requirement, continued — plus Imee's instruction after batch-1 testing to apply the zero-students empty state everywhere it's relevant, not just `/attendance`.
+**Source:** `docs/prompts/prompt-01-setup.md` Step 1.3; Imee's batch-1 feedback.
+**Files:** `app/progress/page.tsx`, `app/curriculum/import/page.tsx`, `app/mastery/page.tsx`, `app/transcript/page.tsx`, `app/daily-log/page.tsx`.
+**DB migrations:** none.
+**Testing:** `tsc --noEmit` holds at 17 pre-existing errors (the one hit in `app/daily-log/page.tsx` line 114 was already in that baseline, unrelated to this change). `next build` completes clean. Smoke-tested all 5 routes return 200 against the running dev server. **Not yet browser-tested.**
+**Follow-ups:**
+- 12 pages remain (the Step 1.0 list of "21 feature pages" is actually 22 by count — not resolving that discrepancy now, just working through the list as recorded): `app/compliance/page.tsx`, `app/vacation/page.tsx`, `app/subjects/page.tsx`, `app/bulk-schedule/page.tsx`, `app/lessons/page.tsx`, `app/field-trips/page.tsx`, `app/supply-scout/page.tsx`, `app/teacher/assessments/page.tsx`, `app/reading-log/page.tsx`, `app/school-year/page.tsx`, `app/standards/page.tsx`, `app/tools/page.tsx`.
+- `ProgressDashboard.tsx` and `MasteryTracker.tsx` themselves still have no internal zero-kids guard — fine today since both call sites now gate at the page level, but worth knowing if either component is ever reused somewhere that doesn't gate first.
+
+---
+
 ## [2026-10-01] Hotfix — Invite signup: unauthenticated email-confirmation endpoint, and redeem-before-session bug
 **Status:** Browser-tested by Imee (invite-code signup → confirm → sign in → `/teaching-schedule` as `co_teacher`, no placeholder org created, invite code cleared from metadata and sessionStorage; `confirm-user` endpoint confirmed gone, returns 404). Merged `hotfix/invite-signup` into `main`.
 

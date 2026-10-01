@@ -9,6 +9,9 @@ import TranscriptGenerator from '@/components/TranscriptGenerator'
 import CourseDescriptions from '@/components/CourseDescriptions'
 import AuthGuard from '@/components/AuthGuard'
 import { getOrganizationId } from '@/src/lib/getOrganizationId'
+import { useOrganizationId } from '@/src/hooks/useOrganizationId'
+import { OrganizationLoadingScreen, OrganizationPendingInviteScreen, OrganizationErrorScreen } from '@/components/OrganizationStateScreen'
+import { NoStudentsEmptyState } from '@/components/NoStudentsEmptyState'
 import { pageShell, colors } from '@/src/lib/designTokens'
 import { useAppHeader } from '@/components/layout/AppHeader'
 
@@ -16,6 +19,7 @@ import { useAppHeader } from '@/components/layout/AppHeader'
 
 function TranscriptsContent() {
   const router = useRouter()
+  const orgState = useOrganizationId()
   const [backHref, setBackHref] = useState('/reports')
   useAppHeader({ title: '📄 Transcripts', backHref })
   const [user, setUser]           = useState<any>(null)
@@ -36,8 +40,15 @@ function TranscriptsContent() {
       if (!user) { router.push('/'); return }
 
       // ── Resolve org + co-teacher guard (admin-only) ─────────────────────
-      const { orgId, isCoTeacher } = await getOrganizationId(user.id)
-      if (!orgId) { router.push('/onboarding'); return }
+      let { orgId, isCoTeacher } = await getOrganizationId(user.id)
+      if (!orgId) {
+        // No org via the direct read — resolve via the shared hook instead
+        // of the old hard redirect to the now-removed onboarding gate.
+        if (orgState.status === 'loading') return
+        if (orgState.status !== 'ready') return
+        orgId = orgState.organizationId
+        isCoTeacher = orgState.isCoTeacher
+      }
       if (isCoTeacher) { router.push('/dashboard'); return }
 
       // ── Load kids ────────────────────────────────────────────────────────
@@ -57,7 +68,7 @@ function TranscriptsContent() {
     }
 
     init()
-  }, [])
+  }, [orgState.status])
 
   const tabs = [
     { id: 'gradebook',     label: '📊 Grade Book',       description: 'Grades'       },
@@ -66,11 +77,12 @@ function TranscriptsContent() {
     { id: 'generate',      label: '📄 Generate',           description: 'PDF'          },
   ]
 
-  if (loading) return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: colors.pageBackground }}>
-      <div style={{ color: colors.purple, fontWeight: 700, fontSize: 16 }}>Loading...</div>
-    </div>
-  )
+  if (orgState.status === 'pending_invite' && !user) return <OrganizationPendingInviteScreen />
+  if (orgState.status === 'error' && !user) {
+    return <OrganizationErrorScreen message={orgState.error} onRetry={orgState.retry} />
+  }
+
+  if (loading) return <OrganizationLoadingScreen />
   return (
     <div style={css.root}>
       <button onClick={() => router.push(backHref)} style={{
@@ -103,15 +115,8 @@ function TranscriptsContent() {
 
         {/* Empty state */}
         {kids.length === 0 ? (
-          <div className="hr-card" style={{ padding: '48px 24px', textAlign: 'center' as const }}>
-            <div style={{ fontSize: 48, marginBottom: 12 }}>🤷‍♀️</div>
-            <h2 style={{ fontSize: 18, fontWeight: 800, color: colors.textPrimary, marginBottom: 8 }}>No students found</h2>
-            <p style={{ fontSize: 13, color: colors.textSecondary, marginBottom: 20 }}>
-              Add a child to your account before creating transcripts.
-            </p>
-            <button style={css.emptyBtn} onClick={() => router.push('/dashboard')}>
-              Go to Dashboard
-            </button>
+          <div className="hr-card">
+            <NoStudentsEmptyState message="Transcripts are per student — add your first student before generating one." />
           </div>
         ) : (
           <>
