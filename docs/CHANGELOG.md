@@ -19,7 +19,7 @@ Entry format:
 ---
 
 ## [2026-10-01] Hotfix — Invite signup: unauthenticated email-confirmation endpoint, and redeem-before-session bug
-**Status:** Done, on `hotfix/invite-signup`. Not yet merged to `main`.
+**Status:** Browser-tested by Imee (invite-code signup → confirm → sign in → `/teaching-schedule` as `co_teacher`, no placeholder org created, invite code cleared from metadata and sessionStorage; `confirm-user` endpoint confirmed gone, returns 404). Merged `hotfix/invite-signup` into `main`.
 
 **1. Security fix: removed `POST /api/invites/confirm-user`**
 **What changed:** Deleted `app/api/invites/confirm-user/route.ts` and its one call site in `app/signup/page.tsx`. The route took a raw `userId` in the request body and called `supabaseAdmin.auth.admin.updateUserById(userId, { email_confirm: true })` using the service-role key, with no authentication, authorization, or ownership check of any kind.
@@ -40,6 +40,9 @@ Entry format:
 **Files:** `app/signup/page.tsx`, `app/auth/callback/route.ts`, `app/login/page.tsx`, `app/pending-invite/page.tsx`, `src/lib/pendingInviteCode.ts` (new).
 **DB migrations:** none.
 
+**2b. Ordering fix on `/pending-invite` (caught before browser testing):** the first version of the fix above still called `ensure_organization_for_user()` before checking for a stored invite code. For a code-only invite (no email match) the RPC would create a placeholder org first, then the code would get redeemed — leaving the user with both their own org and a collaborator membership. Fixed by checking `getStoredInviteCode()` first and redeeming directly, skipping the RPC call entirely when a code is present; the RPC only runs as a fallback when there's no stored code. A redemption failure of "You are already a member of this family account." is now treated as success (clears the code, routes to `/teaching-schedule`) rather than shown as an error.
+**Files:** `app/pending-invite/page.tsx`.
+
 **3. Checked: `app/join/page.tsx`**
 **What changed:** No change. It already reads the live session via `supabase.auth.getUser()` immediately before calling `redeemInvite()`, so there's no redeem-before-session gap there — confirmed during this review.
 **Files:** none.
@@ -51,7 +54,8 @@ Entry format:
 **Files:** `components/AppShell.tsx`.
 **DB migrations:** none.
 
-**Follow-ups:** none discovered beyond what's already fixed here.
+**Follow-ups:**
+- Pre-existing, not blocking: `redeemInvite()` step 5 (marking `collaborator_invites.status = 'accepted'`) is silently blocked by RLS when run as the invitee, so redeemed invites stay stuck at `status = 'pending'` even though the `family_collaborators` row was created successfully (see `+setup2`, `+setup3`). Proposed fix for later: a `SECURITY DEFINER` `accept_invite(code)` RPC that does the membership insert and status update in one transaction, the same pattern as `ensure_organization_for_user`.
 
 ---
 
