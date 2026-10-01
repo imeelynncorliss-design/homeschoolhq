@@ -6,7 +6,7 @@ import type { NextRequest } from 'next/server'
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
-  const next = searchParams.get('next') ?? '/dashboard'
+  const explicitNext = searchParams.get('next')
 
   if (code) {
     const cookieStore = await cookies()
@@ -27,7 +27,23 @@ export async function GET(request: NextRequest) {
 
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
-      return NextResponse.redirect(`${origin}${next}`)
+      // An explicit destination (e.g. password reset) is honored as-is.
+      if (explicitNext) {
+        return NextResponse.redirect(`${origin}${explicitNext}`)
+      }
+
+      // Idempotent: creates an org only for a genuinely new user with no
+      // pending invite waiting for them. Safe to call on every callback.
+      const { data, error: rpcError } = await supabase.rpc('ensure_organization_for_user', {})
+
+      if (!rpcError && data?.source === 'pending_invite') {
+        return NextResponse.redirect(`${origin}/pending-invite`)
+      }
+      if (!rpcError && data?.source === 'created') {
+        return NextResponse.redirect(`${origin}/agree`)
+      }
+
+      return NextResponse.redirect(`${origin}/dashboard`)
     }
   }
 

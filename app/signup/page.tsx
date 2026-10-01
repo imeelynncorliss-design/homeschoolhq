@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/src/lib/supabase'
 import { redeemInvite } from '@/src/lib/invites'
+import { ensureOrganizationForUser } from '@/src/lib/ensureOrganization'
 import Link from 'next/link'
 import { Suspense } from 'react'
 
@@ -121,12 +122,21 @@ function SignupContent() {
 
       // Step 3: New parent path — no invite code
       if (data.session) {
-        // Session live — go straight to dashboard
-        // Session live — go to onboarding
+        // Idempotent — also catches the case where this email actually has a
+        // pending co-teacher/aide invite waiting, even though the "I have an
+        // invite code" box wasn't checked.
+        const referralSource = sessionStorage.getItem('hsr_referral')
+        const result = await ensureOrganizationForUser(supabase, { referralSource })
+
         setSuccess(true)
-        setTimeout(() => router.push('/onboarding'), 1500)
+        if (result.source === 'pending_invite') {
+          setTimeout(() => router.push('/pending-invite'), 1500)
+        } else {
+          setTimeout(() => router.push('/onboarding'), 1500)
+        }
       } else {
-        // Email confirmation required
+        // Email confirmation required — org gets created at /auth/callback
+        // once the user confirms and a session is established.
         setSuccess(true)
         setParentNeedsConfirmation(true)
       }
