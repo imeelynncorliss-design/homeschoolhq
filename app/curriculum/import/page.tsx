@@ -685,7 +685,6 @@ function CurriculumImportContent() {
                       accept="application/pdf,image/jpeg,image/png,image/heic,image/heif,.heic,.heif"
                       onChange={handleFileChange}
                       multiple
-                      capture="environment"
                       className="hidden"
                       id="file-upload"
                       style={{ display: 'none' }}

@@ -18,6 +18,16 @@ Entry format:
 
 ---
 
+## [2026-10-01] Hotfix — Curriculum photo upload forced the camera on mobile
+**Status:** Merged to `main`, then merged into `feature/setup-1.2-1.3`.
+**What changed:** Removed `capture="environment"` from the two curriculum-import file inputs (`components/CurriculumImporter.tsx` ~line 872, `app/curriculum/import/page.tsx` ~line 682). Nothing else changed.
+**Why:** Courtney reported that on her phone, tapping to add curriculum photos opened the camera directly with no way to pick existing photos from her library. `capture="environment"` tells mobile browsers to skip the normal file chooser and launch the camera straight away. Without it, iOS and Android show their usual picker (Photo Library, Take Photo, Files), restoring the choice. This came from item 2.4's requirement to "keep the camera option" for parents photographing a table of contents on the spot — `capture` was the wrong way to keep that option, since it does so by removing every other option instead of adding to them.
+**Source:** Courtney (urgent production report).
+**Files:** `components/CurriculumImporter.tsx`, `app/curriculum/import/page.tsx`.
+**DB migrations:** none.
+
+---
+
 ## [2026-10-01] Roadmap item 1.2 — Remove onboarding gate and the NDA; item 1.3 batch 1 (5 of 21 pages)
 **Status:** In progress. Branch `feature/setup-1.2-1.3` off `main`. Steps 1.2 and 1.3 ship together per the prompt — not merged yet, and not browser-tested yet. Stopping here for Imee's review per the batch-of-5 instruction.
 
