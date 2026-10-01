@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, Suspense } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/src/lib/supabase/client'
 import AuthGuard from '@/components/AuthGuard'
 import { getOrganizationId } from '@/src/lib/getOrganizationId'
@@ -77,6 +77,7 @@ function InfoRow({ label, value, last = false }: { label: string; value: string;
 
 function ProfileContent() {
   const router  = useRouter()
+  const searchParams = useSearchParams()
   const supabase = createClient()
 
   const [loading,        setLoading]        = useState(true)
@@ -103,6 +104,14 @@ function ProfileContent() {
   useEffect(() => {
     try { setWeatherEnabled(localStorage.getItem(WEATHER_PREF_KEY) !== 'off') } catch { setWeatherEnabled(true) }
   }, [])
+
+  // Deep link from the "Add your first student" empty state (item 1.3).
+  useEffect(() => {
+    if (searchParams?.get('addKid') === '1') {
+      setAddingKid(true)
+      router.replace('/profile')
+    }
+  }, [searchParams])
   const [editingKid,     setEditingKid]     = useState<any | null>(null)
   const [addingKid,      setAddingKid]      = useState(false)
   const [orgId,          setOrgId]          = useState<string | null>(null)

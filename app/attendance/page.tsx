@@ -8,6 +8,7 @@ import AttendanceTracker from '@/components/AttendanceTracker'
 import { getOrganizationId } from '@/src/lib/getOrganizationId'
 import { useOrganizationId } from '@/src/hooks/useOrganizationId'
 import { OrganizationLoadingScreen, OrganizationPendingInviteScreen, OrganizationErrorScreen } from '@/components/OrganizationStateScreen'
+import { NoStudentsEmptyState } from '@/components/NoStudentsEmptyState'
 import { useAppHeader } from '@/components/layout/AppHeader'
 import { pageShell } from '@/src/lib/designTokens'
 
@@ -81,11 +82,15 @@ function AttendanceContent() {
 
         <div className="hr-card" style={{ padding: '24px', minHeight: 500 }}>
           {organizationId && (
-            <AttendanceTracker
-              kids={kids}
-              organizationId={organizationId}
-              userId={user.id}
-            />
+            kids.length === 0 ? (
+              <NoStudentsEmptyState message="Attendance is tracked per student — add your first student to start logging school days." />
+            ) : (
+              <AttendanceTracker
+                kids={kids}
+                organizationId={organizationId}
+                userId={user.id}
+              />
+            )
           )}
         </div>
       </main>

@@ -57,6 +57,33 @@ Entry format:
 
 ---
 
+## [2026-10-01] Roadmap item 1.3 follow-ups from batch-1 browser testing — zero-students empty state; organizations.state default investigation
+**Status:** Done (item 1 below); investigation only, no fix (item 2 below)
+**Source:** Imee, browser-testing batch 1 (+setup4 test account)
+
+**1. Fix: "no students" empty state, starting with `/attendance`**
+**What changed:**
+- New `components/NoStudentsEmptyState.tsx` — shared empty state ("No students yet" + **Add your first student** button) for any item-1.3 page whose UI depends on at least one `kids` row.
+- `app/attendance/page.tsx`: when `kids.length === 0`, renders the new empty state instead of `<AttendanceTracker>` — which previously rendered "Mark Today," "0 of 180 required," and the export tools with nothing to attend to and no hint to add a student.
+- `app/profile/page.tsx`: added a small `?addKid=1` deep link (reads the query param, calls the existing `setAddingKid(true)`, then clears the param) so the empty state's button can open the add-student form directly instead of just linking to a page where the parent still has to find the right button.
+**Why:** Removing the onboarding gate means a brand-new org can reach any of these pages with zero students. Showing student-dependent numbers/tools with nothing behind them (as opposed to a clear "add a student" action) is exactly the blank/misleading-render risk Step 1.3 is meant to close.
+**Files:** `components/NoStudentsEmptyState.tsx` (new), `app/attendance/page.tsx`, `app/profile/page.tsx`.
+**DB migrations:** none.
+**Checked the rest of batch 1:** `app/dashboard/page.tsx` already has its own explicit zero-kids branch (`kidPulses.length === 0`). `app/standards-setup/page.tsx` and `app/calendar/connect/page.tsx` don't query `kids` at all. `app/assessments/page.tsx` queries kids for a filter dropdown but doesn't render a misleading number when empty. Will apply the same `NoStudentsEmptyState` pattern to any page in batches 2+ that needs it.
+
+**2. Investigated: `organizations.state` defaulting to `'NC'` on every new org**
+**What changed:** No code/schema change — investigation only, per instructions not to touch the schema yet.
+**Finding:** Not set by any application code — searched every `.insert(... organizations ...)` call site; the only one is inside the `ensure_organization_for_user()` Postgres function (migration `20260930000000`), whose insert is `insert into organizations (user_id, name, referral_source) values (...)` — `state` is never mentioned. Not set by any tracked migration either — grepped all 34 files under `supabase/migrations/`, and none create or alter the `organizations` table's `state` column at all (the earliest migration in the repo is 2026-03-16; `organizations` predates migration tracking in this repo entirely).
+**Confirmed via the live schema:** queried the Supabase REST endpoint's OpenAPI schema (`GET /rest/v1/` with `Accept: application/openapi+json`, which PostgREST generates from the live Postgres catalog — read-only, no data touched) and found `organizations.state` carries a column-level `DEFAULT 'NC'` directly in the database — set outside any file in this repo, presumably by hand in the Supabase dashboard/SQL editor during early development, likely because NC was the developer's own test state.
+**Also found while checking:** two more stray column defaults on `organizations` worth knowing about even though not asked for: `school_year` defaults to the literal string `'2024-2025'` (same stale-hardcoded-year problem as the since-deleted onboarding bug, just at the DB level instead of in app code), and `onboarding_completed` defaults to `false` (now a vestigial column now that onboarding is gone — per the 2026-09-28 decision #7, completion should be read from data, not a stored flag; not touched, not dropped).
+**Why this matters (not fixed yet):** Confirms Imee's read — a new org silently gets North Carolina's (light) compliance rules with nobody having chosen a state, which would make the 1.4 checklist's "State" step look complete when it isn't, and would show the wrong (and in NC's case, lighter) requirements to any non-NC family who doesn't happen to notice and correct it in settings.
+**Source:** Imee, found on the `+setup4` test account during batch-1 browser testing.
+**Files:** none changed.
+**DB migrations:** none.
+**Follow-up (not fixed, needs a decision before 1.4):** Removing the `state` default (and the `school_year` one) requires a schema change (`ALTER COLUMN ... DROP DEFAULT`), which per the working rules needs explicit approval before touching. Recommend: drop both defaults so a new org's `state`/`school_year` come back `null` until the parent actually sets them — 1.4's "State is complete when org has a state" check already treats a set, non-placeholder value as the signal, so a `null` default is what it expects. Also worth checking how many existing orgs have `state = 'NC'` by coincidence (chose it) vs. by this default (never touched it) before 1.4 ships, since there's no way to tell them apart after the fact without this fix.
+
+---
+
 ## [2026-10-01] Hotfix — Invite signup: unauthenticated email-confirmation endpoint, and redeem-before-session bug
 **Status:** Browser-tested by Imee (invite-code signup → confirm → sign in → `/teaching-schedule` as `co_teacher`, no placeholder org created, invite code cleared from metadata and sessionStorage; `confirm-user` endpoint confirmed gone, returns 404). Merged `hotfix/invite-signup` into `main`.
 
