@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../src/lib/supabase'
 import { CANONICAL_SUBJECTS } from '../src/constants/subjects'
+import { getFallbackSchoolYear as getSharedFallbackSchoolYear } from '../src/lib/schoolYear'
 
 export interface SubjectCoverageData {
   subject: string
@@ -34,13 +35,7 @@ export interface SchoolYearConfig {
 }
 
 function getFallbackSchoolYear(): SchoolYearConfig {
-  const now = new Date()
-  const year = now.getMonth() >= 7 ? now.getFullYear() : now.getFullYear() - 1
-  return {
-    startDate: `${year}-08-01`,
-    endDate: `${year + 1}-05-31`,
-    name: null,
-  }
+  return { ...getSharedFallbackSchoolYear(), name: null }
 }
 
 async function getOrgId(): Promise<string | null> {

@@ -6,13 +6,16 @@ import { useRouter } from 'next/navigation'
 import AuthGuard from '@/components/AuthGuard'
 import AttendanceTracker from '@/components/AttendanceTracker'
 import { getOrganizationId } from '@/src/lib/getOrganizationId'
+import { useOrganizationId } from '@/src/hooks/useOrganizationId'
+import { OrganizationLoadingScreen, OrganizationPendingInviteScreen, OrganizationErrorScreen } from '@/components/OrganizationStateScreen'
 import { useAppHeader } from '@/components/layout/AppHeader'
-import { pageShell, colors } from '@/src/lib/designTokens'
+import { pageShell } from '@/src/lib/designTokens'
 
 // ─── Page Content ─────────────────────────────────────────────────────────────
 
 function AttendanceContent() {
   const router = useRouter()
+  const orgState = useOrganizationId()
   const [user, setUser]                     = useState<any>(null)
   const [organizationId, setOrganizationId] = useState<string | null>(null)
   const [kids, setKids]                     = useState<any[]>([])
@@ -26,7 +29,7 @@ function AttendanceContent() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/'); return }
 
-      const { orgId } = await getOrganizationId(user.id)
+      let { orgId } = await getOrganizationId(user.id)
 
       // Co-teacher guard — attendance is admin-only
       // Only applies if the user is NOT an org owner
@@ -37,7 +40,13 @@ function AttendanceContent() {
           .eq('user_id', user.id)
           .maybeSingle()
         if (collaboration) { router.push('/dashboard'); return }
-        router.push('/onboarding'); return
+
+        // Not an owner and not a collaborator — resolve via the shared org
+        // hook (self-heals/shows pending-invite or error) instead of the
+        // old hard redirect to the now-removed onboarding gate.
+        if (orgState.status === 'loading') return
+        if (orgState.status !== 'ready') { setLoading(false); return }
+        orgId = orgState.organizationId
       }
 
       const { data: kidsData } = await supabase
@@ -54,13 +63,14 @@ function AttendanceContent() {
     }
 
     init()
-  }, [])
+  }, [orgState.status])
 
-  if (loading) return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: colors.pageBackground }}>
-      <div style={{ color: colors.purple, fontWeight: 700, fontSize: 16 }}>Loading...</div>
-    </div>
-  )
+  if (orgState.status === 'pending_invite') return <OrganizationPendingInviteScreen />
+  if (orgState.status === 'error' && !organizationId) {
+    return <OrganizationErrorScreen message={orgState.error} onRetry={orgState.retry} />
+  }
+
+  if (loading) return <OrganizationLoadingScreen />
 
   return (
     <div style={css.root}>

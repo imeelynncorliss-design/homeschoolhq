@@ -18,6 +18,45 @@ Entry format:
 
 ---
 
+## [2026-10-01] Roadmap item 1.2 — Remove onboarding gate and the NDA; item 1.3 batch 1 (5 of 21 pages)
+**Status:** In progress. Branch `feature/setup-1.2-1.3` off `main`. Steps 1.2 and 1.3 ship together per the prompt — not merged yet, and not browser-tested yet. Stopping here for Imee's review per the batch-of-5 instruction.
+
+**1.2 — Onboarding gate and NDA removed**
+**What changed:**
+- `middleware.ts`: removed the `/onboarding` auth-protection block and the matcher entries for it (the page now redirects on its own, authenticated or not). The rule that sent a logged-in visitor at `/login` or `/signup` to `/onboarding` now sends them to `/dashboard`.
+- `app/onboarding/page.tsx`: replaced the 2,798-line wizard with a one-line server redirect to `/dashboard`, so old bookmarks/links still resolve. **The pre-1.2 version is recoverable at commit `ca3c043e21416ce0e1f2c75be5841c9e7cef2c42`** (last commit that touched the file).
+- `app/signup/page.tsx`: the no-invite-code, session-already-live branch routed to `/onboarding` after `ensureOrganizationForUser`; now routes to `/agree` when `source === 'created'` (brand-new user, same age/ToS gate as login) and `/dashboard` otherwise — matches `app/login/page.tsx`'s existing logic, which needed no change.
+- `app/agree/page.tsx`: removed the NDA checkbox and the `ndaConfirmed` state/`beta_nda_confirmed` write and read. The "already agreed" skip-ahead check now only requires `age_confirmed`/`tos_confirmed`, and both that check and `handleContinue` now route to `/dashboard` instead of `/onboarding`. **`beta_nda_confirmed` column is untouched** — just no longer written or checked.
+- `app/auth/callback/route.ts` needed no change — it already routed `source: 'created'` to `/agree` and everything else to `/dashboard`, never through `/onboarding`.
+**Why:** Roadmap item 1 — forced onboarding is where new users drop off, and the beta NDA has no ongoing purpose now that the beta is closed (existing NDA data kept, per the 2026-09-28 decision).
+**Source:** `docs/prompts/prompt-01-setup.md` Step 1.2.
+**Files:** `middleware.ts`, `app/onboarding/page.tsx`, `app/signup/page.tsx`, `app/agree/page.tsx`.
+**DB migrations:** none. No columns dropped.
+
+**1.3 — Shared `useOrganizationId()` hook + empty states, batch 1 of 21 pages**
+**What changed:**
+- New `src/hooks/useOrganizationId.ts`: replaces every page's old `getOrganizationId()` → `router.push('/onboarding')`-if-missing boilerplate. States: `loading`, `ready` (`{ organizationId, isCoTeacher, userId }`), `pending_invite`, `error` (with a `retry()`). Fast path is the same direct read every page already did (`getOrganizationId`); only when that comes back empty does it fall back to the idempotent `ensureOrganizationForUser` RPC (the same one login/signup use) — this is what self-heals a page opened without going through login (e.g. a resumed session on a direct deep link) and is how a stale pending invite gets surfaced here instead of a second org getting created out from under it.
+- New `components/OrganizationStateScreen.tsx`: shared full-page screens for the hook's three non-`ready` states (`OrganizationLoadingScreen`, `OrganizationPendingInviteScreen` with a link to `/pending-invite`, `OrganizationErrorScreen` with a **Try again** button wired to the hook's `retry()`), so all 21 pages render the same thing instead of each inventing its own.
+- Wired into 5 pages: `app/dashboard/page.tsx`, `app/attendance/page.tsx`, `app/standards-setup/page.tsx`, `app/assessments/page.tsx`, `app/calendar/connect/page.tsx`. Each page's own pre-existing guard logic was preserved exactly (dashboard's and attendance's `family_collaborators`-first checks, assessments' admin-only co-teacher redirect) — the hook only replaces the final "no org found" fallback that used to hard-redirect to `/onboarding`.
+**Why:** Once the gate is gone, any page reached before an org exists (or mid-race, or via a pending invite) would otherwise crash or render blank. Step 1.3 explicitly calls for a shared hook with these four states on all 21 pages, in batches of 5.
+**Source:** `docs/prompts/prompt-01-setup.md` Step 1.3; Imee's batch-of-5 instruction for this pass.
+**Files:** `src/hooks/useOrganizationId.ts` (new), `components/OrganizationStateScreen.tsx` (new), `app/dashboard/page.tsx`, `app/attendance/page.tsx`, `app/standards-setup/page.tsx`, `app/assessments/page.tsx`, `app/calendar/connect/page.tsx`.
+**DB migrations:** none.
+
+**Also in this pass — unified the two fallback school-year ranges (carried over from the 1.1 follow-ups):**
+**What changed:** New `src/lib/schoolYear.ts` exports `getFallbackSchoolYear(today?)`, always computed from the date passed in (defaults to `new Date()`) — never a hardcoded year. `hooks/useSubjectCoverage.ts`'s `getFallbackSchoolYear()` and `app/compliance/page.tsx`'s inline fallback (which used Aug 1-Jun 30, the odd one out) both now call it, settling on the Aug 1-May 31 convention already documented in `src/hooks/useComplianceHours.ts` and `useComplianceHealthScore.ts`.
+**Why:** The 1.1 changelog entry flagged these two independent inline fallbacks and asked that unifying them compute the year from today's date rather than ever hardcoding one (the bug that had been found in the now-deleted `app/onboarding/page.tsx`, which is moot now that that file is gone).
+**Files:** `src/lib/schoolYear.ts` (new), `hooks/useSubjectCoverage.ts`, `app/compliance/page.tsx`.
+**DB migrations:** none.
+
+**Testing so far:** `tsc --noEmit` holds at the documented 17 pre-existing errors (none new, confirmed none fall in any file touched here). `next build` completes clean, `/onboarding` still resolves as a redirect. Smoke-tested (`curl`, no auth) that `/attendance`, `/standards-setup`, `/assessments`, `/calendar/connect` return 200 and `/dashboard`/`/onboarding` redirect (307) rather than 500 against the running local dev server. **Not yet browser-tested** — stopping here per the batch-of-5 instruction for Imee to review and browser-test before the next 5 pages.
+**Follow-ups:**
+- For a user resolved only through the hook's RPC fallback (not the fast read) — notably every co-teacher/aide, since their membership lives in `family_collaborators`, which the fast path never checks — `ensure_organization_for_user` now runs on every one of these pages' loads, not just at login. It's idempotent and cheap (an advisory lock plus indexed lookups), but it's a new RPC round-trip on every page view for that whole user class. Worth a follow-up pass once all 21 pages are converted, to short-circuit via a cached/shared result instead of each page's hook instance re-resolving independently.
+- `dashboard/page.tsx`'s and `attendance/page.tsx`'s pending-invite/error screens are gated on `!isCollaborator`/`!organizationId` so a collaborator whose own branch already succeeded can't get bounced by an unrelated hook hiccup — but in the brief window before either resolves, a true hook error could still flash the error screen for a collaborator. Edge case, not fixed here.
+- 16 of 21 pages remain: `app/progress/page.tsx`, `app/curriculum/import/page.tsx`, `app/mastery/page.tsx`, `app/transcript/page.tsx`, `app/daily-log/page.tsx`, `app/compliance/page.tsx`, `app/vacation/page.tsx`, `app/subjects/page.tsx`, `app/bulk-schedule/page.tsx`, `app/lessons/page.tsx`, `app/field-trips/page.tsx`, `app/supply-scout/page.tsx`, `app/teacher/assessments/page.tsx`, `app/reading-log/page.tsx`, `app/school-year/page.tsx`, `app/standards/page.tsx`, `app/tools/page.tsx`.
+
+---
+
 ## [2026-10-01] Hotfix — Invite signup: unauthenticated email-confirmation endpoint, and redeem-before-session bug
 **Status:** Browser-tested by Imee (invite-code signup → confirm → sign in → `/teaching-schedule` as `co_teacher`, no placeholder org created, invite code cleared from metadata and sessionStorage; `confirm-user` endpoint confirmed gone, returns 404). Merged `hotfix/invite-signup` into `main`.
 

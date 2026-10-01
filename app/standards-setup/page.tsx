@@ -1,12 +1,12 @@
 'use client'
 
 import { useEffect, useState, Suspense } from 'react'
-import { supabase } from '@/src/lib/supabase'
 import { useRouter } from 'next/navigation'
 import AuthGuard from '@/components/AuthGuard'
 import CommonCoreImporter from '@/components/CommonCoreImporter'
 import StandardsImporter from '@/components/StandardsImporter'
-import { getOrganizationId } from '@/src/lib/getOrganizationId'
+import { useOrganizationId } from '@/src/hooks/useOrganizationId'
+import { OrganizationLoadingScreen, OrganizationPendingInviteScreen, OrganizationErrorScreen } from '@/components/OrganizationStateScreen'
 import { colors } from '@/src/lib/designTokens'
 import { useAppHeader } from '@/components/layout/AppHeader'
 
@@ -14,6 +14,7 @@ type Section = 'ccss' | 'state'
 
 function StandardsSetupContent() {
   const router = useRouter()
+  const orgState = useOrganizationId()
   useAppHeader({ title: '📥 Learning Goals Setup', backHref: '/tools' })
 
   const [organizationId, setOrganizationId] = useState<string>('')
@@ -22,24 +23,15 @@ function StandardsSetupContent() {
   const [showStateImporter, setShowStateImporter] = useState(false)
 
   useEffect(() => {
-    const init = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.push('/'); return }
+    if (orgState.status !== 'ready') return
+    setOrganizationId(orgState.organizationId)
+    setLoading(false)
+  }, [orgState.status, orgState.organizationId])
 
-      const { orgId } = await getOrganizationId(user.id)
-      if (!orgId) { router.push('/onboarding'); return }
+  if (orgState.status === 'pending_invite') return <OrganizationPendingInviteScreen />
+  if (orgState.status === 'error') return <OrganizationErrorScreen message={orgState.error} onRetry={orgState.retry} />
 
-      setOrganizationId(orgId)
-      setLoading(false)
-    }
-    init()
-  }, [])
-
-  if (loading) return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: colors.pageBackground }}>
-      <div style={{ color: colors.purple, fontWeight: 700, fontSize: 16 }}>Loading...</div>
-    </div>
-  )
+  if (loading) return <OrganizationLoadingScreen />
 
   const sectionCard = (
     key: Section,

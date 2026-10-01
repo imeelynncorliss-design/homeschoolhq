@@ -20,6 +20,8 @@ import type { CalendarConnection } from '@/src/types/calendar';
 import { useAppHeader } from '@/components/layout/AppHeader';
 import { supabase } from '@/src/lib/supabase';
 import { getOrganizationId } from '@/src/lib/getOrganizationId';
+import { useOrganizationId } from '@/src/hooks/useOrganizationId';
+import { OrganizationLoadingScreen, OrganizationPendingInviteScreen, OrganizationErrorScreen } from '@/components/OrganizationStateScreen';
 import { pageShell } from '@/src/lib/designTokens';
 
 const btnPrimary: React.CSSProperties = {
@@ -43,6 +45,7 @@ const btnIcon: React.CSSProperties = {
 function CalendarConnectContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const orgState = useOrganizationId();
   useAppHeader({ title: '📅 Calendar Sync', backHref: '/tools' });
   const [orgId, setOrgId] = useState<string | null>(null);
   const [connections, setConnections] = useState<CalendarConnection[]>([]);
@@ -70,13 +73,19 @@ function CalendarConnectContent() {
     const init = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/'); return }
-      const { orgId: oid } = await getOrganizationId(user.id)
-      if (!oid) { router.push('/onboarding'); return }
+      let { orgId: oid } = await getOrganizationId(user.id)
+      if (!oid) {
+        // No org via the direct read — resolve via the shared hook instead
+        // of the old hard redirect to the now-removed onboarding gate.
+        if (orgState.status === 'loading') return
+        if (orgState.status !== 'ready') return
+        oid = orgState.organizationId
+      }
       setOrgId(oid)
       await loadConnections(oid)
     }
     init()
-  }, []);
+  }, [orgState.status]);
 
   const loadConnections = async (resolvedOrgId?: string) => {
     const id = resolvedOrgId ?? orgId
@@ -152,6 +161,11 @@ function CalendarConnectContent() {
       </span>
     );
   };
+
+  if (orgState.status === 'pending_invite' && !orgId) return <OrganizationPendingInviteScreen />;
+  if (orgState.status === 'error' && !orgId) {
+    return <OrganizationErrorScreen message={orgState.error} onRetry={orgState.retry} />;
+  }
 
   return (
     <div style={{ ...pageShell.root, paddingBottom: 100 }}>

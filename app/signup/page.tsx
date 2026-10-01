@@ -138,8 +138,11 @@ function SignupContent() {
         setSuccess(true)
         if (result.source === 'pending_invite') {
           setTimeout(() => router.push('/pending-invite'), 1500)
+        } else if (result.source === 'created') {
+          // Brand-new user — still goes through the age/ToS gate, same as login.
+          setTimeout(() => router.push('/agree'), 1500)
         } else {
-          setTimeout(() => router.push('/onboarding'), 1500)
+          setTimeout(() => router.push('/dashboard'), 1500)
         }
       } else {
         // Email confirmation required — org gets created at /auth/callback

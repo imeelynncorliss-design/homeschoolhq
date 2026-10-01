@@ -12,6 +12,8 @@ import AssessmentsHelpModal from '@/components/AssessmentsHelpModal'
 import AssessmentTaking from '@/components/AssessmentTaking'
 import { Lightbulb, ChevronDown, ChevronRight } from 'lucide-react'
 import { getOrganizationId } from '@/src/lib/getOrganizationId'
+import { useOrganizationId } from '@/src/hooks/useOrganizationId'
+import { OrganizationPendingInviteScreen, OrganizationErrorScreen } from '@/components/OrganizationStateScreen'
 import { pageShell } from '@/src/lib/designTokens'
 import { CANONICAL_SUBJECTS } from '@/src/constants/subjects'
 
@@ -137,6 +139,7 @@ type MonthGroup = {
 
 function AssessmentsContent() {
   const router = useRouter()
+  const orgState = useOrganizationId()
   useAppHeader({ title: 'Progress Evidence & Assessments', backHref: '/reports' })
   const [currentView, setCurrentView] = useState<'results' | 'standards'>('results')
   const [assessments, setAssessments] = useState<AssessmentWithDetails[]>([])
@@ -167,8 +170,15 @@ function AssessmentsContent() {
       if (!user) { router.push('/'); return }
 
       // Co-teacher guard — assessments is admin-only
-      const { orgId, isCoTeacher } = await getOrganizationId(user.id)
-      if (!orgId) { router.push('/onboarding'); return }
+      let { orgId, isCoTeacher } = await getOrganizationId(user.id)
+      if (!orgId) {
+        // No org via the direct read — resolve via the shared hook instead
+        // of the old hard redirect to the now-removed onboarding gate.
+        if (orgState.status === 'loading') return
+        if (orgState.status !== 'ready') return
+        orgId = orgState.organizationId
+        isCoTeacher = orgState.isCoTeacher
+      }
       if (isCoTeacher) { router.push('/dashboard'); return }
 
       const { data: kidsData } = await supabase
@@ -184,7 +194,7 @@ function AssessmentsContent() {
       setOrganizationId(orgId)
     }
     init()
-  }, [])
+  }, [orgState.status])
 
   useEffect(() => {
     if (organizationId) {
@@ -516,6 +526,11 @@ function AssessmentsContent() {
   const availableGrades = [...new Set(standards.map(s => s.grade_level))].filter(Boolean).sort()
 
   // ── Render ─────────────────────────────────────────────────────────────────
+
+  if (orgState.status === 'pending_invite' && !organizationId) return <OrganizationPendingInviteScreen />
+  if (orgState.status === 'error' && !organizationId) {
+    return <OrganizationErrorScreen message={orgState.error} onRetry={orgState.retry} />
+  }
 
   return (
     <div style={css.root}>

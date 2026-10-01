@@ -6,7 +6,8 @@ import { supabase } from '@/src/lib/supabase'
 import { useRouter, useSearchParams } from 'next/navigation'
 import AuthGuard from '@/components/AuthGuard'
 import DevTierToggle from '@/components/DevTierToggle'
-import { getOrganizationId } from '@/src/lib/getOrganizationId'
+import { useOrganizationId } from '@/src/hooks/useOrganizationId'
+import { OrganizationPendingInviteScreen, OrganizationErrorScreen } from '@/components/OrganizationStateScreen'
 import LessonViewModal, { type LessonViewModalLesson } from '@/components/LessonViewModal'
 import ActivityGenerator from '@/components/ActivityGenerator'
 import LessonGenerator from '@/components/LessonGenerator'
@@ -1291,6 +1292,7 @@ function computeScoutNudge(
 function DashboardContent() {
   const router       = useRouter()
   const searchParams = useSearchParams()
+  const orgState = useOrganizationId()
   const [user, setUser]                     = useState<any>(null)
   const [loading, setLoading]               = useState(true)
   const [kidPulses, setKidPulses]           = useState<KidPulse[]>([])
@@ -1410,9 +1412,12 @@ function DashboardContent() {
           setShowTour(true)
         }
       } else {
-        const { orgId: resolved } = await getOrganizationId(user.id)
-        if (!resolved) { router.push('/onboarding'); return }
-        orgId = resolved
+        // Not a collaborator — resolve via the shared org hook instead of a
+        // second independent lookup + its own onboarding redirect, so this
+        // path can't race the hook's own self-heal/pending-invite handling.
+        if (orgState.status === 'loading') return
+        if (orgState.status !== 'ready') { setLoading(false); return }
+        orgId = orgState.organizationId
 
         const { data: profile } = await supabase
           .from('user_profiles')
@@ -1581,7 +1586,7 @@ function DashboardContent() {
       setLoading(false)
     }
     load()
-  }, [todayKey])
+  }, [todayKey, orgState.status])
 
   // Refresh week lessons from DB — called when user opens the This Week view
   const refreshWeekLessons = async () => {
@@ -1656,6 +1661,11 @@ function DashboardContent() {
       ))
       return updated
     })
+  }
+
+  if (!isCollaborator && orgState.status === 'pending_invite') return <OrganizationPendingInviteScreen />
+  if (!isCollaborator && orgState.status === 'error') {
+    return <OrganizationErrorScreen message={orgState.error} onRetry={orgState.retry} />
   }
 
   if (loading) return (

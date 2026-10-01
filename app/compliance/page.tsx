@@ -17,6 +17,7 @@ import { useComplianceSettings } from '@/src/hooks/useComplianceSettings'
 import { useAppHeader } from '@/components/layout/AppHeader'
 import { getOrganizationId } from '@/src/lib/getOrganizationId'
 import { colors } from '@/src/lib/designTokens'
+import { getFallbackSchoolYear } from '@/src/lib/schoolYear'
 
 interface Kid {
   id: string
@@ -275,12 +276,12 @@ export default function CompliancePage() {
         || settings?.school_year_end_date
         || null
 
-      // Last resort: current school year Aug → Jun
+      // Last resort: current school year, same Aug 1-May 31 fallback used
+      // everywhere else (src/lib/schoolYear.ts) — always from today's date.
       if (!startDate || !endDate) {
-        const now = new Date()
-        const year = now.getMonth() >= 7 ? now.getFullYear() : now.getFullYear() - 1
-        startDate = `${year}-08-01`
-        endDate = `${year + 1}-06-30`
+        const fallback = getFallbackSchoolYear()
+        startDate = fallback.startDate
+        endDate = fallback.endDate
       }
 
 

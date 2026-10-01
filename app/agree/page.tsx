@@ -158,7 +158,6 @@ function AgreeContent() {
   const [saving, setSaving]           = useState(false)
   const [ageConfirmed, setAgeConfirmed] = useState(false)
   const [tosConfirmed, setTosConfirmed] = useState(false)
-  const [ndaConfirmed, setNdaConfirmed] = useState(false)
   const [error, setError]             = useState<string | null>(null)
   const [userId, setUserId]           = useState<string | null>(null)
 
@@ -167,15 +166,17 @@ function AgreeContent() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.replace('/login'); return }
 
-      // If user has already fully agreed, skip ahead
+      // If user has already agreed, skip ahead. Item 1.2: the beta NDA is no
+      // longer required (beta_nda_confirmed is kept in the table, just not
+      // checked here anymore).
       const { data: existing } = await supabase
         .from('user_agreements')
-        .select('age_confirmed, tos_confirmed, beta_nda_confirmed')
+        .select('age_confirmed, tos_confirmed')
         .eq('user_id', user.id)
         .maybeSingle()
 
-      if (existing?.age_confirmed && existing?.tos_confirmed && existing?.beta_nda_confirmed && !isPreview) {
-        router.replace('/onboarding')
+      if (existing?.age_confirmed && existing?.tos_confirmed && !isPreview) {
+        router.replace('/dashboard')
         return
       }
 
@@ -186,7 +187,7 @@ function AgreeContent() {
   }, [])
 
   const handleContinue = async () => {
-    if (!ageConfirmed || !tosConfirmed || !ndaConfirmed || !userId || saving) return
+    if (!ageConfirmed || !tosConfirmed || !userId || saving) return
     setSaving(true)
     setError(null)
 
@@ -197,7 +198,6 @@ function AgreeContent() {
           user_id:             userId,
           age_confirmed:       true,
           tos_confirmed:       true,
-          beta_nda_confirmed:  true,
           agreed_at:           new Date().toISOString(),
         },
         { onConflict: 'user_id' }
@@ -209,7 +209,7 @@ function AgreeContent() {
       return
     }
 
-    router.push('/onboarding')
+    router.push('/dashboard')
   }
 
   if (loading) {
@@ -220,7 +220,7 @@ function AgreeContent() {
     )
   }
 
-  const canProceed = ageConfirmed && tosConfirmed && ndaConfirmed
+  const canProceed = ageConfirmed && tosConfirmed
 
   return (
     <div style={css.page}>
@@ -299,33 +299,6 @@ function AgreeContent() {
               </p>
               <p style={css.checkSub}>
                 Your agreement is recorded with a timestamp and stored securely.
-              </p>
-            </div>
-          </div>
-
-          {/* Checkbox 3 — Beta NDA */}
-          <div
-            onClick={() => setNdaConfirmed(v => !v)}
-            style={{ ...css.checkRow, borderColor: ndaConfirmed ? colors.purple : colors.gray200, background: ndaConfirmed ? colors.purpleFaint : colors.gray50 }}
-          >
-            <div style={{ ...css.checkbox, background: ndaConfirmed ? colors.purple : colors.white, borderColor: ndaConfirmed ? colors.purple : colors.gray200 }}>
-              {ndaConfirmed && <span style={css.checkmark}>✓</span>}
-            </div>
-            <div style={{ flex: 1 }}>
-              <p style={css.checkLabel}>
-                I agree to the HomeschoolReady{' '}
-                <a
-                  href="/legal/beta-nda"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={css.link}
-                  onClick={e => e.stopPropagation()}
-                >
-                  Beta Tester Non-Disclosure Agreement
-                </a>.
-              </p>
-              <p style={css.checkSub}>
-                As a beta tester, you agree to keep product features and feedback confidential. This NDA expires when the beta period ends.
               </p>
             </div>
           </div>
