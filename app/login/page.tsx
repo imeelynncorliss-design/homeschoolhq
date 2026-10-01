@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/src/lib/supabase'
+import { ensureOrganizationForUser } from '@/src/lib/ensureOrganization'
 import Link from 'next/link'
 
 export default function LoginPage() {
@@ -38,32 +39,27 @@ export default function LoginPage() {
         return
       }
 
-      // 1. Org owner path
-      const { data: ownedOrg } = await supabase
-        .from('organizations')
-        .select('id')
-        .eq('user_id', data.user.id)
-        .maybeSingle()
+      // Idempotent: creates an org only for a genuinely new user with no
+      // pending invite waiting for them. Safe to call on every login.
+      const referralSource = sessionStorage.getItem('hsr_referral')
+      const result = await ensureOrganizationForUser(supabase, { referralSource })
 
-      if (ownedOrg) {
-        router.push('/dashboard')
+      if (result.source === 'pending_invite') {
+        router.push('/pending-invite')
         return
       }
 
-      // 2. Co-teacher / aide path
-      const { data: membership } = await supabase
-        .from('user_organizations')
-        .select('role')
-        .eq('user_id', data.user.id)
-        .maybeSingle()
-
-      if (membership) {
-        router.push('/dashboard')
+      // Co-teachers/aides and users who've already completed onboarding
+      // before (org existed already) go straight to the dashboard, same as
+      // today. A brand-new user (org just now created) still goes through
+      // the existing age/ToS agreement gate before onboarding — unchanged
+      // here; onboarding itself is what Step 1.2 replaces.
+      if (result.source === 'created') {
+        router.push('/agree')
         return
       }
 
-      // 3. No org — send to onboarding
-      router.push('/agree')
+      router.push('/dashboard')
     } catch (err) {
       setError('An error occurred. Please try again.')
     } finally {

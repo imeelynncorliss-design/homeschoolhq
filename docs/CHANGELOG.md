@@ -18,6 +18,45 @@ Entry format:
 
 ---
 
+## [2026-09-30] Roadmap item 1.1 — Create the org at first login
+**Status:** In progress — migration **not yet applied to production**. Per the binding deploy-order decision below, this code must not be merged to `main` until that migration is confirmed live.
+**What changed:**
+1. **New migration** `supabase/migrations/20260930000000_ensure_organization_for_user.sql` adds a Postgres function `ensure_organization_for_user(p_placeholder_name, p_referral_source, p_force_create)` that idempotently creates an organization + `user_organizations` row for the calling user, or returns their existing membership, without ever creating a duplicate:
+   - Checks, in order: an existing `user_organizations` row (`existing_owner`) → an existing `family_collaborators` row (`collaborator`) → a pending, unexpired `collaborator_invites` row matching the caller's **confirmed** email (`pending_invite`, unless `p_force_create` is true) → otherwise creates a new org (`created`).
+   - Takes a per-user `pg_advisory_xact_lock` so concurrent calls for the same brand-new user (e.g. login and the auth callback firing close together) can't create two orgs. No unique constraint added to `user_organizations.user_id`, since a user can legitimately hold more than one membership row.
+   - Identity (`auth.uid()`, `auth.jwt() ->> 'email'`) is derived from the caller's own session inside the function — no `user_id`/`email` parameters accepted, so a caller can never act on another user's behalf. `SECURITY DEFINER` with `SET search_path = public`; `EXECUTE` revoked from `PUBLIC` and from `anon`, granted only to `authenticated`.
+   - The pending-invite email match additionally requires `auth.users.email_confirmed_at is not null` — an unconfirmed signup using someone else's email can't ride along on that person's invite before address ownership is actually verified.
+2. **New client wrapper** `src/lib/ensureOrganization.ts` — `ensureOrganizationForUser(supabase, options?)` calls the RPC and returns a typed `{ organizationId, source, inviteOrganizationId?, inviteOrganizationName?, inviteCode? }`.
+3. **New page** `app/pending-invite/page.tsx` — shown when the RPC returns `pending_invite`. Offers two explicit choices: "Accept invite to {org name}" (calls the existing `redeemInvite()` from `src/lib/invites.ts` using the invite code the RPC already matched) or "Start my own homeschool instead" (re-calls the RPC with `forceCreate: true`). Revoked/expired invites are already excluded by the function's `status = 'pending' AND expires_at > now()` filter, so they never reach this screen.
+4. **Call sites wired in**, preserving today's downstream behavior (age/ToS gate via `/agree`, onboarding, co-teacher routing to `/teaching-schedule`) and only changing *where* the org gets created:
+   - `app/login/page.tsx` — replaces the old read-only "check owned org, then check membership, else `/agree`" logic with one `ensureOrganizationForUser` call; `source: 'created'` still routes to `/agree` (brand-new user, unchanged gate), anything else routes to `/dashboard`, `pending_invite` routes to `/pending-invite`.
+   - `app/signup/page.tsx` — the no-invite-code, session-already-live branch now calls `ensureOrganizationForUser` before redirecting (catches the case where this email actually has a pending invite waiting, even though the "I have an invite code" box wasn't checked — a real gap that existed before this change).
+   - `app/auth/callback/route.ts` — covers the email-confirmation-required path (where no session exists yet at signup time). Only runs the RPC when no explicit `?next=` was requested (so password-reset-style redirects through this same route are untouched).
+5. **`handleStateConfirmed` in `app/onboarding/page.tsx`:** no change — already gated on `if (!orgId)`, so it stays a no-op once the org already exists by the time a user reaches it.
+
+**Why:** Roadmap item 1 requires an org to exist before the onboarding gate can be removed (Step 1.2), without breaking RLS or creating duplicate/orphaned orgs for invited co-teachers. Decisions and conditions below came out of plan review before any code was written.
+
+**Important correction to the Step 1.0 investigation:** `app/auth/callback/route.ts` and `src/app/auth/callback/route.ts` are two different files (confirmed via `diff`), and likewise `app/join/page.tsx` / `src/app/join/page.tsx`. Only the root `app/` versions are actually served — confirmed via `.next/server/app-paths-manifest.json`, which maps `/auth/callback/route` and `/join/page` to the `app/` copies. The Step 1.0 investigation subagent had read the `src/app/` versions and reported their (different, dead) logic. This code targets the live `app/` files; the `src/app/auth/callback/route.ts` and `src/app/join/page.tsx` duplicates are dead code, left untouched (follow-up below). Also correcting Step 1.0's "no `/legal/beta-nda` route exists" note — it does exist (`app/legal/beta-nda/page.tsx`); confirmed via `next build`'s route listing.
+
+**Decisions from plan review (binding):**
+- Org creation is one atomic Postgres function with an advisory lock, not a client-side select-then-insert — login and the auth callback can race for the same new user.
+- The function must check `family_collaborators` and `collaborator_invites` before creating an org, so an invited co-teacher/aide never gets a spurious second org.
+- Identity comes from `auth.uid()`/`auth.jwt()` inside the function, never from caller-supplied parameters; `EXECUTE` is restricted to `authenticated` only (not `anon`, not `PUBLIC`).
+- The pending-invite email match only applies once the email is confirmed (`email_confirmed_at is not null`), to prevent an unconfirmed signup from riding along on someone else's invite.
+- The pending-invite screen must offer both "accept" and "start my own," never pick one automatically; revoked/expired invites are ignored.
+- **Deploy order is binding:** this migration must be applied to the production Supabase database and confirmed **before** any code calling the RPC is merged to `main`. Merging the code first would break every login/signup (RPC not found).
+
+**Source:** `docs/prompts/prompt-01-setup.md` Step 1.1; Imee (plan review — invite-awareness, atomic/race-safe creation, SECURITY DEFINER identity + grants, two-choice pending-invite screen, email-confirmation requirement, anon revoke, deploy order)
+**Files:** `supabase/migrations/20260930000000_ensure_organization_for_user.sql` (new), `src/lib/ensureOrganization.ts` (new), `app/pending-invite/page.tsx` (new), `app/login/page.tsx`, `app/signup/page.tsx`, `app/auth/callback/route.ts`
+**DB migrations:** `ensure_organization_for_user` function — **not yet applied to production; must be applied and confirmed before this code is merged to `main`.**
+**Build/type-check:** `tsc --noEmit` holds at the same 17 pre-existing errors (none in files touched here). `next build` completes clean, including the new `/pending-invite` route.
+**Follow-ups:**
+- `src/app/auth/callback/route.ts` and `src/app/join/page.tsx` are dead duplicates of the live `app/` versions (same route paths, different/stale content in the callback's case) — confusing to anyone editing auth code, not fixed here since removing files needs explicit approval; flagging for a cleanup pass.
+- An open (not email-specific) `collaborator_invites` row (`email = ''`) is never auto-detected by this change — only invites created for a specific email can match a logging-in user. This matches today's intent (an open invite isn't "for" anyone specific yet) but is worth knowing: open-code invites still only work through the existing manual `/join` or signup-checkbox code entry.
+- Steps 1.2–1.4 still ahead: the gate itself, the NDA, the 21 pages' empty states, and the setup checklist card are all unchanged by this step.
+
+---
+
 ## [2026-09-30] Roadmap item 1.0 — Investigation and plan for setup refactor
 **Status:** Done (investigation + plan only, no code changed). Plan approved by Imee; implementation proceeds one step at a time (1.1, then 1.2+1.3 together, then 1.4), each stopped for approval.
 **Source:** `docs/prompts/prompt-01-setup.md` Step 1.0; Imee (plan review, three rounds of revisions)
