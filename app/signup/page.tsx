@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/src/lib/supabase'
 import { redeemInvite } from '@/src/lib/invites'
 import { ensureOrganizationForUser } from '@/src/lib/ensureOrganization'
+import { storeInviteCodeForSession, clearStoredInviteCode } from '@/src/lib/pendingInviteCode'
 import Link from 'next/link'
 import { Suspense } from 'react'
 
@@ -59,12 +60,16 @@ function SignupContent() {
     }
 
     try {
-      // Step 1: Create the account
+      // Step 1: Create the account. The invite code (if any) rides along in
+      // user_metadata so it survives the email-confirmation redirect even if
+      // it's opened in a different browser/device than signup happened in.
+      const trimmedInviteCode = hasInviteCode ? inviteCode.trim() : null
       const { data, error: signupError } = await supabase.auth.signUp({
         email,
         password,
         options: {
           emailRedirectTo: `${window.location.origin}/auth/callback`,
+          data: trimmedInviteCode ? { invite_code: trimmedInviteCode } : undefined,
         },
       })
 
@@ -89,31 +94,33 @@ function SignupContent() {
       }
 
       // Step 2: Co-teacher path — has invite code
-      if (hasInviteCode && inviteCode.trim()) {
-        const result = await redeemInvite(inviteCode.trim(), data.user.id, email)
-
-        if (!result.success) {
-          setError(
-            `Account created, but the invite code failed: ${result.error} ` +
-            `Please sign in and enter your code on the next screen.`
-          )
-          setLoading(false)
-          return
-        }
-
-        // Invite redeemed — auto-confirm the user
-        await fetch('/api/invites/confirm-user', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: data.user.id })
-        })
+      if (trimmedInviteCode) {
+        // Keep a same-tab fallback copy too, in case this session never
+        // reads user_metadata back (e.g. updateUser race) before redeeming.
+        storeInviteCodeForSession(trimmedInviteCode)
 
         if (data.session) {
-          // Session live — go straight to teaching schedule
+          // Session already live (email confirmations disabled) — redeem now.
+          // Without a session this insert would fail under RLS, so confirmation
+          // is required first; /auth/callback and /pending-invite finish the
+          // job once a session exists.
+          const result = await redeemInvite(trimmedInviteCode, data.user.id, email)
+
+          if (!result.success) {
+            setError(
+              `Account created, but the invite code failed: ${result.error} ` +
+              `You can try a different code from the Join page, or start your own homeschool.`
+            )
+            setLoading(false)
+            return
+          }
+
+          await clearStoredInviteCode(supabase)
           setSuccess(true)
           setTimeout(() => router.push('/teaching-schedule'), 1500)
         } else {
-          // Email confirmation required
+          // Email confirmation required — redemption happens after confirming,
+          // via /auth/callback -> /pending-invite.
           setSuccess(true)
           setCoTeacherNeedsConfirmation(true)
         }

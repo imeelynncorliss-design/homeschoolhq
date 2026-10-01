@@ -32,6 +32,15 @@ export async function GET(request: NextRequest) {
         return NextResponse.redirect(`${origin}${explicitNext}`)
       }
 
+      // A signup-time invite code (stashed in user_metadata — see app/signup)
+      // takes priority over the RPC: a code-only invite has no email on it,
+      // so the RPC's email match would miss it and create a placeholder org
+      // before /pending-invite ever gets a chance to redeem the code.
+      const { data: { user } } = await supabase.auth.getUser()
+      if (typeof user?.user_metadata?.invite_code === 'string' && user.user_metadata.invite_code.trim()) {
+        return NextResponse.redirect(`${origin}/pending-invite`)
+      }
+
       // Idempotent: creates an org only for a genuinely new user with no
       // pending invite waiting for them. Safe to call on every callback.
       const { data, error: rpcError } = await supabase.rpc('ensure_organization_for_user', {})
