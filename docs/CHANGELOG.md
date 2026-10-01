@@ -104,6 +104,31 @@ Also applied the `NoStudentsEmptyState` pattern from the batch-1 follow-up to ev
 
 ---
 
+## [2026-10-01] Roadmap item 1.3 batch 3 (5 more pages) — includes the two item-2 hotspots
+**Status:** In progress. Same branch, `feature/setup-1.2-1.3`. Not merged, not browser-tested yet.
+
+**What changed:** Wired `useOrganizationId()` into `app/compliance/page.tsx`, `app/vacation/page.tsx`, `app/subjects/page.tsx`, `app/bulk-schedule/page.tsx`, `app/lessons/page.tsx` — same fast-read-then-hook-fallback pattern as batches 1-2.
+
+**`app/subjects/page.tsx` and `app/lessons/page.tsx` needed care** since both carry roadmap item 2 fixes that must not regress: the `?kidId=`/`?openImporter=`/`?subject=` deep link between them (2.2), `CurriculumImporter` (2.1/2.4 parity), and `useScoutOverlay` (2.3). Confirmed by inspection before editing and by grep after: all three are untouched — I only replaced the final "no org found" fallback in each page's org-resolution block, nothing in `loadData`'s kid/importer deep-link logic or the Scout-overlay wiring.
+- `app/subjects/page.tsx` doesn't call `getOrganizationId()` at all — it inlines its own `organizations` → `user_organizations` check. Left that exactly as-is; the hook only kicks in when both direct reads come back empty.
+- `app/lessons/page.tsx`'s co-teacher-aware "no lessons yet" empty state is now split: co-teachers still see the original "the account admin hasn't added any lessons yet" message (no button — they can't add students), owners now get the shared `NoStudentsEmptyState`.
+
+**Zero-students empty state, continued:**
+- `app/subjects/page.tsx`: swapped its existing plain-text "no kids" message for the shared component.
+- `app/compliance/page.tsx`: had none — with zero students it would show a 0% family health score and "0 of 0 students on track," which reads as a failing score rather than "no data" (same shape as the `/attendance` bug). Added the gate after the state-selector check.
+- `app/bulk-schedule/page.tsx`: `BulkLessonScheduler` had no zero-kids guard (empty child dropdown, empty lesson list, no hint). Added the same page-level gate used for `progress`/`mastery` in batch 2.
+- `app/vacation/page.tsx`: no change needed — vacation planning is org-wide, not per-student; `EnhancedVacationManager` has no kids dependency at all.
+**Why:** Continuing Step 1.3 plus the zero-students follow-up from batch-1 testing.
+**Source:** `docs/prompts/prompt-01-setup.md` Step 1.3; Imee's batch-1 feedback; Imee's explicit reminder before this batch not to regress the item-2 fixes in `/lessons` and `/subjects`.
+**Files:** `app/compliance/page.tsx`, `app/vacation/page.tsx`, `app/subjects/page.tsx`, `app/bulk-schedule/page.tsx`, `app/lessons/page.tsx`.
+**DB migrations:** none.
+**Testing:** `tsc --noEmit` holds at 17 pre-existing errors (none in files touched here). `next build` completes clean. All 5 routes return 200 against the running dev server. Confirmed via grep that `useScoutOverlay`, the `?kidId=`/`?openImporter=` deep link, and `CurriculumImporter` are unchanged in both `subjects` and `lessons`. **Not yet browser-tested** — this batch needs it most, given what it touches.
+**Follow-ups:**
+- Noticed while reading `components/BulkLessonScheduler.tsx`: it queries `kids` by `user_id`, not `organization_id`, unlike every other kids query in the codebase. Likely a pre-existing latent bug (would misbehave for a co-teacher, though the page's admin-only guard means only the org owner ever reaches it today). Not fixed — out of scope for this pass, flagging for whoever next touches that component.
+- 7 pages remain: `app/field-trips/page.tsx`, `app/supply-scout/page.tsx`, `app/teacher/assessments/page.tsx`, `app/reading-log/page.tsx`, `app/school-year/page.tsx`, `app/standards/page.tsx`, `app/tools/page.tsx`.
+
+---
+
 ## [2026-10-01] Hotfix — Invite signup: unauthenticated email-confirmation endpoint, and redeem-before-session bug
 **Status:** Browser-tested by Imee (invite-code signup → confirm → sign in → `/teaching-schedule` as `co_teacher`, no placeholder org created, invite code cleared from metadata and sessionStorage; `confirm-user` endpoint confirmed gone, returns 404). Merged `hotfix/invite-signup` into `main`.
 

@@ -15,6 +15,9 @@ import CurriculumImporter from '@/components/CurriculumImporter'
 import { formatLessonDescription } from '@/lib/formatLessonDescription'
 import { DEFAULT_HOLIDAYS_2025_2026 } from '@/app/utils/holidayUtils'
 import { getOrganizationId } from '@/src/lib/getOrganizationId'
+import { useOrganizationId } from '@/src/hooks/useOrganizationId'
+import { OrganizationLoadingScreen, OrganizationPendingInviteScreen, OrganizationErrorScreen } from '@/components/OrganizationStateScreen'
+import { NoStudentsEmptyState } from '@/components/NoStudentsEmptyState'
 import GenerateAssessmentModal from '@/components/GenerateAssessmentModal'
 import UpgradeModal from '@/components/UpgradeModal'
 import { useAppHeader } from '@/components/layout/AppHeader'
@@ -59,6 +62,7 @@ const KID_COLORS = ['#7c3aed', '#0d9488', '#ec4899', '#f59e0b', '#3b82f6']
 function LessonsContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const orgState = useOrganizationId()
   useAppHeader({ title: '📚 Lessons' })
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
@@ -203,8 +207,15 @@ function LessonsContent() {
         .maybeSingle()
       setUserTier((subData?.tier as UserTier) || getTierForTesting())
 
-      const { orgId: resolvedOrgId, isCoTeacher: coTeacher } = await getOrganizationId(user.id)
-      if (!resolvedOrgId) { router.push('/onboarding'); return }
+      let { orgId: resolvedOrgId, isCoTeacher: coTeacher } = await getOrganizationId(user.id)
+      if (!resolvedOrgId) {
+        // No org via the direct read — resolve via the shared hook instead
+        // of the old hard redirect to the now-removed onboarding gate.
+        if (orgState.status === 'loading') return
+        if (orgState.status !== 'ready') return
+        resolvedOrgId = orgState.organizationId
+        coTeacher = orgState.isCoTeacher
+      }
       setIsCoTeacher(coTeacher)
       setOrganizationId(resolvedOrgId)
 
@@ -243,7 +254,7 @@ function LessonsContent() {
     }
     }
     init()
-  }, [])
+  }, [orgState.status])
 
   // ── Add Lesson ──────────────────────────────────────────────────────────────
 
@@ -523,11 +534,12 @@ function LessonsContent() {
 
   // ── Render ──────────────────────────────────────────────────────────────────
 
-  if (loading) return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#3d3a52' }}>
-      <div style={{ color: '#7c3aed', fontWeight: 800, fontSize: 16, fontFamily: "'Nunito', sans-serif" }}>Loading lessons...</div>
-    </div>
-  )
+  if (orgState.status === 'pending_invite' && !organizationId) return <OrganizationPendingInviteScreen />
+  if (orgState.status === 'error' && !organizationId) {
+    return <OrganizationErrorScreen message={orgState.error} onRetry={orgState.retry} />
+  }
+
+  if (loading) return <OrganizationLoadingScreen />
 
   return (
     <div className="hr-page" style={{ fontFamily: "'Nunito', sans-serif", paddingBottom: 88 }}>
@@ -617,15 +629,19 @@ function LessonsContent() {
           }}
         />
         {kids.length === 0 ? (
-          <div className="hr-card" style={{ padding: '48px 32px', textAlign: 'center' }}>
-            <div style={{ fontSize: 48, marginBottom: 12 }}>📚</div>
-            <h2 style={{ fontSize: 20, fontWeight: 900, color: '#111827', margin: '0 0 8px', fontFamily: "'Nunito', sans-serif" }}>No lessons yet</h2>
-            <p style={{ color: '#6b7280', fontSize: 14, margin: '0 0 20px', fontFamily: "'Nunito', sans-serif" }}>
-              {isCoTeacher
-                ? "No lessons found. The account admin hasn't added any lessons yet."
-                : "Add your first child and lesson to get started."}
-            </p>
-          </div>
+          isCoTeacher ? (
+            <div className="hr-card" style={{ padding: '48px 32px', textAlign: 'center' }}>
+              <div style={{ fontSize: 48, marginBottom: 12 }}>📚</div>
+              <h2 style={{ fontSize: 20, fontWeight: 900, color: '#111827', margin: '0 0 8px', fontFamily: "'Nunito', sans-serif" }}>No lessons yet</h2>
+              <p style={{ color: '#6b7280', fontSize: 14, margin: 0, fontFamily: "'Nunito', sans-serif" }}>
+                No lessons found. The account admin hasn't added any lessons yet.
+              </p>
+            </div>
+          ) : (
+            <div className="hr-card">
+              <NoStudentsEmptyState message="Lessons are organized per student — add your first student to get started." />
+            </div>
+          )
         ) : (
           <AllChildrenList
             kids={activeKidId ? kids.filter(k => k.id === activeKidId) : kids}

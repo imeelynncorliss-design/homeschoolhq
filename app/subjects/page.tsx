@@ -7,6 +7,9 @@ import AuthGuard from '@/components/AuthGuard'
 import LessonViewModal, { type LessonViewModalLesson } from '@/components/LessonViewModal'
 import LessonGenerator from '@/components/LessonGenerator'
 import { useScoutOverlay } from '@/components/layout/AppHeader'
+import { useOrganizationId } from '@/src/hooks/useOrganizationId'
+import { OrganizationLoadingScreen, OrganizationPendingInviteScreen, OrganizationErrorScreen } from '@/components/OrganizationStateScreen'
+import { NoStudentsEmptyState } from '@/components/NoStudentsEmptyState'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -126,6 +129,7 @@ function SubjectsContent() {
   const router       = useRouter()
   const searchParams = useSearchParams()
   const supabase     = createClient()
+  const orgState     = useOrganizationId()
   const css = {
     root: {
       fontFamily: "'Nunito', sans-serif",
@@ -281,7 +285,13 @@ function SubjectsContent() {
           .from('user_organizations').select('organization_id').eq('user_id', user.id).maybeSingle()
         resolvedOrgId = m?.organization_id
       }
-      if (!resolvedOrgId) { router.push('/onboarding'); return }
+      if (!resolvedOrgId) {
+        // No org via the direct reads above — resolve via the shared hook
+        // instead of the old hard redirect to the now-removed onboarding gate.
+        if (orgState.status === 'loading') return
+        if (orgState.status !== 'ready') return
+        resolvedOrgId = orgState.organizationId
+      }
       setOrgId(resolvedOrgId)
 
       const [kidsResult, lessonsResult, subjectsResult] = await Promise.all([
@@ -304,7 +314,7 @@ function SubjectsContent() {
       setLoading(false)
     }
     load()
-  }, [lessonRefreshKey])
+  }, [lessonRefreshKey, orgState.status])
 
   // Auto-open Scout generator when arriving from "Copy & Adapt" flow
   useEffect(() => {
@@ -414,11 +424,12 @@ function SubjectsContent() {
     setSelected(null)
   }
 
-  if (loading) return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#3d3a52' }}>
-      <div style={{ color: '#7c3aed', fontWeight: 800, fontSize: 18, fontFamily: "'Nunito', sans-serif" }}>Loading...</div>
-    </div>
-  )
+  if (orgState.status === 'pending_invite' && !orgId) return <OrganizationPendingInviteScreen />
+  if (orgState.status === 'error' && !orgId) {
+    return <OrganizationErrorScreen message={orgState.error} onRetry={orgState.retry} />
+  }
+
+  if (loading) return <OrganizationLoadingScreen />
 
   return (
     <div className="hr-page" style={css.root}>
@@ -454,8 +465,8 @@ function SubjectsContent() {
       <div style={{ maxWidth: 800, margin: '0 auto', padding: '0 20px' }}>
 
         {kids.length === 0 ? (
-          <div className="hr-card" style={{ padding: '40px 24px', textAlign: 'center', color: '#6b7280', fontSize: 15, fontWeight: 600 }}>
-            Add children to your account to see subjects here.
+          <div className="hr-card">
+            <NoStudentsEmptyState message="Subjects are organized per student — add your first student to see them here." />
           </div>
         ) : (
           <>

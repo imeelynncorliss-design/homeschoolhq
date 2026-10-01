@@ -16,6 +16,9 @@ import { useStateComplianceTemplates } from '@/src/hooks/useStateComplianceTempl
 import { useComplianceSettings } from '@/src/hooks/useComplianceSettings'      
 import { useAppHeader } from '@/components/layout/AppHeader'
 import { getOrganizationId } from '@/src/lib/getOrganizationId'
+import { useOrganizationId } from '@/src/hooks/useOrganizationId'
+import { OrganizationLoadingScreen, OrganizationPendingInviteScreen, OrganizationErrorScreen } from '@/components/OrganizationStateScreen'
+import { NoStudentsEmptyState } from '@/components/NoStudentsEmptyState'
 import { colors } from '@/src/lib/designTokens'
 import { getFallbackSchoolYear } from '@/src/lib/schoolYear'
 
@@ -43,6 +46,7 @@ interface KidComplianceData {
 
 export default function CompliancePage() {
   const router = useRouter()
+  const orgState = useOrganizationId()
   useAppHeader({ title: 'Compliance', backHref: '/reports' })
   const supabase = createClient()
   
@@ -73,11 +77,14 @@ export default function CompliancePage() {
         return
       }
 
-      const { orgId } = await getOrganizationId(user.id)
+      let { orgId } = await getOrganizationId(user.id)
 
       if (!orgId) {
-        router.push('/onboarding')
-        return
+        // No org via the direct read — resolve via the shared hook instead
+        // of the old hard redirect to the now-removed onboarding gate.
+        if (orgState.status === 'loading') return
+        if (orgState.status !== 'ready') return
+        orgId = orgState.organizationId
       }
 
       setOrganizationId(orgId)
@@ -93,7 +100,7 @@ export default function CompliancePage() {
       setLoading(false)
     }
     loadData()
-  }, [router])
+  }, [router, orgState.status])
 
   // Mark settings as initialized after first load so refreshSettings() doesn't re-show the spinner
   useEffect(() => {
@@ -413,12 +420,13 @@ export default function CompliancePage() {
     return 'bg-red-600'
   }
 
+  if (orgState.status === 'pending_invite' && !organizationId) return <OrganizationPendingInviteScreen />
+  if (orgState.status === 'error' && !organizationId) {
+    return <OrganizationErrorScreen message={orgState.error} onRetry={orgState.retry} />
+  }
+
   if (loading || (!settingsLoadedOnce && settingsLoading) || templatesLoading) {
-    return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: colors.pageBackground }}>
-        <div style={{ color: colors.purple, fontWeight: 700, fontSize: 16 }}>Loading compliance data...</div>
-      </div>
-    )
+    return <OrganizationLoadingScreen />
   }
 
   // Compliance settings modal (shown on first setup or when editing)
@@ -580,7 +588,18 @@ export default function CompliancePage() {
     )
   }
 
-  const selectedKidData = selectedKidId 
+  if (kids.length === 0) {
+    return (
+      <div className="hr-page" style={{ minHeight: '100vh' }}>
+        <div style={{ maxWidth: 1120, margin: '0 auto', padding: '24px 20px 0' }}>
+          <NoStudentsEmptyState message="Compliance is tracked per student — add your first student to see days/hours toward your state's requirements." />
+        </div>
+        {settingsModal}
+      </div>
+    )
+  }
+
+  const selectedKidData = selectedKidId
     ? complianceData.find(d => d.kid.id === selectedKidId)
     : null
 
