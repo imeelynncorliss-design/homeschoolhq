@@ -18,6 +18,7 @@ const NO_HEADER_ROUTES = [
   '/agree',
   '/onboarding',
   '/join',
+  '/pending-invite',
 ]
 
 export default function AppShell({ children }: { children: React.ReactNode }) {

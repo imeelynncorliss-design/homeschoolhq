@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/src/lib/supabase'
 import { ensureOrganizationForUser } from '@/src/lib/ensureOrganization'
+import { getStoredInviteCode } from '@/src/lib/pendingInviteCode'
 import Link from 'next/link'
 
 export default function LoginPage() {
@@ -36,6 +37,15 @@ export default function LoginPage() {
 
       if (error) {
         setError(error.message)
+        return
+      }
+
+      // A signup-time invite code takes priority over the RPC: a code-only
+      // invite has no email on it, so the RPC's email match would miss it and
+      // create a placeholder org before /pending-invite gets to redeem it.
+      const storedInviteCode = await getStoredInviteCode(supabase)
+      if (storedInviteCode) {
+        router.push('/pending-invite')
         return
       }
 

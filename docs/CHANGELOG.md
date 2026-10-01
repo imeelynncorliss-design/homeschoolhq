@@ -18,6 +18,47 @@ Entry format:
 
 ---
 
+## [2026-10-01] Hotfix — Invite signup: unauthenticated email-confirmation endpoint, and redeem-before-session bug
+**Status:** Browser-tested by Imee (invite-code signup → confirm → sign in → `/teaching-schedule` as `co_teacher`, no placeholder org created, invite code cleared from metadata and sessionStorage; `confirm-user` endpoint confirmed gone, returns 404). Merged `hotfix/invite-signup` into `main`.
+
+**1. Security fix: removed `POST /api/invites/confirm-user`**
+**What changed:** Deleted `app/api/invites/confirm-user/route.ts` and its one call site in `app/signup/page.tsx`. The route took a raw `userId` in the request body and called `supabaseAdmin.auth.admin.updateUserById(userId, { email_confirm: true })` using the service-role key, with no authentication, authorization, or ownership check of any kind.
+**Why:** Any unauthenticated caller could POST an arbitrary `userId` and have that user's email force-confirmed. This directly undermines the `email_confirmed_at is not null` check added to `ensure_organization_for_user` in item 1.1, whose entire purpose was to stop an unconfirmed signup from riding along on another email's pending invite before address ownership is verified — this endpoint let an attacker fake that verification for any account. Found during review ahead of starting item 1.2.
+**Source:** Technical finding (pre-1.2 review, Imee requested a hotfix pass).
+**Files:** `app/api/invites/confirm-user/route.ts` (deleted), `app/signup/page.tsx`.
+**DB migrations:** none.
+
+**2. Bug fix: invite redemption attempted before a session exists**
+**What changed:** `app/signup/page.tsx` called `redeemInvite()` immediately after `signUp()` on the invite-code path, even when Supabase requires email confirmation and no session exists yet — the `family_collaborators` insert then silently fails under RLS (`auth.uid()` is null). Fixed by:
+- Passing the invite code into `signUp({ options: { data: { invite_code } } })` so it lands in `user_metadata` (survives the confirmation link being opened on a different device/browser), plus a `sessionStorage` same-tab fallback (`src/lib/pendingInviteCode.ts`).
+- Only redeeming inline at signup when `data.session` is already live (email confirmations disabled for the project).
+- `app/auth/callback/route.ts`: when a confirmed user carries a stored `invite_code`, redirect straight to `/pending-invite` instead of calling `ensure_organization_for_user` first.
+- `app/login/page.tsx`: same check on password sign-in, for a user who confirmed by email and is logging in fresh with no live session from signup.
+- `app/pending-invite/page.tsx`: if the RPC's own email-based match doesn't find a pending invite, falls back to redeeming the stored code directly. This also fixes **code-only invites** (`collaborator_invites.email = ''`), which the RPC's email match can never find since it compares against the empty string — previously these would silently get a placeholder org created instead of being redeemed. On a failed redemption (expired/revoked/already used), shows a friendly screen with "Try a different code" (→ `/join`) and "Start my own homeschool instead", rather than a dead-end error page. The invite code is cleared from both metadata and sessionStorage after any successful redemption.
+**Why:** Co-teacher/aide signups with email confirmation enabled were silently failing to join the inviting family's account; code-only invites (no email specified at creation) were unredeemable from the signup flow entirely.
+**Source:** Imee, hotfix request ahead of 1.2.
+**Files:** `app/signup/page.tsx`, `app/auth/callback/route.ts`, `app/login/page.tsx`, `app/pending-invite/page.tsx`, `src/lib/pendingInviteCode.ts` (new).
+**DB migrations:** none.
+
+**2b. Ordering fix on `/pending-invite` (caught before browser testing):** the first version of the fix above still called `ensure_organization_for_user()` before checking for a stored invite code. For a code-only invite (no email match) the RPC would create a placeholder org first, then the code would get redeemed — leaving the user with both their own org and a collaborator membership. Fixed by checking `getStoredInviteCode()` first and redeeming directly, skipping the RPC call entirely when a code is present; the RPC only runs as a fallback when there's no stored code. A redemption failure of "You are already a member of this family account." is now treated as success (clears the code, routes to `/teaching-schedule`) rather than shown as an error.
+**Files:** `app/pending-invite/page.tsx`.
+
+**3. Checked: `app/join/page.tsx`**
+**What changed:** No change. It already reads the live session via `supabase.auth.getUser()` immediately before calling `redeemInvite()`, so there's no redeem-before-session gap there — confirmed during this review.
+**Files:** none.
+
+**4. UI fix: bottom nav showing on `/pending-invite`**
+**What changed:** Added `/pending-invite` to `NO_HEADER_ROUTES` in `components/AppShell.tsx`, which controls both the app header and `BottomNav` together (same mechanism already used for `/agree`, `/onboarding`, `/join`).
+**Why:** Follow-up noted during 1.1 testing — the bottom nav shouldn't appear on this intermediate decision screen.
+**Source:** 1.1 test pass (Imee).
+**Files:** `components/AppShell.tsx`.
+**DB migrations:** none.
+
+**Follow-ups:**
+- Pre-existing, not blocking: `redeemInvite()` step 5 (marking `collaborator_invites.status = 'accepted'`) is silently blocked by RLS when run as the invitee, so redeemed invites stay stuck at `status = 'pending'` even though the `family_collaborators` row was created successfully (see `+setup2`, `+setup3`). Proposed fix for later: a `SECURITY DEFINER` `accept_invite(code)` RPC that does the membership insert and status update in one transaction, the same pattern as `ensure_organization_for_user`.
+
+---
+
 ## [2026-09-30] Roadmap item 1.1 — Create the org at first login
 **Status:** Verified by Imee. Migration live on production; code committed on `feature/setup-refactor`, not yet merged to `main`.
 **Testing (Imee, 2026-09-30) — all passed:**
